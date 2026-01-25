@@ -1,6 +1,5 @@
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Briefcase, Building2, PieChart as ChartIcon, Layers } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
@@ -64,11 +63,11 @@ export default function AnalyticsScreen() {
         );
     }
 
-    const dimensions: { id: Dimension; label: string; icon: React.ReactNode }[] = [
-        { id: 'Sector', label: 'Sector', icon: <Layers size={14} color="currentColor" /> },
-        { id: 'Company Name', label: 'Company', icon: <Building2 size={14} color="currentColor" /> },
-        { id: 'Asset Type', label: 'Asset Type', icon: <Briefcase size={14} color="currentColor" /> },
-        { id: 'Broker', label: 'Broker', icon: <ChartIcon size={14} color="currentColor" /> },
+    const dimensions: { id: Dimension; label: string }[] = [
+        { id: 'Sector', label: 'Sector' },
+        { id: 'Company Name', label: 'Company' },
+        { id: 'Asset Type', label: 'Asset Type' },
+        { id: 'Broker', label: 'Broker' },
     ];
 
     return (
@@ -85,7 +84,6 @@ export default function AnalyticsScreen() {
                                     onPress={() => setSelectedDimension(dim.id)}
                                 >
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                        <Text style={{ color: isActive ? '#FFF' : '#8E8E93' }}>{dim.icon}</Text>
                                         <Text style={[styles.selectorText, isActive && styles.selectorTextActive]}>
                                             {dim.label}
                                         </Text>

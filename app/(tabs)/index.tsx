@@ -38,12 +38,7 @@ export default function PortfolioScreen() {
           <View style={styles.header}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'transparent' }}>
               <Text style={styles.greeting}>Net worth</Text>
-              {tickers.length > 0 && (
-                <View style={styles.liveBadge}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>LIVE</Text>
-                </View>
-              )}
+
             </View>
             <Text style={styles.totalValue}>₹{summary.totalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             <View style={styles.overallReturnContainer}>

@@ -68,7 +68,7 @@ export default function AddTransactionScreen() {
   }, [broker, existingBrokers]);
 
   const handleSave = () => {
-    if (!symbol || !quantity || !price) return;
+    if (!symbol || !quantity || price === '') return;
 
     const transactionData = {
       id: editingTransaction ? editingTransaction.id : Math.random().toString(36).substring(7),

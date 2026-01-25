@@ -13,6 +13,7 @@ interface PortfolioState {
     calculateSummary: () => PortfolioSummary;
     getAllocationData: (dimension: 'Sector' | 'Company Name' | 'Asset Type' | 'Broker') => { name: string; value: number; percentage: number }[];
     getYearlyAnalysis: () => import('../types').YearlyAnalysis[];
+    importTransactions: (transactions: Transaction[]) => void;
 }
 
 export const usePortfolioStore = create<PortfolioState>((set, get) => ({
@@ -215,6 +216,8 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
             previousYearInvestment = yearInvestment;
         });
 
-        return analysis;
-    }
+        return analysis.reverse();
+    },
+    importTransactions: (newTransactions) =>
+        set((state) => ({ transactions: [...state.transactions, ...newTransactions] }))
 }));

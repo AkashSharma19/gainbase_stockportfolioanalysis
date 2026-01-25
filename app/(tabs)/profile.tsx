@@ -1,9 +1,10 @@
 import { usePortfolioStore } from '@/store/usePortfolioStore';
+import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { StatusBar } from 'expo-status-bar';
-import { ChevronRight, LogOut, User } from 'lucide-react-native';
+import { ChevronRight, Download, LogOut, Upload, User } from 'lucide-react-native';
 import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as XLSX from 'xlsx';
@@ -11,7 +12,7 @@ import * as XLSX from 'xlsx';
 export default function ProfileScreen() {
     const router = useRouter();
 
-    const { transactions, tickers } = usePortfolioStore();
+    const { transactions, tickers, importTransactions } = usePortfolioStore();
 
     const handleExport = async () => {
         if (transactions.length === 0) {
@@ -73,7 +74,117 @@ export default function ProfileScreen() {
         }
     };
 
+    const handleDownloadSample = async () => {
+        try {
+            const sampleData = [
+                {
+                    Symbol: 'RELIANCE',
+                    Quantity: 10,
+                    Price: 2400.50,
+                    Date: '2023-01-15',
+                    Type: 'BUY',
+                    Broker: 'Zerodha',
+                    Currency: 'INR'
+                },
+                {
+                    Symbol: 'TCS',
+                    Quantity: 5,
+                    Price: 3200.00,
+                    Date: '2023-02-20',
+                    Type: 'SELL',
+                    Broker: 'Upstox',
+                    Currency: 'INR'
+                }
+            ];
+
+            const worksheet = XLSX.utils.json_to_sheet(sampleData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
+
+            const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+            const filename = `Portfolio_Sample_Template.xlsx`;
+            const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+            await FileSystem.writeAsStringAsync(fileUri, wbout, {
+                encoding: FileSystem.EncodingType.Base64,
+            });
+
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(fileUri, {
+                    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    dialogTitle: 'Download Sample Template',
+                    UTI: 'com.microsoft.excel.xlsx',
+                });
+            } else {
+                Alert.alert('Sharing not available', 'Sharing is not available on this device.');
+            }
+        } catch (error) {
+            console.error('Sample Download Error:', error);
+            Alert.alert('Error', 'Failed to generate sample file.');
+        }
+    };
+
+    const handleImport = async () => {
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'],
+                copyToCacheDirectory: true
+            });
+
+            if (result.canceled) return;
+
+            const fileUri = result.assets[0].uri;
+            const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+                encoding: FileSystem.EncodingType.Base64
+            });
+
+            const workbook = XLSX.read(fileContent, { type: 'base64' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+            if (jsonData.length === 0) {
+                Alert.alert('Empty File', 'The imported file contains no data.');
+                return;
+            }
+
+            const newTransactions = jsonData.map((row: any) => ({
+                id: Math.random().toString(36).substr(2, 9),
+                symbol: row.Symbol || row.symbol || '',
+                quantity: Number(row.Quantity || row.quantity || 0),
+                price: Number(row.Price || row.price || 0),
+                date: row.Date || row.date || new Date().toISOString(),
+                type: (row.Type?.toUpperCase() === 'SELL' ? 'SELL' : 'BUY') as 'BUY' | 'SELL',
+                currency: row.Currency || row.currency || 'INR',
+                broker: row.Broker || row.broker || ''
+            })).filter(t => t.symbol && t.quantity > 0 && t.price >= 0);
+
+            if (newTransactions.length > 0) {
+                importTransactions(newTransactions);
+                Alert.alert('Success', `Successfully imported ${newTransactions.length} transactions.`);
+            } else {
+                Alert.alert('Error', 'No valid transactions found in the file.');
+            }
+
+        } catch (error) {
+            console.error('Import Error:', error);
+            Alert.alert('Import Failed', 'An error occurred while importing the file. Please ensure it matches the sample format.');
+        }
+    };
+
     const menuItems = [
+        {
+            icon: <Download size={20} color="#34C759" />,
+            label: 'Download Sample',
+            sublabel: 'Get Excel template for import',
+            onPress: handleDownloadSample
+        },
+        {
+            icon: <Upload size={20} color="#FF9500" />,
+            label: 'Import Transactions',
+            sublabel: 'Upload Excel file',
+            onPress: handleImport
+        },
         {
             icon: <ChevronRight size={20} color="#007AFF" />,
             label: 'Export Transactions',

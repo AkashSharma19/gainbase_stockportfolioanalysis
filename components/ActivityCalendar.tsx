@@ -39,20 +39,23 @@ export const ActivityCalendar = ({ transactions }: ActivityCalendarProps) => {
         return marks;
     }, [transactions, selectedDate]);
 
-    const dailySummary = useMemo(() => {
-        const dayTransactions = transactions.filter(
-            (t) => format(parseISO(t.date), 'yyyy-MM-dd') === selectedDate
+    const monthlySummary = useMemo(() => {
+        if (!selectedDate) return { buyTotal: 0, sellTotal: 0, count: 0 };
+
+        const selectedMonth = format(parseISO(selectedDate), 'yyyy-MM');
+        const monthTransactions = transactions.filter(
+            (t) => format(parseISO(t.date), 'yyyy-MM') === selectedMonth
         );
 
         let buyTotal = 0;
         let sellTotal = 0;
 
-        dayTransactions.forEach((t) => {
+        monthTransactions.forEach((t) => {
             if (t.type === 'BUY') buyTotal += t.quantity * t.price;
             else sellTotal += t.quantity * t.price;
         });
 
-        return { buyTotal, sellTotal, count: dayTransactions.length };
+        return { buyTotal, sellTotal, count: monthTransactions.length };
     }, [transactions, selectedDate]);
 
     return (
@@ -85,20 +88,18 @@ export const ActivityCalendar = ({ transactions }: ActivityCalendarProps) => {
             />
 
             <View style={styles.summaryBox}>
-                <Text style={styles.summaryTitle}>
-                    {format(parseISO(selectedDate), 'MMMM dd, yyyy')}
-                </Text>
+
                 <View style={styles.summaryRows}>
                     <View style={styles.row}>
-                        <Text style={styles.rowLabel}>Daily Buy</Text>
+                        <Text style={styles.rowLabel}>Monthly Buy</Text>
                         <Text style={[styles.rowValue, { color: '#4CAF50' }]}>
-                            ₹{dailySummary.buyTotal.toLocaleString()}
+                            ₹{monthlySummary.buyTotal.toLocaleString()}
                         </Text>
                     </View>
                     <View style={styles.row}>
-                        <Text style={styles.rowLabel}>Daily Sell</Text>
+                        <Text style={styles.rowLabel}>Monthly Sell</Text>
                         <Text style={[styles.rowValue, { color: '#F44336' }]}>
-                            ${dailySummary.sellTotal.toLocaleString()}
+                            ₹{monthlySummary.sellTotal.toLocaleString()}
                         </Text>
                     </View>
                 </View>
