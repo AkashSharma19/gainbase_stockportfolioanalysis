@@ -86,12 +86,7 @@ export default function PortfolioScreen() {
             <ActivityCalendar transactions={transactions} />
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Performance</Text>
-            <View style={styles.chartPlaceholder}>
-              <Text style={styles.placeholderText}>Historical performance chart</Text>
-            </View>
-          </View>
+
 
           <View style={[styles.section, { marginBottom: 20 }]}>
             <Text style={styles.sectionTitle}>Yearly Analysis</Text>

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Portfolio_ios_app",
-    "slug": "Portfolio_ios_app",
+    "name": "Gainbase",
+    "slug": "Gainbase",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "portfolioiosapp",
+    "scheme": "gainbase",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
