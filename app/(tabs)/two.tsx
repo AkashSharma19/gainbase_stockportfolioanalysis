@@ -178,7 +178,7 @@ export default function HistoryScreen() {
           <View style={styles.filtersContainer}>
             <View style={styles.filterRow}>
               <Text style={styles.filterLabel}>Sort by:</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false}>
                 {(['date', 'symbol', 'amount'] as const).map((s) => (
                   <TouchableOpacity
                     key={s}
@@ -220,7 +220,7 @@ export default function HistoryScreen() {
             {uniqueAssetTypes.length > 0 && (
               <View style={styles.filterRow}>
                 <Text style={styles.filterLabel}>Asset Type:</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false}>
                   <TouchableOpacity
                     style={[styles.filterChip, filterAssetType === null && styles.filterChipActive]}
                     onPress={() => setFilterAssetType(null)}
@@ -247,7 +247,7 @@ export default function HistoryScreen() {
             {uniqueSectors.length > 0 && (
               <View style={styles.filterRow}>
                 <Text style={styles.filterLabel}>Sector:</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false}>
                   <TouchableOpacity
                     style={[styles.filterChip, filterSector === null && styles.filterChipActive]}
                     onPress={() => setFilterSector(null)}
@@ -274,7 +274,7 @@ export default function HistoryScreen() {
             {uniqueBrokers.length > 0 && (
               <View style={styles.filterRow}>
                 <Text style={styles.filterLabel}>Broker:</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false}>
                   <TouchableOpacity
                     style={[styles.filterChip, filterBroker === null && styles.filterChipActive]}
                     onPress={() => setFilterBroker(null)}
@@ -310,6 +310,8 @@ export default function HistoryScreen() {
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
           />
         )}
       </View>

@@ -132,7 +132,7 @@ export default function AddTransactionScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
 
             {/* TYPE SELECTOR */}
             <View style={styles.typeSelectorContainer}>
@@ -296,6 +296,8 @@ export default function AddTransactionScreen() {
             accessibilityLabel='tickers-list'
             keyExtractor={(item) => item.Tickers}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.tickerItem}
@@ -348,7 +350,7 @@ export default function AddTransactionScreen() {
             )}
           </View>
 
-          <ScrollView contentContainerStyle={styles.tickerList} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={styles.tickerList} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
             {/* Option to add new if search query exists */}
             {searchQuery.length > 0 && (
               <TouchableOpacity

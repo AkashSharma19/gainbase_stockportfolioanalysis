@@ -74,7 +74,7 @@ export default function AnalyticsScreen() {
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
             <View style={styles.container}>
                 <View style={styles.selectorBar}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.selectorScroll}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false} contentContainerStyle={styles.selectorScroll}>
                         {dimensions.map((dim) => {
                             const isActive = selectedDimension === dim.id;
                             return (
@@ -99,6 +99,8 @@ export default function AnalyticsScreen() {
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFF" />
                     }
+                    showsVerticalScrollIndicator={false}
+                    showsHorizontalScrollIndicator={false}
                 >
                     <LinearGradient
                         colors={GRADIENTS.card}

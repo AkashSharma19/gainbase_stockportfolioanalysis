@@ -1,8 +1,8 @@
 import { ActivityCalendar } from '@/components/ActivityCalendar';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
-import { TrendingUp } from 'lucide-react-native';
+import { ChevronDown, TrendingUp } from 'lucide-react-native';
 import React, { useEffect, useMemo } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const CHART_COLORS = [
@@ -28,6 +28,11 @@ export default function PortfolioScreen() {
   }, []);
 
   const [refreshing, setRefreshing] = React.useState(false);
+  const [expandedYear, setExpandedYear] = React.useState<number | null>(null);
+
+  const toggleYear = (year: number) => {
+    setExpandedYear(expandedYear === year ? null : year);
+  };
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -41,6 +46,8 @@ export default function PortfolioScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFF" />}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
         >
           <View style={styles.header}>
             <View style={styles.heroCard}>
@@ -83,47 +90,56 @@ export default function PortfolioScreen() {
           <View style={[styles.section, { marginBottom: 20 }]}>
             <Text style={styles.sectionTitle}>Yearly Analysis</Text>
             {yearlyAnalysis.length > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.yearlyScroll}>
-                {yearlyAnalysis.map((item, index) => (
-                  <View key={item.year} style={styles.yearlyCard}>
-                    <Text style={styles.yearlyYear}>{item.year}</Text>
-                    <View style={styles.yearlyRow}>
-                      <View style={{ backgroundColor: 'transparent' }}>
-                        <Text style={styles.yearlyLabel}>Avg. Inv (Monthly)</Text>
-                        <Text style={styles.yearlyValue}>₹{item.averageMonthlyInvestment.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
-                      </View>
-                      {item.percentageIncrease !== 0 && (
-                        <View style={[styles.growthBadge, { backgroundColor: item.percentageIncrease >= 0 ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
-                          <TrendingUp size={12} color={item.percentageIncrease >= 0 ? '#4CAF50' : '#F44336'} style={{ transform: [{ rotate: item.percentageIncrease >= 0 ? '0deg' : '180deg' }] }} />
-                          <Text style={[styles.growthText, { color: item.percentageIncrease >= 0 ? '#4CAF50' : '#F44336' }]}>
-                            {Math.abs(item.percentageIncrease).toFixed(1)}%
-                          </Text>
+              <View style={styles.accordionContainer}>
+                {yearlyAnalysis.map((item, index) => {
+                  const isExpanded = expandedYear === item.year;
+                  return (
+                    <View key={item.year} style={styles.accordionItem}>
+                      <TouchableOpacity
+                        style={[styles.accordionHeader, isExpanded && styles.accordionHeaderActive]}
+                        onPress={() => toggleYear(item.year)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.headerLeft}>
+                          <Text style={styles.yearText}>{item.year}</Text>
+                          <Text style={styles.subText}>Avg. Inv: ₹{item.averageMonthlyInvestment.toLocaleString(undefined, { maximumFractionDigits: 0, notation: "compact", compactDisplay: "short" })}</Text>
+                        </View>
+
+                        <View style={styles.headerRight}>
+                          {item.percentageIncrease !== 0 && (
+                            <View style={[styles.growthBadge, { backgroundColor: item.percentageIncrease >= 0 ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
+                              <TrendingUp size={12} color={item.percentageIncrease >= 0 ? '#4CAF50' : '#F44336'} style={{ transform: [{ rotate: item.percentageIncrease >= 0 ? '0deg' : '180deg' }] }} />
+                              <Text style={[styles.growthText, { color: item.percentageIncrease >= 0 ? '#4CAF50' : '#F44336' }]}>
+                                {Math.abs(item.percentageIncrease).toFixed(1)}%
+                              </Text>
+                            </View>
+                          )}
+                          <View style={{ transform: [{ rotate: isExpanded ? '180deg' : '0deg' }], marginLeft: 8 }}>
+                            <ChevronDown size={20} color="#666" />
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+
+                      {isExpanded && (
+                        <View style={styles.accordionBody}>
+                          <View style={styles.separator} />
+                          <View style={styles.assetsGrid}>
+                            {item.assetDistribution.map((asset, i) => (
+                              <View key={i} style={styles.assetItem}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                  <View style={[styles.dot, { backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }]} />
+                                  <Text style={styles.assetName} numberOfLines={1}>{asset.name}</Text>
+                                </View>
+                                <Text style={styles.assetValue}>₹{asset.value.toLocaleString(undefined, { maximumFractionDigits: 0, notation: "compact", compactDisplay: "short" })}</Text>
+                              </View>
+                            ))}
+                          </View>
                         </View>
                       )}
                     </View>
-
-                    <View style={styles.divider} />
-
-                    <Text style={styles.yearlyLabel}>Distribution</Text>
-                    <View style={styles.distributionContainer}>
-                      {item.assetDistribution.slice(0, 3).map((asset, i) => (
-                        <View key={i} style={styles.distributionItem}>
-                          <View style={styles.distributionHeader}>
-                            <Text style={styles.assetName} numberOfLines={1}>{asset.name}</Text>
-                            <Text style={styles.assetPercentage}>{asset.percentage.toFixed(0)}%</Text>
-                          </View>
-                          <View style={styles.progressBarBg}>
-                            <View style={[styles.progressBarFill, { width: `${asset.percentage}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }]} />
-                          </View>
-                        </View>
-                      ))}
-                      {item.assetDistribution.length > 3 && (
-                        <Text style={styles.moreAssetsText}>+ {item.assetDistribution.length - 3} more assets</Text>
-                      )}
-                    </View>
-                  </View>
-                ))}
-              </ScrollView>
+                  );
+                })}
+              </View>
             ) : (
               <View style={styles.emptyCard}>
                 <Text style={styles.placeholderText}>Not enough data for yearly analysis</Text>
@@ -143,6 +159,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    backgroundColor: '#000',
   },
   scrollContent: {
     padding: 20,
@@ -244,99 +261,95 @@ const styles = StyleSheet.create({
     color: '#444',
     fontSize: 14,
   },
-  yearlyScroll: {
-    paddingBottom: 10,
-  },
-  yearlyCard: {
-    backgroundColor: '#1C1C1E',
+
+  // Accordion Styles
+  accordionContainer: {
     borderRadius: 16,
-    padding: 16,
-    width: 260,
-    marginRight: 16,
+    overflow: 'hidden',
+    backgroundColor: '#1C1C1E',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: '#2C2C2E',
   },
-  yearlyYear: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#007AFF',
-    marginBottom: 12,
+  accordionItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#2C2C2E',
   },
-  yearlyRow: {
+  accordionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    backgroundColor: 'transparent',
-    marginBottom: 12,
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#1C1C1E',
   },
-  yearlyLabel: {
-    fontSize: 11,
-    color: '#8E8E93',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
+  accordionHeaderActive: {
+    backgroundColor: '#222',
   },
-  yearlyValue: {
-    fontSize: 14,
-    fontWeight: '700',
+  headerLeft: {
+    justifyContent: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  yearText: {
     color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  subText: {
+    color: '#8E8E93',
+    fontSize: 12,
   },
   growthBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 6,
+    marginRight: 4,
   },
   growthText: {
     fontSize: 11,
     fontWeight: '700',
     marginLeft: 4,
   },
-  divider: {
+  chevron: {
+    // Chevron icon could be replaced with Lucide's ChevronDown
+    // For now we do a simple rotation animation wrapper in JSX
+  },
+  accordionBody: {
+    backgroundColor: '#151515',
+    padding: 16,
+    paddingTop: 0,
+  },
+  separator: {
     height: 1,
-    backgroundColor: '#333',
-    marginVertical: 12,
+    backgroundColor: '#2C2C2E',
+    marginBottom: 12,
   },
-  distributionContainer: {
-    backgroundColor: 'transparent',
+  assetsGrid: {
+    gap: 12,
   },
-  distributionItem: {
-    marginBottom: 10,
-    backgroundColor: 'transparent',
-  },
-  distributionHeader: {
+  assetItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
-    backgroundColor: 'transparent',
+    alignItems: 'center',
   },
-  assetName: {
-    fontSize: 12,
-    color: '#FFF',
-    flex: 1,
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     marginRight: 8,
   },
-  assetPercentage: {
-    fontSize: 11,
-    color: '#8E8E93',
+  assetName: {
+    color: '#CCC',
+    fontSize: 13,
+  },
+  assetValue: {
+    color: '#FFF',
+    fontSize: 13,
     fontWeight: '600',
-  },
-  progressBarBg: {
-    height: 4,
-    backgroundColor: '#2C2C2E',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  moreAssetsText: {
-    fontSize: 11,
-    color: '#444',
-    fontStyle: 'italic',
-    marginTop: 4,
   },
   emptyCard: {
     height: 150,

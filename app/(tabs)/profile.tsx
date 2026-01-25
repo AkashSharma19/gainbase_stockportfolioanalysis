@@ -1,17 +1,17 @@
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { StatusBar } from 'expo-status-bar';
-import { ChevronRight, Download, LogOut, Upload, User } from 'lucide-react-native';
-import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ChevronRight, Download, LogOut, ShieldCheck, Upload } from 'lucide-react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as XLSX from 'xlsx';
 
 export default function ProfileScreen() {
     const router = useRouter();
-
     const { transactions, tickers, importTransactions } = usePortfolioStore();
 
     const handleExport = async () => {
@@ -21,10 +21,7 @@ export default function ProfileScreen() {
         }
 
         try {
-            // Create a lookup map for tickers
             const tickerMap = new Map(tickers.map(t => [t.Tickers.toUpperCase(), t]));
-
-            // Prepare data for Excel
             const exportData = transactions.map(t => {
                 const ticker = tickerMap.get(t.symbol.toUpperCase());
                 return {
@@ -41,24 +38,18 @@ export default function ProfileScreen() {
                 };
             });
 
-            // Create worksheet and workbook
             const worksheet = XLSX.utils.json_to_sheet(exportData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Transactions');
 
-            // Generate base64 string
             const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
-
-            // File URI
             const filename = `Portfolio_Transactions_${new Date().toISOString().split('T')[0]}.xlsx`;
             const fileUri = `${FileSystem.cacheDirectory}${filename}`;
 
-            // Write file
             await FileSystem.writeAsStringAsync(fileUri, wbout, {
                 encoding: FileSystem.EncodingType.Base64,
             });
 
-            // Share/Save file
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(fileUri, {
                     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -168,67 +159,107 @@ export default function ProfileScreen() {
 
         } catch (error) {
             console.error('Import Error:', error);
-            Alert.alert('Import Failed', 'An error occurred while importing the file. Please ensure it matches the sample format.');
+            Alert.alert('Import Failed', 'Ensure the file matches the sample format.');
         }
     };
 
     const menuItems = [
         {
             icon: <Download size={20} color="#34C759" />,
-            label: 'Download Sample',
-            sublabel: 'Get Excel template for import',
+            iconBg: 'rgba(52, 199, 89, 0.15)',
+            label: 'Download Template',
+            sublabel: 'Get Excel structure',
             onPress: handleDownloadSample
         },
         {
             icon: <Upload size={20} color="#FF9500" />,
+            iconBg: 'rgba(255, 149, 0, 0.15)',
             label: 'Import Transactions',
             sublabel: 'Upload Excel file',
             onPress: handleImport
         },
         {
-            icon: <ChevronRight size={20} color="#007AFF" />,
-            label: 'Export Transactions',
-            sublabel: 'Download as Excel file',
+            icon: <ShieldCheck size={20} color="#007AFF" />,
+            iconBg: 'rgba(0, 122, 255, 0.15)',
+            label: 'Export Data',
+            sublabel: 'Backup your portfolio',
             onPress: handleExport
-        },
+        }
     ];
 
     return (
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
             <View style={styles.container}>
-                <StatusBar style={Platform.OS === 'ios' ? 'light' : 'auto'} />
+                <StatusBar style="light" />
 
-                <View style={styles.header}>
-                    <View style={styles.avatarContainer}>
-                        <View style={styles.avatarPlaceholder}>
-                            <User size={40} color="#FFF" />
-                        </View>
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                    {/* Hero Section */}
+                    <View style={styles.heroContainer}>
+                        <LinearGradient
+                            colors={['#1C1C1E', '#000']}
+                            style={styles.heroGradient}
+                        >
+                            <View style={styles.avatarContainer}>
+                                <LinearGradient
+                                    colors={['#007AFF', '#5856D6']}
+                                    style={styles.avatarBorder}
+                                >
+                                    <View style={styles.avatarInner}>
+                                        <Text style={styles.avatarText}>AS</Text>
+                                    </View>
+                                </LinearGradient>
+                                <View style={styles.proBadge}>
+                                    <Text style={styles.proText}>PRO</Text>
+                                </View>
+                            </View>
+
+                            <Text style={styles.name}>Akash Sharma</Text>
+                            <Text style={styles.email}>akash@example.com</Text>
+
+                            <View style={styles.statsRow}>
+                                <View style={styles.statItem}>
+                                    <Text style={styles.statValue}>{transactions.length}</Text>
+                                    <Text style={styles.statLabel}>Transactions</Text>
+                                </View>
+                                <View style={styles.statDivider} />
+                                <View style={styles.statItem}>
+                                    <Text style={styles.statValue}>{tickers.length}</Text>
+                                    <Text style={styles.statLabel}>Holdings</Text>
+                                </View>
+                            </View>
+                        </LinearGradient>
                     </View>
-                    <Text style={styles.name}>Akash Sharma</Text>
-                    <Text style={styles.email}>akash@example.com</Text>
-                </View>
 
-                <View style={styles.menuContainer}>
-                    {menuItems.map((item, index) => (
-                        <TouchableOpacity key={index} style={styles.menuItem} onPress={item.onPress}>
-                            <View style={styles.menuIconContainer}>
-                                {item.icon}
-                            </View>
-                            <View style={styles.menuTextContainer}>
-                                <Text style={styles.menuLabel}>{item.label}</Text>
-                                <Text style={styles.menuSublabel}>{item.sublabel}</Text>
-                            </View>
-                            <ChevronRight size={18} color="#38383A" />
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                    {/* Data Management Section */}
+                    <Text style={styles.sectionTitle}>Data Management</Text>
+                    <View style={styles.menuGroup}>
+                        {menuItems.map((item, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                style={[styles.menuItem, index === menuItems.length - 1 && styles.menuItemLast]}
+                                onPress={item.onPress}
+                                activeOpacity={0.7}
+                            >
+                                <View style={[styles.iconBox, { backgroundColor: item.iconBg }]}>
+                                    {item.icon}
+                                </View>
+                                <View style={styles.menuTextContainer}>
+                                    <Text style={styles.menuLabel}>{item.label}</Text>
+                                    {item.sublabel && <Text style={styles.menuSublabel}>{item.sublabel}</Text>}
+                                </View>
+                                <ChevronRight size={18} color="#555" />
+                            </TouchableOpacity>
+                        ))}
+                    </View>
 
-                <TouchableOpacity style={styles.logoutButton}>
-                    <LogOut size={20} color="#FF3B30" />
-                    <Text style={styles.logoutText}>Log Out</Text>
-                </TouchableOpacity>
+                    {/* Logout Button */}
+                    <TouchableOpacity style={styles.logoutButton} activeOpacity={0.8}>
+                        <LogOut size={20} color="#FF453A" />
+                        <Text style={styles.logoutText}>Log Out</Text>
+                    </TouchableOpacity>
 
-                <Text style={styles.version}>Version 1.0.0</Text>
+                    <Text style={styles.versionText}>v1.0.0 • Build 2024</Text>
+                </ScrollView>
             </View>
         </SafeAreaView>
     );
@@ -242,44 +273,115 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#000',
-        padding: 20,
-        paddingBottom: 20,
     },
-    header: {
+    scrollContent: {
+        padding: 20,
+    },
+    heroContainer: {
+        marginBottom: 32,
+        borderRadius: 24,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#1C1C1E',
+    },
+    heroGradient: {
+        padding: 24,
         alignItems: 'center',
-        marginTop: 20,
-        marginBottom: 40,
-        backgroundColor: 'transparent',
     },
     avatarContainer: {
+        position: 'relative',
         marginBottom: 16,
-        backgroundColor: 'transparent',
     },
-    avatarPlaceholder: {
+    avatarBorder: {
+        width: 84,
+        height: 84,
+        borderRadius: 42,
+        padding: 2,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    avatarInner: {
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#1C1C1E',
+        backgroundColor: '#151515',
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#333',
+    },
+    avatarText: {
+        fontSize: 28,
+        fontWeight: '700',
+        color: '#FFF',
+    },
+    proBadge: {
+        position: 'absolute',
+        bottom: -6,
+        alignSelf: 'center',
+        backgroundColor: '#007AFF',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: '#000',
+    },
+    proText: {
+        color: '#FFF',
+        fontSize: 10,
+        fontWeight: '800',
     },
     name: {
-        fontSize: 20,
-        fontWeight: 'bold',
+        fontSize: 22,
+        fontWeight: '700',
         color: '#FFF',
         marginBottom: 4,
     },
     email: {
+        fontSize: 13,
+        color: '#8E8E93',
+        marginBottom: 20,
+    },
+    statsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        width: '100%',
+        justifyContent: 'space-around',
+    },
+    statItem: {
+        alignItems: 'center',
+    },
+    statValue: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#FFF',
+    },
+    statLabel: {
         fontSize: 11,
         color: '#8E8E93',
+        marginTop: 2,
     },
-    menuContainer: {
+    statDivider: {
+        width: 1,
+        height: 24,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+    },
+    sectionTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#8E8E93',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginLeft: 12,
+        marginBottom: 8,
+    },
+    menuGroup: {
         backgroundColor: '#1C1C1E',
         borderRadius: 16,
-        paddingVertical: 8,
-        marginBottom: 30,
+        overflow: 'hidden',
+        marginBottom: 32,
     },
     menuItem: {
         flexDirection: 'row',
@@ -288,11 +390,13 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#2C2C2E',
     },
-    menuIconContainer: {
+    menuItemLast: {
+        borderBottomWidth: 0,
+    },
+    iconBox: {
         width: 36,
         height: 36,
         borderRadius: 8,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
@@ -301,14 +405,14 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     menuLabel: {
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: 16,
+        fontWeight: '500',
         color: '#FFF',
         marginBottom: 2,
     },
     menuSublabel: {
-        fontSize: 11,
-        color: '#8E8E93',
+        fontSize: 12,
+        color: '#666',
     },
     logoutButton: {
         flexDirection: 'row',
@@ -317,19 +421,20 @@ const styles = StyleSheet.create({
         backgroundColor: '#1C1C1E',
         borderRadius: 16,
         padding: 16,
-        marginTop: 'auto',
-        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 69, 58, 0.2)',
     },
     logoutText: {
-        color: '#FF3B30',
-        fontSize: 14,
+        color: '#FF453A',
+        fontSize: 16,
         fontWeight: '600',
         marginLeft: 8,
     },
-    version: {
+    versionText: {
         textAlign: 'center',
-        color: '#38383A',
+        color: '#333',
         fontSize: 11,
-        marginBottom: 20,
-    },
+        marginTop: 24,
+        marginBottom: 10,
+    }
 });

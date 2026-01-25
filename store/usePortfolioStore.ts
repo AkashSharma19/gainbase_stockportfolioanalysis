@@ -153,6 +153,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
         const cumulativeHoldings = new Map<string, number>();
         let previousYearInvestment = 0;
+        let previousAverageMonthlyInvestment = 0;
 
         years.forEach(year => {
             const yearTransactions = sortedTransactions.filter(t => new Date(t.date).getFullYear() === year);
@@ -202,10 +203,6 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
                 }))
                 .sort((a, b) => b.value - a.value);
 
-            const percentageIncrease = previousYearInvestment > 0
-                ? ((yearInvestment - previousYearInvestment) / previousYearInvestment) * 100
-                : 0;
-
             const currentDate = new Date();
             const currentYear = currentDate.getFullYear();
 
@@ -218,6 +215,10 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
             const averageMonthlyInvestment = yearInvestment / divisor;
 
+            const percentageIncrease = previousAverageMonthlyInvestment > 0
+                ? ((averageMonthlyInvestment - previousAverageMonthlyInvestment) / previousAverageMonthlyInvestment) * 100
+                : 0;
+
             analysis.push({
                 year,
                 investment: yearInvestment,
@@ -227,6 +228,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
             });
 
             previousYearInvestment = yearInvestment;
+            previousAverageMonthlyInvestment = averageMonthlyInvestment;
         });
 
         return analysis.reverse();
