@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     },
     selectorText: {
         color: '#8E8E93',
-        fontSize: 13,
+        fontSize: 11,
         fontWeight: '600',
     },
     selectorTextActive: {
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
         gap: 20,
     },
     cardTitle: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '700',
         color: '#FFF',
         marginBottom: 20,
@@ -243,13 +243,13 @@ const styles = StyleSheet.create({
     },
     noDataText: {
         color: '#8E8E93',
-        fontSize: 14,
+        fontSize: 11,
     },
     listContainer: {
         gap: 12,
     },
     listTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '800',
         color: '#FFF',
         marginBottom: 8,
@@ -289,13 +289,13 @@ const styles = StyleSheet.create({
     },
     itemName: {
         color: '#FFF',
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '600',
         flex: 1,
     },
     itemValue: {
         color: '#FFF',
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '700',
     },
     progressContainer: {
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     },
     itemPercentage: {
         color: '#8E8E93',
-        fontSize: 13,
+        fontSize: 11,
         fontWeight: '600',
         width: 45,
         textAlign: 'right',
@@ -329,13 +329,13 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         color: '#FFF',
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: 'bold',
         marginBottom: 8,
     },
     emptySubtext: {
         color: '#8E8E93',
-        fontSize: 15,
+        fontSize: 14,
         textAlign: 'center',
         lineHeight: 22,
     },

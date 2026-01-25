@@ -30,6 +30,7 @@ export interface PortfolioSummary {
 export interface YearlyAnalysis {
   year: number;
   investment: number;
+  averageMonthlyInvestment: number;
   percentageIncrease: number;
   assetDistribution: { name: string; value: number; percentage: number }[];
 }

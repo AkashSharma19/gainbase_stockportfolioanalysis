@@ -266,13 +266,13 @@ const styles = StyleSheet.create({
         borderColor: '#333',
     },
     name: {
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: 'bold',
         color: '#FFF',
         marginBottom: 4,
     },
     email: {
-        fontSize: 14,
+        fontSize: 11,
         color: '#8E8E93',
     },
     menuContainer: {
@@ -301,13 +301,13 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     menuLabel: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         color: '#FFF',
         marginBottom: 2,
     },
     menuSublabel: {
-        fontSize: 12,
+        fontSize: 11,
         color: '#8E8E93',
     },
     logoutButton: {
@@ -322,14 +322,14 @@ const styles = StyleSheet.create({
     },
     logoutText: {
         color: '#FF3B30',
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         marginLeft: 8,
     },
     version: {
         textAlign: 'center',
         color: '#38383A',
-        fontSize: 12,
+        fontSize: 11,
         marginBottom: 20,
     },
 });

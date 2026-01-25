@@ -54,7 +54,7 @@ function RootLayoutNav() {
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="add-transaction" options={{ presentation: 'modal', title: 'Transaction' }} />
+          <Stack.Screen name="add-transaction" options={{ presentation: 'modal', headerShown: false }} />
         </Stack>
       </ThemeProvider>
     </GestureHandlerRootView>

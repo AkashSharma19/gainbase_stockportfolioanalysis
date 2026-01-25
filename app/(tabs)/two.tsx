@@ -2,7 +2,7 @@ import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Transaction } from '@/types';
 import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { Edit2, Filter, Search, Trash2 } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight, Edit2, Filter, Search, Trash2 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
@@ -105,33 +105,52 @@ export default function HistoryScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: Transaction }) => (
-    <Swipeable
-      renderRightActions={() => renderRightActions(item.id)}
-      friction={2}
-      rightThreshold={40}
-    >
-      <View style={styles.transactionItem}>
-        <View style={styles.leftCol}>
-          <Text style={styles.symbol}>{item.symbol}</Text>
-          <Text style={styles.date}>{format(new Date(item.date), 'MMM dd, yyyy')}</Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.broker}>{item.broker || 'No Broker'}</Text>
-            <Text style={styles.dot}>•</Text>
-            <Text style={styles.currency}>{item.currency || 'INR'}</Text>
+  const renderItem = ({ item }: { item: Transaction }) => {
+    const isBuy = item.type === 'BUY';
+    const totalValue = item.quantity * item.price;
+    const ticker = tickerMap.get(item.symbol.toUpperCase());
+    const displayName = ticker?.['Company Name'] || item.symbol;
+
+    return (
+      <Swipeable
+        renderRightActions={() => renderRightActions(item.id)}
+        friction={2}
+        rightThreshold={40}
+      >
+        <View style={styles.transactionItem}>
+          <View style={[styles.iconContainer, { backgroundColor: isBuy ? 'rgba(52, 199, 89, 0.15)' : 'rgba(255, 59, 48, 0.15)' }]}>
+            {isBuy ? (
+              <ArrowUpRight size={20} color="#34C759" />
+            ) : (
+              <ArrowDownLeft size={20} color="#FF3B30" />
+            )}
+          </View>
+
+          <View style={styles.infoCol}>
+            <Text style={styles.symbol} numberOfLines={1} ellipsizeMode="tail">{displayName}</Text>
+            <View style={styles.dateRow}>
+              <Text style={styles.date}>{format(new Date(item.date), 'MMM dd')}</Text>
+              {item.broker && (
+                <>
+                  <Text style={styles.dot}>•</Text>
+                  <Text style={styles.broker}>{item.broker}</Text>
+                </>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.rightCol}>
+            <Text style={[styles.amountValue, { color: isBuy ? '#FFF' : '#FFF' }]}>
+              {item.currency === 'USD' ? '$' : '₹'}{totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
+            <Text style={styles.quantityDetails}>
+              {item.quantity} @ {item.price.toLocaleString()}
+            </Text>
           </View>
         </View>
-        <View style={styles.rightCol}>
-          <Text style={[styles.type, item.type === 'BUY' ? styles.buy : styles.sell]}>
-            {item.type}
-          </Text>
-          <Text style={styles.amount}>
-            {item.quantity} @ {item.currency === 'USD' ? '$' : '₹'}{item.price.toFixed(2)}
-          </Text>
-        </View>
-      </View>
-    </Swipeable>
-  );
+      </Swipeable>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -330,7 +349,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 36,
     color: '#FFF',
-    fontSize: 16,
+    fontSize: 14,
   },
   filterToggle: {
     padding: 8,
@@ -348,7 +367,7 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     color: '#8E8E93',
-    fontSize: 12,
+    fontSize: 11,
     marginBottom: 8,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -371,10 +390,10 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     color: '#FFF',
-    fontSize: 14,
+    fontSize: 12,
   },
   filterChipTextActive: {
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   listContent: {
     padding: 0,
@@ -387,79 +406,66 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: '#666',
-    fontSize: 16,
+    fontSize: 14,
   },
   transactionItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#2C2C2E',
+    borderBottomColor: '#1C1C1E',
     backgroundColor: '#000',
   },
-  leftCol: {
-    backgroundColor: 'transparent',
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  infoCol: {
     flex: 1,
+    justifyContent: 'center',
   },
   rightCol: {
     alignItems: 'flex-end',
-    backgroundColor: 'transparent',
+    justifyContent: 'center',
   },
   symbol: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFF',
-  },
-  date: {
     fontSize: 14,
-    color: '#8E8E93',
-    marginTop: 2,
+    color: '#FFF',
+    marginBottom: 4,
   },
-  metaRow: {
+  dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
-    backgroundColor: 'transparent',
+  },
+  date: {
+    fontSize: 11,
+    color: '#8E8E93',
   },
   broker: {
-    fontSize: 12,
-    color: '#007AFF',
-    fontWeight: '600',
+    fontSize: 11,
+    color: '#8E8E93',
   },
   dot: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#444',
     marginHorizontal: 6,
   },
-  currency: {
-    fontSize: 12,
-    color: '#8E8E93',
-  },
-  type: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  buy: {
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    color: '#4CAF50',
-  },
-  sell: {
-    backgroundColor: 'rgba(244, 67, 54, 0.1)',
-    color: '#F44336',
-  },
-  amount: {
+  amountValue: {
     fontSize: 14,
-    color: '#FFF',
-    marginTop: 6,
+    marginBottom: 4,
+  },
+  quantityDetails: {
+    fontSize: 11,
+    color: '#8E8E93',
   },
   rightActions: {
     flexDirection: 'row',
-    width: 160,
+    width: 140,
   },
   actionButton: {
     flex: 1,
@@ -474,8 +480,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     color: '#FFF',
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 4,
-    fontWeight: '600',
   },
 });

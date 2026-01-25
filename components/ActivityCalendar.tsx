@@ -1,8 +1,7 @@
-import { Text, View } from '@/components/Themed';
 import { Transaction } from '@/types';
 import { format, parseISO } from 'date-fns';
-import React, { useMemo, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 
 interface ActivityCalendarProps {
@@ -10,100 +9,103 @@ interface ActivityCalendarProps {
 }
 
 export const ActivityCalendar = ({ transactions }: ActivityCalendarProps) => {
-    const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-
-    const markedDates = useMemo(() => {
-        const marks: any = {};
+    // Group transactions by date
+    const dailyStats = useMemo(() => {
+        const stats: Record<string, { buy: number; sell: number }> = {};
 
         transactions.forEach((t) => {
             const dateStr = format(parseISO(t.date), 'yyyy-MM-dd');
-            if (!marks[dateStr]) {
-                marks[dateStr] = { dots: [] };
+            if (!stats[dateStr]) {
+                stats[dateStr] = { buy: 0, sell: 0 };
             }
-
-            const dotColor = t.type === 'BUY' ? '#4CAF50' : '#F44336';
-            // Only add dot if not already present for this type on this day to avoid too many dots
-            if (!marks[dateStr].dots.some((d: any) => d.color === dotColor)) {
-                marks[dateStr].dots.push({ key: t.type, color: dotColor });
+            const value = t.quantity * t.price;
+            if (t.type === 'BUY') {
+                stats[dateStr].buy += value;
+            } else {
+                stats[dateStr].sell += value;
             }
         });
 
-        if (selectedDate) {
-            marks[selectedDate] = {
-                ...marks[selectedDate],
-                selected: true,
-                selectedColor: '#007AFF'
-            };
-        }
+        return stats;
+    }, [transactions]);
 
-        return marks;
-    }, [transactions, selectedDate]);
+    const renderDay = (day: DateData & { state?: string | undefined }) => {
+        const dateStr = day.dateString;
+        const stat = dailyStats[dateStr];
+        const isToday = dateStr === format(new Date(), 'yyyy-MM-dd');
 
-    const monthlySummary = useMemo(() => {
-        if (!selectedDate) return { buyTotal: 0, sellTotal: 0, count: 0 };
+        // Skip rendering for days outside the month if needed, 
+        // but react-native-calendars usually handles 'disabled' state visually.
+        // We'll just render the content if it's a valid day object.
+        if (!day) return <View />;
 
-        const selectedMonth = format(parseISO(selectedDate), 'yyyy-MM');
-        const monthTransactions = transactions.filter(
-            (t) => format(parseISO(t.date), 'yyyy-MM') === selectedMonth
+        const buyValue = stat?.buy || 0;
+        const sellValue = stat?.sell || 0;
+
+        return (
+            <View style={styles.dayContainer}>
+                {/* Top: Sell (Negative) */}
+                <View style={styles.statContainer}>
+                    {sellValue > 0 && (
+                        <Text style={styles.sellText} numberOfLines={1}>
+                            -{sellValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                        </Text>
+                    )}
+                </View>
+
+                {/* Center: Date */}
+                <Text style={[
+                    styles.dayText,
+                    isToday && styles.todayText,
+                    day.state === 'disabled' && styles.disabledText
+                ]}>
+                    {day.day}
+                </Text>
+
+                {/* Bottom: Buy (Positive) */}
+                <View style={styles.statContainer}>
+                    {buyValue > 0 && (
+                        <Text style={styles.buyText} numberOfLines={1}>
+                            +{buyValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                        </Text>
+                    )}
+                </View>
+            </View>
         );
-
-        let buyTotal = 0;
-        let sellTotal = 0;
-
-        monthTransactions.forEach((t) => {
-            if (t.type === 'BUY') buyTotal += t.quantity * t.price;
-            else sellTotal += t.quantity * t.price;
-        });
-
-        return { buyTotal, sellTotal, count: monthTransactions.length };
-    }, [transactions, selectedDate]);
+    };
 
     return (
         <View style={styles.container}>
             <Calendar
+                dayComponent={({ date, state }: { date?: DateData; state?: string }) => {
+                    if (!date) return <View />;
+                    return renderDay({ ...date, state });
+                }}
                 theme={{
                     backgroundColor: '#1C1C1E',
                     calendarBackground: '#1C1C1E',
-                    textSectionTitleColor: '#b6c1cd',
-                    selectedDayBackgroundColor: '#007AFF',
+                    textSectionTitleColor: '#8E8E93',
+                    selectedDayBackgroundColor: 'transparent',
                     selectedDayTextColor: '#ffffff',
-                    todayTextColor: '#007AFF',
+                    todayTextColor: '#2ac4c7',
                     dayTextColor: '#ffffff',
                     textDisabledColor: '#444',
                     dotColor: '#00adf5',
                     selectedDotColor: '#ffffff',
-                    arrowColor: '#007AFF',
-                    monthTextColor: '#ffffff',
+                    arrowColor: '#8E8E93',
+                    monthTextColor: '#8E8E93',
                     indicatorColor: 'white',
-                    textDayFontWeight: '300',
-                    textMonthFontWeight: 'bold',
-                    textDayHeaderFontWeight: '300',
-                    textDayFontSize: 16,
-                    textMonthFontSize: 18,
-                    textDayHeaderFontSize: 14
+                    textDayFontWeight: '400',
+                    textMonthFontWeight: '600',
+                    textDayHeaderFontWeight: '600',
+                    textDayFontSize: 14,
+                    textMonthFontSize: 16,
+                    textDayHeaderFontSize: 11,
                 }}
-                markingType={'multi-dot'}
-                markedDates={markedDates}
-                onDayPress={(day: DateData) => setSelectedDate(day.dateString)}
+                enableSwipeMonths={true}
+                hideExtraDays={true}
+                firstDay={1}
             />
-
-            <View style={styles.summaryBox}>
-
-                <View style={styles.summaryRows}>
-                    <View style={styles.row}>
-                        <Text style={styles.rowLabel}>Monthly Buy</Text>
-                        <Text style={[styles.rowValue, { color: '#4CAF50' }]}>
-                            ₹{monthlySummary.buyTotal.toLocaleString()}
-                        </Text>
-                    </View>
-                    <View style={styles.row}>
-                        <Text style={styles.rowLabel}>Monthly Sell</Text>
-                        <Text style={[styles.rowValue, { color: '#F44336' }]}>
-                            ₹{monthlySummary.sellTotal.toLocaleString()}
-                        </Text>
-                    </View>
-                </View>
-            </View>
         </View>
     );
 };
@@ -111,37 +113,47 @@ export const ActivityCalendar = ({ transactions }: ActivityCalendarProps) => {
 const styles = StyleSheet.create({
     container: {
         backgroundColor: '#1C1C1E',
-        borderRadius: 16,
-        overflow: 'hidden',
-        marginBottom: 20,
-    },
-    summaryBox: {
+        borderRadius: 24,
         padding: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#333',
-        backgroundColor: 'transparent',
+        paddingTop: 20,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#2C2C2E',
     },
-    summaryTitle: {
+
+    dayContainer: {
+        width: 48,
+        height: 48,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    dayText: {
         fontSize: 16,
-        fontWeight: 'bold',
         color: '#FFF',
-        marginBottom: 12,
+        fontWeight: '500',
+        marginBottom: 2,
     },
-    summaryRows: {
-        backgroundColor: 'transparent',
-        gap: 8,
+    todayText: {
+        color: '#2ac4c7', // Cyan-ish for today
+        fontWeight: '700',
     },
-    row: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        backgroundColor: 'transparent',
+    disabledText: {
+        color: '#444',
     },
-    rowLabel: {
-        fontSize: 14,
-        color: '#8E8E93',
+    statContainer: {
+        height: 12, // Fixed height to prevent jitter
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
     },
-    rowValue: {
-        fontSize: 14,
-        fontWeight: '600',
+    sellText: {
+        fontSize: 9,
+        color: '#8E8E93', // Gray as requested for sells (or use Red #FF453A if preferred)
+        textAlign: 'center',
+    },
+    buyText: {
+        fontSize: 9,
+        color: '#2ac4c7', // Cyan/Green for buys
+        textAlign: 'center',
     },
 });

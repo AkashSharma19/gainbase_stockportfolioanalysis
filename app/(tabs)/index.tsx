@@ -1,5 +1,4 @@
 import { ActivityCalendar } from '@/components/ActivityCalendar';
-import { SummaryCard } from '@/components/SummaryCard';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { TrendingUp } from 'lucide-react-native';
 import React, { useEffect, useMemo } from 'react';
@@ -28,56 +27,54 @@ export default function PortfolioScreen() {
     return () => clearInterval(interval);
   }, []);
 
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchTickers();
+    setRefreshing(false);
+  }, [fetchTickers]);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.container}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={fetchTickers} tintColor="#FFF" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFF" />}
         >
           <View style={styles.header}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'transparent' }}>
-              <Text style={styles.greeting}>Net worth</Text>
+            <View style={styles.heroCard}>
+              <View style={styles.heroHeaderRow}>
+                <Text style={styles.heroLabel}>HOLDINGS ({tickers.length})</Text>
+              </View>
 
-            </View>
-            <Text style={styles.totalValue}>₹{summary.totalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-            <View style={styles.overallReturnContainer}>
-              <Text style={[styles.overallReturnText, { color: summary.profitAmount >= 0 ? '#4CAF50' : '#F44336' }]}>
-                {summary.profitAmount >= 0 ? '+' : ''}₹{Math.abs(summary.profitAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                ({summary.profitAmount >= 0 ? '+' : ''}{summary.profitPercentage.toFixed(2)}%)
-              </Text>
-              <Text style={styles.returnLabel}> all time</Text>
+              <Text style={styles.heroValue}>₹{summary.totalValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</Text>
+
+              <View style={styles.dashedDivider} />
+
+              <View style={styles.heroRow}>
+                <Text style={styles.heroRowLabel}>Total returns</Text>
+                <Text style={[styles.heroRowValue, { color: summary.profitAmount >= 0 ? '#4CAF50' : '#F44336' }]}>
+                  {summary.profitAmount >= 0 ? '+' : '-'}₹{Math.abs(summary.profitAmount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ({Math.abs(summary.profitPercentage).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%)
+                </Text>
+              </View>
+
+              <View style={styles.heroRow}>
+                <Text style={styles.heroRowLabel}>Invested</Text>
+                <Text style={styles.heroRowValueWhite}>₹{summary.totalCost.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</Text>
+              </View>
+
+              <View style={[styles.heroRow, { marginBottom: 0 }]}>
+                <Text style={styles.heroRowLabel}>XIRR</Text>
+                <Text style={styles.heroRowValueWhite}>{summary.xirr.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%</Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.summaryGrid}>
-            <SummaryCard
-              label="Total Balance"
-              value={summary.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              prefix="₹"
-            />
-            <SummaryCard
-              label="Total Return"
-              value={summary.totalReturn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              trend={summary.profitPercentage}
-              prefix="₹"
-            />
-            <SummaryCard
-              label="Profit/Loss %"
-              value={summary.profitPercentage.toFixed(2)}
-              prefix=""
-              trend={summary.profitPercentage}
-            />
-            <SummaryCard
-              label="XIRR"
-              value={summary.xirr.toFixed(2)}
-              prefix=""
-              trend={summary.xirr}
-            />
-          </View>
+
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Activity</Text>
+            <Text style={styles.sectionTitle}>Calendar view</Text>
             <ActivityCalendar transactions={transactions} />
           </View>
 
@@ -92,8 +89,8 @@ export default function PortfolioScreen() {
                     <Text style={styles.yearlyYear}>{item.year}</Text>
                     <View style={styles.yearlyRow}>
                       <View style={{ backgroundColor: 'transparent' }}>
-                        <Text style={styles.yearlyLabel}>Investment</Text>
-                        <Text style={styles.yearlyValue}>₹{item.investment.toLocaleString('en-IN')}</Text>
+                        <Text style={styles.yearlyLabel}>Avg. Inv (Monthly)</Text>
+                        <Text style={styles.yearlyValue}>₹{item.averageMonthlyInvestment.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
                       </View>
                       {item.percentageIncrease !== 0 && (
                         <View style={[styles.growthBadge, { backgroundColor: item.percentageIncrease >= 0 ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
@@ -157,64 +154,78 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     backgroundColor: 'transparent',
   },
-  greeting: {
-    fontSize: 14,
+  heroCard: {
+    backgroundColor: '#1C1C1E',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#2C2C2E',
+  },
+  heroHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  heroLabel: {
     color: '#8E8E93',
-    textTransform: 'uppercase',
+    fontSize: 11,
+    fontWeight: '700',
     letterSpacing: 1,
+    textTransform: 'uppercase',
   },
-  liveBadge: {
+  heroIcons: {
     flexDirection: 'row',
+    gap: 8,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#2C2C2E',
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
   },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#4CAF50',
-    marginRight: 6,
-  },
-  liveText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  totalValue: {
-    fontSize: 42,
-    fontWeight: '800',
+  heroValue: {
+    fontSize: 32,
+    fontWeight: '700',
     color: '#FFF',
-    marginTop: 8,
+    marginBottom: 16,
   },
-  overallReturnContainer: {
+  dashedDivider: {
+    height: 1,
+    borderWidth: 1,
+    borderColor: '#333',
+    borderStyle: 'dashed',
+    borderRadius: 1,
+    marginBottom: 16,
+  },
+  heroRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
-    backgroundColor: 'transparent',
+    marginBottom: 12,
   },
-  overallReturnText: {
-    fontSize: 16,
+  heroRowLabel: {
+    color: '#8E8E93',
+    fontSize: 14,
+  },
+  heroRowValue: {
+    fontSize: 14,
     fontWeight: '600',
   },
-  returnLabel: {
-    fontSize: 16,
-    color: '#8E8E93',
+  heroRowValueWhite: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFF',
   },
-  summaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    backgroundColor: 'transparent',
-  },
+
   section: {
     marginTop: 10,
     backgroundColor: 'transparent',
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
     color: '#FFF',
@@ -246,7 +257,7 @@ const styles = StyleSheet.create({
     borderColor: '#333',
   },
   yearlyYear: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#007AFF',
     marginBottom: 12,
@@ -259,14 +270,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   yearlyLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#8E8E93',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   yearlyValue: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFF',
   },
@@ -278,7 +289,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   growthText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     marginLeft: 4,
   },
@@ -301,13 +312,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   assetName: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#FFF',
     flex: 1,
     marginRight: 8,
   },
   assetPercentage: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#8E8E93',
     fontWeight: '600',
   },
@@ -322,7 +333,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   moreAssetsText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#444',
     fontStyle: 'italic',
     marginTop: 4,

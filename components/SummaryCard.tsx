@@ -45,12 +45,12 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     label: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#8E8E93',
         marginBottom: 8,
     },
     value: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: 'bold',
         color: '#FFF',
     },
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
     },
     trendText: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: '600',
     },
 });

@@ -206,9 +206,22 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
                 ? ((yearInvestment - previousYearInvestment) / previousYearInvestment) * 100
                 : 0;
 
+            const currentDate = new Date();
+            const currentYear = currentDate.getFullYear();
+
+            let divisor = 12;
+            if (year === currentYear) {
+                // If it's the current year, divide by the number of months passed so far
+                // getMonth() returns 0 for Jan, so we add 1
+                divisor = currentDate.getMonth() + 1;
+            }
+
+            const averageMonthlyInvestment = yearInvestment / divisor;
+
             analysis.push({
                 year,
                 investment: yearInvestment,
+                averageMonthlyInvestment,
                 percentageIncrease,
                 assetDistribution
             });

@@ -27,7 +27,7 @@ export default function TabLayout() {
           paddingTop: 10,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '600',
         }
       }}>
@@ -35,14 +35,14 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Portfolio',
-          tabBarIcon: ({ color }) => <Briefcase color={color} size={24} />,
+          tabBarIcon: ({ color }) => <Briefcase color={color} size={20} />,
         }}
       />
       <Tabs.Screen
         name="analytics"
         options={{
           title: 'Analytics',
-          tabBarIcon: ({ color, size }) => <TrendingUp color={color} size={24} />,
+          tabBarIcon: ({ color }) => <TrendingUp color={color} size={20} />,
         }}
       />
       <Tabs.Screen
@@ -52,9 +52,9 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <View
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
+                width: 40,
+                height: 40,
+                borderRadius: 20,
                 backgroundColor: '#007AFF',
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -65,7 +65,7 @@ export default function TabLayout() {
                 elevation: 4,
               }}
             >
-              <Plus size={24} color="#FFF" />
+              <Plus size={20} color="#FFF" />
             </View>
           ),
           tabBarLabel: () => null,
@@ -81,14 +81,14 @@ export default function TabLayout() {
         name="two"
         options={{
           title: 'History',
-          tabBarIcon: ({ color, size }) => <History color={color} size={24} />,
+          tabBarIcon: ({ color }) => <History color={color} size={20} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => <User color={color} size={24} />,
+          tabBarIcon: ({ color }) => <User color={color} size={20} />,
         }}
       />
     </Tabs>
