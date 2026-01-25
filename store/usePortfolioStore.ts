@@ -11,6 +11,7 @@ interface PortfolioState {
     updateTransaction: (id: string, transaction: Transaction) => void;
     fetchTickers: () => Promise<void>;
     calculateSummary: () => PortfolioSummary;
+    getAllocationData: (dimension: 'Sector' | 'Company Name' | 'Asset Type' | 'Broker') => { name: string; value: number; percentage: number }[];
 }
 
 export const usePortfolioStore = create<PortfolioState>((set, get) => ({
@@ -82,5 +83,56 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
             totalReturn: profitAmount,
             xirr,
         };
+    },
+    getAllocationData: (dimension) => {
+        const { transactions, tickers } = get();
+        if (transactions.length === 0) return [];
+
+        const tickerMap = new Map(tickers.map(t => [t.Tickers.toUpperCase(), t]));
+        const holdings = new Map<string, number>();
+
+        transactions.forEach(t => {
+            const current = holdings.get(t.symbol) || 0;
+            holdings.set(t.symbol, t.type === 'BUY' ? current + t.quantity : current - t.quantity);
+        });
+
+        const dimensionValueMap = new Map<string, number>();
+        let totalPortfolioValue = 0;
+
+        holdings.forEach((quantity, symbol) => {
+            if (quantity <= 0) return;
+            const ticker = tickerMap.get(symbol.toUpperCase());
+
+            // Find the last transaction for this symbol to get a fallback price
+            const lastTransaction = [...transactions]
+                .reverse()
+                .find(t => t.symbol.toUpperCase() === symbol.toUpperCase());
+
+            const fallbackPrice = lastTransaction ? lastTransaction.price : 0;
+            const price = (ticker && ticker['Current Value']) ? ticker['Current Value'] : fallbackPrice;
+
+            let dimensionValue = 'Unknown';
+            if (dimension === 'Broker' && lastTransaction) {
+                dimensionValue = lastTransaction.broker || 'No Broker';
+            } else if (ticker) {
+                dimensionValue = (ticker as any)[dimension] || 'Unknown';
+            } else if (dimension === 'Company Name') {
+                dimensionValue = ticker ? ticker['Company Name'] : symbol;
+            }
+
+            const value = quantity * price;
+            totalPortfolioValue += value;
+            dimensionValueMap.set(dimensionValue, (dimensionValueMap.get(dimensionValue) || 0) + value);
+        });
+
+        if (totalPortfolioValue === 0) return [];
+
+        return Array.from(dimensionValueMap.entries())
+            .map(([name, value]) => ({
+                name,
+                value,
+                percentage: (value / totalPortfolioValue) * 100
+            }))
+            .sort((a, b) => b.value - a.value);
     }
 }));
