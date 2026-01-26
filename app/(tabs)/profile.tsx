@@ -1,18 +1,78 @@
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { StatusBar } from 'expo-status-bar';
-import { ChevronRight, Download, LogOut, ShieldCheck, Upload } from 'lucide-react-native';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Download, Edit2, FileText, Mail, Phone, Upload, User, X } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as XLSX from 'xlsx';
 
 export default function ProfileScreen() {
     const router = useRouter();
-    const { transactions, tickers, importTransactions, isPrivacyMode } = usePortfolioStore();
+    const {
+        transactions,
+        tickers,
+        importTransactions,
+        isPrivacyMode,
+        calculateSummary,
+        userName,
+        userEmail,
+        userMobile,
+        userImage,
+        updateProfile
+    } = usePortfolioStore();
+
+    const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+
+    // Modal Edit State
+    const [editName, setEditName] = useState(userName);
+    const [editEmail, setEditEmail] = useState(userEmail);
+    const [editMobile, setEditMobile] = useState(userMobile);
+
+    const summary = useMemo(() => calculateSummary(), [transactions, tickers, calculateSummary]);
+
+    const handleOpenEditModal = () => {
+        setEditName(userName);
+        setEditEmail(userEmail);
+        setEditMobile(userMobile);
+        setIsEditModalVisible(true);
+    };
+
+    const handlePickImage = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission Denied', 'We need access to your gallery to change your profile picture.');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.5,
+        });
+
+        if (!result.canceled) {
+            updateProfile({ image: result.assets[0].uri });
+        }
+    };
+
+    const handleSaveProfile = () => {
+        if (!editName.trim()) {
+            Alert.alert('Error', 'Name cannot be empty.');
+            return;
+        }
+        updateProfile({
+            name: editName.trim(),
+            email: editEmail.trim(),
+            mobile: editMobile.trim()
+        });
+        setIsEditModalVisible(false);
+    };
 
     const handleExport = async () => {
         if (transactions.length === 0) {
@@ -163,103 +223,154 @@ export default function ProfileScreen() {
         }
     };
 
-    const menuItems = [
-        {
-            icon: <Download size={20} color="#34C759" />,
-            iconBg: 'rgba(52, 199, 89, 0.15)',
-            label: 'Download Template',
-            sublabel: 'Get Excel structure',
-            onPress: handleDownloadSample
-        },
-        {
-            icon: <Upload size={20} color="#FF9500" />,
-            iconBg: 'rgba(255, 149, 0, 0.15)',
-            label: 'Import Transactions',
-            sublabel: 'Upload Excel file',
-            onPress: handleImport
-        },
-        {
-            icon: <ShieldCheck size={20} color="#007AFF" />,
-            iconBg: 'rgba(0, 122, 255, 0.15)',
-            label: 'Export Data',
-            sublabel: 'Backup your portfolio',
-            onPress: handleExport
-        }
-    ];
-
     return (
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
             <View style={styles.container}>
                 <StatusBar style="light" />
 
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                    {/* Hero Section */}
-                    <View style={styles.heroContainer}>
-                        <LinearGradient
-                            colors={['#1C1C1E', '#000']}
-                            style={styles.heroGradient}
-                        >
+                    {/* Consolidated User Info & Stats Box */}
+                    <View style={styles.userInfoContainer}>
+                        <View style={styles.profileRow}>
                             <View style={styles.avatarContainer}>
-                                <LinearGradient
-                                    colors={['#007AFF', '#5856D6']}
-                                    style={styles.avatarBorder}
-                                >
-                                    <View style={styles.avatarInner}>
-                                        <Text style={styles.avatarText}>AS</Text>
-                                    </View>
-                                </LinearGradient>
-                                <View style={styles.proBadge}>
-                                    <Text style={styles.proText}>PRO</Text>
-                                </View>
+                                <Image
+                                    source={{ uri: userImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userName || 'User'}` }}
+                                    style={styles.avatar}
+                                />
                             </View>
-
-                            <Text style={styles.name}>Akash Sharma</Text>
-                            <Text style={styles.email}>akash@example.com</Text>
-
-                            <View style={styles.statsRow}>
-                                <View style={styles.statItem}>
-                                    <Text style={styles.statValue}>{isPrivacyMode ? '****' : transactions.length}</Text>
-                                    <Text style={styles.statLabel}>Transactions</Text>
-                                </View>
-                                <View style={styles.statDivider} />
-                                <View style={styles.statItem}>
-                                    <Text style={styles.statValue}>{isPrivacyMode ? '****' : tickers.length}</Text>
-                                    <Text style={styles.statLabel}>Holdings</Text>
-                                </View>
+                            <View style={styles.nameContainer}>
+                                <Text style={styles.nameText}>{userName || 'Set up your profile'}</Text>
+                                {userEmail ? (
+                                    <Text style={styles.emailText} numberOfLines={1}>{userEmail}</Text>
+                                ) : (
+                                    <Text style={styles.emailText}>Tap the edit icon to get started</Text>
+                                )}
                             </View>
-                        </LinearGradient>
-                    </View>
-
-                    {/* Data Management Section */}
-                    <Text style={styles.sectionTitle}>Data Management</Text>
-                    <View style={styles.menuGroup}>
-                        {menuItems.map((item, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                style={[styles.menuItem, index === menuItems.length - 1 && styles.menuItemLast]}
-                                onPress={item.onPress}
-                                activeOpacity={0.7}
-                            >
-                                <View style={[styles.iconBox, { backgroundColor: item.iconBg }]}>
-                                    {item.icon}
-                                </View>
-                                <View style={styles.menuTextContainer}>
-                                    <Text style={styles.menuLabel}>{item.label}</Text>
-                                    {item.sublabel && <Text style={styles.menuSublabel}>{item.sublabel}</Text>}
-                                </View>
-                                <ChevronRight size={18} color="#555" />
+                            <TouchableOpacity style={styles.mainEditIcon} onPress={handleOpenEditModal}>
+                                <Edit2 size={20} color="#007AFF" />
                             </TouchableOpacity>
-                        ))}
+                        </View>
+
+                        <View style={styles.statsBar}>
+                            <View style={styles.statItem}>
+                                <Text style={styles.statValue}>{isPrivacyMode ? '****' : transactions.length}</Text>
+                                <Text style={styles.statLabel}>Transactions</Text>
+                            </View>
+                            <View style={styles.statItem}>
+                                <Text style={styles.statValue}>
+                                    {isPrivacyMode ? '****' : `₹${summary.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0, notation: "compact", compactDisplay: "short" })}`}
+                                </Text>
+                                <Text style={styles.statLabel}>Net assets</Text>
+                            </View>
+                        </View>
                     </View>
 
-                    {/* Logout Button */}
-                    <TouchableOpacity style={styles.logoutButton} activeOpacity={0.8}>
-                        <LogOut size={20} color="#FF453A" />
-                        <Text style={styles.logoutText}>Log Out</Text>
-                    </TouchableOpacity>
+                    {/* Action Grid */}
+                    <View style={styles.actionGridContainer}>
+                        <View style={styles.gridRow}>
+                            <TouchableOpacity style={styles.gridButton} onPress={handleDownloadSample}>
+                                <View style={[styles.gridIconBox, { backgroundColor: '#2C2C2E' }]}>
+                                    <FileText size={24} color="#007AFF" />
+                                </View>
+                                <Text style={styles.gridLabel}>Sample</Text>
+                            </TouchableOpacity>
 
-                    <Text style={styles.versionText}>v1.0.0 • Build 2024</Text>
+                            <TouchableOpacity style={styles.gridButton} onPress={handleImport}>
+                                <View style={[styles.gridIconBox, { backgroundColor: '#2C2C2E' }]}>
+                                    <Upload size={24} color="#007AFF" />
+                                </View>
+                                <Text style={styles.gridLabel}>Import</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.gridButton} onPress={handleExport}>
+                                <View style={[styles.gridIconBox, { backgroundColor: '#2C2C2E' }]}>
+                                    <Download size={24} color="#007AFF" />
+                                </View>
+                                <Text style={styles.gridLabel}>Export</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                 </ScrollView>
+
+                {/* Edit Profile Modal */}
+                <Modal
+                    visible={isEditModalVisible}
+                    animationType="slide"
+                    transparent={true}
+                    onRequestClose={() => setIsEditModalVisible(false)}
+                >
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={styles.modalOverlay}
+                    >
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Edit Profile</Text>
+                                <TouchableOpacity onPress={() => setIsEditModalVisible(false)} style={styles.closeButton}>
+                                    <X size={24} color="#FFF" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.modalBody}>
+                                <TouchableOpacity style={styles.modalAvatarContainer} onPress={handlePickImage}>
+                                    <Image
+                                        source={{ uri: userImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userName || 'User'}` }}
+                                        style={styles.modalAvatar}
+                                    />
+                                    <View style={styles.editImageOverlay}>
+                                        <Edit2 size={16} color="#FFF" />
+                                    </View>
+                                </TouchableOpacity>
+
+                                <View style={styles.inputGroup}>
+                                    <View style={styles.inputIcon}>
+                                        <User size={20} color="#666" />
+                                    </View>
+                                    <TextInput
+                                        style={styles.modalInput}
+                                        value={editName}
+                                        onChangeText={setEditName}
+                                        placeholder="Name"
+                                        placeholderTextColor="#666"
+                                    />
+                                </View>
+
+                                <View style={styles.inputGroup}>
+                                    <View style={styles.inputIcon}>
+                                        <Mail size={20} color="#666" />
+                                    </View>
+                                    <TextInput
+                                        style={styles.modalInput}
+                                        value={editEmail}
+                                        onChangeText={setEditEmail}
+                                        placeholder="Email"
+                                        placeholderTextColor="#666"
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                    />
+                                </View>
+
+                                <View style={styles.inputGroup}>
+                                    <View style={styles.inputIcon}>
+                                        <Phone size={20} color="#666" />
+                                    </View>
+                                    <TextInput
+                                        style={styles.modalInput}
+                                        value={editMobile}
+                                        onChangeText={setEditMobile}
+                                        placeholder="Mobile"
+                                        placeholderTextColor="#666"
+                                        keyboardType="phone-pad"
+                                    />
+                                </View>
+
+                                <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
+                                    <Text style={styles.saveButtonText}>Save Changes</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </KeyboardAvoidingView>
+                </Modal>
             </View>
         </SafeAreaView>
     );
@@ -274,167 +385,217 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#000',
     },
-    scrollContent: {
-        padding: 20,
-    },
-    heroContainer: {
-        marginBottom: 32,
-        borderRadius: 24,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: '#1C1C1E',
-    },
-    heroGradient: {
-        padding: 24,
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 15,
     },
-    avatarContainer: {
-        position: 'relative',
-        marginBottom: 16,
-    },
-    avatarBorder: {
-        width: 84,
-        height: 84,
-        borderRadius: 42,
-        padding: 2,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    avatarInner: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#151515',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    avatarText: {
-        fontSize: 28,
-        fontWeight: '700',
-        color: '#FFF',
-    },
-    proBadge: {
-        position: 'absolute',
-        bottom: -6,
-        alignSelf: 'center',
-        backgroundColor: '#007AFF',
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 8,
-        borderWidth: 2,
-        borderColor: '#000',
-    },
-    proText: {
-        color: '#FFF',
-        fontSize: 10,
-        fontWeight: '800',
-    },
-    name: {
+    headerText: {
         fontSize: 22,
-        fontWeight: '700',
+        fontWeight: '400',
         color: '#FFF',
-        marginBottom: 4,
     },
-    email: {
-        fontSize: 13,
-        color: '#8E8E93',
+    headerIcons: {
+        flexDirection: 'row',
+        gap: 15,
+    },
+    headerIconButton: {
+        padding: 4,
+    },
+    scrollContent: {
+        paddingHorizontal: 16,
+        paddingBottom: 40,
+    },
+    userInfoContainer: {
+        backgroundColor: '#1C1C1E',
+        borderRadius: 24,
+        padding: 20,
         marginBottom: 20,
+        marginTop: 10,
+        borderWidth: 1,
+        borderColor: '#2C2C2E',
     },
-    statsRow: {
+    profileRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderRadius: 12,
-        paddingVertical: 12,
-        paddingHorizontal: 24,
+        marginBottom: 30,
+        paddingHorizontal: 4,
+    },
+    avatarContainer: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        overflow: 'hidden',
+        backgroundColor: '#1C1C1E',
+        marginRight: 16,
+    },
+    avatar: {
         width: '100%',
+        height: '100%',
+    },
+    nameContainer: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    nameText: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#FFF',
+    },
+    emailText: {
+        fontSize: 14,
+        color: '#8E8E93',
+        marginTop: 2,
+    },
+    mainEditIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#2C2C2E',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    statsBar: {
+        flexDirection: 'row',
         justifyContent: 'space-around',
+        paddingHorizontal: 10,
     },
     statItem: {
         alignItems: 'center',
     },
     statValue: {
         fontSize: 18,
-        fontWeight: '700',
+        fontWeight: '600',
         color: '#FFF',
+        marginBottom: 4,
     },
     statLabel: {
-        fontSize: 11,
-        color: '#8E8E93',
-        marginTop: 2,
-    },
-    statDivider: {
-        width: 1,
-        height: 24,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-    },
-    sectionTitle: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#8E8E93',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        marginLeft: 12,
-        marginBottom: 8,
-    },
-    menuGroup: {
-        backgroundColor: '#1C1C1E',
-        borderRadius: 16,
-        overflow: 'hidden',
-        marginBottom: 32,
-    },
-    menuItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#2C2C2E',
-    },
-    menuItemLast: {
-        borderBottomWidth: 0,
-    },
-    iconBox: {
-        width: 36,
-        height: 36,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 16,
-    },
-    menuTextContainer: {
-        flex: 1,
-    },
-    menuLabel: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#FFF',
-        marginBottom: 2,
-    },
-    menuSublabel: {
         fontSize: 12,
-        color: '#666',
+        color: '#8E8E93',
     },
-    logoutButton: {
+    actionGridContainer: {
+        backgroundColor: '#1C1C1E',
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#2C2C2E',
+    },
+    gridRow: {
+        flexDirection: 'row',
+        justifyContent: 'flex-start',
+        gap: 20,
+    },
+    gridButton: {
+        alignItems: 'center',
+        width: 70,
+    },
+    gridIconBox: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 8,
+        backgroundColor: '#2C2C2E'
+    },
+    gridLabel: {
+        fontSize: 12,
+        color: '#FFF',
+        fontWeight: '400',
+    },
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#1C1C1E',
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+        maxHeight: '90%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 24,
+        borderBottomWidth: 1,
+        borderBottomColor: '#1C1C1E',
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#FFF',
+    },
+    closeButton: {
+        padding: 4,
+    },
+    modalBody: {
+        padding: 24,
+        alignItems: 'center',
+    },
+    modalAvatarContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        marginBottom: 30,
+        position: 'relative',
+    },
+    modalAvatar: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 50,
+    },
+    editImageOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        backgroundColor: '#007AFF',
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 3,
+        borderColor: '#1C1C1E',
+    },
+    inputGroup: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
         backgroundColor: '#1C1C1E',
-        borderRadius: 16,
-        padding: 16,
+        borderRadius: 12,
+        marginBottom: 16,
+        width: '100%',
+        paddingHorizontal: 16,
+        height: 56,
         borderWidth: 1,
-        borderColor: 'rgba(255, 69, 58, 0.2)',
+        borderColor: '#333',
     },
-    logoutText: {
-        color: '#FF453A',
+    inputIcon: {
+        marginRight: 12,
+    },
+    modalInput: {
+        flex: 1,
+        color: '#FFF',
+        fontSize: 16,
+    },
+    saveButton: {
+        backgroundColor: '#007AFF',
+        borderRadius: 12,
+        height: 56,
+        width: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    saveButtonText: {
+        color: '#FFF',
         fontSize: 16,
         fontWeight: '600',
-        marginLeft: 8,
-    },
-    versionText: {
-        textAlign: 'center',
-        color: '#333',
-        fontSize: 11,
-        marginTop: 24,
-        marginBottom: 10,
     }
 });
