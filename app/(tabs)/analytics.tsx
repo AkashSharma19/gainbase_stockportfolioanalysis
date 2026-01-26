@@ -1,6 +1,6 @@
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowUpDown } from 'lucide-react-native';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
@@ -21,15 +21,8 @@ const GRADIENTS = {
 type Dimension = 'Sector' | 'Company Name' | 'Asset Type' | 'Broker';
 
 export default function AnalyticsScreen() {
-    /**
-     * Analytics Screen Refinements
-     * - Clean Layout: Removed the redundant "Portfolio Spread" heading.
-     * - Minimalist List: Removed the colored dots from the distribution list.
-     * - Text Wrapping: Item names now wrap to 2 lines if they are long.
-     */
     const fetchTickers = usePortfolioStore((state) => state.fetchTickers);
     const getAllocationData = usePortfolioStore((state) => state.getAllocationData);
-    const getHoldingsData = usePortfolioStore((state) => state.getHoldingsData);
     const transactions = usePortfolioStore((state) => state.transactions);
     const tickers = usePortfolioStore((state) => state.tickers);
     const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
@@ -37,7 +30,7 @@ export default function AnalyticsScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedDimension, setSelectedDimension] = useState<Dimension>('Sector');
     const [holdingsViewMode, setHoldingsViewMode] = useState<'Current' | 'Returns' | 'Contribution'>('Current');
-    const [searchQuery, setSearchQuery] = useState('');
+    const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('DESC');
 
     useEffect(() => {
         fetchTickers();
@@ -55,14 +48,34 @@ export default function AnalyticsScreen() {
     );
 
     const filteredAllocation = useMemo(() => {
-        let data = allocation;
-        if (searchQuery) {
-            data = data.filter(item =>
-                item.name.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-        }
+        let data = [...allocation];
+
+        data.sort((a, b) => {
+            let valA = 0;
+            let valB = 0;
+
+            if (holdingsViewMode === 'Returns') {
+                valA = a.pnl || 0;
+                valB = b.pnl || 0;
+            } else if (holdingsViewMode === 'Contribution') {
+                valA = a.percentage || 0;
+                valB = b.percentage || 0;
+            } else {
+                // Default: 'Current'
+                valA = a.value || 0;
+                valB = b.value || 0;
+            }
+
+            if (valA !== valB) {
+                return sortDirection === 'DESC' ? valB - valA : valA - valB;
+            }
+
+            // Stable secondary sort by name if values are identical
+            return a.name.localeCompare(b.name);
+        });
+
         return data;
-    }, [allocation, searchQuery]);
+    }, [allocation, sortDirection, holdingsViewMode]);
 
     const chartData = useMemo(() => {
         return allocation.map((item, index) => ({
@@ -150,23 +163,36 @@ export default function AnalyticsScreen() {
                         </View>
                     </LinearGradient>
 
-                    {/* Unified Actions Bar (Toggle) */}
-                    <View style={[styles.holdingsHeader, { justifyContent: 'flex-end' }]}>
-                        <TouchableOpacity
-                            style={styles.viewModeToggle}
-                            onPress={() => {
-                                if (holdingsViewMode === 'Current') setHoldingsViewMode('Returns');
-                                else if (holdingsViewMode === 'Returns') setHoldingsViewMode('Contribution');
-                                else setHoldingsViewMode('Current');
-                            }}
-                        >
-                            <ArrowUpDown size={14} color="#FFF" />
-                            <Text style={styles.viewModeText}>
-                                {holdingsViewMode === 'Current' ? 'Current (Invested)' :
-                                    holdingsViewMode === 'Returns' ? 'Returns (%)' :
-                                        'Contribution (Current)'}
-                            </Text>
-                        </TouchableOpacity>
+                    {/* Unified Actions Bar (Sort & View Mode) */}
+                    <View style={styles.holdingsHeader}>
+                        <View style={styles.actionsBarLeft}>
+                            <TouchableOpacity
+                                style={styles.actionIconButton}
+                                onPress={() => setSortDirection(prev => prev === 'DESC' ? 'ASC' : 'DESC')}
+                            >
+                                {sortDirection === 'DESC' ? (
+                                    <ArrowDown size={14} color="#FFF" />
+                                ) : (
+                                    <ArrowUp size={14} color="#FFF" />
+                                )}
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.viewModeToggle}
+                                onPress={() => {
+                                    if (holdingsViewMode === 'Current') setHoldingsViewMode('Returns');
+                                    else if (holdingsViewMode === 'Returns') setHoldingsViewMode('Contribution');
+                                    else setHoldingsViewMode('Current');
+                                }}
+                            >
+                                <ArrowUpDown size={14} color="#FFF" />
+                                <Text style={styles.viewModeText}>
+                                    {holdingsViewMode === 'Current' ? 'Current (Invested)' :
+                                        holdingsViewMode === 'Returns' ? 'Returns (%)' :
+                                            'Contribution (Current)'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     {/* Unified Distribution/Holdings List */}
@@ -346,62 +372,47 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 16,
     },
-    holdingsLeft: {
+    actionsBarLeft: {
         flexDirection: 'row',
-        gap: 12,
+        alignItems: 'center',
+        gap: 8,
     },
-    iconButtonSmall: {
-        width: 32,
-        height: 32,
-        borderRadius: 8,
-        backgroundColor: '#1C1C1E',
+    actionIconButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: '#2C2C2E',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#2C2C2E',
+        borderColor: '#3C3C3E',
     },
     viewModeToggle: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
         backgroundColor: '#2C2C2E',
-        paddingHorizontal: 12,
+        paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 20,
+        height: 36,
+        borderWidth: 1,
+        borderColor: '#3C3C3E',
     },
     viewModeText: {
         color: '#FFF',
         fontSize: 12,
         fontWeight: '400',
     },
-    searchBarContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#1C1C1E',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#2C2C2E',
-        gap: 8,
-    },
-    searchBarInput: {
-        flex: 1,
-        color: '#FFF',
-        fontSize: 14,
-        height: 24,
-        padding: 0,
-    },
     holdingsList: {
         backgroundColor: '#1C1C1E',
-        borderRadius: 16,
+        borderRadius: 20,
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: '#2C2C2E',
     },
     holdingItem: {
-        padding: 16,
+        padding: 18,
         alignSelf: 'stretch',
     },
     holdingItemBorder: {
@@ -418,20 +429,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 12,
         flex: 1,
-        marginRight: 20, // More space for the right-side values
+        marginRight: 10,
     },
     holdingIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
+        width: 44,
+        height: 44,
+        borderRadius: 14,
         backgroundColor: '#2C2C2E',
         justifyContent: 'center',
         alignItems: 'center',
     },
     iconLetter: {
         color: '#FFF',
-        fontSize: 16,
-        fontWeight: '400',
+        fontSize: 18,
+        fontWeight: '500',
     },
     holdingInfo: {
         justifyContent: 'center',
@@ -440,7 +451,7 @@ const styles = StyleSheet.create({
     },
     holdingSymbol: {
         color: '#FFF',
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: '400',
         flexShrink: 1,
     },
@@ -456,7 +467,7 @@ const styles = StyleSheet.create({
     },
     primaryValue: {
         color: '#FFF',
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: '400',
     },
     secondaryValue: {
@@ -465,16 +476,15 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     contributionProgressBarContainer: {
-        height: 4,
+        height: 3,
         backgroundColor: '#2C2C2E',
-        borderRadius: 2,
-        marginTop: 12,
-        marginHorizontal: 4,
+        borderRadius: 1.5,
+        marginTop: 14,
+        marginHorizontal: 0,
         overflow: 'hidden',
     },
     contributionProgressBarFill: {
         height: '100%',
-        backgroundColor: '#8E8E93', // Simple grey for the progress bar
-        borderRadius: 2,
+        borderRadius: 1.5,
     },
 });
