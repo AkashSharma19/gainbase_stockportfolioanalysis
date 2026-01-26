@@ -1,4 +1,5 @@
 import { ActivityCalendar } from '@/components/ActivityCalendar';
+import TopMovers from '@/components/TopMovers';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { ArrowRight, ChevronDown, Eye, EyeOff, TrendingUp } from 'lucide-react-native';
 import React, { useEffect, useMemo } from 'react';
@@ -57,6 +58,7 @@ export default function PortfolioScreen() {
           showsHorizontalScrollIndicator={false}
         >
           <View style={styles.header}>
+            <TopMovers />
             <View style={styles.heroCard}>
               <View style={styles.heroHeaderRow}>
                 <Text style={styles.heroLabel}>HOLDINGS ({tickers.length})</Text>
