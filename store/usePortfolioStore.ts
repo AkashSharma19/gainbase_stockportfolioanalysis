@@ -173,6 +173,15 @@ export const usePortfolioStore = create<PortfolioState>()(
                     totalPortfolioValue += currentValue;
                 });
 
+                return Object.entries(groups).map(([name, data]) => ({
+                    name,
+                    value: data.value,
+                    totalCost: data.cost,
+                    quantity: data.quantity,
+                    pnl: data.value - data.cost,
+                    pnlPercentage: data.cost > 0 ? ((data.value - data.cost) / data.cost) * 100 : 0,
+                    percentage: totalPortfolioValue > 0 ? (data.value / totalPortfolioValue) * 100 : 0
+                })).sort((a, b) => b.value - a.value);
             },
             getHoldingsData: () => {
                 const { transactions, tickers } = get();
