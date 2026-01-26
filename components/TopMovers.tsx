@@ -1,7 +1,7 @@
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { default as React, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TopMovers() {
@@ -13,17 +13,31 @@ export default function TopMovers() {
 
     const topMovers = useMemo(() => {
         const holdings = getHoldingsData();
-        if (holdings.length === 0) return [];
+        if (!holdings || holdings.length === 0) return [];
 
         // Sort by Daily Change Percentage
         const sorted = [...holdings]
-            .sort((a, b) => b.dayChangePercentage - a.dayChangePercentage);
+            .sort((a, b) => (b.dayChangePercentage || 0) - (a.dayChangePercentage || 0));
 
-        // Take top 8 performers
-        return sorted.slice(0, 8);
+        // Take top performers
+        return sorted.slice(0, 10);
     }, [getHoldingsData, transactions, tickers]);
 
-    if (topMovers.length === 0) return null;
+    if (transactions.length === 0) return null;
+
+    // If we have transactions but no top movers calculated yet (e.g. initial load), 
+    // keep the space or show a subtle placeholder instead of returning null
+    // This prevents the UI from jumping once data loads
+    if (topMovers.length === 0) {
+        return (
+            <View style={styles.container}>
+                <Text style={styles.sectionTitle}>TOP PERFORMERS</Text>
+                <View style={[styles.listContent, { height: 80, justifyContent: 'center' }]}>
+                    <Text style={{ color: '#444', fontSize: 12 }}>Loading performers...</Text>
+                </View>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
