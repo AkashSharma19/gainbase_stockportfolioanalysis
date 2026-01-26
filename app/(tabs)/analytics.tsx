@@ -10,7 +10,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const CHART_COLORS = [
     '#0A84FF', '#5E5CE6', '#BF5AF2', '#FF2D55', '#FF9F0A',
-    '#FFD60A', '#30D158', '#64D2FF', '#8E8E93', '#1C1C1E'
+    '#FFD60A', '#30D158', '#64D2FF', '#FF375F', '#32D74B'
 ];
 
 const GRADIENTS = {
