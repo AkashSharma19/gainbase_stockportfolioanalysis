@@ -2,6 +2,7 @@ import { ActivityCalendar } from '@/components/ActivityCalendar';
 import ShareableCard from '@/components/ShareableCard';
 import TopMovers from '@/components/TopMovers';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { ArrowRight, ChevronDown, Eye, EyeOff, Share2, TrendingUp } from 'lucide-react-native';
@@ -52,12 +53,14 @@ export default function PortfolioScreen() {
   };
 
   const onRefresh = React.useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setRefreshing(true);
     await fetchTickers();
     setRefreshing(false);
   }, [fetchTickers]);
 
   const handleShare = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (isPrivacyMode) {
       Alert.alert('Privacy Mode Active', 'Please disable privacy mode to share your portfolio performance.');
       return;
@@ -117,7 +120,13 @@ export default function PortfolioScreen() {
               <View style={styles.heroHeaderRow}>
                 <Text style={styles.heroLabel}>HOLDINGS ({tickers.length})</Text>
                 <View style={styles.heroIcons}>
-                  <TouchableOpacity onPress={togglePrivacyMode} style={styles.iconButton}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      togglePrivacyMode();
+                    }}
+                    style={styles.iconButton}
+                  >
                     {isPrivacyMode ? <EyeOff size={16} color="#FFF" /> : <Eye size={16} color="#FFF" />}
                   </TouchableOpacity>
                   <TouchableOpacity onPress={handleShare} style={styles.iconButton}>

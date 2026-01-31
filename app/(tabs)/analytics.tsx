@@ -1,4 +1,5 @@
 import { usePortfolioStore } from '@/store/usePortfolioStore';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -37,6 +38,7 @@ export default function AnalyticsScreen() {
     }, []);
 
     const onRefresh = React.useCallback(async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setRefreshing(true);
         await fetchTickers();
         setRefreshing(false);
@@ -114,7 +116,10 @@ export default function AnalyticsScreen() {
                             <TouchableOpacity
                                 key={dim.id}
                                 style={[styles.selectorButton, isActive && styles.selectorButtonActive]}
-                                onPress={() => setSelectedDimension(dim.id)}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    setSelectedDimension(dim.id);
+                                }}
                             >
                                 <Text style={[styles.selectorText, isActive && styles.selectorTextActive]}>
                                     {dim.label}
@@ -167,7 +172,10 @@ export default function AnalyticsScreen() {
                     <View style={styles.holdingsHeader}>
                         <TouchableOpacity
                             style={styles.actionIconButton}
-                            onPress={() => setSortDirection(prev => prev === 'DESC' ? 'ASC' : 'DESC')}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setSortDirection(prev => prev === 'DESC' ? 'ASC' : 'DESC');
+                            }}
                         >
                             {sortDirection === 'DESC' ? (
                                 <ArrowDown size={14} color="#FFF" />
@@ -179,6 +187,7 @@ export default function AnalyticsScreen() {
                         <TouchableOpacity
                             style={styles.viewModeToggle}
                             onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 if (holdingsViewMode === 'Current') setHoldingsViewMode('Returns');
                                 else if (holdingsViewMode === 'Returns') setHoldingsViewMode('Contribution');
                                 else setHoldingsViewMode('Current');

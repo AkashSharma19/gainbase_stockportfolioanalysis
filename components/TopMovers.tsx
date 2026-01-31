@@ -1,4 +1,5 @@
 import { usePortfolioStore } from '@/store/usePortfolioStore';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
@@ -81,7 +82,10 @@ export default function TopMovers() {
                         key={item.id}
                         style={styles.storyWrapper}
                         activeOpacity={0.7}
-                        onPress={() => router.push(item.route as any)}
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            router.push(item.route as any);
+                        }}
                     >
                         <LinearGradient
                             colors={item.color as any}

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Tabs, useRouter } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import React from 'react';
@@ -10,6 +11,10 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
 
+  const handleHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: '#000' }}>
       <Tabs
@@ -18,6 +23,20 @@ export default function TabLayout() {
           tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.5)',
           headerShown: false,
           tabBarShowLabel: true,
+          tabBarButton: (props) => {
+            const { delayLongPress, ...rest } = props as any;
+            return (
+              <TouchableOpacity
+                {...rest}
+                delayLongPress={delayLongPress ?? undefined}
+                activeOpacity={0.7}
+                onPress={(e) => {
+                  handleHaptic();
+                  props.onPress?.(e);
+                }}
+              />
+            );
+          },
           tabBarStyle: {
             backgroundColor: '#000',
             height: Platform.OS === 'ios' ? 90 : 75,
@@ -89,7 +108,10 @@ export default function TabLayout() {
 
       {/* Floating Action Button */}
       <TouchableOpacity
-        onPress={() => router.push('/add-transaction')}
+        onPress={() => {
+          handleHaptic();
+          router.push('/add-transaction');
+        }}
         activeOpacity={0.8}
         style={{
           position: 'absolute',
