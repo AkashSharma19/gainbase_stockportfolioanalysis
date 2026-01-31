@@ -117,11 +117,11 @@ export default function PortfolioScreen() {
               <View style={styles.heroHeaderRow}>
                 <Text style={styles.heroLabel}>HOLDINGS ({tickers.length})</Text>
                 <View style={styles.heroIcons}>
-                  <TouchableOpacity onPress={handleShare} style={styles.iconButton}>
-                    <Share2 size={16} color="#FFF" />
-                  </TouchableOpacity>
                   <TouchableOpacity onPress={togglePrivacyMode} style={styles.iconButton}>
                     {isPrivacyMode ? <EyeOff size={16} color="#FFF" /> : <Eye size={16} color="#FFF" />}
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleShare} style={styles.iconButton}>
+                    <Share2 size={16} color="#FFF" />
                   </TouchableOpacity>
                 </View>
               </View>
