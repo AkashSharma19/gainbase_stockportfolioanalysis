@@ -16,7 +16,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.akashsharma.gainbase",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true,
+        "UIBackgroundModes": [
+          "fetch"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
