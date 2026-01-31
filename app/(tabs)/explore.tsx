@@ -5,6 +5,7 @@ import { TrendingUp } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
+    Dimensions,
     FlatList,
     RefreshControl,
     ScrollView,
@@ -14,7 +15,10 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const CHART_COLORS = [
     '#0A84FF', '#5E5CE6', '#BF5AF2', '#FF2D55', '#FF9F0A',
@@ -51,7 +55,7 @@ export default function ExploreScreen() {
     }, [fetchTickers]);
 
     const filteredTickers = useMemo(() => {
-        let result = [...tickers];
+        let result = tickers.filter(t => t.Tickers !== 'INDEXNSE:NIFTY_50' && t.Tickers !== 'INDEXBOM:SENSEX' && t.Tickers !== '.IXIC'); // Filter out Indices
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             result = result.filter(
@@ -82,6 +86,14 @@ export default function ExploreScreen() {
             return bChange - aChange;
         });
     }, [tickers, searchQuery, filterAssetType, filterSector]);
+
+    const indicesData = useMemo(() => {
+        return {
+            nifty50: tickers.find(t => t.Tickers === 'INDEXNSE:NIFTY_50'),
+            sensex: tickers.find(t => t.Tickers === 'INDEXBOM:SENSEX'),
+            nasdaq: tickers.find(t => t.Tickers === '.IXIC')
+        };
+    }, [tickers]);
 
     const uniqueAssetTypes = useMemo(() => {
         const assetTypes = new Set<string>(tickers.map(t => t['Asset Type']).filter((t): t is string => !!t));
@@ -127,6 +139,73 @@ export default function ExploreScreen() {
                     </View>
                 </View>
             </TouchableOpacity>
+        );
+    };
+
+    const renderTickerRibbon = () => {
+        const { nifty50, sensex, nasdaq } = indicesData;
+        if ((!nifty50 && !sensex && !nasdaq) || searchQuery || filterAssetType || filterSector) return null;
+
+        const indices = [
+            { label: 'NIFTY 50', data: nifty50 },
+            { label: 'SENSEX', data: sensex },
+            { label: 'NASDAQ', data: nasdaq },
+        ].filter(i => i.data);
+
+        // Repeat the list to create a seamless loop
+        const duplicatedIndices = [...indices, ...indices, ...indices, ...indices];
+
+        const translateX = useSharedValue(0);
+        const itemWidth = 240; // Adjusted for pill width + margin
+        const totalWidth = indices.length * itemWidth;
+
+        useEffect(() => {
+            translateX.value = withRepeat(
+                withTiming(-totalWidth, {
+                    duration: 10000, // Adjust speed here
+                    easing: Easing.linear,
+                }),
+                -1, // Infinite repeat
+                false // Do not reverse
+            );
+        }, [totalWidth]);
+
+        const animatedStyle = useAnimatedStyle(() => {
+            return {
+                transform: [{ translateX: translateX.value }],
+            };
+        });
+
+        const renderTickerItem = (item: any, index: number) => {
+            const data = item.data;
+            const currentValue = data['Current Value'] || 0;
+            const yesterdayClose = data['Yesterday Close'] || currentValue;
+            const change = currentValue - yesterdayClose;
+            const changePercentage = yesterdayClose !== 0 ? (change / yesterdayClose) * 100 : 0;
+            const isPositive = change >= 0;
+
+            return (
+                <View key={index} style={styles.tickerItem}>
+                    <Text style={styles.tickerLabel}>{item.label}</Text>
+                    <Text style={styles.tickerPrice}>
+                        {currentValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </Text>
+                    <View style={styles.tickerChangeContainer}>
+                        <TrendingUp size={12} color={isPositive ? '#4CAF50' : '#F44336'} style={{ marginRight: 2, transform: [{ rotate: isPositive ? '0deg' : '180deg' }] }} />
+                        <Text style={[styles.tickerChange, { color: isPositive ? '#4CAF50' : '#F44336' }]}>
+                            {Math.abs(changePercentage).toFixed(2)}%
+                        </Text>
+                    </View>
+                </View>
+            );
+        };
+
+        return (
+            <View style={styles.ribbonContainer}>
+                <Animated.View style={[styles.ribbonContent, animatedStyle]}>
+                    {duplicatedIndices.map((item, index) => renderTickerItem(item, index))}
+                </Animated.View>
+            </View>
         );
     };
 
@@ -228,6 +307,7 @@ export default function ExploreScreen() {
                         data={filteredTickers}
                         keyExtractor={(item) => item.Tickers}
                         renderItem={renderItem}
+                        ListHeaderComponent={renderTickerRibbon}
                         contentContainerStyle={styles.listContent}
                         showsVerticalScrollIndicator={false}
                         refreshControl={
@@ -406,5 +486,47 @@ const styles = StyleSheet.create({
     emptyText: {
         color: '#8E8E93',
         fontSize: 16,
+    },
+    // Ticker Ribbon Styles
+    ribbonContainer: {
+        height: 50,
+        backgroundColor: 'transparent',
+        marginBottom: 20,
+        overflow: 'hidden',
+        justifyContent: 'center',
+    },
+    ribbonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+    },
+    tickerItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginRight: 12,
+        width: 228, // Matches itemWidth (240) - margin (12)
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        backgroundColor: '#2C2C2E',
+        borderRadius: 20,
+    },
+    tickerLabel: {
+        color: '#FFF',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    tickerPrice: {
+        color: '#FFF',
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    tickerChangeContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    tickerChange: {
+        fontSize: 11,
+        fontWeight: '600',
     },
 });

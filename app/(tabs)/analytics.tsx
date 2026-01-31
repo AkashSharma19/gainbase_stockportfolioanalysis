@@ -212,15 +212,15 @@ export default function AnalyticsScreen() {
                                     data={chartData}
                                     donut
                                     sectionAutoFocus
-                                    radius={SCREEN_WIDTH * 0.3}
-                                    innerRadius={SCREEN_WIDTH * 0.22}
+                                    radius={SCREEN_WIDTH * 0.22}
+                                    innerRadius={SCREEN_WIDTH * 0.15}
                                     innerCircleColor={'#1C1C1E'}
                                     centerLabelComponent={() => (
                                         <View style={{ justifyContent: 'center', alignItems: 'center' }}>
-                                            <Text style={{ fontSize: 28, color: 'white' }}>
+                                            <Text style={{ fontSize: 20, color: 'white' }}>
                                                 {allocation.length}
                                             </Text>
-                                            <Text style={{ fontSize: 10, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                            <Text style={{ fontSize: 8, color: '#8E8E93', textTransform: 'uppercase', letterSpacing: 1 }}>
                                                 {selectedDimension.split(' ')[0]}s
                                             </Text>
                                         </View>
@@ -419,12 +419,12 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '400',
         color: '#FFF',
-        marginBottom: 20,
+        marginBottom: 12,
         letterSpacing: 0.5,
     },
     chartContainer: {
         borderRadius: 24,
-        padding: 24,
+        padding: 20,
         alignItems: 'center',
         borderWidth: 1,
         borderColor: '#2C2C2E',
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     pieWrapper: {
         alignItems: 'center',
         justifyContent: 'center',
-        height: SCREEN_WIDTH * 0.65,
+        height: SCREEN_WIDTH * 0.45,
     },
     noDataText: {
         color: '#8E8E93',
