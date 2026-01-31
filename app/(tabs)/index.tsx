@@ -1,11 +1,14 @@
 import { ActivityCalendar } from '@/components/ActivityCalendar';
+import ShareableCard from '@/components/ShareableCard';
 import TopMovers from '@/components/TopMovers';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { useRouter } from 'expo-router';
-import { ArrowRight, ChevronDown, Eye, EyeOff, TrendingUp } from 'lucide-react-native';
-import React, { useEffect, useMemo } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Sharing from 'expo-sharing';
+import { ArrowRight, ChevronDown, Eye, EyeOff, Share2, TrendingUp } from 'lucide-react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import ViewShot from 'react-native-view-shot';
 
 const CHART_COLORS = [
   '#007AFF', '#5856D6', '#AF52DE', '#FF2D55', '#FF9500',
@@ -22,6 +25,11 @@ export default function PortfolioScreen() {
   const getMonthlyAnalysis = usePortfolioStore((state) => state.getMonthlyAnalysis);
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const togglePrivacyMode = usePortfolioStore((state) => state.togglePrivacyMode);
+  const getHoldingsData = usePortfolioStore((state) => state.getHoldingsData);
+  const userName = usePortfolioStore((state) => state.userName);
+
+  const viewShotRef = useRef<any>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   const summary = useMemo(() => calculateSummary(), [transactions, calculateSummary, tickers]);
   const yearlyAnalysis = useMemo(() => getYearlyAnalysis(), [transactions, getYearlyAnalysis, tickers]);
@@ -49,6 +57,51 @@ export default function PortfolioScreen() {
     setRefreshing(false);
   }, [fetchTickers]);
 
+  const handleShare = async () => {
+    if (isPrivacyMode) {
+      Alert.alert('Privacy Mode Active', 'Please disable privacy mode to share your portfolio performance.');
+      return;
+    }
+
+    try {
+      setIsCapturing(true);
+      // Give time for the hidden component to render
+      setTimeout(async () => {
+        if (viewShotRef.current) {
+          const uri = await viewShotRef.current.capture();
+          await Sharing.shareAsync(uri);
+        }
+        setIsCapturing(false);
+      }, 100);
+    } catch (error) {
+      console.error('Sharing failed:', error);
+      Alert.alert('Error', 'Failed to generate shareable card.');
+      setIsCapturing(false);
+    }
+  };
+
+  const shareData = useMemo(() => {
+    const holdings = getHoldingsData();
+    const topWinners = [...holdings]
+      .sort((a, b) => b.pnl - a.pnl)
+      .slice(0, 5)
+      .map(h => ({
+        symbol: h.symbol,
+        profit: h.pnl
+      }));
+
+    return {
+      totalValue: summary.totalValue,
+      profitAmount: summary.profitAmount,
+      profitPercentage: summary.profitPercentage,
+      dayChange: summary.dayChange,
+      dayChangePercentage: summary.dayChangePercentage,
+      xirr: summary.xirr,
+      topWinners,
+      userName: userName
+    };
+  }, [summary, getHoldingsData, userName]);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.container}>
@@ -63,9 +116,14 @@ export default function PortfolioScreen() {
             <View style={styles.heroCard}>
               <View style={styles.heroHeaderRow}>
                 <Text style={styles.heroLabel}>HOLDINGS ({tickers.length})</Text>
-                <TouchableOpacity onPress={togglePrivacyMode} style={styles.iconButton}>
-                  {isPrivacyMode ? <EyeOff size={16} color="#FFF" /> : <Eye size={16} color="#FFF" />}
-                </TouchableOpacity>
+                <View style={styles.heroIcons}>
+                  <TouchableOpacity onPress={handleShare} style={styles.iconButton}>
+                    <Share2 size={16} color="#FFF" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={togglePrivacyMode} style={styles.iconButton}>
+                    {isPrivacyMode ? <EyeOff size={16} color="#FFF" /> : <Eye size={16} color="#FFF" />}
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <Text style={styles.heroValue}>{isPrivacyMode ? '****' : `₹${summary.totalValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}</Text>
@@ -205,8 +263,17 @@ export default function PortfolioScreen() {
           </View>
         </ScrollView>
       </View>
-    </SafeAreaView>
 
+      {/* Hidden ViewShot component for capturing */}
+      <View style={styles.hiddenCapture} pointerEvents="none">
+        <ViewShot
+          ref={viewShotRef}
+          options={{ format: 'png', quality: 1.0 }}
+        >
+          <ShareableCard data={shareData} />
+        </ViewShot>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -465,5 +532,11 @@ const styles = StyleSheet.create({
   },
   modalList: {
     paddingBottom: 40,
+  },
+  hiddenCapture: {
+    position: 'absolute',
+    left: -1000, // Off-screen
+    top: 0,
+    opacity: 0,
   },
 });
