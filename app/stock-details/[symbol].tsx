@@ -4,7 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowDownLeft, ArrowLeft, ArrowUpRight } from 'lucide-react-native';
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LineChart } from 'react-native-gifted-charts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function StockDetailsScreen() {
@@ -51,6 +52,40 @@ export default function StockDetailsScreen() {
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [transactions, symbol]);
 
+    const tickerData = usePortfolioStore((state) => state.tickers.find(t => t.Tickers === symbol));
+
+    const chartData = useMemo(() => {
+        if (!tickerData) return [];
+
+        const dataPoints = [
+            { value: tickerData['Today - 7'], label: '7d' },
+            { value: tickerData['Today - 6'], label: '6d' },
+            { value: tickerData['Today - 5'], label: '5d' },
+            { value: tickerData['Today - 4'], label: '4d' },
+            { value: tickerData['Today - 3'], label: '3d' },
+            { value: tickerData['Today - 2'], label: '2d' },
+            { value: tickerData['Yesterday Close'], label: '1d' },
+            { value: tickerData['Current Value'], label: 'Now' }
+        ];
+
+        // Filter out undefined/null values in case data is partial 
+        // (though if user says they added it, it should be there, but we need to handle gaps)
+        // Actually, we should probably only define points that exist.
+        // Assuming consecutive data:
+        const validPoints = dataPoints.filter(p => typeof p.value === 'number' && p.value > 0).map(p => ({
+            value: p.value as number,
+            label: '', // Empty label to hide X-axis text
+            dataLabel: p.label, // Custom prop for tooltip
+        }));
+
+        return validPoints;
+    }, [tickerData]);
+
+    const isPositiveTrend = useMemo(() => {
+        if (chartData.length < 2) return true;
+        return chartData[chartData.length - 1].value >= chartData[0].value;
+    }, [chartData]);
+
     if (!holding) {
         return (
             <SafeAreaView style={styles.container}>
@@ -86,69 +121,102 @@ export default function StockDetailsScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 showsHorizontalScrollIndicator={false}
+                bounces={false}
+                overScrollMode="never"
             >
+                {/* Hero Chart (7 Day Trend) */}
+
+
                 {/* Main Price Card */}
-                <View style={styles.priceCard}>
-                    <View style={styles.heroHeaderRow}>
-                        <Text style={styles.heroLabel}>{holding.quantity > 0 ? 'CURRENT VALUE' : 'CURRENT PRICE'}</Text>
-                    </View>
-
-                    <Text style={styles.heroValue}>
-                        {isPrivacyMode ? '****' : `₹${(holding.quantity > 0 ? holding.currentValue : holding.currentPrice).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
-                    </Text>
-
-                    <View style={styles.dashedDivider} />
-
-                    <View style={styles.heroRow}>
-                        <Text style={styles.heroRowLabel}>{holding.quantity > 0 ? '1D returns' : '1D change'}</Text>
-                        <Text style={[styles.heroRowValue, { color: isPrivacyMode ? '#FFF' : (holding.dayChange >= 0 ? '#4CAF50' : '#F44336') }]}>
-                            {isPrivacyMode ? '****' : `${holding.dayChange >= 0 ? '+' : ''}₹${Math.abs(holding.quantity > 0 ? holding.dayChange : (holding.dayChange)).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} (${Math.abs(holding.dayChangePercentage).toFixed(2)}%)`}
-                        </Text>
-                    </View>
-
-                    {holding.quantity > 0 && (
-                        <View style={styles.heroRow}>
-                            <Text style={styles.heroRowLabel}>Total returns</Text>
-                            <Text style={[styles.heroRowValue, { color: isPrivacyMode ? '#FFF' : (holding.pnl >= 0 ? '#4CAF50' : '#F44336') }]}>
-                                {isPrivacyMode ? '****' : `${holding.pnl >= 0 ? '+' : '-'}₹${Math.abs(holding.pnl).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} (${Math.abs(holding.pnlPercentage).toFixed(2)}%)`}
-                            </Text>
+                <View style={[styles.priceCard, { overflow: 'hidden' }]}>
+                    {/* Background Chart */}
+                    {chartData.length > 2 && (
+                        <View style={{ position: 'absolute', bottom: 0, left: -30, right: -30, top: 0, overflow: 'hidden' }}>
+                            <View style={{ opacity: 0.15, transform: [{ translateY: 40 }] }}>
+                                <LineChart
+                                    data={chartData}
+                                    areaChart
+                                    curved
+                                    color={isPositiveTrend ? '#4CAF50' : '#F44336'}
+                                    startFillColor={isPositiveTrend ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)'}
+                                    endFillColor={isPositiveTrend ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)'}
+                                    thickness={5}
+                                    hideDataPoints
+                                    hideRules
+                                    hideYAxisText
+                                    hideAxesAndRules
+                                    yAxisOffset={Math.min(...chartData.map(d => d.value)) * 0.95}
+                                    height={320}
+                                    width={Dimensions.get('window').width + 60}
+                                    adjustToWidth={true}
+                                />
+                            </View>
                         </View>
                     )}
+                    <View style={{ padding: 24 }}>
+                        <View style={styles.heroHeaderRow}>
+                            <Text style={styles.heroLabel}>{holding.quantity > 0 ? 'CURRENT VALUE' : 'CURRENT PRICE'}</Text>
+                        </View>
 
-                    {holding.quantity > 0 ? (
-                        <>
+                        <Text style={styles.heroValue}>
+                            {isPrivacyMode ? '****' : `₹${(holding.quantity > 0 ? holding.currentValue : holding.currentPrice).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                        </Text>
+
+                        <View style={styles.dashedDivider} />
+
+                        <View style={styles.heroRow}>
+                            <Text style={styles.heroRowLabel}>{holding.quantity > 0 ? '1D returns' : '1D change'}</Text>
+                            <Text style={[styles.heroRowValue, { color: isPrivacyMode ? '#FFF' : (holding.dayChange >= 0 ? '#4CAF50' : '#F44336') }]}>
+                                {isPrivacyMode ? '****' : `${holding.dayChange >= 0 ? '+' : ''}₹${Math.abs(holding.quantity > 0 ? holding.dayChange : (holding.dayChange)).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} (${Math.abs(holding.dayChangePercentage).toFixed(2)}%)`}
+                            </Text>
+                        </View>
+
+                        {holding.quantity > 0 && (
                             <View style={styles.heroRow}>
-                                <Text style={styles.heroRowLabel}>Invested</Text>
-                                <Text style={styles.heroRowValueWhite}>{isPrivacyMode ? '****' : `₹${holding.investedValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}</Text>
+                                <Text style={styles.heroRowLabel}>Total returns</Text>
+                                <Text style={[styles.heroRowValue, { color: isPrivacyMode ? '#FFF' : (holding.pnl >= 0 ? '#4CAF50' : '#F44336') }]}>
+                                    {isPrivacyMode ? '****' : `${holding.pnl >= 0 ? '+' : '-'}₹${Math.abs(holding.pnl).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} (${Math.abs(holding.pnlPercentage).toFixed(2)}%)`}
+                                </Text>
                             </View>
+                        )}
 
-                            <View style={styles.heroRow}>
-                                <Text style={styles.heroRowLabel}>Quantity</Text>
-                                <Text style={styles.heroRowValueWhite}>{holding.quantity}</Text>
-                            </View>
+                        {holding.quantity > 0 ? (
+                            <>
+                                <View style={styles.heroRow}>
+                                    <Text style={styles.heroRowLabel}>Invested</Text>
+                                    <Text style={styles.heroRowValueWhite}>{isPrivacyMode ? '****' : `₹${holding.investedValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}</Text>
+                                </View>
 
+                                <View style={styles.heroRow}>
+                                    <Text style={styles.heroRowLabel}>Quantity</Text>
+                                    <Text style={styles.heroRowValueWhite}>{holding.quantity}</Text>
+                                </View>
+
+                                <View style={styles.heroRow}>
+                                    <Text style={styles.heroRowLabel}>Current Price</Text>
+                                    <Text style={styles.heroRowValueWhite}>₹{holding.currentPrice.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</Text>
+                                </View>
+
+                                <View style={styles.heroRow}>
+                                    <Text style={styles.heroRowLabel}>Avg. Price</Text>
+                                    <Text style={styles.heroRowValueWhite}>{isPrivacyMode ? '****' : `₹${holding.avgPrice.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}</Text>
+                                </View>
+                            </>
+                        ) : (
                             <View style={styles.heroRow}>
                                 <Text style={styles.heroRowLabel}>Current Price</Text>
                                 <Text style={styles.heroRowValueWhite}>₹{holding.currentPrice.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</Text>
                             </View>
+                        )}
 
-                            <View style={styles.heroRow}>
-                                <Text style={styles.heroRowLabel}>Avg. Price</Text>
-                                <Text style={styles.heroRowValueWhite}>{isPrivacyMode ? '****' : `₹${holding.avgPrice.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}</Text>
-                            </View>
-                        </>
-                    ) : (
                         <View style={styles.heroRow}>
-                            <Text style={styles.heroRowLabel}>Current Price</Text>
-                            <Text style={styles.heroRowValueWhite}>₹{holding.currentPrice.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</Text>
+                            <Text style={styles.heroRowLabel}>Sector</Text>
+                            <Text style={styles.heroRowValueWhite} numberOfLines={1}>{holding.sector}</Text>
                         </View>
-                    )}
-
-                    <View style={styles.heroRow}>
-                        <Text style={styles.heroRowLabel}>Sector</Text>
-                        <Text style={styles.heroRowValueWhite} numberOfLines={1}>{holding.sector}</Text>
                     </View>
                 </View>
+
+
 
                 {/* 52 Week Range */}
                 {typeof holding.high52 === 'number' && typeof holding.low52 === 'number' && holding.high52 > 0 && holding.low52 > 0 && holding.assetType !== 'Mutual Fund' && (
@@ -216,7 +284,7 @@ export default function StockDetailsScreen() {
                 )}
 
             </ScrollView>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 }
 
@@ -267,7 +335,6 @@ const styles = StyleSheet.create({
     priceCard: {
         backgroundColor: '#1C1C1E',
         borderRadius: 24,
-        padding: 24,
         marginBottom: 24,
         borderWidth: 1,
         borderColor: '#2C2C2E',
@@ -481,5 +548,11 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.8,
         shadowRadius: 4,
         elevation: 5,
+    },
+
+    heroChartContainer: {
+        marginBottom: 20,
+        marginHorizontal: -20, // Negative margin to hit edges
+        overflow: 'hidden',
     },
 });

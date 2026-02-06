@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { StatusBar } from 'expo-status-bar';
-import { Download, Edit2, FileText, Mail, Phone, Upload, User, X } from 'lucide-react-native';
+import { Database, Download, Edit2, FileText, Mail, Phone, Upload, User, X } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -125,6 +125,49 @@ export default function ProfileScreen() {
         }
     };
 
+    const handleBackup = async () => {
+        if (transactions.length === 0) {
+            Alert.alert('No Data', 'There are no transactions to backup.');
+            return;
+        }
+
+        try {
+            // Map to the simple Sample format
+            const backupData = transactions.map(t => ({
+                Symbol: t.symbol,
+                Quantity: t.quantity,
+                Price: t.price,
+                Date: t.date,
+                Type: t.type,
+                Broker: t.broker || '',
+                Currency: t.currency
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(backupData);
+            const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
+
+            const filename = `Gainbase_Backup_${new Date().toISOString().split('T')[0]}.csv`;
+            const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+            await FileSystem.writeAsStringAsync(fileUri, csvOutput, {
+                encoding: FileSystem.EncodingType.UTF8,
+            });
+
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(fileUri, {
+                    mimeType: 'text/csv',
+                    dialogTitle: 'Backup Transactions',
+                    UTI: 'public.comma-separated-values-text',
+                });
+            } else {
+                Alert.alert('Sharing not available', 'Sharing is not available on this device.');
+            }
+        } catch (error) {
+            console.error('Backup Error:', error);
+            Alert.alert('Backup Failed', 'An error occurred while creating the backup.');
+        }
+    };
+
     const handleDownloadSample = async () => {
         try {
             const sampleData = [
@@ -178,23 +221,43 @@ export default function ProfileScreen() {
     const handleImport = async () => {
         try {
             const result = await DocumentPicker.getDocumentAsync({
-                type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'],
+                type: [
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'application/vnd.ms-excel',
+                    'text/csv',
+                    'text/comma-separated-values',
+                    'application/csv'
+                ],
                 copyToCacheDirectory: true
             });
 
             if (result.canceled) return;
 
             const fileUri = result.assets[0].uri;
-            const fileContent = await FileSystem.readAsStringAsync(fileUri, {
-                encoding: FileSystem.EncodingType.Base64
-            });
+            const fileName = result.assets[0].name.toLowerCase();
+            const isCsv = fileName.endsWith('.csv');
 
-            const workbook = XLSX.read(fileContent, { type: 'base64' });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            let jsonData;
 
-            if (jsonData.length === 0) {
+            if (isCsv) {
+                const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+                    encoding: FileSystem.EncodingType.UTF8
+                });
+                const workbook = XLSX.read(fileContent, { type: 'string' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                jsonData = XLSX.utils.sheet_to_json(worksheet);
+            } else {
+                const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+                    encoding: FileSystem.EncodingType.Base64
+                });
+                const workbook = XLSX.read(fileContent, { type: 'base64' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                jsonData = XLSX.utils.sheet_to_json(worksheet);
+            }
+
+            if (!jsonData || jsonData.length === 0) {
                 Alert.alert('Empty File', 'The imported file contains no data.');
                 return;
             }
@@ -214,7 +277,7 @@ export default function ProfileScreen() {
                 importTransactions(newTransactions);
                 Alert.alert('Success', `Successfully imported ${newTransactions.length} transactions.`);
             } else {
-                Alert.alert('Error', 'No valid transactions found in the file.');
+                Alert.alert('Error', 'No valid transactions found in the file. Please use the Sample format.');
             }
 
         } catch (error) {
@@ -280,6 +343,13 @@ export default function ProfileScreen() {
                                     <Upload size={24} color="#007AFF" />
                                 </View>
                                 <Text style={styles.gridLabel}>Import</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.gridButton} onPress={handleBackup}>
+                                <View style={[styles.gridIconBox, { backgroundColor: '#2C2C2E' }]}>
+                                    <Database size={24} color="#007AFF" />
+                                </View>
+                                <Text style={styles.gridLabel}>Backup</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity style={styles.gridButton} onPress={handleExport}>

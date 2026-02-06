@@ -20,8 +20,8 @@ export default function TopMovers() {
         // 1. Welcome Story (Always first if empty)
         if (!transactions || transactions.length === 0) {
             return [
-                { id: 'welcome', type: 'insight', label: 'Welcome', symbol: 'HAY', color: ['#007AFF', '#004080'], route: '/(tabs)/profile' },
-                { id: 'add', type: 'action', label: 'Add Trade', symbol: '+', color: ['#30D158', '#15803d'], route: '/add-transaction' }
+                { id: 'welcome', type: 'insight', label: 'Welcome', symbol: 'HAY', color: ['#00C6FF', '#0072FF'], shadowColor: '#0072FF', route: '/(tabs)/profile' },
+                { id: 'add', type: 'action', label: 'Add Trade', symbol: '+', color: ['#34C759', '#30D158'], shadowColor: '#34C759', route: '/add-transaction' }
             ];
         }
 
@@ -40,7 +40,8 @@ export default function TopMovers() {
                 label: h.companyName || h.symbol,
                 symbol: (h.companyName || h.symbol).substring(0, 3).toUpperCase(),
                 value: `${isProfit ? '+' : ''}${(h.dayChangePercentage || 0).toFixed(1)}%`,
-                color: isProfit ? ['#30D158', '#15803d'] : ['#FF453A', '#991B1B'],
+                color: isProfit ? ['#34C759', '#30D158'] : ['#FF3B30', '#FF453A'],
+                shadowColor: isProfit ? '#34C759' : '#FF3B30',
                 route: `/stock-details/${h.symbol}`
             });
         });
@@ -52,7 +53,8 @@ export default function TopMovers() {
                 type: 'insight',
                 label: 'Analysis',
                 symbol: '📊',
-                color: ['#5E5CE6', '#2E2A85'],
+                color: ['#5856D6', '#AF52DE'],
+                shadowColor: '#5856D6',
                 route: '/(tabs)/analytics'
             });
             items.push({
@@ -61,6 +63,7 @@ export default function TopMovers() {
                 label: 'Add New',
                 symbol: '+',
                 color: ['#007AFF', '#004080'],
+                shadowColor: '#007AFF',
                 route: '/add-transaction'
             });
         }
@@ -87,14 +90,18 @@ export default function TopMovers() {
                             router.push(item.route as any);
                         }}
                     >
-                        <LinearGradient
-                            colors={item.color as any}
-                            style={styles.storyRing}
-                        >
-                            <View style={styles.storyInner}>
-                                <Text style={styles.symbolText}>{item.symbol}</Text>
-                            </View>
-                        </LinearGradient>
+                        <View style={[styles.glowContainer, { shadowColor: item.shadowColor }]}>
+                            <LinearGradient
+                                colors={item.color as any}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.storyRing}
+                            >
+                                <View style={styles.storyInner}>
+                                    <Text style={styles.symbolText}>{item.symbol}</Text>
+                                </View>
+                            </LinearGradient>
+                        </View>
 
                         {item.value && (
                             <View style={[styles.badge, { backgroundColor: item.color[0] }]}>
@@ -112,45 +119,49 @@ export default function TopMovers() {
 
 const styles = StyleSheet.create({
     container: {
-        marginVertical: 12,
+        marginVertical: 16,
         paddingBottom: 4,
     },
     sectionTitle: {
         color: '#8E8E93',
         fontSize: 10,
         fontWeight: '700',
-        letterSpacing: 1.2,
+        letterSpacing: 1,
         textTransform: 'uppercase',
-        marginBottom: 16,
-        paddingHorizontal: 4,
+        marginBottom: 12,
+        paddingHorizontal: 0,
+        marginLeft: 16, // Align with list content padding
     },
     listContent: {
+        paddingHorizontal: 16,
         paddingRight: 24,
-        gap: 18,
+        paddingVertical: 12, // Add space for shadow/glow
+        gap: 16,
     },
     storyWrapper: {
         alignItems: 'center',
-        width: 72,
+        width: 64,
+    },
+    glowContainer: {
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: 8,
+        marginBottom: 8,
+        elevation: 10,
     },
     storyRing: {
-        width: 68,
-        height: 68,
-        borderRadius: 34,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
         padding: 2.5,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 8,
     },
     storyInner: {
         backgroundColor: '#000',
         width: '100%',
         height: '100%',
-        borderRadius: 34,
+        borderRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
@@ -158,13 +169,13 @@ const styles = StyleSheet.create({
     },
     symbolText: {
         color: '#FFF',
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: '800',
         letterSpacing: 0.5,
     },
     badge: {
         position: 'absolute',
-        top: 50,
+        bottom: 20, // Positioned relative to wrapper
         borderRadius: 10,
         paddingHorizontal: 6,
         paddingVertical: 2,
@@ -178,7 +189,7 @@ const styles = StyleSheet.create({
         fontWeight: '800',
     },
     labelText: {
-        color: '#EBEBF599',
+        color: '#EBEBF5',
         fontSize: 10,
         fontWeight: '500',
         textAlign: 'center',

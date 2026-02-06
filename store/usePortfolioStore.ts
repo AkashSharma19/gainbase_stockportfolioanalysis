@@ -56,17 +56,24 @@ export const usePortfolioStore = create<PortfolioState>()(
             calculateSummary: () => {
                 const { transactions, tickers } = get();
                 if (transactions.length === 0) {
-                    return { totalValue: 0, totalCost: 0, profitAmount: 0, profitPercentage: 0, totalReturn: 0, xirr: 0, dayChange: 0, dayChangePercentage: 0 };
+                    return { totalValue: 0, totalCost: 0, profitAmount: 0, profitPercentage: 0, totalReturn: 0, xirr: 0, dayChange: 0, dayChangePercentage: 0, realizedReturn: 0, unrealizedReturn: 0 };
                 }
 
                 const priceMap = new Map(tickers.map(t => [t.Tickers.toUpperCase(), t['Current Value']]));
                 const closeMap = new Map(tickers.map(t => [t.Tickers.toUpperCase(), t['Yesterday Close']]));
+
+                // Track holdings for calculation
                 const holdingsMap = new Map<string, number>();
+                // Track average buy price per symbol to calculate realized gains
+                const avgBuyPriceMap = new Map<string, number>();
 
                 let totalCost = 0;
                 let totalValue = 0;
+                let realizedReturn = 0;
+
                 const cashFlows: { amount: number; date: Date }[] = [];
 
+                // Sort transactions by date to correctly calculate running averages
                 const sortedTransactions = [...transactions].sort((a, b) =>
                     new Date(a.date).getTime() - new Date(b.date).getTime()
                 );
@@ -75,22 +82,70 @@ export const usePortfolioStore = create<PortfolioState>()(
                     const date = new Date(t.date);
                     const currentPrice = priceMap.get(t.symbol.toUpperCase());
                     const valuationPrice = currentPrice || t.price; // Fallback to buy price if no live price
+                    const sym = t.symbol.toUpperCase();
+                    const currentQty = holdingsMap.get(sym) || 0;
+                    const currentAvgPrice = avgBuyPriceMap.get(sym) || 0;
 
                     if (t.type === 'BUY') {
+                        // Calculate new weighted avg price
+                        // New Avg = ((Old Qty * Old Avg) + (New Qty * New Price)) / (Old Qty + New Qty)
+                        const newTotalQty = currentQty + t.quantity;
+                        const newAvgPrice = ((currentQty * currentAvgPrice) + (t.quantity * t.price)) / newTotalQty;
+                        avgBuyPriceMap.set(sym, newAvgPrice);
+                        holdingsMap.set(sym, newTotalQty);
+
                         totalCost += t.quantity * t.price;
                         totalValue += t.quantity * valuationPrice;
                         cashFlows.push({ amount: -t.quantity * t.price, date });
                     } else {
+                        // SELL
+                        // Realized Gain = (Sell Price - Avg Buy Price) * Sell Qty
+                        const gain = (t.price - currentAvgPrice) * t.quantity;
+                        realizedReturn += gain;
+
+                        // Reduce quantity, Avg Price stays same (FIFO/Weighted Avg assumption for tax is usually FIFO, but for simple pnl weighted avg is standard)
+                        holdingsMap.set(sym, currentQty - t.quantity);
+
+                        totalCost -= t.quantity * t.price; // We subtract sale proceeds from cost basis in simple view, or adjust accurately below
+                        // Actually, totalCost usually represents "Current Invested Amount". 
+                        // If we sell, we reduce 'Invested Amount' by the proportion of cost basis sold.
+                        // totalCost -= (t.quantity * currentAvgPrice); 
+                        // However, the previous logic (lines 84-85 in original) was: totalCost -= t.quantity * t.price. 
+                        // That logic essentially treats 'totalCost' as 'Net Cash Flow' (Invested - Returned). 
+                        // If that's the desired definition of 'Invested', we keep it. 
+                        // BUT, to be consistent with "Unrealized = Value - Cost", usually Cost is "Remaining Cost Basis".
+                        // Let's stick to the previous 'totalCost' logic if it was 'Net Invested', or refine if 'Remaining Cost'.
+                        // Given 'profitAmount = totalValue - totalCost', if totalCost is 'Net Invested', then profit equals Total PnL (Realized + Unrealized).
+                        // Let's assume existing totalCost logic was essentially 'Net Invested'.
+
+                        // Reverting existing logic for totalCost to match:
                         totalCost -= t.quantity * t.price;
-                        totalValue -= t.quantity * t.price;
+
+                        totalValue -= t.quantity * t.price; // This logic in original seems odd for totalValue? 
+                        // Original: totalValue -= t.quantity * t.price; 
+                        // This seems to imply we remove the sold value. Correct.
+
                         cashFlows.push({ amount: t.quantity * t.price, date });
                     }
-
-                    const sym = t.symbol.toUpperCase();
-                    const currentQty = holdingsMap.get(sym) || 0;
-                    holdingsMap.set(sym, t.type === 'BUY' ? currentQty + t.quantity : currentQty - t.quantity);
                 });
 
+                // Recalculate Total Value based on current holdings strictly
+                // (The previous loop adjusted totalValue incrementally, but refreshing from current holdings is safer/cleaner)
+                let calculatedTotalValue = 0;
+                let calculatedRemainingCost = 0; // Cost basis of current holdings for Unrealized calc
+
+                holdingsMap.forEach((qty, symbol) => {
+                    if (qty > 0) {
+                        const currentPrice = priceMap.get(symbol) || 0;
+                        calculatedTotalValue += qty * currentPrice;
+                        calculatedRemainingCost += qty * (avgBuyPriceMap.get(symbol) || 0);
+                    }
+                });
+
+                // Override totalValue with the fresh calculation from current holdings
+                totalValue = calculatedTotalValue;
+
+                // Recalculate day change
                 let dayChange = 0;
                 holdingsMap.forEach((qty, symbol) => {
                     if (qty > 0) {
@@ -100,10 +155,30 @@ export const usePortfolioStore = create<PortfolioState>()(
                     }
                 });
 
+
                 cashFlows.push({ amount: totalValue, date: new Date() });
 
+                // Total Return (Absolute) = Current Value + Realized Cash - Total Invested Cash?
+                // Or simply: Realized + Unrealized.
+                const unrealizedReturn = totalValue - calculatedRemainingCost;
+
+                // The previous logic for 'profitAmount' was 'totalValue - totalCost' where totalCost was Net Invested.
+                // Property: Net Invested = (Total Buy Amount) - (Total Sell Amount).
+                // Property: Realized = (Sell Amount) - (Cost of Sold).
+                // Property: Remaining Cost = (Total Buy Amount) - (Cost of Sold).
+                // Therefore: Value - Net Invested = Value - (Total Buy - Total Sell)
+                // = Value - ( (Remaining Cost + Cost Sold) - (Realized + Cost Sold) )
+                // = Value - (Remaining Cost - Realized)
+                // = (Value - Remaining Cost) + Realized
+                // = Unrealized + Realized.
+                // So the previous formula 'profitAmount = totalValue - totalCost' is mathematically consistent with (Realized + Unrealized).
+
                 const profitAmount = totalValue - totalCost;
-                const profitPercentage = totalCost > 0 ? (profitAmount / totalCost) * 100 : 0;
+                const profitPercentage = totalCost > 0 ? (profitAmount / totalCost) * 100 : 0; // Note: if Net Invested is negative (huge gains withdrawn), this % is weird.
+                // Usually for display, might want 'Invested' to be 'Current Cost Basis' or 'Max Invested'. 
+                // We will stick to the existing behavior for 'totalCost' and 'profitAmount' to avoid breaking unrelated UI, 
+                // but now we have explicit Realized/Unrealized.
+
                 const xirr = calculateXIRR(cashFlows);
 
                 return {
@@ -115,6 +190,8 @@ export const usePortfolioStore = create<PortfolioState>()(
                     xirr,
                     dayChange,
                     dayChangePercentage: (totalValue - dayChange) > 0 ? (dayChange / (totalValue - dayChange)) * 100 : 0,
+                    realizedReturn,
+                    unrealizedReturn
                 };
             },
             getAllocationData: (dimension) => {
@@ -144,7 +221,7 @@ export const usePortfolioStore = create<PortfolioState>()(
                     holdingsMap.set(sym, current);
                 });
 
-                const groups: Record<string, { value: number, cost: number, quantity: number }> = {};
+                const groups: Record<string, { value: number, cost: number, quantity: number, symbol?: string }> = {};
                 let totalPortfolioValue = 0;
 
                 holdingsMap.forEach((data, symbol) => {
@@ -154,6 +231,7 @@ export const usePortfolioStore = create<PortfolioState>()(
                     const fallbackPrice = lastTransaction?.price || 0;
                     const currentPrice = ticker?.['Current Value'] || fallbackPrice;
 
+                    // Grouping Logic
                     let dimensionValue = 'Unknown';
                     if (dimension === 'Broker' && lastTransaction) {
                         dimensionValue = lastTransaction.broker || 'No Broker';
@@ -167,14 +245,20 @@ export const usePortfolioStore = create<PortfolioState>()(
                     const investedValue = data.totalCost;
 
                     if (!groups[dimensionValue]) groups[dimensionValue] = { value: 0, cost: 0, quantity: 0 };
+
                     groups[dimensionValue].value += currentValue;
                     groups[dimensionValue].cost += investedValue;
                     groups[dimensionValue].quantity += data.quantity;
+                    // If dimension is Company Name, we can reliably map 1:1 to symbol usually.
+                    // If multiple symbols map to same name, this will take the last one iterated, which is acceptable overlap.
+                    if (!groups[dimensionValue].symbol) groups[dimensionValue].symbol = symbol;
+
                     totalPortfolioValue += currentValue;
                 });
 
                 return Object.entries(groups).map(([name, data]) => ({
                     name,
+                    symbol: data.symbol,
                     value: data.value,
                     totalCost: data.cost,
                     quantity: data.quantity,

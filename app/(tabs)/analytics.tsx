@@ -1,6 +1,7 @@
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import {
     ArrowDown,
     ArrowUp,
@@ -84,6 +85,7 @@ const BROKER_ICONS: Record<string, any> = {
 type Dimension = 'Sector' | 'Company Name' | 'Asset Type' | 'Broker';
 
 export default function AnalyticsScreen() {
+    const router = useRouter();
     const fetchTickers = usePortfolioStore((state) => state.fetchTickers);
     const getAllocationData = usePortfolioStore((state) => state.getAllocationData);
     const transactions = usePortfolioStore((state) => state.transactions);
@@ -270,13 +272,24 @@ export default function AnalyticsScreen() {
                     <View style={styles.holdingsList}>
                         {filteredAllocation.map((item, index) => {
                             const isLast = index === filteredAllocation.length - 1;
+                            const isLink = selectedDimension === 'Company Name';
+
                             return (
-                                <View
+                                <TouchableOpacity
                                     key={item.name}
                                     style={[
                                         styles.holdingItem,
                                         !isLast && styles.holdingItemBorder
                                     ]}
+                                    disabled={!isLink}
+                                    onPress={() => {
+                                        if (isLink && item.symbol) {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                            // @ts-ignore
+                                            router.push(`/stock-details/${item.symbol}`);
+                                        }
+                                    }}
+                                    activeOpacity={0.7}
                                 >
                                     <View style={styles.holdingRow}>
                                         <View style={styles.holdingMain}>
@@ -350,7 +363,7 @@ export default function AnalyticsScreen() {
                                             ]} />
                                         </View>
                                     )}
-                                </View>
+                                </TouchableOpacity>
                             );
                         })}
                     </View>

@@ -20,6 +20,12 @@ export interface Ticker {
   'Yesterday Close'?: number;
   High52?: number;
   Low52?: number;
+  'Today - 2'?: number;
+  'Today - 3'?: number;
+  'Today - 4'?: number;
+  'Today - 5'?: number;
+  'Today - 6'?: number;
+  'Today - 7'?: number;
 }
 
 export interface PortfolioSummary {
@@ -31,6 +37,8 @@ export interface PortfolioSummary {
   xirr: number;
   dayChange: number;
   dayChangePercentage: number;
+  realizedReturn: number;
+  unrealizedReturn: number;
 }
 export interface YearlyAnalysis {
   year: number;
@@ -70,6 +78,7 @@ export interface Holding {
 
 export interface AllocationItem {
   name: string;
+  symbol?: string;
   value: number; // current value
   percentage: number;
   totalCost: number;

@@ -1,4 +1,5 @@
-import * as BackgroundFetch from 'expo-background-fetch';
+import * as BackgroundTask from 'expo-background-task';
+import Constants from 'expo-constants';
 import * as TaskManager from 'expo-task-manager';
 import { DataExportService } from '../services/DataExportService';
 
@@ -8,38 +9,45 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
     try {
         const success = await DataExportService.exportData();
         return success
-            ? BackgroundFetch.BackgroundFetchResult.NewData
-            : BackgroundFetch.BackgroundFetchResult.Failed;
+            ? BackgroundTask.BackgroundTaskResult.Success
+            : BackgroundTask.BackgroundTaskResult.Failed;
     } catch (error) {
-        console.error('[BackgroundFetch] Task failed:', error);
-        return BackgroundFetch.BackgroundFetchResult.Failed;
+        console.error('[BackgroundTask] Task failed:', error);
+        return BackgroundTask.BackgroundTaskResult.Failed;
     }
 });
 
 export const registerBackgroundFetchAsync = async () => {
+    if (Constants.appOwnership === 'expo') {
+        console.log('[BackgroundTask] Background tasks are not supported in Expo Go. Skipping registration.');
+        return;
+    }
+
     try {
         const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_FETCH_TASK);
         if (isRegistered) {
-            console.log(`[BackgroundFetch] Task ${BACKGROUND_FETCH_TASK} is already registered.`);
+            console.log(`[BackgroundTask] Task ${BACKGROUND_FETCH_TASK} is already registered.`);
             return;
         }
 
-        await BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
-            minimumInterval: 60 * 60 * 24, // 24 hours
-            stopOnTerminate: false, // Continue even if app is terminated (best effort)
-            startOnBoot: true, // Restart on boot
+        await BackgroundTask.registerTaskAsync(BACKGROUND_FETCH_TASK, {
+            minimumInterval: 24 * 60, // 24 hours in minutes
         });
-        console.log(`[BackgroundFetch] Task ${BACKGROUND_FETCH_TASK} registered.`);
+        console.log(`[BackgroundTask] Task ${BACKGROUND_FETCH_TASK} registered.`);
     } catch (err) {
-        console.error(`[BackgroundFetch] Task Register failed:`, err);
+        console.error(`[BackgroundTask] Task Register failed:`, err);
     }
 };
 
 export const unregisterBackgroundFetchAsync = async () => {
+    if (Constants.appOwnership === 'expo') {
+        return;
+    }
+
     try {
-        await BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
-        console.log(`[BackgroundFetch] Task ${BACKGROUND_FETCH_TASK} unregistered.`);
+        await BackgroundTask.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
+        console.log(`[BackgroundTask] Task ${BACKGROUND_FETCH_TASK} unregistered.`);
     } catch (err) {
-        console.error(`[BackgroundFetch] Task Unregister failed:`, err);
+        console.error(`[BackgroundTask] Task Unregister failed:`, err);
     }
 };

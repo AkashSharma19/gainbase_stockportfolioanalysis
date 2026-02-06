@@ -154,6 +154,20 @@ export default function PortfolioScreen() {
               </View>
 
               <View style={styles.heroRow}>
+                <Text style={styles.heroRowLabel}>Realized returns</Text>
+                <Text style={[styles.heroRowValue, { color: isPrivacyMode ? '#FFF' : (summary.realizedReturn >= 0 ? '#4CAF50' : '#F44336') }]}>
+                  {isPrivacyMode ? '****' : `${summary.realizedReturn >= 0 ? '+' : '-'}₹${Math.abs(summary.realizedReturn).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                </Text>
+              </View>
+
+              <View style={styles.heroRow}>
+                <Text style={styles.heroRowLabel}>Unrealized returns</Text>
+                <Text style={[styles.heroRowValue, { color: isPrivacyMode ? '#FFF' : (summary.unrealizedReturn >= 0 ? '#4CAF50' : '#F44336') }]}>
+                  {isPrivacyMode ? '****' : `${summary.unrealizedReturn >= 0 ? '+' : '-'}₹${Math.abs(summary.unrealizedReturn).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                </Text>
+              </View>
+
+              <View style={styles.heroRow}>
                 <Text style={styles.heroRowLabel}>Invested</Text>
                 <Text style={styles.heroRowValueWhite}>{isPrivacyMode ? '****' : `₹${summary.totalCost.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}</Text>
               </View>
@@ -320,8 +334,8 @@ const styles = StyleSheet.create({
   },
   heroLabel: {
     color: '#8E8E93',
-    fontSize: 11,
-    fontWeight: '400',
+    fontSize: 10,
+    fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
@@ -408,7 +422,7 @@ const styles = StyleSheet.create({
   innerSectionTitle: {
     color: '#8E8E93',
     fontSize: 10,
-    fontWeight: '400',
+    fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 12,
