@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
     ArrowDown,
+    ArrowLeft,
     ArrowUp,
     ArrowUpDown,
     ArrowUpRight,
@@ -154,12 +155,24 @@ export default function AnalyticsScreen() {
 
     if (transactions.length === 0) {
         return (
-            <View style={styles.container}>
-                <View style={styles.emptyState}>
-                    <Text style={styles.emptyText}>No data available yet.</Text>
-                    <Text style={styles.emptySubtext}>Add some transactions to see your portfolio analytics.</Text>
+            <SafeAreaView style={styles.safeArea}>
+                <View style={styles.container}>
+                    <View style={styles.header}>
+                        <TouchableOpacity
+                            onPress={() => router.back()}
+                            style={styles.backButton}
+                        >
+                            <ArrowLeft size={24} color="#FFF" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Analytics</Text>
+                        <View style={{ width: 40 }} />
+                    </View>
+                    <View style={styles.emptyState}>
+                        <Text style={styles.emptyText}>No data available yet.</Text>
+                        <Text style={styles.emptySubtext}>Add some transactions to see your portfolio analytics.</Text>
+                    </View>
                 </View>
-            </View>
+            </SafeAreaView>
         );
     }
 
@@ -173,6 +186,20 @@ export default function AnalyticsScreen() {
     return (
         <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
             <View style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            router.back();
+                        }}
+                        style={styles.backButton}
+                    >
+                        <ArrowLeft size={24} color="#FFF" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Analytics</Text>
+                    <View style={{ width: 40 }} />
+                </View>
+
                 <View style={styles.selectorBar}>
                     {dimensions.map((dim) => {
                         const isActive = selectedDimension === dim.id;
@@ -233,7 +260,6 @@ export default function AnalyticsScreen() {
                         </View>
                     </LinearGradient>
 
-                    {/* Unified Actions Bar (Sort & View Mode) */}
                     <View style={styles.holdingsHeader}>
                         <TouchableOpacity
                             style={styles.actionIconButton}
@@ -267,7 +293,6 @@ export default function AnalyticsScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Unified Distribution/Holdings List */}
                     <View style={styles.holdingsList}>
                         {filteredAllocation.map((item, index) => {
                             const isLast = index === filteredAllocation.length - 1;
@@ -367,9 +392,8 @@ export default function AnalyticsScreen() {
                         })}
                     </View>
                 </ScrollView>
-
-            </View >
-        </SafeAreaView >
+            </View>
+        </SafeAreaView>
     );
 }
 
@@ -381,6 +405,27 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#000',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#000',
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#1C1C1E',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerTitle: {
+        color: '#FFF',
+        fontSize: 17,
+        fontWeight: '600',
     },
     selectorBar: {
         paddingVertical: 12,
@@ -427,13 +472,6 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
         gap: 20,
     },
-    cardTitle: {
-        fontSize: 14,
-        fontWeight: '400',
-        color: '#FFF',
-        marginBottom: 12,
-        letterSpacing: 0.5,
-    },
     chartContainer: {
         borderRadius: 24,
         padding: 20,
@@ -468,7 +506,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 22,
     },
-    // Unified List Styles
     holdingsHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',

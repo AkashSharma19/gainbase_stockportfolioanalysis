@@ -5,7 +5,7 @@ import { usePortfolioStore } from '@/store/usePortfolioStore';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import { ArrowRight, ChevronDown, Eye, EyeOff, Share2, TrendingUp } from 'lucide-react-native';
+import { ArrowRight, ChevronDown, Eye, EyeOff, PieChart, Share2, TrendingUp } from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -128,6 +128,15 @@ export default function PortfolioScreen() {
                     style={styles.iconButton}
                   >
                     {isPrivacyMode ? <EyeOff size={16} color="#FFF" /> : <Eye size={16} color="#FFF" />}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push('/analytics');
+                    }}
+                    style={styles.iconButton}
+                  >
+                    <PieChart size={16} color="#FFF" />
                   </TouchableOpacity>
                   <TouchableOpacity onPress={handleShare} style={styles.iconButton}>
                     <Share2 size={16} color="#FFF" />

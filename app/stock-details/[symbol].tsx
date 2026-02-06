@@ -1,5 +1,6 @@
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { format } from 'date-fns';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowDownLeft, ArrowLeft, ArrowUpRight } from 'lucide-react-native';
@@ -91,7 +92,13 @@ export default function StockDetailsScreen() {
             <SafeAreaView style={styles.container}>
                 <Stack.Screen options={{ headerShown: false }} />
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <TouchableOpacity
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            router.back();
+                        }}
+                        style={styles.backButton}
+                    >
                         <ArrowLeft size={24} color="#FFF" />
                     </TouchableOpacity>
                 </View>
@@ -108,7 +115,13 @@ export default function StockDetailsScreen() {
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <TouchableOpacity
+                    onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.back();
+                    }}
+                    style={styles.backButton}
+                >
                     <ArrowLeft size={24} color="#FFF" />
                 </TouchableOpacity>
                 <View style={styles.headerTitle}>
@@ -301,8 +314,12 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     backButton: {
-        padding: 8,
-        marginLeft: -8,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#1C1C1E',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     headerTitle: {
         flex: 1,
