@@ -6,11 +6,19 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as WebBrowser from 'expo-web-browser';
 import { ArrowDownLeft, ArrowLeft, ArrowUpRight } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+interface NewsItem {
+    title: string;
+    link: string;
+    pubDate: string;
+    source: string;
+}
 
 export default function StockDetailsScreen() {
     const { symbol } = useLocalSearchParams<{ symbol: string }>();
@@ -21,6 +29,9 @@ export default function StockDetailsScreen() {
 
     const colorScheme = useColorScheme() ?? 'dark';
     const currColors = Colors[colorScheme];
+
+    const [news, setNews] = React.useState<NewsItem[]>([]);
+    const [loadingNews, setLoadingNews] = React.useState(true);
 
     const holding = useMemo(() => {
         const holdings = getHoldingsData();
@@ -52,6 +63,50 @@ export default function StockDetailsScreen() {
         }
         return null;
     }, [getHoldingsData, symbol]);
+
+    React.useEffect(() => {
+        const fetchNews = async () => {
+            if (!holding) return;
+            try {
+                setLoadingNews(true);
+                const query = encodeURIComponent(`${holding.companyName} stock news India`);
+                const rssUrl = `https://news.google.com/rss/search?q=${query}&hl=en-IN&gl=IN&ceid=IN:en`;
+                const response = await fetch(rssUrl);
+                const text = await response.text();
+
+                const items = text.match(/<item>[\s\S]*?<\/item>/g) || [];
+                const parsedNews = items.map(item => ({
+                    title: item.match(/<title>(.*?)<\/title>/)?.[1] || '',
+                    link: item.match(/<link>(.*?)<\/link>/)?.[1] || '',
+                    pubDate: item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || '',
+                    source: item.match(/<source.*?>(.*?)<\/source>/)?.[1] || ''
+                }))
+                    .filter(item => item.title && item.link)
+                    .map(item => {
+                        // Clean title - remove source from the end (usually " - Source")
+                        const cleanTitle = item.title.split(' - ').slice(0, -1).join(' - ') || item.title;
+                        return { ...item, title: cleanTitle };
+                    })
+                    .slice(0, 5);
+
+                setNews(parsedNews);
+            } catch (error) {
+                console.error('Failed to fetch news:', error);
+            } finally {
+                setLoadingNews(false);
+            }
+        };
+
+        fetchNews();
+    }, [holding?.companyName]);
+
+    const handleOpenNews = async (url: string) => {
+        try {
+            await WebBrowser.openBrowserAsync(url);
+        } catch (error) {
+            console.error('Error opening browser:', error);
+        }
+    };
 
     const stockTransactions = useMemo(() => {
         return transactions
@@ -302,6 +357,39 @@ export default function StockDetailsScreen() {
                             ))}
                         </View>
                     </>
+                )}
+
+                {/* News Section */}
+                <Text style={[styles.sectionTitle, { color: currColors.textSecondary, marginTop: 24 }]}>LATEST NEWS</Text>
+                {loadingNews ? (
+                    <View style={styles.newsLoadingContainer}>
+                        <Text style={{ color: currColors.textSecondary, fontSize: 13 }}>Fetching latest updates...</Text>
+                    </View>
+                ) : news.length === 0 ? (
+                    <View style={[styles.emptyNewsCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+                        <Text style={{ color: currColors.textSecondary, fontSize: 13 }}>No recent news found for this company.</Text>
+                    </View>
+                ) : (
+                    <View style={styles.newsList}>
+                        {news.map((item, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                style={[styles.newsCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+                                onPress={() => handleOpenNews(item.link)}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.newsSourceRow}>
+                                    <Text style={[styles.newsSource, { color: '#007AFF' }]}>{item.source.toUpperCase()}</Text>
+                                    <Text style={[styles.newsDate, { color: currColors.textSecondary }]}>
+                                        {item.pubDate.split(' ').slice(1, 4).join(' ')}
+                                    </Text>
+                                </View>
+                                <Text style={[styles.newsTitle, { color: currColors.text }]} numberOfLines={3}>
+                                    {item.title}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
                 )}
 
             </ScrollView>
@@ -579,5 +667,45 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         marginHorizontal: -16, // Negative margin to hit edges
         overflow: 'hidden',
+    },
+    newsList: {
+        gap: 12,
+    },
+    newsCard: {
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#2C2C2E',
+        backgroundColor: '#1C1C1E',
+    },
+    newsSourceRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    newsSource: {
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    newsDate: {
+        fontSize: 10,
+    },
+    newsTitle: {
+        fontSize: 14,
+        fontWeight: '500',
+        lineHeight: 20,
+    },
+    newsLoadingContainer: {
+        padding: 24,
+        alignItems: 'center',
+    },
+    emptyNewsCard: {
+        padding: 20,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#2C2C2E',
+        alignItems: 'center',
     },
 });
