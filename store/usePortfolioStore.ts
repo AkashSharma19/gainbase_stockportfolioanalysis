@@ -372,22 +372,14 @@ export const usePortfolioStore = create<PortfolioState>()(
                     });
 
                     const assetValueMap = new Map<string, number>();
-                    let totalYearEndValue = 0;
+                    let totalYearInvestmentValue = 0;
 
-                    cumulativeHoldings.forEach((quantity, symbol) => {
-                        if (quantity <= 0) return;
-                        const ticker = tickerMap.get(symbol.toUpperCase());
-
-                        const lastTransaction = [...sortedTransactions]
-                            .filter(t => new Date(t.date).getFullYear() <= year && t.symbol.toUpperCase() === symbol.toUpperCase())
-                            .reverse()[0];
-
-                        const fallbackPrice = lastTransaction ? lastTransaction.price : 0;
-                        const price = (ticker && ticker['Current Value']) ? ticker['Current Value'] : fallbackPrice;
+                    yearTransactions.forEach(t => {
+                        const ticker = tickerMap.get(t.symbol.toUpperCase());
                         const assetType = (ticker && ticker['Asset Type']) || 'Other';
+                        const value = t.quantity * t.price;
 
-                        const value = quantity * price;
-                        totalYearEndValue += value;
+                        totalYearInvestmentValue += value;
                         assetValueMap.set(assetType, (assetValueMap.get(assetType) || 0) + value);
                     });
 
@@ -395,7 +387,7 @@ export const usePortfolioStore = create<PortfolioState>()(
                         .map(([name, value]) => ({
                             name,
                             value,
-                            percentage: totalYearEndValue > 0 ? (value / totalYearEndValue) * 100 : 0
+                            percentage: totalYearInvestmentValue > 0 ? (value / totalYearInvestmentValue) * 100 : 0
                         }))
                         .sort((a, b) => b.value - a.value);
 
