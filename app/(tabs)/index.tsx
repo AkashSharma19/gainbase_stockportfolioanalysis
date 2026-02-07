@@ -1,6 +1,7 @@
 import { ActivityCalendar } from '@/components/ActivityCalendar';
 import ShareableCard from '@/components/ShareableCard';
 import TopMovers from '@/components/TopMovers';
+import WinLossCard from '@/components/WinLossCard';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
@@ -42,6 +43,8 @@ export default function PortfolioScreen() {
   const monthlyAnalysis = useMemo(() => getMonthlyAnalysis(), [transactions, getMonthlyAnalysis, tickers]);
 
   const previewMonthlyAnalysis = useMemo(() => monthlyAnalysis.slice(0, 6), [monthlyAnalysis]);
+
+  const holdings = useMemo(() => getHoldingsData(), [getHoldingsData, transactions, tickers]);
 
   useEffect(() => {
     fetchTickers();
@@ -89,7 +92,6 @@ export default function PortfolioScreen() {
   };
 
   const shareData = useMemo(() => {
-    const holdings = getHoldingsData();
     const topWinners = [...holdings]
       .sort((a, b) => b.pnl - a.pnl)
       .slice(0, 5)
@@ -108,7 +110,7 @@ export default function PortfolioScreen() {
       topWinners,
       userName: userName
     };
-  }, [summary, getHoldingsData, userName]);
+  }, [summary, holdings, userName]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: currColors.background }]} edges={['top', 'left', 'right']}>
@@ -123,7 +125,7 @@ export default function PortfolioScreen() {
 
             <View style={[styles.heroCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
               <View style={styles.heroHeaderRow}>
-                <Text style={[styles.heroLabel, { color: currColors.textSecondary }]}>HOLDINGS ({tickers.length})</Text>
+                <Text style={[styles.heroLabel, { color: currColors.textSecondary }]}>HOLDINGS ({holdings.length})</Text>
                 <View style={styles.heroIcons}>
                   <TouchableOpacity
                     onPress={() => {
@@ -195,7 +197,7 @@ export default function PortfolioScreen() {
 
           <TopMovers />
 
-
+          <WinLossCard />
 
           <View style={styles.section}>
             <ActivityCalendar transactions={transactions} />

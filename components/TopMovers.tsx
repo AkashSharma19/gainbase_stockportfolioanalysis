@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     },
     symbolText: {
         fontSize: 12,
-        fontWeight: '700',
+        fontWeight: '600',
     },
     badge: {
         flexDirection: 'row',
@@ -186,14 +186,14 @@ const styles = StyleSheet.create({
     },
     badgeText: {
         fontSize: 11,
-        fontWeight: '600',
+        fontWeight: '500',
     },
     cardFooter: {
         gap: 2,
     },
     symbolName: {
         fontSize: 14,
-        fontWeight: '600',
+        fontWeight: '500',
     },
     priceText: {
         fontSize: 12,
