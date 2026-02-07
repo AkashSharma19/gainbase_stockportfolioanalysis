@@ -120,7 +120,7 @@ export default function PortfolioScreen() {
           showsHorizontalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <TopMovers />
+
             <View style={[styles.heroCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
               <View style={styles.heroHeaderRow}>
                 <Text style={[styles.heroLabel, { color: currColors.textSecondary }]}>HOLDINGS ({tickers.length})</Text>
@@ -192,6 +192,8 @@ export default function PortfolioScreen() {
               </View>
             </View>
           </View>
+
+          <TopMovers />
 
 
 

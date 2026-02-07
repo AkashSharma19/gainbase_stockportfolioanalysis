@@ -3,7 +3,6 @@ import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { format } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
@@ -12,6 +11,8 @@ import React, { useMemo } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface NewsItem {
     title: string;
@@ -25,6 +26,7 @@ export default function StockDetailsScreen() {
     const router = useRouter();
     const getHoldingsData = usePortfolioStore((state) => state.getHoldingsData);
     const transactions = usePortfolioStore((state) => state.transactions);
+    const tickers = usePortfolioStore((state) => state.tickers);
     const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
 
     const colorScheme = useColorScheme() ?? 'dark';
@@ -39,7 +41,7 @@ export default function StockDetailsScreen() {
         if (foundHolding) return foundHolding;
 
         // If not in holdings, look up ticker info
-        const ticker = usePortfolioStore.getState().tickers.find(t => t.Tickers === symbol);
+        const ticker = tickers.find(t => t.Tickers === symbol);
         if (ticker) {
             return {
                 symbol: ticker.Tickers,
@@ -62,7 +64,7 @@ export default function StockDetailsScreen() {
             };
         }
         return null;
-    }, [getHoldingsData, symbol]);
+    }, [getHoldingsData, symbol, transactions, tickers]);
 
     React.useEffect(() => {
         const fetchNews = async () => {
@@ -87,6 +89,7 @@ export default function StockDetailsScreen() {
                         const cleanTitle = item.title.split(' - ').slice(0, -1).join(' - ') || item.title;
                         return { ...item, title: cleanTitle };
                     })
+                    .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime())
                     .slice(0, 5);
 
                 setNews(parsedNews);
@@ -144,9 +147,8 @@ export default function StockDetailsScreen() {
     }, [tickerData]);
 
     const isPositiveTrend = useMemo(() => {
-        if (chartData.length < 2) return true;
-        return chartData[chartData.length - 1].value >= chartData[0].value;
-    }, [chartData]);
+        return (holding?.dayChangePercentage ?? 0) >= 0;
+    }, [holding?.dayChangePercentage]);
 
     if (!holding) {
         return (
@@ -207,8 +209,8 @@ export default function StockDetailsScreen() {
                 <View style={[styles.priceCard, { overflow: 'hidden', backgroundColor: currColors.card, borderColor: currColors.border }]}>
                     {/* Background Chart */}
                     {chartData.length > 2 && (
-                        <View style={{ position: 'absolute', bottom: 0, left: -30, right: -30, top: 0, overflow: 'hidden' }}>
-                            <View style={{ opacity: 0.15, transform: [{ translateY: 40 }] }}>
+                        <View style={{ position: 'absolute', bottom: 0, left: -16, right: 0, top: 0, overflow: 'hidden' }} pointerEvents="none">
+                            <View style={{ opacity: 0.15, transform: [{ translateY: 40 }] }} pointerEvents="none">
                                 <LineChart
                                     data={chartData}
                                     areaChart
@@ -223,8 +225,11 @@ export default function StockDetailsScreen() {
                                     hideAxesAndRules
                                     yAxisOffset={Math.min(...chartData.map(d => d.value)) * 0.95}
                                     height={320}
-                                    width={Dimensions.get('window').width + 60}
+                                    width={SCREEN_WIDTH - 20}
                                     adjustToWidth={true}
+                                    initialSpacing={0}
+                                    endSpacing={0}
+                                    disableScroll={true}
                                 />
                             </View>
                         </View>
@@ -297,32 +302,41 @@ export default function StockDetailsScreen() {
                 {/* 52 Week Range */}
                 {typeof holding.high52 === 'number' && typeof holding.low52 === 'number' && holding.high52 > 0 && holding.low52 > 0 && holding.assetType !== 'Mutual Fund' && (
                     <View style={[styles.rangeCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                        <Text style={[styles.sectionTitle, { color: currColors.textSecondary }]}>52 WEEK RANGE</Text>
-                        <View style={styles.rangeBarContainer}>
-                            <View style={styles.rangeLabels}>
-                                <Text style={[styles.rangeValue, { color: currColors.text }]}>₹{holding.low52.toLocaleString('en-IN', { maximumFractionDigits: 1 })}</Text>
-                                <Text style={[styles.rangeValue, { color: currColors.text }]}>₹{holding.high52.toLocaleString('en-IN', { maximumFractionDigits: 1 })}</Text>
+                        <Text style={[styles.sectionTitle, { color: currColors.textSecondary, marginBottom: 16 }]}>52 WEEK RANGE</Text>
+
+                        <View style={styles.rangeRowContainer}>
+                            <View>
+                                <Text style={[styles.rangeLabel, { color: currColors.textSecondary }]}>Low</Text>
+                                <Text style={[styles.rangeValueCompact, { color: currColors.text }]}>₹{holding.low52.toLocaleString('en-IN')}</Text>
                             </View>
-                            <View style={styles.progressBarWrapper}>
-                                <LinearGradient
-                                    colors={colorScheme === 'dark' ? ['#333', '#555', '#333'] : ['#E5E5EA', '#D1D1D6', '#E5E5EA']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={styles.progressBarTrack}
+
+                            <View style={styles.rangeBarContainer}>
+                                <View style={[styles.rangeTrack, { backgroundColor: currColors.border }]} />
+                                <View
+                                    style={[
+                                        styles.rangeFill,
+                                        {
+                                            backgroundColor: ((holding.currentPrice - holding.low52) / (holding.high52 - holding.low52)) >= 0.5 ? '#4CAF50' : '#F44336',
+                                            width: `${Math.min(100, Math.max(0, ((holding.currentPrice - holding.low52) / (holding.high52 - holding.low52)) * 100))}%`
+                                        }
+                                    ]}
                                 />
                                 <View
                                     style={[
-                                        styles.premiumMarker,
-                                        { left: `${Math.min(100, Math.max(0, ((holding.currentPrice - holding.low52) / (holding.high52 - holding.low52)) * 100))}%` }
+                                        styles.rangeKnob,
+                                        {
+                                            left: `${Math.min(100, Math.max(0, ((holding.currentPrice - holding.low52) / (holding.high52 - holding.low52)) * 100))}%`,
+                                            borderColor: currColors.card
+                                        }
                                     ]}
                                 >
-                                    <View style={[styles.markerLine, { backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.1)' }]} />
-                                    <View style={[styles.markerDot, { borderColor: currColors.card }]} />
+                                    <View style={[styles.knobInner, { backgroundColor: ((holding.currentPrice - holding.low52) / (holding.high52 - holding.low52)) >= 0.5 ? '#4CAF50' : '#F44336' }]} />
                                 </View>
                             </View>
-                            <View style={styles.rangeLabels}>
-                                <Text style={[styles.rangeSub, { color: currColors.textSecondary }]}>52W Low</Text>
-                                <Text style={[styles.rangeSub, { color: currColors.textSecondary }]}>52W High</Text>
+
+                            <View style={{ alignItems: 'flex-end' }}>
+                                <Text style={[styles.rangeLabel, { color: currColors.textSecondary }]}>High</Text>
+                                <Text style={[styles.rangeValueCompact, { color: currColors.text }]}>₹{holding.high52.toLocaleString('en-IN')}</Text>
                             </View>
                         </View>
                     </View>
@@ -597,70 +611,62 @@ const styles = StyleSheet.create({
     rangeCard: {
         backgroundColor: '#1C1C1E',
         borderRadius: 24,
-        padding: 24,
+        padding: 20,
         marginBottom: 16,
         borderWidth: 1,
         borderColor: '#2C2C2E',
     },
-    rangeBarContainer: {
-        marginTop: 8,
-    },
-    rangeLabels: {
+    rangeRowContainer: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 4,
+        gap: 12,
     },
-    rangeValue: {
-        color: '#FFF',
+    rangeLabel: {
+        fontSize: 10,
+        marginBottom: 2,
+    },
+    rangeValueCompact: {
         fontSize: 13,
         fontWeight: '600',
     },
-    rangeSub: {
-        color: '#8E8E93',
-        fontSize: 9,
-        fontWeight: '500',
-        marginTop: 6,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    progressBarWrapper: {
-        height: 24,
+    rangeBarContainer: {
+        flex: 1,
+        height: 24, // Enough for knob
         justifyContent: 'center',
-        marginVertical: 4,
     },
-    progressBarTrack: {
+    rangeTrack: {
+        height: 4,
+        borderRadius: 2,
+        width: '100%',
+        backgroundColor: '#333',
+    },
+    rangeFill: {
+        height: 4,
+        borderRadius: 2,
+        position: 'absolute',
+        left: 0,
+    },
+    rangeKnob: {
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: '#FFF',
+        borderWidth: 2,
+        position: 'absolute',
+        marginLeft: -8, // Center knob
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    knobInner: {
+        width: 6,
         height: 6,
         borderRadius: 3,
-        width: '100%',
-    },
-    premiumMarker: {
-        position: 'absolute',
-        alignItems: 'center',
-        width: 20,
-        height: 24,
-        marginLeft: -10,
-        zIndex: 10,
-    },
-    markerLine: {
-        width: 2,
-        height: 24,
-        backgroundColor: 'rgba(255, 255, 255, 0.3)',
-        borderRadius: 1,
-    },
-    markerDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: '#007AFF',
-        borderWidth: 2,
-        borderColor: '#FFF',
-        position: 'absolute',
-        top: 7,
-        shadowColor: '#007AFF',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.8,
-        shadowRadius: 4,
-        elevation: 5,
     },
 
     heroChartContainer: {

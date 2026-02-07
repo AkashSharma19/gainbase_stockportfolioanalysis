@@ -2,37 +2,49 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { Activity, ArrowDownRight, ArrowUpRight, Plus } from 'lucide-react-native';
 import React, { useMemo } from 'react';
-import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TopMovers() {
     const router = useRouter();
     const getHoldingsData = usePortfolioStore((state) => state.getHoldingsData);
     const transactions = usePortfolioStore((state) => state.transactions);
     const tickers = usePortfolioStore((state) => state.tickers);
-    const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
 
     const theme = useColorScheme() ?? 'dark';
     const currColors = Colors[theme];
 
-    const stories = useMemo(() => {
+    const movers = useMemo(() => {
         const holdings = getHoldingsData();
 
-        // 1. Welcome Story (Always first if empty)
         if (!transactions || transactions.length === 0) {
             return [
-                { id: 'welcome', type: 'insight', label: 'Welcome', symbol: 'HAY', color: ['#00C6FF', '#0072FF'], shadowColor: '#0072FF', route: '/(tabs)/profile' },
-                { id: 'add', type: 'action', label: 'Add Trade', symbol: '+', color: ['#34C759', '#30D158'], shadowColor: '#34C759', route: '/add-transaction' }
+                {
+                    id: 'welcome',
+                    type: 'insight',
+                    label: 'Start Investing',
+                    symbol: '👋',
+                    value: 'N/A',
+                    isProfit: true,
+                    route: '/add-transaction'
+                },
+                {
+                    id: 'add',
+                    type: 'action',
+                    label: 'Add Trade',
+                    symbol: '+',
+                    value: 'New',
+                    isProfit: true,
+                    route: '/add-transaction'
+                }
             ];
         }
 
         const items: any[] = [];
 
-        // 2. Performance Stories
+        // Sort by absolute day change percentage to find top movers (gainers or losers)
         const performers = [...holdings]
             .sort((a, b) => Math.abs(b.dayChangePercentage || 0) - Math.abs(a.dayChangePercentage || 0))
             .slice(0, 8);
@@ -43,33 +55,24 @@ export default function TopMovers() {
                 id: h.symbol,
                 type: 'stock',
                 label: h.companyName || h.symbol,
-                symbol: (h.companyName || h.symbol).substring(0, 3).toUpperCase(),
-                value: `${isProfit ? '+' : ''}${(h.dayChangePercentage || 0).toFixed(1)}%`,
-                color: isProfit ? ['#34C759', '#30D158'] : ['#FF3B30', '#FF453A'],
-                shadowColor: isProfit ? '#34C759' : '#FF3B30',
+                symbol: h.symbol,
+                value: `${isProfit ? '+' : ''}${(h.dayChangePercentage || 0).toFixed(2)}%`,
+                price: `₹${h.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
+                isProfit,
                 route: `/stock-details/${h.symbol}`
             });
         });
 
-        // 3. If no holdings (all sold), show history insights
         if (items.length === 0 && transactions.length > 0) {
             items.push({
                 id: 'history',
                 type: 'insight',
-                label: 'Analysis',
-                symbol: '📊',
-                color: ['#5856D6', '#AF52DE'],
-                shadowColor: '#5856D6',
+                label: 'Portfolio Analysis',
+                symbol: 'AVG',
+                value: 'View',
+                price: 'Analytics',
+                isProfit: true,
                 route: '/(tabs)/analytics'
-            });
-            items.push({
-                id: 'add_more',
-                type: 'action',
-                label: 'Add New',
-                symbol: '+',
-                color: ['#007AFF', '#004080'],
-                shadowColor: '#007AFF',
-                route: '/add-transaction'
             });
         }
 
@@ -85,35 +88,44 @@ export default function TopMovers() {
                 contentContainerStyle={styles.listContent}
                 decelerationRate="fast"
             >
-                {stories.map((item) => (
+                {movers.map((item) => (
                     <TouchableOpacity
                         key={item.id}
-                        style={styles.storyWrapper}
+                        style={[styles.card, { backgroundColor: currColors.card, borderColor: currColors.border }]}
                         activeOpacity={0.7}
                         onPress={() => {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             router.push(item.route as any);
                         }}
                     >
-                        <View style={[styles.glowContainer, { shadowColor: item.shadowColor, shadowOpacity: theme === 'light' ? 0.3 : 0.6 }]}>
-                            <LinearGradient
-                                colors={item.color as any}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                                style={styles.storyRing}
-                            >
-                                <View style={[styles.storyInner, { backgroundColor: currColors.card, borderColor: currColors.card }]}>
-                                    <Text style={[styles.symbolText, { color: currColors.text }]}>{item.symbol}</Text>
-                                </View>
-                            </LinearGradient>
-                            {item.value && (
-                                <View style={[styles.badge, { backgroundColor: item.color[0], borderColor: currColors.card }]}>
-                                    <Text style={styles.badgeText}>{item.value}</Text>
-                                </View>
-                            )}
+                        <View style={styles.cardHeader}>
+                            <View style={[styles.iconContainer, { backgroundColor: currColors.cardSecondary }]}>
+                                {item.type === 'action' ? (
+                                    <Plus size={16} color={currColors.tint} />
+                                ) : item.type === 'insight' ? (
+                                    <Activity size={16} color={currColors.tint} />
+                                ) : (
+                                    <Text style={[styles.symbolText, { color: currColors.text }]}>{item.label.substring(0, 2).toUpperCase()}</Text>
+                                )}
+                            </View>
+                            <View style={[styles.badge, { backgroundColor: item.isProfit ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)' }]}>
+                                {item.type === 'stock' ? (
+                                    item.isProfit ?
+                                        <ArrowUpRight size={12} color="#34C759" /> :
+                                        <ArrowDownRight size={12} color="#FF3B30" />
+                                ) : null}
+                                <Text style={[styles.badgeText, { color: item.isProfit ? '#34C759' : '#FF3B30' }]}>
+                                    {item.value}
+                                </Text>
+                            </View>
                         </View>
 
-                        <Text style={[styles.labelText, { color: currColors.textSecondary }]} numberOfLines={1}>{item.label}</Text>
+                        <View style={styles.cardFooter}>
+                            <Text style={[styles.symbolName, { color: currColors.text }]} numberOfLines={1}>{item.label}</Text>
+                            {item.price && (
+                                <Text style={[styles.priceText, { color: currColors.textSecondary }]}>{item.price}</Text>
+                            )}
+                        </View>
                     </TouchableOpacity>
                 ))}
             </ScrollView>
@@ -123,8 +135,7 @@ export default function TopMovers() {
 
 const styles = StyleSheet.create({
     container: {
-        marginVertical: 16,
-        paddingBottom: 4,
+        marginBottom: 24,
         marginHorizontal: -16,
     },
     sectionTitle: {
@@ -134,68 +145,57 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
         textTransform: 'uppercase',
         marginBottom: 12,
-        marginLeft: 16, // Match list content padding
+        marginLeft: 16,
     },
     listContent: {
         paddingHorizontal: 16,
-        paddingVertical: 12, // Add space for shadow/glow
-        gap: 8,
+        gap: 12,
     },
-    storyWrapper: {
-        alignItems: 'center',
-        width: 72,
+    card: {
+        width: 140,
+        padding: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+        justifyContent: 'space-between',
+        height: 100,
     },
-    glowContainer: {
-        width: 60,
-        height: 60,
-        shadowOffset: { width: 0, height: 4 },
-        shadowRadius: 10,
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
         marginBottom: 8,
-        elevation: 5,
     },
-    storyRing: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        padding: 2.5,
+    iconContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    storyInner: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 30,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
     },
     symbolText: {
-        fontSize: 14,
-        fontWeight: '800',
-        letterSpacing: 0.5,
+        fontSize: 12,
+        fontWeight: '700',
     },
     badge: {
-        position: 'absolute',
-        bottom: -4,
-        alignSelf: 'center',
-        borderRadius: 10,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderWidth: 2,
-        zIndex: 10,
-        minWidth: 40,
+        flexDirection: 'row',
         alignItems: 'center',
+        paddingHorizontal: 6,
+        paddingVertical: 4,
+        borderRadius: 8,
+        gap: 2,
     },
     badgeText: {
-        color: '#FFF',
-        fontSize: 9,
-        fontWeight: '800',
+        fontSize: 11,
+        fontWeight: '600',
     },
-    labelText: {
-        fontSize: 10,
-        fontWeight: '500',
-        textAlign: 'center',
-        marginTop: 2,
-        width: 72,
+    cardFooter: {
+        gap: 2,
     },
+    symbolName: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    priceText: {
+        fontSize: 12,
+    }
 });
