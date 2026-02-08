@@ -53,6 +53,8 @@ export default function ExploreScreen() {
     const recentSearches = usePortfolioStore((state) => state.recentSearches);
     const addRecentSearch = usePortfolioStore((state) => state.addRecentSearch);
     const clearRecentSearches = usePortfolioStore((state) => state.clearRecentSearches);
+    const watchlist = usePortfolioStore((state) => state.watchlist);
+    const toggleWatchlist = usePortfolioStore((state) => state.toggleWatchlist);
     const router = useRouter();
 
     const colorScheme = useColorScheme() ?? 'dark';
@@ -92,7 +94,7 @@ export default function ExploreScreen() {
     }, [fetchTickers]);
 
     const filteredTickers = useMemo(() => {
-        let result = tickers.filter(t => t && t.Tickers && t.Tickers !== 'INDEXNSE:NIFTY_50' && t.Tickers !== 'INDEXBOM:SENSEX' && t.Tickers !== '.IXIC'); // Filter out Indices and invalid data
+        let result = tickers.filter(t => t && t.Tickers && t.Tickers !== 'INDEXNSE:NIFTY_50' && t.Tickers !== 'INDEXBOM:SENSEX' && t.Tickers !== '.IXIC');
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             result = result.filter(
@@ -100,13 +102,18 @@ export default function ExploreScreen() {
                     (item['Company Name'] && item['Company Name'].toLowerCase().includes(query)) ||
                     (item.Tickers && item.Tickers.toLowerCase().includes(query))
             );
+        } else if (!isSearchFocused) {
+            // If no search query and search not focused, only show watchlist
+            result = result.filter(item => watchlist.includes(item.Tickers));
+        } else {
+            // If no search query but search is focused, don't show watchlist
+            result = [];
         }
 
         if (filterAssetType) {
             result = result.filter(item => item['Asset Type'] === filterAssetType);
         }
 
-        // Sort by 1D change percentage (descending)
         return [...result].sort((a, b) => {
             const aCurrent = a['Current Value'] || 0;
             const aYesterday = a['Yesterday Close'] || aCurrent;
@@ -118,7 +125,7 @@ export default function ExploreScreen() {
 
             return bChange - aChange;
         });
-    }, [tickers, searchQuery, filterAssetType]);
+    }, [tickers, searchQuery, filterAssetType, watchlist, isSearchFocused]);
 
     const indicesData = useMemo(() => {
         return {
@@ -162,7 +169,7 @@ export default function ExploreScreen() {
                             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 2 }}>
                                 <Image
                                     source={{ uri: item.Logo }}
-                                    style={{ width: 40, height: 40, borderRadius: 10 }} // Adjusted to match Analytics
+                                    style={{ width: 40, height: 40, borderRadius: 10 }}
                                     resizeMode="contain"
                                 />
                             </View>
@@ -186,12 +193,29 @@ export default function ExploreScreen() {
                     </View>
                 </View>
                 <View style={styles.itemRight}>
-                    <Text style={[styles.currentPrice, { color: currColors.text }]}>{showCurrencySymbol ? '₹' : ''}{currentValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-                    <View style={[styles.changeBadge, { backgroundColor: isPositive ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
-                        <TrendingUp size={12} color={isPositive ? '#4CAF50' : '#F44336'} style={{ transform: [{ rotate: isPositive ? '0deg' : '180deg' }] }} />
-                        <Text style={[styles.changeText, { color: isPositive ? '#4CAF50' : '#F44336' }]}>
-                            {Math.abs(changePercentage).toFixed(2)}%
-                        </Text>
+                    <View style={styles.priceRow}>
+                        <View style={{ alignItems: 'flex-end', marginRight: 12 }}>
+                            <Text style={[styles.currentPrice, { color: currColors.text }]}>{showCurrencySymbol ? '₹' : ''}{currentValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                            <View style={[styles.changeBadge, { backgroundColor: isPositive ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
+                                <TrendingUp size={12} color={isPositive ? '#4CAF50' : '#F44336'} style={{ transform: [{ rotate: isPositive ? '0deg' : '180deg' }] }} />
+                                <Text style={[styles.changeText, { color: isPositive ? '#4CAF50' : '#F44336' }]}>
+                                    {Math.abs(changePercentage).toFixed(2)}%
+                                </Text>
+                            </View>
+                        </View>
+                        <TouchableOpacity
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                toggleWatchlist(item.Tickers);
+                            }}
+                            style={styles.starButton}
+                        >
+                            <Ionicons
+                                name={watchlist.includes(item.Tickers) ? "star" : "star-outline"}
+                                size={22}
+                                color={watchlist.includes(item.Tickers) ? "#FFD700" : currColors.textSecondary}
+                            />
+                        </TouchableOpacity>
                     </View>
                 </View>
             </TouchableOpacity >
@@ -241,7 +265,7 @@ export default function ExploreScreen() {
                                             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 8, padding: 2 }}>
                                                 <Image
                                                     source={{ uri: item.Logo }}
-                                                    style={{ width: 24, height: 24, borderRadius: 6 }} // Increased size
+                                                    style={{ width: 24, height: 24, borderRadius: 6 }}
                                                     resizeMode="contain"
                                                 />
                                             </View>
@@ -291,8 +315,6 @@ export default function ExploreScreen() {
         };
 
         const Icon = sectorIcons[name] || LayoutGrid;
-
-        // Colors mapping to keep it vibrant
         const sectorColors: Record<string, string> = {
             'Bank': '#0A84FF',
             'IT': '#5E5CE6',
@@ -365,10 +387,6 @@ export default function ExploreScreen() {
     const renderSearchFocusView = () => {
         if (!isSearchFocused || searchQuery.length > 0) return null;
 
-        const suggestedCompanies = tickers
-            .filter(t => t && t.Tickers && t.Tickers !== 'INDEXNSE:NIFTY_50' && t.Tickers !== 'INDEXBOM:SENSEX' && t.Tickers !== '.IXIC')
-            .slice(0, 5);
-
         return (
             <View style={styles.focusView}>
                 {recentSearches.length > 0 && (
@@ -414,7 +432,6 @@ export default function ExploreScreen() {
                                 autoCorrect={false}
                                 onFocus={() => setIsSearchFocused(true)}
                                 onBlur={() => {
-                                    // Delay blur to allow touch events on suggestions to register
                                     setTimeout(() => setIsSearchFocused(false), 200);
                                 }}
                             />
@@ -469,8 +486,6 @@ export default function ExploreScreen() {
                                     </ScrollView>
                                 </View>
                             )}
-
-                            {/* Removed Sector Filter Row - Now on dedicated page */}
                         </View>
                     )}
                 </View>
@@ -494,15 +509,15 @@ export default function ExploreScreen() {
                                 {renderSearchFocusView()}
                                 {!isSearchFocused && renderTopMovers()}
                                 {!isSearchFocused && renderSectorGrid()}
-                                {(searchQuery || filterAssetType) ? (
+                                {searchQuery || filterAssetType ? (
                                     <View style={[styles.sectionHeader, { marginTop: 10 }]}>
                                         <Text style={[styles.sectionTitle, { color: currColors.textSecondary }]}>SEARCH RESULTS</Text>
                                     </View>
-                                ) : (
+                                ) : !isSearchFocused ? (
                                     <View style={[styles.sectionHeader, { marginTop: 20 }]}>
-                                        <Text style={[styles.sectionTitle, { color: currColors.textSecondary }]}>ALL COMPANIES</Text>
+                                        <Text style={[styles.sectionTitle, { color: currColors.textSecondary }]}>WATCHLIST</Text>
                                     </View>
-                                )}
+                                ) : null}
                             </>
                         }
                         contentContainerStyle={[styles.listContent, { backgroundColor: currColors.background }]}
@@ -511,11 +526,14 @@ export default function ExploreScreen() {
                             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={currColors.text} />
                         }
                         ListEmptyComponent={
-                            <View style={styles.emptyContainer}>
-                                <Text style={[styles.emptyText, { color: currColors.textSecondary }]}>
-                                    {searchQuery ? 'No companies found' : 'Loading companies...'}
-                                </Text>
-                            </View>
+                            (isSearchFocused && !searchQuery) ? null : (
+                                <View style={styles.emptyContainer}>
+                                    <Ionicons name={searchQuery ? "search-outline" : "star-outline"} size={48} color={currColors.textSecondary} style={{ marginBottom: 16 }} />
+                                    <Text style={[styles.emptyText, { color: currColors.textSecondary, textAlign: 'center' }]}>
+                                        {searchQuery ? 'No companies found' : 'Your watchlist is empty.\nSearch for companies to add them.'}
+                                    </Text>
+                                </View>
+                            )
                         }
                     />
                 )}
@@ -533,11 +551,6 @@ const MarketRibbon = ({ indicesData, isVisible, currColors }: { indicesData: any
         { label: 'NASDAQ', data: nasdaq },
     ].filter(i => i && i.data), [nifty50, sensex, nasdaq]);
 
-    const duplicatedIndices = useMemo(() => {
-        if (!isVisible || indices.length === 0) return [];
-        return [...indices, ...indices, ...indices, ...indices];
-    }, [indices, isVisible]);
-
     const [contentWidth, setContentWidth] = useState(0);
     const translateX = useSharedValue(0);
 
@@ -546,7 +559,7 @@ const MarketRibbon = ({ indicesData, isVisible, currColors }: { indicesData: any
         translateX.value = 0;
         translateX.value = withRepeat(
             withTiming(-contentWidth, {
-                duration: contentWidth * 50, // Consistent speed: 50ms per pixel
+                duration: contentWidth * 50,
                 easing: Easing.linear,
             }),
             -1,
@@ -768,6 +781,13 @@ const styles = StyleSheet.create({
         fontWeight: '400',
         marginLeft: 4,
     },
+    priceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    starButton: {
+        padding: 4,
+    },
     emptyContainer: {
         marginTop: 100,
         alignItems: 'center',
@@ -777,7 +797,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     sectionHeader: {
-        paddingHorizontal: 0,
         marginBottom: 12,
     },
     sectionTitle: {
@@ -786,13 +805,12 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
         textTransform: 'uppercase',
     },
-    // Top Movers
     topMoversContainer: {
         marginBottom: 24,
-        marginHorizontal: -16, // Bleed to edges
+        marginHorizontal: -16,
     },
     topMoversScroll: {
-        paddingHorizontal: 16, // Re-add padding to the content specifically
+        paddingHorizontal: 16,
         gap: 12,
     },
     moverCard: {
@@ -836,7 +854,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '400',
     },
-    // Sector Grid
     sectorGridContainer: {
         marginBottom: 24,
     },
@@ -844,14 +861,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'flex-start',
         gap: 8,
-        paddingHorizontal: 0,
     },
     sectorGridExpanded: {
         flexWrap: 'wrap',
         rowGap: 12,
     },
     sectorCard: {
-        width: (SCREEN_WIDTH - 32 - 32) / 5, // 5 columns + small gaps
+        width: (SCREEN_WIDTH - 32 - 32) / 5,
         paddingVertical: 8,
         borderRadius: 12,
         borderWidth: 1,
@@ -874,12 +890,11 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         textAlign: 'center',
     },
-    // Ticker Ribbon Styles
     ribbonContainer: {
         height: 50,
         backgroundColor: 'transparent',
         marginBottom: 24,
-        marginHorizontal: -16, // Bleed to edges
+        marginHorizontal: -16,
         overflow: 'hidden',
         justifyContent: 'center',
     },
@@ -915,7 +930,6 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: '600',
     },
-    // Search Focus View Styles
     focusView: {
         flex: 1,
         paddingHorizontal: 16,
@@ -950,38 +964,6 @@ const styles = StyleSheet.create({
     },
     historyChipText: {
         fontSize: 13,
-        fontWeight: '500',
-    },
-    suggestionItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-    },
-    suggestionLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    suggestionIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    suggestionIconText: {
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    suggestionName: {
-        fontSize: 14,
-        fontWeight: '600',
-        marginBottom: 2,
-    },
-    suggestionTicker: {
-        fontSize: 12,
         fontWeight: '500',
     },
 });

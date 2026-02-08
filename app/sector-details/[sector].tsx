@@ -1,6 +1,7 @@
 import { useColorScheme } from '@/components/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
     ArrowDown,
@@ -25,7 +26,7 @@ import {
     Zap
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
-import { Dimensions, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Colors from '../../constants/Colors';
 import { usePortfolioStore } from '../../store/usePortfolioStore';
@@ -157,9 +158,19 @@ export default function SectorDetailsScreen() {
             >
                 <View style={styles.itemLeft}>
                     <View style={[styles.holdingIcon, { backgroundColor: CHART_COLORS[index % CHART_COLORS.length] + '22' }]}>
-                        <Text style={[styles.iconLetter, { color: CHART_COLORS[index % CHART_COLORS.length] }]}>
-                            {companyName[0]?.toUpperCase() || '?'}
-                        </Text>
+                        {item.Logo ? (
+                            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 2 }}>
+                                <Image
+                                    source={{ uri: item.Logo }}
+                                    style={{ width: 40, height: 40, borderRadius: 10 }}
+                                    resizeMode="contain"
+                                />
+                            </View>
+                        ) : (
+                            <Text style={[styles.iconLetter, { color: CHART_COLORS[index % CHART_COLORS.length] }]}>
+                                {companyName[0]?.toUpperCase() || '?'}
+                            </Text>
+                        )}
                     </View>
                     <View style={styles.infoCol}>
                         <Text style={[styles.companyName, { color: currColors.text }]} numberOfLines={1}>{companyName}</Text>
@@ -188,29 +199,40 @@ export default function SectorDetailsScreen() {
             }} />
 
             <View style={[styles.container, { backgroundColor: currColors.background }]}>
-                {/* Header Section (1/4th of screen) */}
-                <View style={[styles.headerSection, { backgroundColor: sectorColor + '15' }]}>
+                {/* Header Section (1/3rd of screen for more prominence) */}
+                <LinearGradient
+                    colors={[sectorColor + '20', currColors.background]}
+                    style={styles.headerSection}
+                >
                     <SafeAreaView edges={['top']} style={styles.headerContent}>
-                        <TouchableOpacity
-                            onPress={() => router.back()}
-                            style={[styles.backButton, { backgroundColor: currColors.card + '80' }]}
-                        >
-                            <Ionicons name="chevron-back" size={24} color={currColors.text} />
-                        </TouchableOpacity>
+                        <View style={styles.headerTopRow}>
+                            <TouchableOpacity
+                                onPress={() => router.back()}
+                                style={[styles.backButton, { backgroundColor: currColors.card + '80' }]}
+                            >
+                                <Ionicons name="chevron-back" size={24} color={currColors.text} />
+                            </TouchableOpacity>
+                        </View>
+
                         <View style={styles.headerCenter}>
-                            <View style={[styles.largeIconContainer, { backgroundColor: sectorColor + '20', borderColor: sectorColor + '40' }]}>
+                            <View style={[styles.largeIconContainer, {
+                                backgroundColor: currColors.background,
+                                shadowColor: sectorColor,
+                                shadowOffset: { width: 0, height: 10 },
+                                shadowOpacity: 0.3,
+                                shadowRadius: 20,
+                                elevation: 10,
+                                borderColor: sectorColor + '30'
+                            }]}>
                                 <SectorIcon size={48} color={sectorColor} strokeWidth={1.5} />
                             </View>
                             <Text style={[styles.sectorTitle, { color: currColors.text }]}>{sector}</Text>
-                            <Text style={[styles.companyCount, { color: currColors.textSecondary }]}>
-                                {filteredCompanies.length} {filteredCompanies.length === 1 ? 'Company' : 'Companies'}
-                            </Text>
                         </View>
                     </SafeAreaView>
-                </View>
+                </LinearGradient>
 
                 {/* List Section */}
-                <View style={styles.listSection}>
+                <View style={[styles.listSection, { backgroundColor: currColors.background }]}>
                     <View style={styles.filtersWrapper}>
                         <View style={styles.holdingsHeader}>
                             <TouchableOpacity
@@ -247,8 +269,8 @@ export default function SectorDetailsScreen() {
 
                     <FlatList
                         data={filteredCompanies}
-                        keyExtractor={(item) => item.Tickers}
                         renderItem={renderItem}
+                        keyExtractor={(item) => item.Tickers}
                         contentContainerStyle={styles.listContent}
                         showsVerticalScrollIndicator={false}
                         bounces={false}
@@ -267,13 +289,18 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     headerSection: {
-        height: SCREEN_HEIGHT / 4,
+        height: SCREEN_HEIGHT / 3.2,
         width: '100%',
-        position: 'relative',
     },
     headerContent: {
         flex: 1,
         paddingHorizontal: 20,
+    },
+    headerTopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        paddingTop: 10,
     },
     backButton: {
         width: 40,
@@ -281,53 +308,59 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 10,
     },
     headerCenter: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingBottom: 20,
+        marginTop: -10,
     },
     largeIconContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 24,
+        width: 90,
+        height: 90,
+        borderRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        marginBottom: 12,
+        marginBottom: 16,
     },
     sectorTitle: {
-        fontSize: SCREEN_WIDTH > 400 ? 24 : 20,
-        fontWeight: '700',
-        marginBottom: 4,
+        fontSize: SCREEN_WIDTH > 400 ? 28 : 24,
+        fontWeight: '800',
+        letterSpacing: -0.5,
+        marginBottom: 8,
+    },
+    badge: {
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
     },
     companyCount: {
         fontSize: 14,
-        fontWeight: '500',
-        opacity: 0.8,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     listSection: {
         flex: 1,
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
-        backgroundColor: 'transparent',
+        marginTop: -30,
+        paddingTop: 10,
     },
     filtersWrapper: {
-        paddingVertical: 12,
-        backgroundColor: 'transparent',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
     },
     holdingsHeader: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 16,
+        justifyContent: 'space-between',
     },
     actionIconButton: {
         width: 36,
         height: 36,
-        borderRadius: 18,
+        borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
@@ -335,33 +368,32 @@ const styles = StyleSheet.create({
     viewModeToggle: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
+        paddingHorizontal: 12,
         height: 36,
+        borderRadius: 10,
         borderWidth: 1,
+        gap: 6,
     },
     viewModeText: {
-        fontSize: 12,
-        fontWeight: '500',
+        fontSize: 13,
+        fontWeight: '600',
     },
     listContent: {
-        paddingHorizontal: 16,
-        paddingBottom: 40,
+        paddingHorizontal: 20,
+        paddingBottom: 20,
     },
     companyItem: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 15,
+        justifyContent: 'space-between',
+        paddingVertical: 16,
         borderBottomWidth: 1,
     },
     itemLeft: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
+        flex: 1,
         marginRight: 10,
     },
     holdingIcon: {

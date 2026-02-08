@@ -35,6 +35,8 @@ interface PortfolioState {
     clearRecentSearches: () => void;
     headerLogo: string | null;
     headerLink: string | null;
+    watchlist: string[];
+    toggleWatchlist: (ticker: string) => void;
 }
 
 export const usePortfolioStore = create<PortfolioState>()(
@@ -439,6 +441,15 @@ export const usePortfolioStore = create<PortfolioState>()(
             clearRecentSearches: () => set({ recentSearches: [] }),
             headerLogo: null,
             headerLink: null,
+            watchlist: [],
+            toggleWatchlist: (ticker) => set((state) => {
+                const exists = state.watchlist.includes(ticker);
+                if (exists) {
+                    return { watchlist: state.watchlist.filter(t => t !== ticker) };
+                } else {
+                    return { watchlist: [...state.watchlist, ticker] };
+                }
+            }),
         }),
         {
             name: 'portfolio-storage',
