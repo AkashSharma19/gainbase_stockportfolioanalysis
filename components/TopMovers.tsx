@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Activity, ArrowDownRight, ArrowUpRight, Plus } from 'lucide-react-native';
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TopMovers() {
     const router = useRouter();
@@ -60,6 +60,7 @@ export default function TopMovers() {
                 value: `${isProfit ? '+' : ''}${(h.dayChangePercentage || 0).toFixed(2)}%`,
                 price: `${showCurrencySymbol ? '₹' : ''}${h.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`,
                 isProfit,
+                logo: h.logo,
                 route: `/stock-details/${h.symbol}`
             });
         });
@@ -105,6 +106,12 @@ export default function TopMovers() {
                                     <Plus size={16} color={currColors.tint} />
                                 ) : item.type === 'insight' ? (
                                     <Activity size={16} color={currColors.tint} />
+                                ) : item.logo ? (
+                                    <Image
+                                        source={{ uri: item.logo }}
+                                        style={{ width: 32, height: 32, borderRadius: 16 }}
+                                        resizeMode="contain"
+                                    />
                                 ) : (
                                     <Text style={[styles.symbolText, { color: currColors.text }]}>{item.label.substring(0, 2).toUpperCase()}</Text>
                                 )}

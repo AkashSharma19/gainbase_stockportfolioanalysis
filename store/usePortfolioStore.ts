@@ -33,6 +33,8 @@ interface PortfolioState {
     recentSearches: string[];
     addRecentSearch: (query: string) => void;
     clearRecentSearches: () => void;
+    headerLogo: string | null;
+    headerLink: string | null;
 }
 
 export const usePortfolioStore = create<PortfolioState>()(
@@ -53,8 +55,18 @@ export const usePortfolioStore = create<PortfolioState>()(
                 try {
                     const response = await fetch(`${API_CONFIG.WEB_APP_URL}?action=get_tickers`);
                     const result = await response.json();
+                    console.log('[Gainbase Store] fetchTickers result.ok:', result.ok);
+                    console.log('[Gainbase Store] response keys:', Object.keys(result));
                     if (result.ok) {
-                        set({ tickers: result.data });
+                        const logo = result.config?.headerLogo || result.headerLogo || null;
+                        const link = result.config?.headerLink || result.headerLink || null;
+                        console.log('[Gainbase Store] Logo:', logo);
+                        console.log('[Gainbase Store] Link:', link);
+                        set({
+                            tickers: result.data,
+                            headerLogo: logo,
+                            headerLink: link,
+                        });
                     }
                 } catch (error) {
                     console.error('Failed to fetch tickers:', error);
@@ -269,6 +281,7 @@ export const usePortfolioStore = create<PortfolioState>()(
                     value: data.value,
                     totalCost: data.cost,
                     quantity: data.quantity,
+                    logo: data.symbol ? tickerMap.get(data.symbol)?.Logo : undefined,
                     pnl: data.value - data.cost,
                     pnlPercentage: data.cost > 0 ? ((data.value - data.cost) / data.cost) * 100 : 0,
                     percentage: totalPortfolioValue > 0 ? (data.value / totalPortfolioValue) * 100 : 0
@@ -334,6 +347,7 @@ export const usePortfolioStore = create<PortfolioState>()(
                         sector: ticker?.['Sector'] || 'Other',
                         high52: ticker?.High52,
                         low52: ticker?.Low52,
+                        logo: ticker?.Logo,
                         broker: transactions.filter(t => t.symbol.toUpperCase() === symbol).reverse()[0]?.broker || 'Unknown'
                     });
                 });
@@ -552,6 +566,8 @@ export const usePortfolioStore = create<PortfolioState>()(
                 });
             },
             clearRecentSearches: () => set({ recentSearches: [] }),
+            headerLogo: null,
+            headerLink: null,
         }),
         {
             name: 'portfolio-storage',

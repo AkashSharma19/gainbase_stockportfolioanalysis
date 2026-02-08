@@ -36,7 +36,7 @@ import {
     Zap
 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -329,7 +329,13 @@ export default function AnalyticsScreen() {
                                     <View style={styles.holdingRow}>
                                         <View style={styles.holdingMain}>
                                             <View style={[styles.holdingIcon, { backgroundColor: CHART_COLORS[index % CHART_COLORS.length] + '22' }]}>
-                                                {selectedDimension === 'Sector' && SECTOR_ICONS[item.name] ? (() => {
+                                                {item.logo ? (
+                                                    <Image
+                                                        source={{ uri: item.logo }}
+                                                        style={{ width: 44, height: 44, borderRadius: 14 }}
+                                                        resizeMode="contain"
+                                                    />
+                                                ) : selectedDimension === 'Sector' && SECTOR_ICONS[item.name] ? (() => {
                                                     const Icon = SECTOR_ICONS[item.name];
                                                     return <Icon size={20} color={CHART_COLORS[index % CHART_COLORS.length]} />;
                                                 })() : selectedDimension === 'Asset Type' && ASSET_TYPE_ICONS[item.name] ? (() => {

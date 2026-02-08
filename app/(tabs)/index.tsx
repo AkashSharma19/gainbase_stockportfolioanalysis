@@ -8,9 +8,10 @@ import { usePortfolioStore } from '@/store/usePortfolioStore';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
+import * as WebBrowser from 'expo-web-browser';
 import { ArrowRight, ChevronDown, Eye, EyeOff, PieChart, Share2, TrendingUp } from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ViewShot from 'react-native-view-shot';
 
@@ -32,6 +33,8 @@ export default function PortfolioScreen() {
   const getHoldingsData = usePortfolioStore((state) => state.getHoldingsData);
   const userName = usePortfolioStore((state) => state.userName);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
+  const headerLogo = usePortfolioStore((state) => state.headerLogo);
+  const headerLink = usePortfolioStore((state) => state.headerLink);
 
   const theme = useColorScheme() ?? 'dark';
   const currColors = Colors[theme];
@@ -129,6 +132,24 @@ export default function PortfolioScreen() {
           showsHorizontalScrollIndicator={false}
         >
           <View style={styles.header}>
+            {headerLogo && (
+              <TouchableOpacity
+                onPress={async () => {
+                  if (headerLink) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    await WebBrowser.openBrowserAsync(headerLink);
+                  }
+                }}
+                activeOpacity={0.7}
+                style={styles.logoContainer}
+              >
+                <Image
+                  source={{ uri: headerLogo }}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            )}
 
             <View style={[styles.heroCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
               <View style={styles.heroHeaderRow}>
@@ -346,9 +367,17 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    marginTop: 10,
+    marginTop: 0,
     marginBottom: 16,
     backgroundColor: 'transparent',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logo: {
+    width: '100%',
+    height: 60,
   },
   heroCard: {
     borderRadius: 24,

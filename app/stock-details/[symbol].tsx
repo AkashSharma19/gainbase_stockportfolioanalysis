@@ -8,7 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
 import { ArrowDownLeft, ArrowLeft, ArrowUpRight } from 'lucide-react-native';
 import React, { useMemo } from 'react';
-import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -62,6 +62,7 @@ export default function StockDetailsScreen() {
                 dayChangePercentage: ticker['Yesterday Close'] ? ((ticker['Current Value'] - ticker['Yesterday Close']) / ticker['Yesterday Close']) * 100 : 0,
                 high52: ticker.High52,
                 low52: ticker.Low52,
+                logo: ticker.Logo,
             };
         }
         return null;
@@ -191,6 +192,13 @@ export default function StockDetailsScreen() {
                     <ArrowLeft size={24} color={currColors.text} />
                 </TouchableOpacity>
                 <View style={styles.headerTitle}>
+                    {holding.logo ? (
+                        <Image
+                            source={{ uri: holding.logo }}
+                            style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }}
+                            resizeMode="contain"
+                        />
+                    ) : null}
                     <Text style={[styles.companyName, { color: currColors.text }]} numberOfLines={2}>{holding.companyName}</Text>
                 </View>
                 <View style={{ width: 40 }} />
@@ -434,7 +442,9 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         flex: 1,
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         paddingHorizontal: 12,
     },
     symbol: {

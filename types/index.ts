@@ -26,6 +26,7 @@ export interface Ticker {
   'Today - 5'?: number;
   'Today - 6'?: number;
   'Today - 7'?: number;
+  Logo?: string;
 }
 
 export interface PortfolioSummary {
@@ -74,6 +75,7 @@ export interface Holding {
   dayChangePercentage: number;
   high52?: number;
   low52?: number;
+  logo?: string;
 }
 
 export interface AllocationItem {
@@ -85,4 +87,5 @@ export interface AllocationItem {
   pnl: number;
   pnlPercentage: number;
   quantity: number;
+  logo?: string;
 }

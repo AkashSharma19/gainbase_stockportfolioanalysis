@@ -27,6 +27,7 @@ import {
     ActivityIndicator,
     Dimensions,
     FlatList,
+    Image,
     RefreshControl,
     ScrollView,
     StyleSheet,
@@ -157,9 +158,17 @@ export default function ExploreScreen() {
             >
                 <View style={styles.itemLeft}>
                     <View style={[styles.holdingIcon, { backgroundColor: CHART_COLORS[index % CHART_COLORS.length] + '22' }]}>
-                        <Text style={[styles.iconLetter, { color: CHART_COLORS[index % CHART_COLORS.length] }]}>
-                            {companyName[0]?.toUpperCase() || '?'}
-                        </Text>
+                        {item.Logo ? (
+                            <Image
+                                source={{ uri: item.Logo }}
+                                style={{ width: 32, height: 32, borderRadius: 10 }}
+                                resizeMode="contain"
+                            />
+                        ) : (
+                            <Text style={[styles.iconLetter, { color: CHART_COLORS[index % CHART_COLORS.length] }]}>
+                                {companyName[0]?.toUpperCase() || '?'}
+                            </Text>
+                        )}
                     </View>
                     <View style={styles.infoCol}>
                         <Text style={[styles.companyName, { color: currColors.text }]} numberOfLines={1}>{companyName}</Text>
@@ -226,9 +235,17 @@ export default function ExploreScreen() {
                             >
                                 <View style={styles.moverHeader}>
                                     <View style={[styles.moverIcon, { backgroundColor: CHART_COLORS[index % CHART_COLORS.length] + '22' }]}>
-                                        <Text style={[styles.moverIconText, { color: CHART_COLORS[index % CHART_COLORS.length] }]}>
-                                            {item['Company Name']?.[0] || '?'}
-                                        </Text>
+                                        {item.Logo ? (
+                                            <Image
+                                                source={{ uri: item.Logo }}
+                                                style={{ width: 24, height: 24, borderRadius: 8 }}
+                                                resizeMode="contain"
+                                            />
+                                        ) : (
+                                            <Text style={[styles.moverIconText, { color: CHART_COLORS[index % CHART_COLORS.length] }]}>
+                                                {item['Company Name']?.[0] || '?'}
+                                            </Text>
+                                        )}
                                     </View>
                                     <View style={[styles.miniBadge, { backgroundColor: isPositive ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
                                         <Text style={[styles.miniBadgeText, { color: isPositive ? '#4CAF50' : '#F44336' }]}>
