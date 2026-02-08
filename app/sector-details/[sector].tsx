@@ -326,21 +326,11 @@ const styles = StyleSheet.create({
     },
     sectorTitle: {
         fontSize: SCREEN_WIDTH > 400 ? 28 : 24,
-        fontWeight: '800',
+        fontWeight: '500',
         letterSpacing: -0.5,
         marginBottom: 8,
     },
-    badge: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    companyCount: {
-        fontSize: 14,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
+
     listSection: {
         flex: 1,
         borderTopLeftRadius: 30,
@@ -376,7 +366,7 @@ const styles = StyleSheet.create({
     },
     viewModeText: {
         fontSize: 13,
-        fontWeight: '600',
+        fontWeight: '500',
     },
     listContent: {
         paddingHorizontal: 20,
@@ -412,7 +402,7 @@ const styles = StyleSheet.create({
     },
     companyName: {
         fontSize: 15,
-        fontWeight: '600',
+        fontWeight: '500',
         marginBottom: 2,
     },
     tickerRow: {
