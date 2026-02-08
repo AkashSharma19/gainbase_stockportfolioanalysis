@@ -4,6 +4,7 @@ import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Transaction } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Edit2, Trash2 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
@@ -138,7 +139,10 @@ export default function HistoryScreen() {
             </View>
             <TouchableOpacity
               style={[styles.filterToggle, { backgroundColor: currColors.card }]}
-              onPress={() => setShowFilters(!showFilters)}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowFilters(!showFilters);
+              }}
             >
               <Ionicons name="filter" size={20} color={showFilters ? currColors.tint : currColors.text} />
             </TouchableOpacity>
@@ -157,7 +161,10 @@ export default function HistoryScreen() {
                         { backgroundColor: currColors.card, borderColor: currColors.border },
                         filterType === type && styles.filterChipActive
                       ]}
-                      onPress={() => setFilterType(type)}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setFilterType(type);
+                      }}
                     >
                       <Text style={[
                         styles.filterChipText,

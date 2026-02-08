@@ -30,6 +30,9 @@ interface PortfolioState {
     setTheme: (theme: 'system' | 'light' | 'dark') => void;
     showCurrencySymbol: boolean;
     toggleCurrencySymbol: () => void;
+    recentSearches: string[];
+    addRecentSearch: (query: string) => void;
+    clearRecentSearches: () => void;
 }
 
 export const usePortfolioStore = create<PortfolioState>()(
@@ -538,6 +541,17 @@ export const usePortfolioStore = create<PortfolioState>()(
             setTheme: (theme) => set({ theme }),
             showCurrencySymbol: true,
             toggleCurrencySymbol: () => set((state) => ({ showCurrencySymbol: !state.showCurrencySymbol })),
+            recentSearches: [],
+            addRecentSearch: (query) => {
+                if (!query || query.trim() === '') return;
+                const trimmedQuery = query.trim();
+                set((state) => {
+                    const filtered = state.recentSearches.filter(s => s.toLowerCase() !== trimmedQuery.toLowerCase());
+                    const updated = [trimmedQuery, ...filtered].slice(0, 10);
+                    return { recentSearches: updated };
+                });
+            },
+            clearRecentSearches: () => set({ recentSearches: [] }),
         }),
         {
             name: 'portfolio-storage',
