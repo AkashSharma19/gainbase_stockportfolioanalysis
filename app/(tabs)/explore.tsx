@@ -380,7 +380,7 @@ export default function ExploreScreen() {
                             </TouchableOpacity>
                         </View>
                         <View style={styles.historyChips}>
-                            {recentSearches.map((term, index) => (
+                            {recentSearches.slice(0, 4).map((term, index) => (
                                 <TouchableOpacity
                                     key={index}
                                     style={[styles.historyChip, { backgroundColor: currColors.card, borderColor: currColors.border }]}
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     header: {
-        paddingTop: 20,
+        paddingTop: 16,
         paddingBottom: 15,
     },
     headerTop: {

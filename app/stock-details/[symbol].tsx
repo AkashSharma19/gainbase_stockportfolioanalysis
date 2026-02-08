@@ -19,6 +19,8 @@ interface NewsItem {
     link: string;
     pubDate: string;
     source: string;
+    sourceUrl?: string; // URL of the publisher
+    imageUrl?: string;
 }
 
 export default function StockDetailsScreen() {
@@ -83,13 +85,26 @@ export default function StockDetailsScreen() {
                     title: item.match(/<title>(.*?)<\/title>/)?.[1] || '',
                     link: item.match(/<link>(.*?)<\/link>/)?.[1] || '',
                     pubDate: item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || '',
-                    source: item.match(/<source.*?>(.*?)<\/source>/)?.[1] || ''
+                    source: item.match(/<source.*?>(.*?)<\/source>/)?.[1] || '',
+                    sourceUrl: item.match(/<source[^>]*url="(.*?)"[^>]*>/)?.[1] || ''
                 }))
                     .filter(item => item.title && item.link)
                     .map(item => {
                         // Clean title - remove source from the end (usually " - Source")
                         const cleanTitle = item.title.split(' - ').slice(0, -1).join(' - ') || item.title;
-                        return { ...item, title: cleanTitle };
+
+                        // Try to get domain for favicon
+                        let imageUrl = '';
+                        try {
+                            // Use sourceUrl if available (actual publisher), otherwise fallback to link (usually google news redirect)
+                            const targetUrl = item.sourceUrl || item.link;
+                            const url = new URL(targetUrl);
+                            imageUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=128`;
+                        } catch (e) {
+                            // Fallback
+                        }
+
+                        return { ...item, title: cleanTitle, imageUrl };
                     })
                     .sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime())
                     .slice(0, 5);
@@ -404,15 +419,26 @@ export default function StockDetailsScreen() {
                                 onPress={() => handleOpenNews(item.link)}
                                 activeOpacity={0.7}
                             >
-                                <View style={styles.newsSourceRow}>
-                                    <Text style={[styles.newsSource, { color: '#007AFF' }]}>{item.source.toUpperCase()}</Text>
-                                    <Text style={[styles.newsDate, { color: currColors.textSecondary }]}>
-                                        {item.pubDate.split(' ').slice(1, 4).join(' ')}
-                                    </Text>
+                                <View style={{ flexDirection: 'row', gap: 12 }}>
+                                    <View style={{ flex: 1 }}>
+                                        <View style={styles.newsSourceRow}>
+                                            <Text style={[styles.newsSource, { color: '#007AFF' }]}>{item.source.toUpperCase()}</Text>
+                                            <Text style={[styles.newsDate, { color: currColors.textSecondary }]}>
+                                                {item.pubDate.split(' ').slice(1, 4).join(' ')}
+                                            </Text>
+                                        </View>
+                                        <Text style={[styles.newsTitle, { color: currColors.text }]} numberOfLines={3}>
+                                            {item.title}
+                                        </Text>
+                                    </View>
+                                    {item.imageUrl && (
+                                        <Image
+                                            source={{ uri: item.imageUrl }}
+                                            style={{ width: 60, height: 60, borderRadius: 8, backgroundColor: '#FFFFFF' }}
+                                            resizeMode="contain"
+                                        />
+                                    )}
                                 </View>
-                                <Text style={[styles.newsTitle, { color: currColors.text }]} numberOfLines={3}>
-                                    {item.title}
-                                </Text>
                             </TouchableOpacity>
                         ))}
                     </View>
