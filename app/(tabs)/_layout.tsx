@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
+// import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Tabs, useRouter } from 'expo-router';
-import { Plus } from 'lucide-react-native';
+import { Compass, History, Plus, User, Wallet } from 'lucide-react-native';
 import React from 'react';
 import { Platform, TouchableOpacity, View } from 'react-native';
 
@@ -41,18 +41,18 @@ export default function TabLayout() {
           },
           tabBarStyle: {
             backgroundColor: currColors.background,
-            height: Platform.OS === 'ios' ? 90 : 75,
+            height: Platform.OS === 'ios' ? 92 : 78,
             borderTopWidth: 1,
             borderTopColor: currColors.border,
             elevation: 0,
-            paddingBottom: Platform.OS === 'ios' ? 30 : 12,
-            paddingTop: 8,
+            paddingBottom: Platform.OS === 'ios' ? 32 : 12,
+            paddingTop: 10,
           },
           tabBarLabelStyle: {
-            fontSize: 10,
-            fontWeight: '400',
+            fontSize: 11,
+            fontWeight: '500',
             marginTop: 4,
-            marginBottom: 4,
+            marginBottom: 2,
           }
         }}>
         <Tabs.Screen
@@ -60,7 +60,7 @@ export default function TabLayout() {
           options={{
             title: 'Portfolio',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? "briefcase" : "briefcase-outline"} size={22} color={color} />
+              <Wallet size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -76,7 +76,7 @@ export default function TabLayout() {
           options={{
             title: 'History',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? "time" : "time-outline"} size={22} color={color} />
+              <History size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -85,7 +85,7 @@ export default function TabLayout() {
           options={{
             title: 'Explore',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? "compass" : "compass-outline"} size={22} color={color} />
+              <Compass size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
@@ -94,7 +94,7 @@ export default function TabLayout() {
           options={{
             title: 'Profile',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? "person" : "person-outline"} size={22} color={color} />
+              <User size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
             ),
           }}
         />
