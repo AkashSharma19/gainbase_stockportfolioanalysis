@@ -1,11 +1,11 @@
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
-import { ArrowDownRight, ArrowUpRight } from 'lucide-react-native';
+import { ArrowDownRight, ArrowRight, ArrowUpRight } from 'lucide-react-native';
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-export default function WinLossCard() {
+export default function WinLossCard({ onPress }: { onPress?: () => void }) {
     const getHoldingsData = usePortfolioStore((state) => state.getHoldingsData);
     const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
     const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
@@ -40,52 +40,65 @@ export default function WinLossCard() {
 
     return (
         <View style={styles.container}>
-            <View style={[styles.card, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                <View style={styles.header}>
-                    <View style={styles.titleRow}>
-                        <Text style={[styles.title, { color: currColors.textSecondary }]}>WIN / LOSS RATIO</Text>
-                    </View>
-                    <View style={styles.rateContainer}>
-                        <Text style={[styles.rateValue, { color: currColors.text }]}>{isPrivacyMode ? '****' : `${stats.winRate.toFixed(0)}%`}</Text>
-                        <Text style={[styles.rateLabel, { color: currColors.textSecondary }]}>Win Rate</Text>
-                    </View>
-                </View>
-
-                {/* Progress Bar */}
-                <View style={styles.barContainer}>
-                    <View style={[styles.barsection, { flex: stats.winners, backgroundColor: '#4CAF50', borderTopLeftRadius: 4, borderBottomLeftRadius: 4, marginRight: 2 }]} />
-                    <View style={[styles.barsection, { flex: stats.losers, backgroundColor: '#F44336', borderTopRightRadius: 4, borderBottomRightRadius: 4 }]} />
-                </View>
-
-                {/* Stats Row */}
-                <View style={styles.statsRow}>
-                    <View style={styles.statItem}>
-                        <Text style={[styles.statLabel, { color: currColors.textSecondary }]}>Winners</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <View style={[styles.statBadge, { backgroundColor: 'rgba(76, 175, 80, 0.1)' }]}>
-                                <ArrowUpRight size={14} color="#4CAF50" />
-                                <Text style={[styles.statValue, { color: '#4CAF50' }]}>{isPrivacyMode ? '****' : stats.winners}</Text>
+            <TouchableOpacity
+                onPress={onPress}
+                activeOpacity={0.7}
+                disabled={!onPress}
+            >
+                <View style={[styles.card, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+                    <View style={styles.header}>
+                        <View style={styles.titleRow}>
+                            <Text style={[styles.title, { color: currColors.textSecondary }]}>WIN / LOSS RATIO</Text>
+                        </View>
+                        <View style={styles.headerRight}>
+                            <View style={styles.rateContainer}>
+                                <Text style={[styles.rateValue, { color: currColors.text }]}>{isPrivacyMode ? '****' : `${stats.winRate.toFixed(0)}%`}</Text>
+                                <Text style={[styles.rateLabel, { color: currColors.textSecondary }]}>Win Rate</Text>
                             </View>
-                            <Text style={[styles.statAmount, { color: '#4CAF50', marginTop: 0 }]} numberOfLines={1} adjustsFontSizeToFit>
-                                {isPrivacyMode ? '****' : `+${showCurrencySymbol ? '₹' : ''}${stats.winnersProfit.toLocaleString('en-IN', { maximumFractionDigits: 0, notation: "compact", compactDisplay: "short" })}`}
-                            </Text>
+                            {onPress && (
+                                <View style={[styles.iconCircle, { backgroundColor: currColors.cardSecondary }]}>
+                                    <ArrowRight size={14} color={currColors.tint} />
+                                </View>
+                            )}
                         </View>
                     </View>
 
-                    <View style={styles.statItem}>
-                        <Text style={[styles.statLabel, { color: currColors.textSecondary }]}>Losers</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <View style={[styles.statBadge, { backgroundColor: 'rgba(244, 67, 54, 0.1)' }]}>
-                                <ArrowDownRight size={14} color="#F44336" />
-                                <Text style={[styles.statValue, { color: '#F44336' }]}>{isPrivacyMode ? '****' : stats.losers}</Text>
+                    {/* Progress Bar */}
+                    <View style={styles.barContainer}>
+                        <View style={[styles.barsection, { flex: stats.winners, backgroundColor: '#4CAF50', borderTopLeftRadius: 4, borderBottomLeftRadius: 4, marginRight: 2 }]} />
+                        <View style={[styles.barsection, { flex: stats.losers, backgroundColor: '#F44336', borderTopRightRadius: 4, borderBottomRightRadius: 4 }]} />
+                    </View>
+
+                    {/* Stats Row */}
+                    <View style={styles.statsRow}>
+                        <View style={styles.statItem}>
+                            <Text style={[styles.statLabel, { color: currColors.textSecondary }]}>Winners</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <View style={[styles.statBadge, { backgroundColor: 'rgba(76, 175, 80, 0.1)' }]}>
+                                    <ArrowUpRight size={14} color="#4CAF50" />
+                                    <Text style={[styles.statValue, { color: '#4CAF50' }]}>{isPrivacyMode ? '****' : stats.winners}</Text>
+                                </View>
+                                <Text style={[styles.statAmount, { color: '#4CAF50', marginTop: 0 }]} numberOfLines={1} adjustsFontSizeToFit>
+                                    {isPrivacyMode ? '****' : `+${showCurrencySymbol ? '₹' : ''}${stats.winnersProfit.toLocaleString('en-IN', { maximumFractionDigits: 0, notation: "compact", compactDisplay: "short" })}`}
+                                </Text>
                             </View>
-                            <Text style={[styles.statAmount, { color: '#F44336', marginTop: 0 }]} numberOfLines={1} adjustsFontSizeToFit>
-                                {isPrivacyMode ? '****' : `-${showCurrencySymbol ? '₹' : ''}${Math.abs(stats.losersLoss).toLocaleString('en-IN', { maximumFractionDigits: 0, notation: "compact", compactDisplay: "short" })}`}
-                            </Text>
+                        </View>
+
+                        <View style={styles.statItem}>
+                            <Text style={[styles.statLabel, { color: currColors.textSecondary }]}>Losers</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <View style={[styles.statBadge, { backgroundColor: 'rgba(244, 67, 54, 0.1)' }]}>
+                                    <ArrowDownRight size={14} color="#F44336" />
+                                    <Text style={[styles.statValue, { color: '#F44336' }]}>{isPrivacyMode ? '****' : stats.losers}</Text>
+                                </View>
+                                <Text style={[styles.statAmount, { color: '#F44336', marginTop: 0 }]} numberOfLines={1} adjustsFontSizeToFit>
+                                    {isPrivacyMode ? '****' : `-${showCurrencySymbol ? '₹' : ''}${Math.abs(stats.losersLoss).toLocaleString('en-IN', { maximumFractionDigits: 0, notation: "compact", compactDisplay: "short" })}`}
+                                </Text>
+                            </View>
                         </View>
                     </View>
                 </View>
-            </View>
+            </TouchableOpacity>
         </View>
     );
 }
@@ -109,6 +122,18 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    iconCircle: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     iconContainer: {
         width: 32,

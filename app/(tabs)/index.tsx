@@ -227,7 +227,12 @@ export default function PortfolioScreen() {
 
           <TopMovers />
 
-          <WinLossCard />
+          <WinLossCard
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push('/win-loss-details');
+            }}
+          />
 
           <ForecastCard
             years={forecastYears}
