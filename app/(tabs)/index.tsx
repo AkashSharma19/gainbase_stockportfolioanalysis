@@ -1,5 +1,6 @@
 import { ActivityCalendar } from '@/components/ActivityCalendar';
 import { ForecastCard } from '@/components/ForecastCard';
+import { InsightsSummaryCard } from '@/components/InsightsSummaryCard';
 import ShareableCard from '@/components/ShareableCard';
 import TopMovers from '@/components/TopMovers';
 import WinLossCard from '@/components/WinLossCard';
@@ -224,6 +225,8 @@ export default function PortfolioScreen() {
               </View>
             </View>
           </View>
+
+          <InsightsSummaryCard />
 
           <TopMovers />
 
