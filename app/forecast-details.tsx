@@ -1,12 +1,15 @@
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { calculateProjection } from '@/lib/finance';
+import { calculateProjection, calculateProjectionSeries } from '@/lib/finance';
+
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Info } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LineChart } from 'react-native-gifted-charts';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ForecastDetailsScreen() {
@@ -27,7 +30,7 @@ export default function ForecastDetailsScreen() {
     const yearlyAnalysis = useMemo(() => getYearlyAnalysis(), [transactions, getYearlyAnalysis, tickers]);
 
     const currentYear = new Date().getFullYear();
-    const [targetYearInput, setTargetYearInput] = useState((currentYear + years).toString());
+    const [activePoint, setActivePoint] = useState<any>(null);
 
     const annualReturn = useMemo(() => {
         return summary.xirr > 0 ? summary.xirr / 100 : 0.12;
@@ -42,11 +45,48 @@ export default function ForecastDetailsScreen() {
         return calculateProjection(summary.totalValue, annualReturn, monthlySIP, years);
     }, [summary.totalValue, annualReturn, monthlySIP, years]);
 
+    const displayPoint = activePoint || {
+        value: projection.totalFutureValue,
+        year: years,
+        multiplier: projection.multiplier,
+        presentValue: projection.presentValue,
+        totalInvested: projection.totalInvested,
+        estimatedGains: projection.estimatedGains
+    };
+
     const formatValue = (val: number) => {
         return val.toLocaleString('en-IN', {
             maximumFractionDigits: 0,
         });
     };
+
+    const yearTabs = [1, 5, 10, 25];
+
+    const handleCustomPress = () => {
+        Alert.prompt(
+            "Custom Horizon",
+            "How many years do you want to forecast?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Set",
+                    onPress: (text: string | undefined) => {
+                        const val = parseInt(text || '');
+                        if (!isNaN(val) && val > 0 && val <= 100) {
+                            Haptics.selectionAsync();
+                            setYears(val);
+                            setActivePoint(null);
+                        }
+                    }
+                }
+            ],
+            "plain-text",
+            years.toString(),
+            "number-pad"
+        );
+    };
+
+    const isPredefined = yearTabs.includes(years);
 
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: currColors.background }]} edges={['top', 'left', 'right']}>
@@ -65,45 +105,145 @@ export default function ForecastDetailsScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
-                <View style={[styles.heroCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                    <Text style={[styles.heroLabel, { color: currColors.textSecondary }]}>PROJECTED VALUE BY {new Date().getFullYear() + years}</Text>
-                    <Text style={[styles.heroValue, { color: currColors.text }]}>
-                        {isPrivacyMode ? '****' : `${showCurrencySymbol ? '₹' : ''}${formatValue(projection.totalFutureValue)}`}
-                    </Text>
 
-                    <View style={styles.multiplierBadge}>
-                        <Text style={[styles.badgeText, { color: currColors.tint }]}>{projection.multiplier.toFixed(1)}x Growth</Text>
+                {/* DYNAMIC GRAPH UNIT */}
+                <View style={{ marginBottom: 32 }}>
+                    {/* Header overlayed/integrated with graph */}
+                    <View style={[styles.graphStatsContainer, { marginBottom: 0 }]}>
+                        <View style={styles.headerTopRow}>
+                            <Text style={[styles.heroLabel, { color: currColors.textSecondary }]}>
+                                {activePoint ? `PROJECTED BY ${currentYear + activePoint.year}` : `PROJECTED BY ${currentYear + years}`}
+                            </Text>
+                            <View style={[styles.multiplierBadge, {
+                                backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0, 122, 255, 0.1)',
+                                borderColor: theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0, 122, 255, 0.2)',
+                                borderWidth: 1
+                            }]}>
+                                <Text style={[styles.badgeText, { color: currColors.tint }]}>
+                                    {displayPoint.multiplier.toFixed(1)}x Growth
+                                </Text>
+                            </View>
+                        </View>
+
+                        <Text style={[styles.heroValue, { color: currColors.text, fontSize: 28, marginBottom: 0, letterSpacing: -1 }]}>
+                            {isPrivacyMode ? '****' : `${showCurrencySymbol ? '₹' : ''}${formatValue(displayPoint.value)}`}
+                        </Text>
+
+                        <Text style={[styles.inflationNote, { color: currColors.textSecondary, textAlign: 'left', opacity: 0.5, fontSize: 12 }]}>
+                            ≈ {showCurrencySymbol ? '₹' : ''}{formatValue(displayPoint.presentValue)} today
+                        </Text>
                     </View>
-                    <Text style={[styles.inflationNote, { color: currColors.textSecondary }]}>
-                        ≈ {showCurrencySymbol ? '₹' : ''}{formatValue(projection.presentValue)} in today's purchasing power
-                    </Text>
-                </View>
 
-                <Text style={[styles.sectionTitle, { color: currColors.textSecondary }]}>FORECAST HORIZON</Text>
-
-                <View style={[styles.inputCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                    <View style={styles.inputWrapper}>
-                        <TextInput
-                            style={[styles.yearInput, { color: currColors.text }]}
-                            keyboardType="number-pad"
-                            placeholderTextColor={currColors.textSecondary}
-                            value={targetYearInput}
-                            onChangeText={(text) => {
-                                setTargetYearInput(text);
-                                const val = parseInt(text);
-                                if (!isNaN(val) && val > currentYear && val <= currentYear + 100) {
-                                    Haptics.selectionAsync();
-                                    setYears(val - currentYear);
-                                }
+                    <View
+                        style={{ alignItems: 'center', marginTop: -25 }}
+                        onTouchEnd={() => {
+                            setTimeout(() => {
+                                Haptics.selectionAsync();
+                                setActivePoint(null);
+                            }, 50);
+                        }}
+                        onTouchCancel={() => {
+                            setActivePoint(null);
+                        }}
+                    >
+                        <LineChart
+                            key={years} // Force re-mount on horizon change
+                            data={calculateProjectionSeries(summary.totalValue, annualReturn, monthlySIP, years).map(p => {
+                                const totalInvested = summary.totalValue + (monthlySIP * p.year * 12);
+                                return {
+                                    value: p.value,
+                                    label: '',
+                                    hideDataPoint: true,
+                                    year: p.year,
+                                    presentValue: p.value / Math.pow(1.06, p.year),
+                                    multiplier: p.value / totalInvested,
+                                    totalInvested: totalInvested,
+                                    estimatedGains: p.value - totalInvested
+                                };
+                            })}
+                            width={Dimensions.get('window').width - 40}
+                            height={220}
+                            spacing={years > 0 ? (Dimensions.get('window').width - 80) / years : 0}
+                            initialSpacing={10}
+                            color={currColors.tint}
+                            thickness={2}
+                            startFillColor="rgba(0, 122, 255, 0.2)"
+                            endFillColor="rgba(0, 122, 255, 0.01)"
+                            startOpacity={0.9}
+                            endOpacity={0.2}
+                            areaChart
+                            hideRules
+                            hideYAxisText
+                            hideAxesAndRules
+                            curved
+                            isAnimated
+                            animationDuration={1200}
+                            pointerConfig={{
+                                pointerStripHeight: 160,
+                                pointerStripColor: currColors.textSecondary,
+                                pointerStripWidth: 2,
+                                pointerColor: currColors.textSecondary,
+                                radius: 6,
+                                activatePointersOnLongPress: false,
+                                autoAdjustPointerLabelPosition: false,
+                                pointerLabelComponent: (items: any) => {
+                                    if (!items || items.length === 0 || !items[0]) return null;
+                                    const item = items[0];
+                                    setTimeout(() => {
+                                        if (!activePoint || activePoint.year !== item.year) {
+                                            setActivePoint({
+                                                value: item.value,
+                                                year: item.year,
+                                                multiplier: item.multiplier,
+                                                presentValue: item.presentValue,
+                                                totalInvested: item.totalInvested,
+                                                estimatedGains: item.estimatedGains
+                                            });
+                                        }
+                                    }, 0);
+                                    return null;
+                                },
                             }}
-                            maxLength={4}
                         />
-                        <Text style={[styles.yearLabel, { color: currColors.text }]}>Target Year</Text>
                     </View>
-                    <View style={[styles.verticalDivider, { backgroundColor: currColors.border }]} />
-                    <View style={styles.durationWrapper}>
-                        <Text style={[styles.durationValue, { color: currColors.tint }]}>{years}</Text>
-                        <Text style={[styles.durationLabel, { color: currColors.textSecondary }]}>Years from now</Text>
+
+                    {/* YEAR TABS */}
+                    <View style={[styles.tabsContainer, { backgroundColor: currColors.card + '50', borderColor: currColors.border }]}>
+                        {yearTabs.map((y) => (
+                            <TouchableOpacity
+                                key={y}
+                                onPress={() => {
+                                    Haptics.selectionAsync();
+                                    setYears(y);
+                                    setActivePoint(null);
+                                }}
+                                style={[
+                                    styles.tabButton,
+                                    years === y && { backgroundColor: currColors.tint }
+                                ]}
+                            >
+                                <Text style={[
+                                    styles.tabText,
+                                    { color: years === y ? (theme === 'dark' ? '#000' : '#FFF') : currColors.textSecondary }
+                                ]}>
+                                    {y}Y
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                        <TouchableOpacity
+                            onPress={handleCustomPress}
+                            style={[
+                                styles.tabButton,
+                                !isPredefined && { backgroundColor: currColors.tint }
+                            ]}
+                        >
+                            <Text style={[
+                                styles.tabText,
+                                { color: !isPredefined ? (theme === 'dark' ? '#000' : '#FFF') : currColors.textSecondary }
+                            ]}>
+                                {isPredefined ? 'Custom' : `${years}Y`}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -129,13 +269,13 @@ export default function ForecastDetailsScreen() {
                     <View style={styles.dataRow}>
                         <Text style={[styles.dataLabel, { color: currColors.textSecondary }]}>Total Invested Capital</Text>
                         <Text style={[styles.dataValue, { color: currColors.text }]}>
-                            {isPrivacyMode ? '****' : `${showCurrencySymbol ? '₹' : ''}${formatValue(projection.totalInvested)}`}
+                            {isPrivacyMode ? '****' : `${showCurrencySymbol ? '₹' : ''}${formatValue(displayPoint.totalInvested)}`}
                         </Text>
                     </View>
                     <View style={styles.dataRow}>
                         <Text style={[styles.dataLabel, { color: currColors.textSecondary }]}>Est. Capital Gains</Text>
                         <Text style={[styles.dataValue, { color: '#4CAF50' }]}>
-                            {isPrivacyMode ? '****' : `+${showCurrencySymbol ? '₹' : ''}${formatValue(projection.estimatedGains)}`}
+                            {isPrivacyMode ? '****' : `+${showCurrencySymbol ? '₹' : ''}${formatValue(displayPoint.estimatedGains)}`}
                         </Text>
                     </View>
                 </View>
@@ -164,7 +304,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 16,
-        fontWeight: '600', // Reverting to standard header weight
+        fontWeight: '600',
     },
     backButton: {
         width: 40,
@@ -179,42 +319,40 @@ const styles = StyleSheet.create({
         padding: 20,
         paddingBottom: 40,
     },
-    heroCard: {
-        borderRadius: 24,
-        padding: 32,
-        borderWidth: 1,
-        marginBottom: 32,
+    graphStatsContainer: {
+        paddingHorizontal: 10,
+        marginBottom: 8,
+    },
+    headerTopRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        justifyContent: 'center',
+        marginBottom: 8,
     },
     heroLabel: {
-        fontSize: 10, // Match Dashboard heroLabel
+        fontSize: 10,
         fontWeight: '700',
         letterSpacing: 1,
-        marginBottom: 8,
         textTransform: 'uppercase',
     },
     heroValue: {
-        fontSize: 28, // Distinct but not huge
+        fontSize: 32,
         fontWeight: '400',
-        marginBottom: 16,
+        marginBottom: 6,
         letterSpacing: -0.5,
-        textAlign: 'center',
     },
     multiplierBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 100,
-        backgroundColor: 'rgba(0, 122, 255, 0.1)',
-        marginBottom: 12,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
     },
     badgeText: {
-        fontSize: 12,
-        fontWeight: '500',
+        fontSize: 11,
+        fontWeight: '700',
+        textTransform: 'uppercase',
     },
     inflationNote: {
         fontSize: 13,
-        textAlign: 'center',
         opacity: 0.8,
     },
     sectionTitle: {
@@ -225,46 +363,24 @@ const styles = StyleSheet.create({
         marginLeft: 4,
         textTransform: 'uppercase',
     },
-    inputCard: {
+    tabsContainer: {
         flexDirection: 'row',
-        alignItems: 'center',
-        borderRadius: 20,
+        marginTop: -15,
+        padding: 6,
+        borderRadius: 16,
         borderWidth: 1,
-        marginBottom: 32,
-        paddingVertical: 20,
-        paddingHorizontal: 24,
+        gap: 6,
     },
-    inputWrapper: {
+    tabButton: {
         flex: 1,
+        paddingVertical: 10,
+        borderRadius: 10,
+        alignItems: 'center',
         justifyContent: 'center',
     },
-    yearInput: {
-        fontSize: 20,
-        fontWeight: '400',
-        padding: 0,
-        margin: 0,
-        lineHeight: 26,
-    },
-    yearLabel: {
+    tabText: {
         fontSize: 12,
-        fontWeight: '400',
-        opacity: 0.7,
-        marginTop: 4,
-    },
-    durationWrapper: {
-        alignItems: 'flex-end',
-        justifyContent: 'center',
-        minWidth: 80,
-    },
-    durationValue: {
-        fontSize: 16,
-        fontWeight: '400',
-        lineHeight: 22,
-    },
-    durationLabel: {
-        fontSize: 11,
-        fontWeight: '400',
-        marginTop: 2,
+        fontWeight: '600',
     },
     dataCard: {
         borderRadius: 20,

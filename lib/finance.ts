@@ -57,3 +57,30 @@ export function calculateProjection(currentVal: number, annualReturn: number, mo
         presentValue
     };
 }
+
+export function calculateProjectionSeries(currentVal: number, annualReturn: number, monthlySIP: number, years: number) {
+    const dataPoints = [];
+    const r = annualReturn / 12; // Monthly rate
+
+    for (let year = 0; year <= years; year++) {
+        const n = year * 12;
+
+        // Investment Value Logic
+        const principalFutureValue = currentVal * Math.pow(1 + r, n);
+
+        // SIP Calculation (End of period)
+        const sipFutureValue = monthlySIP > 0
+            ? monthlySIP * (Math.pow(1 + r, n) - 1) / r
+            : 0;
+
+        const totalFutureValue = principalFutureValue + sipFutureValue;
+
+        dataPoints.push({
+            year,
+            value: totalFutureValue,
+            label: year === 0 ? 'Now' : `+${year}y`,
+            dataPointText: Math.round(totalFutureValue / 1000) + 'k'
+        });
+    }
+    return dataPoints;
+}
