@@ -13,6 +13,7 @@ export interface Insight {
     logo?: string;
     value: string; // The primary metric to display (e.g. +30%)
     color: string; // Insight color
+    pnlPercentage?: number;
 }
 
 export const useInsights = () => {
@@ -44,8 +45,9 @@ export const useInsights = () => {
                     symbol: h.symbol,
                     logo: h.logo,
                     icon: 'TriangleAlert',
-                    value: `${h.contributionPercentage.toFixed(1)}% Portfolio`,
+                    value: 'Sell/Hold',
                     color: '#FF3B30',
+                    pnlPercentage: h.pnlPercentage,
                 });
             }
         });
@@ -61,8 +63,27 @@ export const useInsights = () => {
                     symbol: h.symbol,
                     logo: h.logo,
                     icon: 'TrendingUp',
-                    value: `+${h.pnlPercentage.toFixed(1)}%`,
+                    value: 'Sell/Hold',
                     color: '#34C759',
+                    pnlPercentage: h.pnlPercentage,
+                });
+            }
+        });
+
+        // Sell/Hold: Tax-Loss Harvesting
+        holdings.forEach((h) => {
+            if (h.pnlPercentage < -15) {
+                list.push({
+                    id: `tax-loss-${h.symbol}`,
+                    category: 'Sell/Hold',
+                    title: h.companyName || h.symbol,
+                    subtitle: `Invested: ${formatCurrency(h.investedValue)}`,
+                    symbol: h.symbol,
+                    logo: h.logo,
+                    icon: 'CircleArrowDown',
+                    value: 'Sell/Hold',
+                    color: '#FF3B30',
+                    pnlPercentage: h.pnlPercentage,
                 });
             }
         });
@@ -78,8 +99,9 @@ export const useInsights = () => {
                     symbol: h.symbol,
                     logo: h.logo,
                     icon: 'CircleArrowDown',
-                    value: `${h.pnlPercentage.toFixed(1)}%`,
+                    value: 'Buy More',
                     color: '#FF3B30', // Red for low price/discount
+                    pnlPercentage: h.pnlPercentage,
                 });
             }
         });
@@ -97,7 +119,54 @@ export const useInsights = () => {
                     icon: 'Zap',
                     value: 'Near High',
                     color: '#FF9500',
+                    pnlPercentage: h.pnlPercentage,
                 });
+            }
+        });
+
+        // Observe: Winning/Losing Streaks
+        holdings.forEach((h) => {
+            const ticker = tickers.find((t) => t.Tickers.trim().toUpperCase() === h.symbol.trim().toUpperCase());
+            if (!ticker) return;
+
+            const prices = [
+                h.currentPrice,
+                ticker['Yesterday Close'],
+                ticker['Today - 2'],
+                ticker['Today - 3'],
+            ].filter((p): p is number => p !== undefined && p !== null);
+
+            if (prices.length >= 4) {
+                const isWinningStreak = prices[0] > prices[1] && prices[1] > prices[2] && prices[2] > prices[3];
+                const isLosingStreak = prices[0] < prices[1] && prices[1] < prices[2] && prices[2] < prices[3];
+
+                if (isWinningStreak) {
+                    list.push({
+                        id: `winning-streak-${h.symbol}`,
+                        category: 'Observe',
+                        title: h.companyName || h.symbol,
+                        subtitle: '3-Day Winning Streak',
+                        symbol: h.symbol,
+                        logo: h.logo,
+                        icon: 'TrendingUp',
+                        value: 'Winning',
+                        color: '#34C759',
+                        pnlPercentage: h.pnlPercentage,
+                    });
+                } else if (isLosingStreak) {
+                    list.push({
+                        id: `losing-streak-${h.symbol}`,
+                        category: 'Observe',
+                        title: h.companyName || h.symbol,
+                        subtitle: '3-Day Losing Streak',
+                        symbol: h.symbol,
+                        logo: h.logo,
+                        icon: 'CircleArrowDown',
+                        value: 'Losing',
+                        color: '#FF3B30',
+                        pnlPercentage: h.pnlPercentage,
+                    });
+                }
             }
         });
 
@@ -112,14 +181,36 @@ export const useInsights = () => {
                     symbol: h.symbol,
                     logo: h.logo,
                     icon: 'Compass',
-                    value: 'Near Low',
+                    value: 'Buy More',
                     color: '#34C759',
+                    pnlPercentage: h.pnlPercentage,
+                });
+            }
+        });
+
+        // Observe: Sector Concentration
+        const sectorTotals: Record<string, number> = {};
+        holdings.forEach((h) => {
+            const sector = h.sector || 'Other';
+            sectorTotals[sector] = (sectorTotals[sector] || 0) + h.contributionPercentage;
+        });
+
+        Object.entries(sectorTotals).forEach(([sector, percentage]) => {
+            if (percentage > 30) {
+                list.push({
+                    id: `sector-concentration-${sector}`,
+                    category: 'Observe',
+                    title: `${sector} Sector`,
+                    subtitle: 'High Concentration',
+                    icon: 'TriangleAlert',
+                    value: `${percentage.toFixed(1)}%`,
+                    color: '#FF9500',
                 });
             }
         });
 
         return list;
-    }, [holdings, isPrivacyMode, showCurrencySymbol]);
+    }, [holdings, isPrivacyMode, showCurrencySymbol, tickers]);
 
     return {
         insights,

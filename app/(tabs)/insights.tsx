@@ -93,11 +93,16 @@ export default function InsightsScreen() {
                         </Text>
                         <Text style={[styles.tickerText, { color: currColors.textSecondary }]}>
                             {insight.subtitle}
+                            {insight.pnlPercentage !== undefined && (
+                                <Text style={{ color: insight.pnlPercentage >= 0 ? '#34C759' : '#FF3B30' }}>
+                                    {' '}({insight.pnlPercentage >= 0 ? '+' : ''}{insight.pnlPercentage.toFixed(1)}%)
+                                </Text>
+                            )}
                         </Text>
                     </View>
 
                     {/* Right: Value Pill */}
-                    <View style={[styles.valuePill, { backgroundColor: `${insight.color}15` }]}>
+                    <View style={[styles.valuePill, { backgroundColor: `${insight.color}${theme === 'dark' ? '30' : '15'}` }]}>
                         <Text style={[styles.valueText, { color: insight.color }]}>
                             {insight.value}
                         </Text>
@@ -141,7 +146,7 @@ export default function InsightsScreen() {
                             styles.tab,
                             {
                                 backgroundColor: activeTab === tab ? categoryColors[tab] : 'transparent',
-                                borderColor: activeTab === tab ? categoryColors[tab] : currColors.border
+                                borderColor: activeTab === tab ? categoryColors[tab] : (theme === 'dark' ? '#3A3A3C' : currColors.border)
                             }
                         ]}
                         onPress={() => {
