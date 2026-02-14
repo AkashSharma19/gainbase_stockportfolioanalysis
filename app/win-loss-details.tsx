@@ -164,8 +164,13 @@ export default function WinLossDetailsScreen() {
                 {currentList.length > 0 ? (
                     <View style={[styles.listCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
                         {currentList.map((holding, index) => (
-                            <View
+                            <TouchableOpacity
                                 key={holding.symbol}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    router.push(`/stock-details/${holding.symbol}`);
+                                }}
+                                activeOpacity={0.7}
                                 style={[
                                     styles.holdingItem,
                                     { borderBottomColor: currColors.border },
@@ -207,7 +212,7 @@ export default function WinLossDetailsScreen() {
                                         </Text>
                                     </View>
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         ))}
                     </View>
                 ) : (

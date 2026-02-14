@@ -66,6 +66,7 @@ export default function PortfolioScreen() {
   const forecastYears = usePortfolioStore((state) => state.forecastYears);
 
   const toggleYear = (year: number) => {
+    Haptics.selectionAsync();
     setExpandedYear(expandedYear === year ? null : year);
   };
 
@@ -259,9 +260,15 @@ export default function PortfolioScreen() {
             {yearlyAnalysis.length > 0 ? (
               <View style={[styles.accordionContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
                 <View style={[styles.headerWithAction]}>
-                  <Text style={[styles.innerSectionTitle, { color: currColors.textSecondary }]}>YEARLY ANALYSIS</Text>
+                  <Text style={[styles.innerSectionTitle, { color: currColors.textSecondary }]}>YEARLY TREND</Text>
                   {yearlyAnalysis.length > 3 && (
-                    <TouchableOpacity onPress={() => router.push('/yearly-analysis')} style={styles.viewMoreButton}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.push('/yearly-analysis');
+                      }}
+                      style={styles.viewMoreButton}
+                    >
                       <View style={[styles.iconCircle, { backgroundColor: currColors.cardSecondary }]}>
                         <ArrowRight size={14} color={currColors.tint} />
                       </View>
@@ -319,7 +326,7 @@ export default function PortfolioScreen() {
               </View>
             ) : (
               <View style={[styles.emptyCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                <Text style={[styles.placeholderText, { color: currColors.textSecondary }]}>Not enough data for yearly analysis</Text>
+                <Text style={[styles.placeholderText, { color: currColors.textSecondary }]}>Not enough data for yearly trend</Text>
               </View>
             )}
           </View>
@@ -329,9 +336,15 @@ export default function PortfolioScreen() {
             {monthlyAnalysis.length > 0 ? (
               <View style={[styles.accordionContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
                 <View style={[styles.headerWithAction]}>
-                  <Text style={[styles.innerSectionTitle, { color: currColors.textSecondary }]}>MONTHLY ANALYSIS</Text>
+                  <Text style={[styles.innerSectionTitle, { color: currColors.textSecondary }]}>MONTHLY TREND</Text>
                   {monthlyAnalysis.length > 3 && (
-                    <TouchableOpacity onPress={() => router.push('/monthly-analysis')} style={styles.viewMoreButton}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.push('/monthly-analysis');
+                      }}
+                      style={styles.viewMoreButton}
+                    >
                       <View style={[styles.iconCircle, { backgroundColor: currColors.cardSecondary }]}>
                         <ArrowRight size={14} color={currColors.tint} />
                       </View>
@@ -357,7 +370,7 @@ export default function PortfolioScreen() {
               </View>
             ) : (
               <View style={[styles.emptyCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                <Text style={[styles.placeholderText, { color: currColors.textSecondary }]}>Not enough data for monthly analysis</Text>
+                <Text style={[styles.placeholderText, { color: currColors.textSecondary }]}>Not enough data for monthly trend</Text>
               </View>
             )}
           </View>
