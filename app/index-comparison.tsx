@@ -4,7 +4,7 @@ import { usePortfolioStore } from '@/store/usePortfolioStore';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, TrendingUp } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BarChart } from 'react-native-gifted-charts';
@@ -31,6 +31,7 @@ export default function IndexComparisonScreen() {
         return ((selectedIndexData['Current Value'] - selectedIndexData['Today - 365']) / selectedIndexData['Today - 365']) * 100;
     }, [selectedIndexData]);
 
+
     const chartData = useMemo(() => {
         const data = [
             {
@@ -40,9 +41,11 @@ export default function IndexComparisonScreen() {
                 gradientColor: '#00B4FF',
                 showGradient: true,
                 topLabelComponent: () => (
-                    <Text style={{ color: currColors.text, fontSize: 8, marginBottom: 4, width: 50, textAlign: 'center' }} numberOfLines={1}>
-                        {portfolioXIRR.toFixed(2)}%
-                    </Text>
+                    <View style={{ width: 40, alignItems: 'center' }}>
+                        <Text style={{ color: currColors.text, fontSize: 8, marginBottom: 4 }}>
+                            {portfolioXIRR.toFixed(2)}%
+                        </Text>
+                    </View>
                 ),
             }
         ];
@@ -67,18 +70,30 @@ export default function IndexComparisonScreen() {
                 gradientColor: idx.Tickers === defaultIndex ? '#FF9500' : '#48484A',
                 showGradient: true,
                 topLabelComponent: () => (
-                    <Text style={{ color: currColors.textSecondary, fontSize: 8, marginBottom: 4, width: 50, textAlign: 'center' }} numberOfLines={1}>
-                        {return1Y.toFixed(2)}%
-                    </Text>
+                    <View style={{ width: 40, alignItems: 'center' }}>
+                        <Text style={{ color: currColors.textSecondary, fontSize: 8, marginBottom: 4 }}>
+                            {return1Y.toFixed(2)}%
+                        </Text>
+                    </View>
                 ),
             });
         });
 
         return data.sort((a, b) => b.value - a.value);
     }, [indices, portfolioXIRR, defaultIndex, currColors]);
+    const chartConfigs = useMemo(() => {
+        const numBars = chartData.length;
+        if (numBars <= 3) return { barWidth: 40, spacing: 50 };
+        if (numBars <= 5) return { barWidth: 32, spacing: 30 };
+        if (numBars <= 8) return { barWidth: 22, spacing: 20 };
+        return { barWidth: 16, spacing: 14 };
+    }, [chartData.length]);
 
-    const delta = portfolioXIRR - index1YReturn;
-    const isOutperforming = delta >= 0;
+    const maxValue = useMemo(() => {
+        const highestVal = Math.max(...chartData.map(d => d.value));
+        return highestVal > 0 ? highestVal * 1.3 : 10; // Provide 30% extra space for labels
+    }, [chartData]);
+
 
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: currColors.background }]} edges={['top', 'left', 'right']}>
@@ -99,37 +114,28 @@ export default function IndexComparisonScreen() {
                     <View style={{ width: 40 }} />
                 </View>
 
-                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
                     <LinearGradient
                         colors={currColors.text === '#FFFFFF' ? ['#1C1C1E', '#161618'] : ['#FFFFFF', '#F2F2F7']}
                         style={[styles.comparisonCard, { borderColor: currColors.border }]}
                     >
-                        <View style={styles.deltaContainer}>
-                            <View style={[styles.deltaBadge, { backgroundColor: isOutperforming ? 'rgba(52, 199, 89, 0.15)' : 'rgba(255, 59, 48, 0.15)' }]}>
-                                <TrendingUp size={16} color={isOutperforming ? '#34C759' : '#FF3B30'} style={{ transform: [{ rotate: isOutperforming ? '0deg' : '180deg' }] }} />
-                                <Text style={[styles.deltaText, { color: isOutperforming ? '#34C759' : '#FF3B30' }]}>
-                                    {Math.abs(delta).toFixed(2)}% {isOutperforming ? 'Alpha' : 'Gap'}
-                                </Text>
-                            </View>
-                            <Text style={[styles.deltaSummary, { color: currColors.text }]}>
-                                Your current XIRR is {isOutperforming ? 'outperforming' : 'underperforming'} {selectedIndexData?.['Company Name'] || 'the index'} by {Math.abs(delta).toFixed(2)}% compared to their 1-year return.
-                            </Text>
-                        </View>
 
                         <View style={styles.chartTitleRow}>
-                            <Text style={[styles.chartTitle, { color: currColors.textSecondary }]}>PERFORMANCE VS BENCHMARKS (1Y)</Text>
+                            <Text style={[styles.chartTitle, { color: currColors.textSecondary }]}>PERFORMANCE (1Y)</Text>
                         </View>
 
                         <View style={{ height: 260, marginTop: 10, alignItems: 'center', justifyContent: 'center' }}>
                             <BarChart
                                 data={chartData}
-                                barWidth={26}
-                                spacing={45}
+                                barWidth={chartConfigs.barWidth}
+                                spacing={chartConfigs.spacing}
+                                maxValue={maxValue}
                                 noOfSections={5}
                                 dashGap={0}
                                 yAxisThickness={0}
                                 xAxisThickness={0}
                                 hideRules
+                                hideYAxisText
                                 yAxisTextStyle={{ color: currColors.textSecondary, fontSize: 9 }}
                                 xAxisLabelTextStyle={{ color: currColors.textSecondary, fontSize: 8, height: 40, textAlign: 'center' }}
                                 isAnimated
@@ -137,13 +143,19 @@ export default function IndexComparisonScreen() {
                                 roundedTop
                                 xAxisLabelsVerticalShift={5}
                                 barBorderRadius={4}
-                                width={Dimensions.get('window').width - 100}
+                                width={Dimensions.get('window').width - 56}
                             />
+                        </View>
+
+                        <View style={{ marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: currColors.border }}>
+                            <Text style={{ fontSize: 10, color: currColors.textSecondary, lineHeight: 14 }}>
+                                Portfolio performance is measured by lifetime XIRR, while benchmarks show 1-year absolute returns.
+                            </Text>
                         </View>
                     </LinearGradient>
 
                     <View style={{ marginTop: 24 }}>
-                        <Text style={[styles.innerSectionTitle, { color: currColors.textSecondary, marginLeft: 0 }]}>PRIMARY BENCHMARK</Text>
+                        <Text style={[styles.innerSectionTitle, { color: currColors.textSecondary, marginLeft: 0 }]}>BENCHMARKS</Text>
                         <ScrollView
                             horizontal
                             showsHorizontalScrollIndicator={false}
@@ -215,30 +227,9 @@ const styles = StyleSheet.create({
     },
     comparisonCard: {
         borderRadius: 24,
-        padding: 24,
+        padding: 12,
+        paddingVertical: 24,
         borderWidth: 1,
-    },
-    deltaContainer: {
-        marginBottom: 24,
-    },
-    deltaBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        alignSelf: 'flex-start',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 10,
-        marginBottom: 12,
-    },
-    deltaText: {
-        fontSize: 13,
-        fontWeight: '700',
-        marginLeft: 6,
-    },
-    deltaSummary: {
-        fontSize: 16,
-        fontWeight: '500',
-        lineHeight: 24,
     },
     chartTitleRow: {
         flexDirection: 'row',

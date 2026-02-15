@@ -244,9 +244,23 @@ export default function PortfolioScreen() {
                 }}
                 style={[styles.heroRow, { marginBottom: 0 }]}
               >
-                <Text style={[styles.comparisonText, { color: currColors.textSecondary, textDecorationLine: 'underline' }]}>
-                  vs {selectedIndexData?.['Company Name'] || 'Index'}
-                </Text>
+                <View>
+                  <Text style={[styles.comparisonText, { color: currColors.textSecondary }]}>
+                    vs {selectedIndexData?.['Company Name'] || 'Index'}
+                  </Text>
+                  <View
+                    style={{
+                      position: 'absolute',
+                      bottom: -1,
+                      left: 0,
+                      right: 0,
+                      height: 2,
+                      borderBottomWidth: 2,
+                      borderStyle: 'dotted',
+                      borderColor: currColors.textSecondary,
+                    }}
+                  />
+                </View>
                 <Text style={[styles.comparisonValue, { color: currColors.textSecondary }]}>
                   {isPrivacyMode ? '****' : `PF XIRR ${summary.xirr.toFixed(2)}% / Idx ${index1YReturn.toFixed(2)}%`}
                 </Text>
