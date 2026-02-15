@@ -93,7 +93,7 @@ export default function ExploreScreen() {
     }, [fetchTickers]);
 
     const filteredTickers = useMemo(() => {
-        let result = tickers.filter(t => t && t.Tickers && t.Tickers !== 'INDEXNSE:NIFTY_50' && t.Tickers !== 'INDEXBOM:SENSEX' && t.Tickers !== '.IXIC');
+        let result = tickers.filter(t => t && t.Tickers && t['Asset Type'] !== 'Index');
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             result = result.filter(
@@ -127,11 +127,7 @@ export default function ExploreScreen() {
     }, [tickers, searchQuery, filterAssetType, watchlist, isSearchFocused]);
 
     const indicesData = useMemo(() => {
-        return {
-            nifty50: tickers.find(t => t.Tickers === 'INDEXNSE:NIFTY_50'),
-            sensex: tickers.find(t => t.Tickers === 'INDEXBOM:SENSEX'),
-            nasdaq: tickers.find(t => t.Tickers === '.IXIC')
-        };
+        return tickers.filter(t => t['Asset Type'] === 'Index');
     }, [tickers]);
 
     const uniqueAssetTypes = useMemo(() => {
@@ -223,7 +219,7 @@ export default function ExploreScreen() {
 
     const topMovers = useMemo(() => {
         const sorted = [...tickers]
-            .filter(t => t && t.Tickers && t['Company Name'] && t.Tickers !== 'INDEXNSE:NIFTY_50' && t.Tickers !== 'INDEXBOM:SENSEX' && t.Tickers !== '.IXIC')
+            .filter(t => t && t.Tickers && t['Company Name'] && t['Asset Type'] !== 'Index')
             .map(t => {
                 const current = t['Current Value'] || 0;
                 const yesterday = t['Yesterday Close'] || current;
@@ -541,16 +537,8 @@ export default function ExploreScreen() {
     );
 }
 
-const MarketRibbon = ({ indicesData, isVisible, currColors }: { indicesData: any, isVisible: boolean, currColors: any }) => {
-    const { nifty50, sensex, nasdaq } = indicesData;
-
-    const indices = useMemo(() => [
-        { label: 'NIFTY 50', data: nifty50 },
-        { label: 'SENSEX', data: sensex },
-        { label: 'NASDAQ', data: nasdaq },
-    ].filter(i => i && i.data), [nifty50, sensex, nasdaq]);
-
-    if (!isVisible || indices.length === 0) return null;
+const MarketRibbon = ({ indicesData, isVisible, currColors }: { indicesData: any[], isVisible: boolean, currColors: any }) => {
+    if (!isVisible || indicesData.length === 0) return null;
 
     return (
         <View style={styles.ribbonContainer}>
@@ -559,18 +547,17 @@ const MarketRibbon = ({ indicesData, isVisible, currColors }: { indicesData: any
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={[styles.ribbonContent, { paddingHorizontal: 16 }]}
             >
-                {indices.map((item, index) => {
-                    const data = item.data;
-                    const currentValue = data?.['Current Value'] ?? 0;
-                    const yesterdayClose = data?.['Yesterday Close'] ?? currentValue;
+                {indicesData.map((item, index) => {
+                    const currentValue = item['Current Value'] ?? 0;
+                    const yesterdayClose = item['Yesterday Close'] ?? currentValue;
                     const change = currentValue - yesterdayClose;
                     const changePercentage = yesterdayClose !== 0 ? (change / yesterdayClose) * 100 : 0;
                     const isPositive = change >= 0;
 
                     return (
-                        <View key={`${item.label}-${index}`} style={[styles.tickerItem, { backgroundColor: currColors.card }]}>
+                        <View key={`${item.Tickers}-${index}`} style={[styles.tickerItem, { backgroundColor: currColors.card }]}>
                             <Text style={[styles.tickerLabel, { color: currColors.text, marginRight: 8 }]} numberOfLines={1} ellipsizeMode="tail">
-                                {data?.['Company Name'] || item.label}
+                                {item['Company Name'] || item.Tickers}
                             </Text>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                 <Text style={[styles.tickerPrice, { color: currColors.text }]}>

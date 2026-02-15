@@ -159,7 +159,7 @@ export default function AnalyticsScreen() {
         return allocation.map((item, index) => ({
             value: item.percentage,
             color: CHART_COLORS[index % CHART_COLORS.length],
-            text: isPrivacyMode ? '****' : `${item.percentage.toFixed(1)}%`,
+            text: isPrivacyMode ? '****' : `${item.percentage.toFixed(2)}%`,
             label: item.name,
         }));
     }, [allocation, isPrivacyMode]);

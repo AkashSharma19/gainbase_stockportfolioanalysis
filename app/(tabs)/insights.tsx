@@ -95,7 +95,7 @@ export default function InsightsScreen() {
                             {insight.subtitle}
                             {insight.pnlPercentage !== undefined && (
                                 <Text style={{ color: insight.pnlPercentage >= 0 ? '#34C759' : '#FF3B30' }}>
-                                    {' '}({insight.pnlPercentage >= 0 ? '+' : ''}{insight.pnlPercentage.toFixed(1)}%)
+                                    {' '}({insight.pnlPercentage >= 0 ? '+' : ''}{insight.pnlPercentage.toFixed(2)}%)
                                 </Text>
                             )}
                         </Text>

@@ -196,7 +196,7 @@ export default function YearlyAnalysisScreen() {
                                                 <View style={[styles.growthBadge, { backgroundColor: item.percentageIncrease >= 0 ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
                                                     <TrendingUp size={12} color={item.percentageIncrease >= 0 ? '#4CAF50' : '#F44336'} style={{ transform: [{ rotate: item.percentageIncrease >= 0 ? '0deg' : '180deg' }] }} />
                                                     <Text style={[styles.growthText, { color: item.percentageIncrease >= 0 ? '#4CAF50' : '#F44336' }]}>
-                                                        {Math.abs(item.percentageIncrease).toFixed(1)}%
+                                                        {Math.abs(item.percentageIncrease).toFixed(2)}%
                                                     </Text>
                                                 </View>
                                             )}

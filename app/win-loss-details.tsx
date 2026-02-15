@@ -88,7 +88,7 @@ export default function WinLossDetailsScreen() {
                 <View style={[styles.heroCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
                     <Text style={[styles.heroLabel, { color: currColors.textSecondary }]}>WIN RATE</Text>
                     <Text style={[styles.heroValue, { color: currColors.text }]}>
-                        {isPrivacyMode ? '****' : `${stats.winRate.toFixed(1)}%`}
+                        {isPrivacyMode ? '****' : `${stats.winRate.toFixed(2)}%`}
                     </Text>
 
                     {/* Progress Bar */}
@@ -208,7 +208,7 @@ export default function WinLossDetailsScreen() {
                                     </Text>
                                     <View style={[styles.percentageBadge, { backgroundColor: activeTab === 'winners' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
                                         <Text style={[styles.percentageText, { color: currentColor }]}>
-                                            {isPrivacyMode ? '**' : `${activeTab === 'winners' ? '+' : ''}${holding.pnlPercentage.toFixed(1)}%`}
+                                            {isPrivacyMode ? '**' : `${activeTab === 'winners' ? '+' : ''}${holding.pnlPercentage.toFixed(2)}%`}
                                         </Text>
                                     </View>
                                 </View>

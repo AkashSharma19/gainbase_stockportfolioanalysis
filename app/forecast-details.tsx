@@ -264,7 +264,7 @@ export default function ForecastDetailsScreen() {
                     <View style={[styles.horizontalDivider, { backgroundColor: currColors.border }]} />
                     <View style={styles.dataRow}>
                         <Text style={[styles.dataLabel, { color: currColors.textSecondary }]}>Expected Annual Return</Text>
-                        <Text style={[styles.dataValue, { color: '#4CAF50' }]}>{(annualReturn * 100).toFixed(1)}%</Text>
+                        <Text style={[styles.dataValue, { color: '#4CAF50' }]}>{(annualReturn * 100).toFixed(2)}%</Text>
                     </View>
                     <View style={styles.dataRow}>
                         <Text style={[styles.dataLabel, { color: currColors.textSecondary }]}>Total Invested Capital</Text>

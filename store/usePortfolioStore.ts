@@ -39,6 +39,8 @@ interface PortfolioState {
     toggleWatchlist: (ticker: string) => void;
     forecastYears: number;
     setForecastYears: (years: number) => void;
+    defaultIndex: string;
+    setDefaultIndex: (ticker: string) => void;
 }
 
 export const usePortfolioStore = create<PortfolioState>()(
@@ -75,15 +77,18 @@ export const usePortfolioStore = create<PortfolioState>()(
             calculateSummary: () => {
                 const { transactions, tickers } = get();
                 if (transactions.length === 0) {
-                    return { totalValue: 0, totalCost: 0, profitAmount: 0, profitPercentage: 0, totalReturn: 0, xirr: 0, dayChange: 0, dayChangePercentage: 0, realizedReturn: 0, unrealizedReturn: 0 };
+                    return { totalValue: 0, totalCost: 0, profitAmount: 0, profitPercentage: 0, totalReturn: 0, xirr: 0, dayChange: 0, dayChangePercentage: 0, realizedReturn: 0, unrealizedReturn: 0, oneYearReturn: 0 };
                 }
 
                 const priceMap = new Map<string, number>();
                 const closeMap = new Map<string, number>();
+                const oneYearAgoPriceMap = new Map<string, number>();
+
                 tickers.forEach(t => {
                     const sym = t.Tickers.trim().toUpperCase();
                     priceMap.set(sym, t['Current Value']);
                     closeMap.set(sym, t['Yesterday Close'] ?? t['Current Value']);
+                    oneYearAgoPriceMap.set(sym, t['Today - 365'] ?? t['Current Value']);
                 });
 
                 const sortedTransactions = [...transactions].sort((a, b) => {
@@ -139,6 +144,37 @@ export const usePortfolioStore = create<PortfolioState>()(
                     }
                 });
 
+                // Calculate Accurate 1-Year Performance
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+                const holdings1Y = new Map<string, number>();
+                sortedTransactions.filter(t => new Date(t.date) < oneYearAgo).forEach(t => {
+                    const sym = t.symbol.trim().toUpperCase();
+                    const qty = holdings1Y.get(sym) || 0;
+                    if (t.type === 'BUY') holdings1Y.set(sym, qty + t.quantity);
+                    else holdings1Y.set(sym, Math.max(0, qty - t.quantity));
+                });
+
+                let valueOneYearAgo = 0;
+                holdings1Y.forEach((qty, sym) => {
+                    if (qty > 0) {
+                        const ticker = tickers.find(t => t.Tickers.trim().toUpperCase() === sym);
+                        const price1Y = (ticker as any)?.['Today - 365'] ?? (ticker as any)?.['Current Value'] ?? 0;
+                        valueOneYearAgo += qty * price1Y;
+                    }
+                });
+
+                const transactionsIn1Y = sortedTransactions.filter(t => new Date(t.date) >= oneYearAgo);
+                const buys1Y = transactionsIn1Y.filter(t => t.type === 'BUY')
+                    .reduce((acc, t) => acc + (t.quantity * t.price), 0);
+                const sells1Y = transactionsIn1Y.filter(t => t.type === 'SELL')
+                    .reduce((acc, t) => acc + (t.quantity * t.price), 0);
+
+                const denominator = valueOneYearAgo + buys1Y;
+                const numerator = currentMarketValue + sells1Y;
+                const oneYearReturn = denominator > 0 ? ((numerator - denominator) / denominator) * 100 : 0;
+
                 const unrealizedReturn = currentMarketValue - currentCostBasis;
                 const totalReturn = realizedReturn + unrealizedReturn;
                 const netInvested = totalBought - totalSold;
@@ -164,7 +200,8 @@ export const usePortfolioStore = create<PortfolioState>()(
                     dayChange,
                     dayChangePercentage: (currentMarketValue - dayChange) > 0 ? (dayChange / (currentMarketValue - dayChange)) * 100 : 0,
                     realizedReturn,
-                    unrealizedReturn
+                    unrealizedReturn,
+                    oneYearReturn
                 };
             },
             getAllocationData: (dimension) => {
@@ -454,6 +491,8 @@ export const usePortfolioStore = create<PortfolioState>()(
             }),
             forecastYears: 15,
             setForecastYears: (years) => set({ forecastYears: years }),
+            defaultIndex: 'INDEXNSE:NIFTY_50',
+            setDefaultIndex: (ticker) => set({ defaultIndex: ticker }),
         }),
         {
             name: 'portfolio-storage',

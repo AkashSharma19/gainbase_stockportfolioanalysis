@@ -83,6 +83,7 @@ function RootLayoutNav() {
           <Stack.Screen name="win-loss-details" options={{ animation: 'slide_from_right', headerShown: false }} />
           <Stack.Screen name="settings" options={{ animation: 'slide_from_right', headerShown: false }} />
           <Stack.Screen name="insights" options={{ animation: 'slide_from_right', headerShown: false }} />
+          <Stack.Screen name="index-comparison" options={{ animation: 'slide_from_right', headerShown: false }} />
         </Stack>
       </ThemeProvider>
     </GestureHandlerRootView>

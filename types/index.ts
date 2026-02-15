@@ -26,6 +26,7 @@ export interface Ticker {
   'Today - 5'?: number;
   'Today - 6'?: number;
   'Today - 7'?: number;
+  'Today - 365'?: number;
   Logo?: string;
 }
 
@@ -40,6 +41,7 @@ export interface PortfolioSummary {
   dayChangePercentage: number;
   realizedReturn: number;
   unrealizedReturn: number;
+  oneYearReturn?: number;
 }
 export interface YearlyAnalysis {
   year: number;

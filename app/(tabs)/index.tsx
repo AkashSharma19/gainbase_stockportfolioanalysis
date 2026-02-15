@@ -38,6 +38,8 @@ export default function PortfolioScreen() {
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
   const headerLogo = usePortfolioStore((state) => state.headerLogo);
   const headerLink = usePortfolioStore((state) => state.headerLink);
+  const defaultIndex = usePortfolioStore((state) => state.defaultIndex);
+  const setDefaultIndex = usePortfolioStore((state) => state.setDefaultIndex);
 
   const theme = useColorScheme() ?? 'dark';
   const currColors = Colors[theme];
@@ -48,6 +50,14 @@ export default function PortfolioScreen() {
   const summary = useMemo(() => calculateSummary(), [transactions, calculateSummary, tickers]);
   const yearlyAnalysis = useMemo(() => getYearlyAnalysis(), [transactions, getYearlyAnalysis, tickers]);
   const monthlyAnalysis = useMemo(() => getMonthlyAnalysis(), [transactions, getMonthlyAnalysis, tickers]);
+
+  const indices = useMemo(() => tickers.filter(t => t['Asset Type'] === 'Index'), [tickers]);
+  const selectedIndexData = useMemo(() => tickers.find(t => t.Tickers === defaultIndex), [tickers, defaultIndex]);
+
+  const index1YReturn = useMemo(() => {
+    if (!selectedIndexData || !selectedIndexData['Today - 365']) return 0;
+    return ((selectedIndexData['Current Value'] - selectedIndexData['Today - 365']) / selectedIndexData['Today - 365']) * 100;
+  }, [selectedIndexData]);
 
   const previewMonthlyAnalysis = useMemo(() => monthlyAnalysis.slice(0, 3), [monthlyAnalysis]);
   const previewYearlyAnalysis = useMemo(() => yearlyAnalysis.slice(0, 3), [yearlyAnalysis]);
@@ -222,10 +232,25 @@ export default function PortfolioScreen() {
                 <Text style={[styles.heroRowValueWhite, { color: currColors.text }]}>{isPrivacyMode ? '****' : `${showCurrencySymbol ? '₹' : ''}${summary.totalCost.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}</Text>
               </View>
 
-              <View style={[styles.heroRow, { marginBottom: 0 }]}>
+              <View style={styles.heroRow}>
                 <Text style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>XIRR</Text>
                 <Text style={[styles.heroRowValueWhite, { color: currColors.text }]}>{isPrivacyMode ? '****' : `${summary.xirr.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%`}</Text>
               </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push('/index-comparison');
+                }}
+                style={[styles.heroRow, { marginBottom: 0 }]}
+              >
+                <Text style={[styles.comparisonText, { color: currColors.textSecondary, textDecorationLine: 'underline' }]}>
+                  vs {selectedIndexData?.['Company Name'] || 'Index'}
+                </Text>
+                <Text style={[styles.comparisonValue, { color: currColors.textSecondary }]}>
+                  {isPrivacyMode ? '****' : `PF XIRR ${summary.xirr.toFixed(2)}% / Idx ${index1YReturn.toFixed(2)}%`}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -294,7 +319,7 @@ export default function PortfolioScreen() {
                             <View style={[styles.growthBadge, { backgroundColor: item.percentageIncrease >= 0 ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
                               <TrendingUp size={12} color={item.percentageIncrease >= 0 ? '#4CAF50' : '#F44336'} style={{ transform: [{ rotate: item.percentageIncrease >= 0 ? '0deg' : '180deg' }] }} />
                               <Text style={[styles.growthText, { color: item.percentageIncrease >= 0 ? '#4CAF50' : '#F44336' }]}>
-                                {Math.abs(item.percentageIncrease).toFixed(1)}%
+                                {Math.abs(item.percentageIncrease).toFixed(2)}%
                               </Text>
                             </View>
                           )}
@@ -361,7 +386,7 @@ export default function PortfolioScreen() {
                       <View style={[styles.growthBadge, { backgroundColor: item.percentageIncrease >= 0 ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
                         <TrendingUp size={12} color={item.percentageIncrease >= 0 ? '#4CAF50' : '#F44336'} style={{ transform: [{ rotate: item.percentageIncrease >= 0 ? '0deg' : '180deg' }] }} />
                         <Text style={[styles.growthText, { color: item.percentageIncrease >= 0 ? '#4CAF50' : '#F44336' }]}>
-                          {Math.abs(item.percentageIncrease).toFixed(1)}%
+                          {Math.abs(item.percentageIncrease).toFixed(2)}%
                         </Text>
                       </View>
                     )}
@@ -471,6 +496,13 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   heroRowValueWhite: {
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  comparisonText: {
+    fontSize: 14,
+  },
+  comparisonValue: {
     fontSize: 14,
     fontWeight: '400',
   },
@@ -682,5 +714,73 @@ const styles = StyleSheet.create({
   communityText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 1,
+  },
+  filterChipText: {
+    color: '#8E8E93',
+    fontSize: 13,
+    fontWeight: '400',
+  },
+  doneButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  comparisonCard: {
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    marginTop: 10,
+  },
+  benchmarkChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    marginRight: 10,
+    borderWidth: 1,
+  },
+  benchmarkChipText: {
+    fontSize: 13,
+  },
+  chartTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  chartTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  deltaContainer: {
+    marginBottom: 20,
+    padding: 2,
+  },
+  deltaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  deltaText: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+  deltaSummary: {
+    fontSize: 15,
+    fontWeight: '500',
+    lineHeight: 22,
   },
 });
