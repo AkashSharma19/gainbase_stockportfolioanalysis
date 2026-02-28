@@ -40,16 +40,17 @@ export default function SectorsScreen() {
         const { icon: SectorIcon, color } = getSectorIcon(sName);
         return (
             <TouchableOpacity
-                style={styles.sectorCard}
+                style={[styles.sectorListItem, { borderBottomColor: currColors.border }]}
                 onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.push(`/sector-details/${encodeURIComponent(sName)}`);
                 }}
             >
                 <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
-                    <SectorIcon size={24} color={color} />
+                    <SectorIcon size={20} color={color} />
                 </View>
-                <Text style={[styles.sectorName, { color: currColors.text }]} numberOfLines={1}>{sName}</Text>
+                <Text style={[styles.sectorName, { color: currColors.text }]}>{sName}</Text>
+                <Ionicons name="chevron-forward" size={18} color={currColors.textSecondary} />
             </TouchableOpacity>
         );
     };
@@ -59,10 +60,18 @@ export default function SectorsScreen() {
             <Stack.Screen
                 options={{
                     headerTitle: 'All Sectors',
-                    headerLargeTitle: true,
+                    headerTitleStyle: { fontSize: 17, fontWeight: '600' },
                     headerShadowVisible: false,
                     headerStyle: { backgroundColor: currColors.background },
                     headerTintColor: currColors.text,
+                    headerLeft: () => (
+                        <TouchableOpacity
+                            onPress={() => router.back()}
+                            style={{ marginLeft: -8, padding: 8 }}
+                        >
+                            <Ionicons name="chevron-back" size={24} color={currColors.text} />
+                        </TouchableOpacity>
+                    ),
                 }}
             />
 
@@ -89,9 +98,7 @@ export default function SectorsScreen() {
                 data={uniqueSectors}
                 renderItem={renderSectorItem}
                 keyExtractor={(item) => item}
-                numColumns={3}
                 contentContainerStyle={styles.listContent}
-                columnWrapperStyle={styles.columnWrapper}
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
@@ -131,27 +138,24 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingBottom: 32,
     },
-    columnWrapper: {
-        justifyContent: 'flex-start',
-        gap: 12,
-        marginBottom: 20,
-    },
-    sectorCard: {
-        width: (SCREEN_WIDTH - 32 - 24) / 3, // 3 columns
+    sectorListItem: {
+        flexDirection: 'row',
         alignItems: 'center',
+        paddingVertical: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
     iconContainer: {
-        width: 60,
-        height: 60,
-        borderRadius: 16,
+        width: 40,
+        height: 40,
+        borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 10,
+        marginRight: 16,
     },
     sectorName: {
-        fontSize: 12,
+        flex: 1,
+        fontSize: 16,
         fontWeight: '500',
-        textAlign: 'center',
     },
     emptyContainer: {
         alignItems: 'center',
