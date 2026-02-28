@@ -1,27 +1,11 @@
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { getSectorIcon } from '@/constants/Sectors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
-    Antenna,
-    BarChart3,
-    Bolt,
-    Briefcase,
-    Building2,
-    Candy,
-    CarFront,
-    CircleDollarSign,
-    Cpu,
-    Droplet,
-    Factory,
-    FlaskConical,
-    Fuel,
-    Gem,
-    HandCoins,
-    LayoutGrid,
-    Package,
     TrendingUp
 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -66,7 +50,6 @@ export default function ExploreScreen() {
     const [loading, setLoading] = useState(false);
     const [filterAssetType, setFilterAssetType] = useState<string | null>(null);
     const [showFilters, setShowFilters] = useState(false);
-    const [isSectorsExpanded, setIsSectorsExpanded] = useState(false);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
 
     const { sector: paramSector } = useLocalSearchParams<{ sector?: string }>();
@@ -287,54 +270,12 @@ export default function ExploreScreen() {
         );
     };
 
-    const getSectorIcon = (name: string) => {
-        const sectorIcons: Record<string, any> = {
-            'Bank': Building2,
-            'IT': Cpu,
-            'Refineries': Fuel,
-            'Mutual Fund': Briefcase,
-            'FMCG': Package,
-            'Automobile': CarFront,
-            'Gold': CircleDollarSign,
-            'Communications': Antenna,
-            'Steel/ Iron Prducts': Factory,
-            'Steel/ Iron Products': Factory,
-            'Oil': Droplet,
-            'NBFC': HandCoins,
-            'Power': Bolt,
-            'Jewellery': Gem,
-            'Trading': BarChart3,
-            'Petrochemicals': FlaskConical,
-            'Sugar': Candy,
-        };
-
-        const Icon = sectorIcons[name] || LayoutGrid;
-        const sectorColors: Record<string, string> = {
-            'Bank': '#0A84FF',
-            'IT': '#5E5CE6',
-            'Refineries': '#8E8E93',
-            'Mutual Fund': '#AF52DE',
-            'FMCG': '#FF375F',
-            'Automobile': '#FF2D55',
-            'Gold': '#FFD60A',
-            'Communications': '#64D2FF',
-            'Steel/ Iron Products': '#8E8E93',
-            'Oil': '#007AFF',
-            'NBFC': '#5AC8FA',
-            'Power': '#FF9F0A',
-            'Jewellery': '#BF5AF2',
-            'Trading': '#30D158',
-            'Petrochemicals': '#BF5AF2',
-            'Sugar': '#FFCC00',
-        };
-
-        return { icon: Icon, color: sectorColors[name] || '#32D74B' };
-    };
+    // Removed local getSectorIcon
 
     const renderSectorGrid = () => {
         if (searchQuery || filterAssetType) return null;
 
-        const displaySectors = isSectorsExpanded ? uniqueSectors : uniqueSectors.slice(0, 4);
+        const displaySectors = uniqueSectors.slice(0, 3);
         if (displaySectors.length === 0) return null;
 
         return (
@@ -342,7 +283,7 @@ export default function ExploreScreen() {
                 <View style={styles.sectionHeader}>
                     <Text style={[styles.sectionTitle, { color: currColors.textSecondary }]}>BROWSE SECTORS</Text>
                 </View>
-                <View style={[styles.sectorGrid, isSectorsExpanded && styles.sectorGridExpanded]}>
+                <View style={styles.sectorGrid}>
                     {displaySectors.map((sName) => {
                         const { icon: SectorIcon, color } = getSectorIcon(sName);
                         return (
@@ -365,13 +306,13 @@ export default function ExploreScreen() {
                         style={styles.sectorCard}
                         onPress={() => {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setIsSectorsExpanded(!isSectorsExpanded);
+                            router.push('/sectors');
                         }}
                     >
                         <View style={[styles.iconContainer, { backgroundColor: currColors.tint + '15' }]}>
-                            <Ionicons name={isSectorsExpanded ? "chevron-up" : "chevron-down"} size={20} color={currColors.tint} />
+                            <Ionicons name="apps-outline" size={20} color={currColors.tint} />
                         </View>
-                        <Text style={[styles.sectorName, { color: currColors.tint }]}>{isSectorsExpanded ? 'Less' : 'More'}</Text>
+                        <Text style={[styles.sectorName, { color: currColors.tint }]}>More</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -817,9 +758,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 8,
-    },
-    sectorGridExpanded: {
-        rowGap: 16,
     },
     sectorCard: {
         width: (SCREEN_WIDTH - 32 - 24) / 4, // 4 columns

@@ -86,6 +86,8 @@ function RootLayoutNav() {
           <Stack.Screen name="index-comparison" options={{ animation: 'slide_from_right', headerShown: false }} />
           <Stack.Screen name="portfolio-health" options={{ animation: 'slide_from_right', headerShown: false }} />
           <Stack.Screen name="portfolio-health-formula" options={{ animation: 'slide_from_right', headerShown: false }} />
+          <Stack.Screen name="sectors" options={{ animation: 'slide_from_right', headerShown: true }} />
+          <Stack.Screen name="sector-details/[sector]" options={{ animation: 'slide_from_right', headerShown: false }} />
         </Stack>
       </ThemeProvider>
     </GestureHandlerRootView>
