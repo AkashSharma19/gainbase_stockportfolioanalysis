@@ -348,32 +348,29 @@ export default function ExploreScreen() {
                         return (
                             <TouchableOpacity
                                 key={sName}
-                                style={[
-                                    styles.sectorCard,
-                                    { backgroundColor: color + '15', borderColor: color + '30' }
-                                ]}
+                                style={styles.sectorCard}
                                 onPress={() => {
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                     router.push(`/sector-details/${encodeURIComponent(sName)}`);
                                 }}
                             >
-                                <SectorIcon size={20} color={color} style={{ marginBottom: 6 }} />
-                                <Text style={[styles.sectorName, { color: currColors.text }]} numberOfLines={2}>{sName}</Text>
+                                <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
+                                    <SectorIcon size={20} color={color} />
+                                </View>
+                                <Text style={[styles.sectorName, { color: currColors.text }]} numberOfLines={1}>{sName}</Text>
                             </TouchableOpacity>
                         );
                     })}
                     <TouchableOpacity
-                        style={[
-                            styles.sectorCard,
-                            styles.moreCard,
-                            { backgroundColor: currColors.card, borderColor: currColors.border }
-                        ]}
+                        style={styles.sectorCard}
                         onPress={() => {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             setIsSectorsExpanded(!isSectorsExpanded);
                         }}
                     >
-                        <Ionicons name={isSectorsExpanded ? "chevron-up" : "chevron-down"} size={20} color={currColors.tint} style={{ marginBottom: 6 }} />
+                        <View style={[styles.iconContainer, { backgroundColor: currColors.tint + '15' }]}>
+                            <Ionicons name={isSectorsExpanded ? "chevron-up" : "chevron-down"} size={20} color={currColors.tint} />
+                        </View>
                         <Text style={[styles.sectorName, { color: currColors.tint }]}>{isSectorsExpanded ? 'Less' : 'More'}</Text>
                     </TouchableOpacity>
                 </View>
@@ -818,30 +815,30 @@ const styles = StyleSheet.create({
     },
     sectorGrid: {
         flexDirection: 'row',
-        justifyContent: 'flex-start',
+        flexWrap: 'wrap',
         gap: 8,
     },
     sectorGridExpanded: {
-        flexWrap: 'wrap',
-        rowGap: 12,
+        rowGap: 16,
     },
     sectorCard: {
-        width: (SCREEN_WIDTH - 32 - 32) / 5, // 5 columns
-        height: 75,
-        padding: 4,
+        width: (SCREEN_WIDTH - 32 - 24) / 4, // 4 columns
+        alignItems: 'center',
+        paddingVertical: 4,
+    },
+    iconContainer: {
+        width: 44,
+        height: 44,
         borderRadius: 12,
-        borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    moreCard: {
-        borderStyle: 'dashed',
+        marginBottom: 8,
     },
     sectorName: {
-        fontSize: 9,
-        fontWeight: '600',
+        fontSize: 11,
+        fontWeight: '500',
         textAlign: 'center',
-        lineHeight: 11,
+        letterSpacing: -0.2,
     },
     ribbonContainer: {
         height: 50,
