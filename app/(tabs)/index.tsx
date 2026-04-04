@@ -312,14 +312,20 @@ export default function PortfolioScreen() {
 
           <TopMovers />
 
-          <PortfolioHealthCard />
-
-          <WinLossCard
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push('/win-loss-details');
-            }}
-          />
+          <View style={[styles.dashboardRow, { marginBottom: 16 }]}>
+            <View style={{ flex: 1 }}>
+              <PortfolioHealthCard isCompact />
+            </View>
+            <View style={{ flex: 1 }}>
+              <WinLossCard
+                isCompact
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push('/win-loss-details');
+                }}
+              />
+            </View>
+          </View>
 
           <ForecastCard
             years={forecastYears}
@@ -600,6 +606,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 12,
     marginLeft: 16,
+  },
+  dashboardRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'stretch',
   },
   headerWithAction: {
     flexDirection: 'row',

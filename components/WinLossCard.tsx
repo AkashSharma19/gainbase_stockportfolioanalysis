@@ -1,11 +1,62 @@
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
-import { ArrowDownRight, ArrowRight, ArrowUpRight } from 'lucide-react-native';
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Scale } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Circle, Svg } from 'react-native-svg';
 
-export default function WinLossCard({ onPress }: { onPress?: () => void }) {
+// ✨ Redesigned Donut Chart for Compact View
+const WinLossDonut = ({ winners, losers, size, colorWin, colorLoss, trackColor, winRate, isPrivacyMode }: any) => {
+    const r = size * 0.4;
+    const center = size / 2;
+    const circum = 2 * Math.PI * r;
+
+    // Calculate segments
+    const total = winners + losers;
+    const winShare = total > 0 ? (winners / total) : 0;
+    const winStroke = winShare * circum;
+    const lossStroke = circum - winStroke;
+
+    return (
+        <View style={{ alignItems: 'center', justifyContent: 'center', width: size, height: size }}>
+            <Svg width={size} height={size}>
+                {/* Winners Segment */}
+                <Circle
+                    cx={center}
+                    cy={center}
+                    r={r}
+                    stroke={colorWin}
+                    strokeWidth={size * 0.08}
+                    strokeDasharray={`${winStroke} ${circum}`}
+                    strokeLinecap="round"
+                    fill="none"
+                    transform={`rotate(-90 ${center} ${center})`}
+                />
+                {/* Losers Segment */}
+                <Circle
+                    cx={center}
+                    cy={center}
+                    r={r}
+                    stroke={colorLoss}
+                    strokeWidth={size * 0.08}
+                    strokeDasharray={`${lossStroke} ${circum}`}
+                    // Offset by the winners stroke
+                    strokeDashoffset={-winStroke}
+                    strokeLinecap="round"
+                    fill="none"
+                    transform={`rotate(-90 ${center} ${center})`}
+                />
+            </Svg>
+            <View style={styles.compactRateBox}>
+                <Text style={[styles.compactRateValue, { color: '#FFFFFF' }]}>{isPrivacyMode ? '**' : `${winRate.toFixed(0)}%`}</Text>
+                <Text style={[styles.compactRateLabel, { color: '#8E8E93' }]}>WIN RATE</Text>
+            </View>
+        </View>
+    );
+};
+
+export default function WinLossCard({ onPress, isCompact = false }: { onPress?: () => void; isCompact?: boolean }) {
     const getHoldingsData = usePortfolioStore((state) => state.getHoldingsData);
     const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
     const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
@@ -36,70 +87,106 @@ export default function WinLossCard({ onPress }: { onPress?: () => void }) {
         };
     }, [holdings]);
 
+    const [containerWidth, setContainerWidth] = React.useState(150);
+
     if (stats.total === 0) return null;
 
     return (
-        <View style={styles.container}>
-            <TouchableOpacity
-                onPress={onPress}
-                activeOpacity={0.7}
-                disabled={!onPress}
-            >
-                <View style={[styles.card, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                    <View style={styles.header}>
-                        <View style={styles.titleRow}>
-                            <Text style={[styles.title, { color: currColors.textSecondary }]}>WIN / LOSS RATIO</Text>
-                        </View>
-                        <View style={styles.headerRight}>
-                            <View style={styles.rateContainer}>
-                                <Text style={[styles.rateValue, { color: currColors.text }]}>{isPrivacyMode ? '****' : `${stats.winRate.toFixed(0)}%`}</Text>
-                                <Text style={[styles.rateLabel, { color: currColors.textSecondary }]}>Win Rate</Text>
-                            </View>
-                            {onPress && (
-                                <View style={[styles.iconCircle, { backgroundColor: currColors.cardSecondary }]}>
-                                    <ArrowRight size={14} color={currColors.tint} />
-                                </View>
-                            )}
-                        </View>
+        <TouchableOpacity
+            onPress={onPress}
+            activeOpacity={0.7}
+            disabled={!onPress}
+            onLayout={(e) => {
+                if (isCompact) {
+                    setContainerWidth(e.nativeEvent.layout.width - 32);
+                }
+            }}
+            style={[
+                isCompact ? { flex: 1 } : styles.container
+            ]}
+        >
+            <View style={[
+                styles.card,
+                { backgroundColor: currColors.card, borderColor: currColors.border },
+                isCompact && { flex: 1, padding: 16, justifyContent: 'space-between', borderRadius: 24 }
+            ]}>
+                <View style={[styles.header, isCompact && { marginBottom: 0 }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        {isCompact && <Scale size={12} color={currColors.textSecondary} />}
+                        <Text style={[styles.title, { color: currColors.textSecondary, fontSize: isCompact ? 9 : 10 }]}>WIN / LOSS</Text>
                     </View>
-
-                    {/* Progress Bar */}
-                    <View style={styles.barContainer}>
-                        <View style={[styles.barsection, { flex: stats.winners, backgroundColor: '#4CAF50', borderTopLeftRadius: 4, borderBottomLeftRadius: 4, marginRight: 2 }]} />
-                        <View style={[styles.barsection, { flex: stats.losers, backgroundColor: '#F44336', borderTopRightRadius: 4, borderBottomRightRadius: 4 }]} />
-                    </View>
-
-                    {/* Stats Row */}
-                    <View style={styles.statsRow}>
-                        <View style={styles.statItem}>
-                            <Text style={[styles.statLabel, { color: currColors.textSecondary }]}>Winners</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <View style={[styles.statBadge, { backgroundColor: 'rgba(76, 175, 80, 0.1)' }]}>
-                                    <ArrowUpRight size={14} color="#4CAF50" />
-                                    <Text style={[styles.statValue, { color: '#4CAF50' }]}>{isPrivacyMode ? '****' : stats.winners}</Text>
-                                </View>
-                                <Text style={[styles.statAmount, { color: '#4CAF50', marginTop: 0 }]} numberOfLines={1} adjustsFontSizeToFit>
-                                    {isPrivacyMode ? '****' : `+${showCurrencySymbol ? '₹' : ''}${stats.winnersProfit.toLocaleString('en-IN', { maximumFractionDigits: 0, notation: "compact", compactDisplay: "short" })}`}
-                                </Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.statItem}>
-                            <Text style={[styles.statLabel, { color: currColors.textSecondary }]}>Losers</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <View style={[styles.statBadge, { backgroundColor: 'rgba(244, 67, 54, 0.1)' }]}>
-                                    <ArrowDownRight size={14} color="#F44336" />
-                                    <Text style={[styles.statValue, { color: '#F44336' }]}>{isPrivacyMode ? '****' : stats.losers}</Text>
-                                </View>
-                                <Text style={[styles.statAmount, { color: '#F44336', marginTop: 0 }]} numberOfLines={1} adjustsFontSizeToFit>
-                                    {isPrivacyMode ? '****' : `-${showCurrencySymbol ? '₹' : ''}${Math.abs(stats.losersLoss).toLocaleString('en-IN', { maximumFractionDigits: 0, notation: "compact", compactDisplay: "short" })}`}
-                                </Text>
-                            </View>
+                    <View style={styles.headerRight}>
+                        <View style={[styles.iconCircle, { backgroundColor: currColors.cardSecondary, width: 24, height: 24 }]}>
+                            <ArrowRight size={12} color={currColors.tint} />
                         </View>
                     </View>
                 </View>
-            </TouchableOpacity>
-        </View>
+
+                {isCompact ? (
+                    <View style={[styles.compactMain, { flex: 1, justifyContent: 'center' }]}>
+                        <WinLossDonut
+                            winners={stats.winners}
+                            losers={stats.losers}
+                            size={containerWidth * 0.85}
+                            colorWin="#4CAF50"
+                            colorLoss="#F44336"
+                            trackColor={theme === 'dark' ? '#2C2C2E' : '#E5E5EA'}
+                            winRate={stats.winRate}
+                            isPrivacyMode={isPrivacyMode}
+                        />
+                        <View style={[styles.compactFooter, { marginTop: 12 }]}>
+                            <Text style={[styles.compactFooterText, { color: currColors.textSecondary }]}>
+                                {stats.winners}W • {stats.losers}L
+                            </Text>
+                        </View>
+                    </View>
+                ) : (
+                    <>
+                        <View style={styles.header}>
+                                <View style={styles.headerRight}>
+                                    <View style={styles.rateContainer}>
+                                        <Text style={[styles.rateValue, { color: currColors.text }]}>{isPrivacyMode ? '****' : `${stats.winRate.toFixed(0)}%`}</Text>
+                                        <Text style={[styles.rateLabel, { color: currColors.textSecondary }]}>Win Rate</Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            <View style={[styles.barContainer, { height: 8 }]}>
+                                <View style={[styles.barsection, { flex: stats.winners, backgroundColor: '#4CAF50', borderTopLeftRadius: 4, borderBottomLeftRadius: 4, marginRight: 2 }]} />
+                                <View style={[styles.barsection, { flex: stats.losers, backgroundColor: '#F44336', borderTopRightRadius: 4, borderBottomRightRadius: 4 }]} />
+                            </View>
+
+                            <View style={styles.statsRow}>
+                                <View style={styles.statItem}>
+                                    <Text style={[styles.statLabel, { color: currColors.textSecondary }]}>Winners</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                        <View style={[styles.statBadge, { backgroundColor: 'rgba(76, 175, 80, 0.1)' }]}>
+                                            <ArrowUpRight size={14} color="#4CAF50" />
+                                            <Text style={[styles.statValue, { color: '#4CAF50' }]}>{isPrivacyMode ? '****' : stats.winners}</Text>
+                                        </View>
+                                        <Text style={[styles.statAmount, { color: '#4CAF50', marginTop: 0 }]} numberOfLines={1} adjustsFontSizeToFit>
+                                            {isPrivacyMode ? '****' : `+${showCurrencySymbol ? '₹' : ''}${stats.winnersProfit.toLocaleString('en-IN', { maximumFractionDigits: 0, notation: "compact", compactDisplay: "short" })}`}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.statItem}>
+                                    <Text style={[styles.statLabel, { color: currColors.textSecondary }]}>Losers</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                        <View style={[styles.statBadge, { backgroundColor: 'rgba(244, 67, 54, 0.1)' }]}>
+                                            <ArrowDownRight size={14} color="#F44336" />
+                                            <Text style={[styles.statValue, { color: '#F44336' }]}>{isPrivacyMode ? '****' : stats.losers}</Text>
+                                        </View>
+                                        <Text style={[styles.statAmount, { color: '#F44336', marginTop: 0 }]} numberOfLines={1} adjustsFontSizeToFit>
+                                            {isPrivacyMode ? '****' : `-${showCurrencySymbol ? '₹' : ''}${Math.abs(stats.losersLoss).toLocaleString('en-IN', { maximumFractionDigits: 0, notation: "compact", compactDisplay: "short" })}`}
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+                        </>
+                    )}
+            </View>
+        </TouchableOpacity>
     );
 }
 
@@ -135,13 +222,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    iconContainer: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
     title: {
         fontSize: 10,
         fontWeight: '700',
@@ -166,7 +246,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         borderRadius: 4,
         overflow: 'hidden',
-        backgroundColor: '#f0f0f030', // subtle backing if needed
+        backgroundColor: '#f0f0f030',
     },
     barsection: {
         height: '100%',
@@ -201,17 +281,36 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: '500',
     },
-    statValueContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        flex: 1,
-        justifyContent: 'flex-end',
-    },
     statAmount: {
         fontSize: 10,
         fontWeight: '500',
         marginTop: 0,
         flexShrink: 1,
+    },
+    compactMain: {
+        alignItems: 'center',
+        paddingTop: 8,
+    },
+    compactRateBox: {
+        position: 'absolute',
+        alignItems: 'center',
+    },
+    compactRateValue: {
+        fontSize: 22,
+        fontWeight: '800',
+    },
+    compactRateLabel: {
+        fontSize: 7,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+        marginTop: -2,
+    },
+    compactFooter: {
+        marginTop: 12,
+    },
+    compactFooterText: {
+        fontSize: 10,
+        fontWeight: '600',
+        letterSpacing: 0.5,
     },
 });
