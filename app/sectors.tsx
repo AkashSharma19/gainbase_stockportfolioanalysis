@@ -1,6 +1,6 @@
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { getSectorIcon } from '@/constants/Sectors';
+import { getSectorIcon } from '@/constants/Icons';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';

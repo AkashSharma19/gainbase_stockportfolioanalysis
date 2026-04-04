@@ -9,32 +9,13 @@ import {
     ArrowLeft,
     ArrowUp,
     ArrowUpDown,
-    ArrowUpRight,
     Briefcase,
     Building2,
-    Candy,
-    Car,
-    ChartNoAxesCombined,
-    Coins,
-    CreditCard,
-    Diamond,
-    Droplet,
-    Factory,
-    FlaskConical,
-    Hammer,
-    Landmark,
-    Layers,
     LayoutGrid,
-    Medal,
-    Monitor,
-    Phone,
-    ShoppingBasket,
-    Target,
-    TrendingUp,
-    Trophy,
-    Wallet,
-    Zap
+    Layers,
+    TrendingUp
 } from 'lucide-react-native';
+import { ASSET_TYPE_ICONS, BROKER_ICONS, CHART_COLORS, getCategoryIcon, SECTOR_ICONS } from '@/constants/Icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PieChart } from 'react-native-gifted-charts';
@@ -42,48 +23,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-const CHART_COLORS = [
-    '#0A84FF', '#5E5CE6', '#BF5AF2', '#FF2D55', '#FF9F0A',
-    '#FFD60A', '#30D158', '#64D2FF', '#FF375F', '#32D74B'
-];
-
 const GRADIENTS = {
     card: ['#1C1C1E', '#000000'] as const,
     active: ['#007AFF', '#004080'] as const,
 };
 
-const SECTOR_ICONS: Record<string, any> = {
-    'Bank': Landmark,
-    'IT': Monitor,
-    'Refineries': Factory,
-    'Mutual Fund': Wallet,
-    'FMCG': ShoppingBasket,
-    'Automobile': Car,
-    'Gold': Coins,
-    'Communications': Phone,
-    'Steel/ Iron Prducts': Hammer,
-    'Steel/ Iron Products': Hammer,
-    'Oil': Droplet,
-    'NBFC': CreditCard,
-    'Power': Zap,
-    'Jewellery': Diamond,
-    'Trading': TrendingUp,
-    'Petrochemicals': FlaskConical,
-    'Sugar': Candy,
-};
 
-const ASSET_TYPE_ICONS: Record<string, any> = {
-    'Large Cap': Trophy,
-    'Mid Cap': Medal,
-    'Small Cap': Target,
-    'ETF': Layers,
-};
-
-const BROKER_ICONS: Record<string, any> = {
-    'Upstox': ArrowUpRight,
-    'Groww': ChartNoAxesCombined,
-    'IND Money': Landmark,
-};
 
 type Dimension = 'Sector' | 'Company Name' | 'Asset Type' | 'Broker';
 
@@ -156,13 +101,16 @@ export default function AnalyticsScreen() {
     }, [allocation, sortDirection, holdingsViewMode]);
 
     const chartData = useMemo(() => {
-        return allocation.map((item, index) => ({
-            value: item.percentage,
-            color: CHART_COLORS[index % CHART_COLORS.length],
-            text: isPrivacyMode ? '****' : `${item.percentage.toFixed(2)}%`,
-            label: item.name,
-        }));
-    }, [allocation, isPrivacyMode]);
+        return allocation.map((item) => {
+            const { color } = getCategoryIcon(selectedDimension, item.name);
+            return {
+                value: item.percentage,
+                color: color,
+                text: isPrivacyMode ? '****' : `${item.percentage.toFixed(2)}%`,
+                label: item.name,
+            };
+        });
+    }, [allocation, isPrivacyMode, selectedDimension]);
 
     if (transactions.length === 0) {
         return (
@@ -307,7 +255,9 @@ export default function AnalyticsScreen() {
                     <View style={[styles.holdingsList, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
                         {filteredAllocation.map((item, index) => {
                             const isLast = index === filteredAllocation.length - 1;
-                            const isLink = selectedDimension === 'Company Name';
+                            const isCompanyLink = selectedDimension === 'Company Name';
+                            const isCategoryLink = ['Sector', 'Asset Type', 'Broker'].includes(selectedDimension);
+                            const isLink = isCompanyLink || isCategoryLink;
 
                             return (
                                 <TouchableOpacity
@@ -318,40 +268,38 @@ export default function AnalyticsScreen() {
                                     ]}
                                     disabled={!isLink}
                                     onPress={() => {
-                                        if (isLink && item.symbol) {
+                                        if (isCompanyLink && item.symbol) {
                                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                             // @ts-ignore
                                             router.push(`/stock-details/${item.symbol}`);
+                                        } else if (isCategoryLink) {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                            // @ts-ignore
+                                            router.push(`/analytics-details/${selectedDimension}/${encodeURIComponent(item.name)}`);
                                         }
                                     }}
                                     activeOpacity={0.7}
                                 >
                                     <View style={styles.holdingRow}>
                                         <View style={styles.holdingMain}>
-                                            <View style={[styles.holdingIcon, { backgroundColor: CHART_COLORS[index % CHART_COLORS.length] + '22' }]}>
-                                                {selectedDimension === 'Company Name' && item.logo ? (
-                                                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 2 }}>
-                                                        <Image
-                                                            source={{ uri: item.logo }}
-                                                            style={{ width: 40, height: 40, borderRadius: 10 }} // Adjusted size for padding
-                                                            resizeMode="contain"
-                                                        />
+                                            {(() => {
+                                                const { icon: CategoryIcon, color: categoryColor } = getCategoryIcon(selectedDimension, item.name);
+                                                return (
+                                                    <View style={[styles.holdingIcon, { backgroundColor: categoryColor + '22' }]}>
+                                                        {selectedDimension === 'Company Name' && item.logo ? (
+                                                            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 2 }}>
+                                                                <Image
+                                                                    source={{ uri: item.logo }}
+                                                                    style={{ width: 40, height: 40, borderRadius: 10 }}
+                                                                    resizeMode="contain"
+                                                                />
+                                                            </View>
+                                                        ) : (
+                                                            <CategoryIcon size={20} color={categoryColor} />
+                                                        )}
                                                     </View>
-                                                ) : selectedDimension === 'Sector' && SECTOR_ICONS[item.name] ? (() => {
-                                                    const Icon = SECTOR_ICONS[item.name];
-                                                    return <Icon size={20} color={CHART_COLORS[index % CHART_COLORS.length]} />;
-                                                })() : selectedDimension === 'Asset Type' && ASSET_TYPE_ICONS[item.name] ? (() => {
-                                                    const Icon = ASSET_TYPE_ICONS[item.name];
-                                                    return <Icon size={20} color={CHART_COLORS[index % CHART_COLORS.length]} />;
-                                                })() : selectedDimension === 'Broker' && BROKER_ICONS[item.name] ? (() => {
-                                                    const Icon = BROKER_ICONS[item.name];
-                                                    return <Icon size={20} color={CHART_COLORS[index % CHART_COLORS.length]} />;
-                                                })() : (
-                                                    <Text style={[styles.iconLetter, { color: CHART_COLORS[index % CHART_COLORS.length] }]}>
-                                                        {item.name[0]?.toUpperCase() || '?'}
-                                                    </Text>
-                                                )}
-                                            </View>
+                                                );
+                                            })()}
                                             <View style={styles.holdingInfo}>
                                                 <Text style={[styles.holdingSymbol, { color: currColors.text }]} numberOfLines={2} ellipsizeMode="tail">{item.name}</Text>
                                                 {selectedDimension === 'Company Name' && (

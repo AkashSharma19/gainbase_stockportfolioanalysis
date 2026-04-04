@@ -1,5 +1,5 @@
 import { useColorScheme } from '@/components/useColorScheme';
-import { getSectorIcon } from '@/constants/Icons';
+import { getSectorIcon } from '@/constants/Sectors';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,29 +8,24 @@ import {
     ArrowDown,
     ArrowUp,
     ArrowUpDown,
+    Briefcase,
+    Layers,
+    LayoutGrid,
     TrendingUp
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { Dimensions, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Colors from '../../constants/Colors';
-import { usePortfolioStore } from '../../store/usePortfolioStore';
+import Colors from '../../../constants/Colors';
+import { CHART_COLORS, getCategoryIcon } from '../../../constants/Icons';
+import { usePortfolioStore } from '../../../store/usePortfolioStore';
+import { Holding } from '../../../types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const CHART_COLORS = [
-    '#4ADE80', // Green
-    '#60A5FA', // Blue
-    '#F87171', // Red
-    '#FACC15', // Yellow
-    '#A78BFA', // Purple
-    '#FB923C', // Orange
-    '#2DD4BF', // Teal
-];
-
-export default function SectorDetailsScreen() {
-    const { sector } = useLocalSearchParams<{ sector: string }>();
-    const tickers = usePortfolioStore((state) => state.tickers);
+export default function AnalyticsDetailsScreen() {
+    const { type, value } = useLocalSearchParams<{ type: string; value: string }>();
+    const getHoldingsData = usePortfolioStore((state) => state.getHoldingsData);
     const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
     const addRecentSearch = usePortfolioStore((state) => state.addRecentSearch);
     const router = useRouter();
@@ -38,36 +33,36 @@ export default function SectorDetailsScreen() {
     const currColors = Colors[colorScheme as 'light' | 'dark'];
 
     const [viewMode, setViewMode] = useState<'Price' | 'DailyChange' | 'Name'>('DailyChange');
-    const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('DESC');
+    const [sortDirection, setSortDirection] = useState<'DESC' | 'ASC'>('DESC');
 
-    // Removed local getSectorIcon
+    const holdings = useMemo(() => getHoldingsData(), [getHoldingsData]);
 
-    const sectorData = getSectorIcon(sector || '');
-    const SectorIcon = sectorData.icon;
-    const sectorColor = sectorData.color;
+    const filteredHoldings = useMemo(() => {
+        const decodedValue = decodeURIComponent(value || '');
+        const typeKeyMap: Record<string, keyof Holding> = {
+            'Sector': 'sector',
+            'Asset Type': 'assetType',
+            'Broker': 'broker',
+        };
 
-    const filteredCompanies = useMemo(() => {
-        let result = tickers.filter(t => t['Sector'] === sector);
+        const key = typeKeyMap[type as keyof typeof typeKeyMap] || 'sector';
+        
+        let result = holdings.filter(h => String(h[key]) === decodedValue);
 
         return [...result].sort((a, b) => {
             let valA: any;
             let valB: any;
 
             if (viewMode === 'Name') {
-                valA = a['Company Name'] || '';
-                valB = b['Company Name'] || '';
+                valA = a.companyName;
+                valB = b.companyName;
             } else if (viewMode === 'Price') {
-                valA = a['Current Value'] || 0;
-                valB = b['Current Value'] || 0;
+                valA = a.currentValue;
+                valB = b.currentValue;
             } else {
                 // Default: DailyChange (Returns)
-                const aCurrent = a['Current Value'] || 0;
-                const aYesterday = a['Yesterday Close'] || aCurrent;
-                valA = aYesterday !== 0 ? ((aCurrent - aYesterday) / aYesterday) * 100 : 0;
-
-                const bCurrent = b['Current Value'] || 0;
-                const bYesterday = b['Yesterday Close'] || bCurrent;
-                valB = bYesterday !== 0 ? ((bCurrent - bYesterday) / bYesterday) * 100 : 0;
+                valA = a.dayChangePercentage;
+                valB = b.dayChangePercentage;
             }
 
             if (valA !== valB) {
@@ -78,15 +73,17 @@ export default function SectorDetailsScreen() {
             }
             return 0;
         });
-    }, [tickers, sector, viewMode, sortDirection]);
+    }, [holdings, type, value, viewMode, sortDirection]);
 
-    const renderItem = ({ item, index }: { item: any; index: number }) => {
-        const currentValue = item['Current Value'] || 0;
-        const yesterdayClose = item['Yesterday Close'] || currentValue;
-        const change = currentValue - yesterdayClose;
-        const changePercentage = yesterdayClose !== 0 ? (change / yesterdayClose) * 100 : 0;
-        const isPositive = change >= 0;
-        const companyName = item['Company Name'] || '?';
+    const headerData = useMemo(() => {
+        return getCategoryIcon(type as string, decodeURIComponent(value || ''));
+    }, [type, value]);
+
+    const HeaderIcon = headerData.icon;
+    const headerColor = headerData.color;
+
+    const renderItem = ({ item, index }: { item: Holding; index: number }) => {
+        const isPositive = item.dayChange >= 0;
 
         return (
             <TouchableOpacity
@@ -94,39 +91,42 @@ export default function SectorDetailsScreen() {
                 activeOpacity={0.7}
                 onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    addRecentSearch(companyName);
-                    router.push(`/stock-details/${item.Tickers}`);
+                    addRecentSearch(item.companyName);
+                    router.push(`/stock-details/${item.symbol}`);
                 }}
             >
                 <View style={styles.itemLeft}>
                     <View style={[styles.holdingIcon, { backgroundColor: CHART_COLORS[index % CHART_COLORS.length] + '22' }]}>
-                        {item.Logo ? (
+                        {item.logo ? (
                             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 2 }}>
                                 <Image
-                                    source={{ uri: item.Logo }}
+                                    source={{ uri: item.logo }}
                                     style={{ width: 40, height: 40, borderRadius: 10 }}
                                     resizeMode="contain"
                                 />
                             </View>
                         ) : (
                             <Text style={[styles.iconLetter, { color: CHART_COLORS[index % CHART_COLORS.length] }]}>
-                                {companyName[0]?.toUpperCase() || '?'}
+                                {item.companyName[0]?.toUpperCase() || '?'}
                             </Text>
                         )}
                     </View>
                     <View style={styles.infoCol}>
-                        <Text style={[styles.companyName, { color: currColors.text }]} numberOfLines={1}>{companyName}</Text>
+                        <Text style={[styles.companyName, { color: currColors.text }]} numberOfLines={1}>{item.companyName}</Text>
                         <View style={styles.tickerRow}>
-                            <Text style={[styles.tickerText, { color: currColors.textSecondary }]}>{item.Tickers?.split(':').pop() || item.Tickers}</Text>
+                            <Text style={[styles.tickerText, { color: currColors.textSecondary }]}>Qty: {item.quantity.toLocaleString()}</Text>
                         </View>
                     </View>
                 </View>
                 <View style={styles.itemRight}>
-                    <Text style={[styles.currentPrice, { color: currColors.text }]}>{showCurrencySymbol ? '₹' : ''}{currentValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                    <Text style={[styles.currentPrice, { color: currColors.text }]}>
+                        {showCurrencySymbol ? '₹' : ''}
+                        {item.currentPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Text>
                     <View style={[styles.changeBadge, { backgroundColor: isPositive ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
                         <TrendingUp size={12} color={isPositive ? '#4CAF50' : '#F44336'} style={{ transform: [{ rotate: isPositive ? '0deg' : '180deg' }] }} />
                         <Text style={[styles.changeText, { color: isPositive ? '#4CAF50' : '#F44336' }]}>
-                            {Math.abs(changePercentage).toFixed(2)}%
+                            {Math.abs(item.dayChangePercentage).toFixed(2)}%
                         </Text>
                     </View>
                 </View>
@@ -136,14 +136,11 @@ export default function SectorDetailsScreen() {
 
     return (
         <View style={[styles.safeArea, { backgroundColor: currColors.background }]}>
-            <Stack.Screen options={{
-                headerShown: false,
-            }} />
+            <Stack.Screen options={{ headerShown: false }} />
 
             <View style={[styles.container, { backgroundColor: currColors.background }]}>
-                {/* Header Section (1/3rd of screen for more prominence) */}
                 <LinearGradient
-                    colors={[sectorColor + '20', currColors.background]}
+                    colors={[headerColor + '20', currColors.background]}
                     style={styles.headerSection}
                 >
                     <SafeAreaView edges={['top']} style={styles.headerContent}>
@@ -159,21 +156,21 @@ export default function SectorDetailsScreen() {
                         <View style={styles.headerCenter}>
                             <View style={[styles.largeIconContainer, {
                                 backgroundColor: currColors.background,
-                                shadowColor: sectorColor,
+                                shadowColor: headerColor,
                                 shadowOffset: { width: 0, height: 10 },
                                 shadowOpacity: 0.3,
                                 shadowRadius: 20,
                                 elevation: 10,
-                                borderColor: sectorColor + '30'
+                                borderColor: headerColor + '30'
                             }]}>
-                                <SectorIcon size={48} color={sectorColor} strokeWidth={1.5} />
+                                <HeaderIcon size={48} color={headerColor} strokeWidth={1.5} />
                             </View>
-                            <Text style={[styles.sectorTitle, { color: currColors.text }]}>{sector}</Text>
+                            <Text style={[styles.sectorTitle, { color: currColors.text }]}>{decodeURIComponent(value || '')}</Text>
+                            <Text style={[styles.typeSubtitle, { color: currColors.textSecondary }]}>{type}</Text>
                         </View>
                     </SafeAreaView>
                 </LinearGradient>
 
-                {/* List Section */}
                 <View style={[styles.listSection, { backgroundColor: currColors.background }]}>
                     <View style={styles.filtersWrapper}>
                         <View style={styles.holdingsHeader}>
@@ -202,7 +199,7 @@ export default function SectorDetailsScreen() {
                             >
                                 <ArrowUpDown size={14} color={currColors.text} />
                                 <Text style={[styles.viewModeText, { color: currColors.text }]}>
-                                    {viewMode === 'Price' ? 'Current price' :
+                                    {viewMode === 'Price' ? 'Current value' :
                                         viewMode === 'DailyChange' ? 'Daily change' : 'Name'}
                                 </Text>
                             </TouchableOpacity>
@@ -210,12 +207,17 @@ export default function SectorDetailsScreen() {
                     </View>
 
                     <FlatList
-                        data={filteredCompanies}
+                        data={filteredHoldings}
                         renderItem={renderItem}
-                        keyExtractor={(item) => item.Tickers}
+                        keyExtractor={(item) => item.symbol}
                         contentContainerStyle={styles.listContent}
                         showsVerticalScrollIndicator={false}
                         bounces={false}
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                <Text style={[styles.emptyText, { color: currColors.textSecondary }]}>No owned companies found</Text>
+                            </View>
+                        }
                     />
                 </View>
             </View>
@@ -270,9 +272,14 @@ const styles = StyleSheet.create({
         fontSize: SCREEN_WIDTH > 400 ? 28 : 24,
         fontWeight: '500',
         letterSpacing: -0.5,
-        marginBottom: 8,
     },
-
+    typeSubtitle: {
+        fontSize: 14,
+        fontWeight: '400',
+        marginTop: 4,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
     listSection: {
         flex: 1,
         borderTopLeftRadius: 30,
@@ -374,5 +381,12 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '400',
         marginLeft: 4,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        marginTop: 40,
+    },
+    emptyText: {
+        fontSize: 16,
     },
 });
