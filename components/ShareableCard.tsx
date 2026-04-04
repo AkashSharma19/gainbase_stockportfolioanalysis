@@ -1,6 +1,7 @@
-import { Activity, Award } from 'lucide-react-native';
+import { Shield, Scale, LayoutGrid } from 'lucide-react-native';
 import React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { Svg, Circle } from 'react-native-svg';
 
 const { width } = Dimensions.get('window');
 
@@ -12,6 +13,7 @@ interface ShareableCardProps {
         dayChange: number;
         dayChangePercentage: number;
         xirr: number;
+        healthScore?: number;
         topWinners: {
             symbol: string;
             profit: number;
@@ -22,19 +24,48 @@ interface ShareableCardProps {
     };
 }
 
-const DNA_LABELS = {
-    risk: 'Risk Appetite',
-    diversification: 'Diversification',
-    activity: 'Activity',
-    winRate: 'Win Rate',
+// ✨ Ultra-Minimal Circular Metrics
+const MiniMetric = ({ score, color, label, icon: Icon, isPercent = false }: any) => {
+    const size = 32;
+    const r = size * 0.4;
+    const center = size / 2;
+    const circum = 2 * Math.PI * r;
+    const offset = circum - (score / 100) * circum;
+
+    return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+                <Svg width={size} height={size}>
+                    <Circle cx={center} cy={center} r={r} stroke="#2C2C2E" strokeWidth={2.5} fill="none" />
+                    <Circle
+                        cx={center}
+                        cy={center}
+                        r={r}
+                        stroke={color}
+                        strokeWidth={2.5}
+                        strokeDasharray={`${circum} ${circum}`}
+                        strokeDashoffset={offset}
+                        strokeLinecap="round"
+                        fill="none"
+                        transform={`rotate(-90 ${center} ${center})`}
+                    />
+                </Svg>
+            </View>
+            <View>
+                <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '600' }}>
+                    {score.toFixed(0)}{isPercent ? '%' : ''}
+                </Text>
+                <Text style={{ color: '#8E8E93', fontSize: 7, fontWeight: '700', letterSpacing: 0.5 }}>{label}</Text>
+            </View>
+        </View>
+    );
 };
 
-const getPersonaName = (stats: { risk: number; diversification: number; activity: number; winRate: number }) => {
-    if (stats.winRate > 80 && stats.risk > 70) return 'The Alpha Hunter';
-    if (stats.winRate > 70 && stats.diversification > 80) return 'The Strategic Guardian';
-    if (stats.risk > 80 && stats.activity > 80) return 'The Adrenaline Trader';
-    if (stats.diversification > 80 && stats.risk < 40) return 'The Balanced Architect';
-    if (stats.winRate > 60 && stats.risk < 50) return 'The Calculated Sniper';
+const getPersonaName = (stats: { risk: number; diversification: number; winRate: number }) => {
+    if (stats.winRate > 80) return 'The Alpha Hunter';
+    if (stats.diversification > 80) return 'The Strategic Guardian';
+    if (stats.risk > 70) return 'The Adrenaline Trader';
+    if (stats.diversification > 60 && stats.risk < 40) return 'The Balanced Architect';
     return 'The Aspiring Tycoon';
 };
 
@@ -42,162 +73,65 @@ export default function ShareableCard({ data }: ShareableCardProps) {
     const isProfit = data.profitAmount >= 0;
     const isDayProfit = data.dayChange >= 0;
 
-    // --- Investor DNA Calculation ---
-    // 1. Risk: Based on Small/Mid Cap allocation (approx. by tracking "Cap" in asset type if available, 
-    //    or volatility of top winners? For now, let's use a proxy: Day Change %)
-    //    High day change % = High Volatility = High Risk Appetite. 
-    //    Let's clamp it: 0-5% = 0-100 score.
-    const riskScore = Math.min(Math.abs(data.dayChangePercentage) * 20, 100);
+    const persona = getPersonaName({
+        risk: Math.min(Math.abs(data.dayChangePercentage) * 20, 100),
+        diversification: Math.min((data.holdingsCount || 5) * 5, 100),
+        winRate: data.winRate || 50,
+    });
 
-    // 2. Diversification: Number of holdings. <5 = low, >20 = high.
-    const diversificationScore = Math.min((data.holdingsCount || 5) * 5, 100);
-
-    // 3. Activity: We don't have transaction history here. 
-    //    Let's use "Day Change" frequency? No.
-    //    Let's use a static "Medium" for now or base it on XIRR (High XIRR often implies active timing or luck).
-    const activityScore = Math.min(Math.abs(data.xirr), 100);
-
-    // 4. Win Rate: Use passed winRate
-    const winRateScore = data.winRate || (data.profitPercentage > 0 ? Math.min(data.profitPercentage * 2, 100) : 30);
-
-    const dnaStats = {
-        risk: riskScore,
-        diversification: diversificationScore,
-        activity: activityScore,
-        winRate: winRateScore,
-    };
-
-    const persona = getPersonaName(dnaStats);
-
-
-    const formatCompactCurrency = (val: number) => {
+    const formatCurrency = (val: number) => {
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'INR',
-            notation: 'compact',
-            maximumFractionDigits: 1,
-        }).format(Math.abs(val));
+            maximumFractionDigits: 0,
+        }).format(val);
     };
 
     return (
         <View style={styles.captureContainer}>
-            <View style={styles.container}>
-                {/* Header */}
+            <View style={styles.minimalCard}>
+                {/* Minimal Header */}
                 <View style={styles.header}>
-                    <View>
-                        <Text style={styles.brandName}>GAINBASE</Text>
-                        <Text style={styles.userName}>{data.userName || 'PORTFOLIO PERFORMANCE'}</Text>
+                    <View style={styles.logoRow}>
+                        <LayoutGrid size={14} color="#0A84FF" />
+                        <Text style={styles.brandTitle}>GAINBASE</Text>
                     </View>
-                    <View style={styles.headerRight}>
-                        <Activity size={20} color="#007AFF" />
+                    <Text style={styles.dateText}>{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}</Text>
+                </View>
+
+                {/* Typography Hero */}
+                <View style={styles.heroSection}>
+                    <Text style={styles.heroValue}>{formatCurrency(data.totalValue)}</Text>
+                    <View style={styles.subMetricRow}>
+                        <Text style={[styles.subValue, { color: isProfit ? '#34C759' : '#FF3B30' }]}>
+                            {isProfit ? '+' : ''}{data.profitPercentage.toFixed(2)}% Total
+                        </Text>
+                        <View style={styles.dot} />
+                        <Text style={styles.subValue}>{data.xirr.toFixed(1)}% XIRR</Text>
+                        <View style={styles.dot} />
+                        <Text style={[styles.subValue, { color: isDayProfit ? '#34C759' : '#FF3B30' }]}>
+                            {isDayProfit ? '+' : ''}{data.dayChangePercentage.toFixed(1)}% Day
+                        </Text>
                     </View>
                 </View>
 
-                {/* Main Value Card (Hero Design) */}
-                <View style={styles.heroCard}>
-                    <Text style={styles.heroLabel}>TOTAL PORTFOLIO VALUE</Text>
-                    <Text style={styles.heroValue}>
-                        {new Intl.NumberFormat('en-IN', {
-                            style: 'currency',
-                            currency: 'INR',
-                            maximumFractionDigits: 0,
-                        }).format(data.totalValue)}
-                    </Text>
-
-                    <View style={styles.dashedDivider} />
-
-                    <View style={styles.heroMetricRow}>
-                        <View style={styles.metricItem}>
-                            <Text style={styles.miniLabel}>TOTAL RETURN</Text>
-                            <Text style={[styles.miniValue, { color: isProfit ? '#30D158' : '#FF453A' }]}>
-                                {isProfit ? '+' : ''}{data.profitPercentage.toFixed(2)}%
-                            </Text>
-                        </View>
+                {/* Bottom Stats Line */}
+                <View style={styles.bottomSection}>
+                    <View style={styles.statLine}>
+                        <MiniMetric score={data.healthScore || 85} color="#0A84FF" label="HEALTH" icon={Shield} />
                         <View style={styles.verticalDivider} />
-                        <View style={styles.metricItem}>
-                            <Text style={styles.miniLabel}>XIRR</Text>
-                            <Text style={styles.miniValueWhite}>{data.xirr.toFixed(2)}%</Text>
-                        </View>
-                        <View style={styles.verticalDivider} />
-                        <View style={styles.metricItem}>
-                            <Text style={styles.miniLabel}>1D CHANGE</Text>
-                            <Text style={[styles.miniValue, { color: isDayProfit ? '#30D158' : '#FF453A' }]}>
-                                {isDayProfit ? '+' : ''}{data.dayChangePercentage.toFixed(2)}%
-                            </Text>
-                        </View>
+                        <MiniMetric score={data.winRate || 72} color="#34C759" label="WIN RATE" icon={Scale} isPercent />
+                    </View>
+
+                    <View style={styles.personaRow}>
+                        <Text style={styles.personaLabel}>INVESTOR DNA</Text>
+                        <Text style={styles.personaValue}>{persona.toUpperCase()}</Text>
                     </View>
                 </View>
 
-                {/* Investor DNA Section */}
-                <View style={styles.dnaContainer}>
-                    <View style={styles.dnaHeader}>
-                        <Award size={14} color="#FFD60A" />
-                        <Text style={styles.dnaTitle}>INVESTOR DNA</Text>
-                    </View>
-                    <Text style={styles.personaText}>{persona}</Text>
-
-                    <View style={styles.dnaGrid}>
-                        {/* Risk */}
-                        <View style={styles.dnaItem}>
-                            <Text style={styles.dnaLabel}>Risk</Text>
-                            <View style={styles.progressBarBg}>
-                                <View style={[styles.progressBarFill, { width: `${dnaStats.risk}%`, backgroundColor: '#FF453A' }]} />
-                            </View>
-                        </View>
-                        {/* Win Rate */}
-                        <View style={styles.dnaItem}>
-                            <Text style={styles.dnaLabel}>Win Rate</Text>
-                            <View style={styles.progressBarBg}>
-                                <View style={[styles.progressBarFill, { width: `${dnaStats.winRate}%`, backgroundColor: '#30D158' }]} />
-                            </View>
-                        </View>
-                        {/* Diversification */}
-                        <View style={styles.dnaItem}>
-                            <Text style={styles.dnaLabel}>Diversity</Text>
-                            <View style={styles.progressBarBg}>
-                                <View style={[styles.progressBarFill, { width: `${dnaStats.diversification}%`, backgroundColor: '#0A84FF' }]} />
-                            </View>
-                        </View>
-                        {/* Activity */}
-                        <View style={styles.dnaItem}>
-                            <Text style={styles.dnaLabel}>Activity</Text>
-                            <View style={styles.progressBarBg}>
-                                <View style={[styles.progressBarFill, { width: `${dnaStats.activity}%`, backgroundColor: '#BF5AF2' }]} />
-                            </View>
-                        </View>
-                    </View>
-                </View>
-
-
-                {/* Top Winners Section */}
-                <View style={styles.winnersContainer}>
-                    <View style={styles.winnersHeader}>
-                        <Award size={14} color="#8E8E93" />
-                        <Text style={styles.winnersTitle}>TOP WINNERS</Text>
-                    </View>
-
-                    <View style={styles.winnersList}>
-                        {data.topWinners.slice(0, 3).map((winner, index) => (
-                            <View key={winner.symbol} style={styles.winnerRow}>
-                                <View style={styles.winnerInfo}>
-                                    <View style={[styles.rankBadge, { backgroundColor: index === 0 ? '#007AFF' : '#2C2C2E' }]}>
-                                        <Text style={styles.rankText}>{index + 1}</Text>
-                                    </View>
-                                    <Text style={styles.winnerSymbol}>{winner.symbol}</Text>
-                                </View>
-                                <Text style={styles.winnerProfit}>
-                                    +{formatCompactCurrency(winner.profit)}
-                                </Text>
-                            </View>
-                        ))}
-                    </View>
-                </View>
-
-                {/* Footer */}
-                <View style={styles.footer}>
-                    <View style={styles.footerLine} />
-                    <Text style={styles.footerText}>MADE WITH GAINBASE</Text>
-                    <View style={styles.footerLine} />
+                {/* Clean Footer Branding */}
+                <View style={styles.footerBranding}>
+                    <Text style={styles.footerText}>PROUDLY INVESTING WITH GAINBASE.APP</Text>
                 </View>
             </View>
         </View>
@@ -207,216 +141,107 @@ export default function ShareableCard({ data }: ShareableCardProps) {
 const styles = StyleSheet.create({
     captureContainer: {
         width: width,
+        aspectRatio: 0.85,
         backgroundColor: '#000',
-        padding: 20,
+        padding: 32,
+        justifyContent: 'center',
     },
-    container: {
-        backgroundColor: '#1C1C1E',
-        borderRadius: 24,
+    minimalCard: {
+        flex: 1,
+        backgroundColor: '#000',
+        borderRadius: 40,
         borderWidth: 1,
-        borderColor: '#2C2C2E',
-        padding: 24,
-        gap: 20,
+        borderColor: '#1C1C1E',
+        padding: 40,
+        justifyContent: 'space-between',
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
-    },
-    headerRight: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#2C2C2E',
-        justifyContent: 'center',
         alignItems: 'center',
     },
-    brandName: {
-        color: '#8E8E93',
-        fontSize: 10,
-        fontWeight: '700',
+    logoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    brandTitle: {
+        color: '#FFF',
+        fontSize: 12,
+        fontWeight: '800',
         letterSpacing: 2,
     },
-    userName: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: '800',
-        marginTop: 2,
+    dateText: {
+        color: '#48484A',
+        fontSize: 9,
+        fontWeight: '700',
+        letterSpacing: 0.5,
     },
-    heroCard: {
-        backgroundColor: '#2C2C2E',
-        borderRadius: 20,
-        padding: 20,
-    },
-    heroLabel: {
-        color: '#8E8E93',
-        fontSize: 10,
-        fontWeight: '600',
-        letterSpacing: 1,
+    heroSection: {
+        alignItems: 'center',
+        marginVertical: 40,
     },
     heroValue: {
-        color: '#FFFFFF',
-        fontSize: 32,
-        fontWeight: '800',
-        marginVertical: 12,
+        color: '#FFF',
+        fontSize: 48,
+        fontWeight: '700',
+        letterSpacing: -1,
+        marginBottom: 12,
     },
-    dashedDivider: {
-        height: 1,
-        borderWidth: 1,
-        borderColor: '#3C3C3E',
-        borderStyle: 'dashed',
-        marginVertical: 16,
-    },
-    heroMetricRow: {
+    subMetricRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        gap: 12,
     },
-    metricItem: {
+    subValue: {
+        color: '#8E8E93',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    dot: {
+        width: 3,
+        height: 3,
+        borderRadius: 1.5,
+        backgroundColor: '#2C2C2E',
+    },
+    bottomSection: {
+        gap: 32,
+    },
+    statLine: {
+        flexDirection: 'row',
         alignItems: 'center',
-        flex: 1,
+        justifyContent: 'center',
+        gap: 24,
     },
     verticalDivider: {
         width: 1,
         height: 24,
-        backgroundColor: '#3C3C3E',
+        backgroundColor: '#1C1C1E',
     },
-    miniLabel: {
-        color: '#8E8E93',
-        fontSize: 8,
-        fontWeight: '700',
-        marginBottom: 4,
-        textAlign: 'center',
-    },
-    miniValue: {
-        fontSize: 13,
-        fontWeight: '800',
-        textAlign: 'center',
-    },
-    miniValueWhite: {
-        fontSize: 13,
-        fontWeight: '800',
-        color: '#FFF',
-        textAlign: 'center',
-    },
-
-    // DNA Section
-    dnaContainer: {
-        backgroundColor: '#252528',
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#333',
-    },
-    dnaHeader: {
-        flexDirection: 'row',
+    personaRow: {
         alignItems: 'center',
-        gap: 6,
-        marginBottom: 8,
+        gap: 4,
     },
-    dnaTitle: {
-        color: '#FFD60A',
-        fontSize: 10,
-        fontWeight: '700',
-        letterSpacing: 1,
-    },
-    personaText: {
-        color: '#FFF',
-        fontSize: 18,
-        fontWeight: '800',
-        marginBottom: 16,
-    },
-    dnaGrid: {
-        gap: 12,
-    },
-    dnaItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    dnaLabel: {
-        color: '#AAA',
-        fontSize: 11,
-        width: 60,
-        fontWeight: '500',
-    },
-    progressBarBg: {
-        flex: 1,
-        height: 6,
-        backgroundColor: '#3C3C3E',
-        borderRadius: 3,
-        overflow: 'hidden',
-    },
-    progressBarFill: {
-        height: '100%',
-        borderRadius: 3,
-    },
-
-    winnersContainer: {
-        marginTop: 4,
-    },
-    winnersHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 12,
-    },
-    winnersTitle: {
-        color: '#8E8E93',
-        fontSize: 10,
-        fontWeight: '700',
-        letterSpacing: 1,
-    },
-    winnersList: {
-        gap: 10,
-    },
-    winnerRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    winnerInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    rankBadge: {
-        width: 20,
-        height: 20,
-        borderRadius: 6,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    rankText: {
-        color: '#FFF',
-        fontSize: 10,
-        fontWeight: '800',
-    },
-    winnerSymbol: {
-        color: '#FFF',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    winnerProfit: {
-        color: '#30D158',
-        fontSize: 14,
-        fontWeight: '700',
-    },
-    footer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        marginTop: 8,
-    },
-    footerLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: '#2C2C2E',
-    },
-    footerText: {
+    personaLabel: {
         color: '#48484A',
         fontSize: 8,
         fontWeight: '800',
         letterSpacing: 1,
+    },
+    personaValue: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '600',
+        letterSpacing: 0.5,
+    },
+    footerBranding: {
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    footerText: {
+        color: '#2C2C2E',
+        fontSize: 8,
+        fontWeight: '800',
+        letterSpacing: 1.5,
     },
 });

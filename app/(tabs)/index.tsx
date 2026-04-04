@@ -2,6 +2,7 @@ import { ActivityCalendar } from '@/components/ActivityCalendar';
 import { ForecastCard } from '@/components/ForecastCard';
 import { PortfolioHealthCard } from '@/components/PortfolioHealthCard';
 import ShareableCard from '@/components/ShareableCard';
+import { usePortfolioHealth } from '@/hooks/usePortfolioHealth';
 import TopMovers from '@/components/TopMovers';
 import WinLossCard from '@/components/WinLossCard';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -99,6 +100,8 @@ export default function PortfolioScreen() {
   const [expandedYear, setExpandedYear] = React.useState<number | null>(null);
   const forecastYears = usePortfolioStore((state) => state.forecastYears);
 
+  const health = usePortfolioHealth();
+
   const toggleYear = (year: number) => {
     Haptics.selectionAsync();
     setExpandedYear(expandedYear === year ? null : year);
@@ -157,9 +160,10 @@ export default function PortfolioScreen() {
       topWinners,
       userName: userName,
       holdingsCount: holdings.length,
-      winRate
+      winRate,
+      healthScore: health.totalScore
     };
-  }, [summary, holdings, userName]);
+  }, [summary, holdings, userName, health.totalScore]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: currColors.background }]} edges={['top', 'left', 'right']}>
@@ -468,7 +472,7 @@ export default function PortfolioScreen() {
       <View style={styles.hiddenCapture} pointerEvents="none">
         <ViewShot
           ref={viewShotRef}
-          options={{ format: 'png', quality: 1.0 }}
+          options={{ format: 'png', quality: 1.0, result: 'tmpfile' }}
         >
           <ShareableCard data={shareData} />
         </ViewShot>
