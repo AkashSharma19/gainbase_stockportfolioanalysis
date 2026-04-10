@@ -101,8 +101,8 @@ export default function AnalyticsScreen() {
     }, [allocation, sortDirection, holdingsViewMode]);
 
     const chartData = useMemo(() => {
-        return allocation.map((item) => {
-            const { color } = getCategoryIcon(selectedDimension, item.name);
+        return filteredAllocation.map((item, index) => {
+            const color = CHART_COLORS[index % CHART_COLORS.length];
             return {
                 value: item.percentage,
                 color: color,
@@ -110,7 +110,7 @@ export default function AnalyticsScreen() {
                 label: item.name,
             };
         });
-    }, [allocation, isPrivacyMode, selectedDimension]);
+    }, [filteredAllocation, isPrivacyMode, selectedDimension]);
 
     if (transactions.length === 0) {
         return (
@@ -283,7 +283,8 @@ export default function AnalyticsScreen() {
                                     <View style={styles.holdingRow}>
                                         <View style={styles.holdingMain}>
                                             {(() => {
-                                                const { icon: CategoryIcon, color: categoryColor } = getCategoryIcon(selectedDimension, item.name);
+                                                const { icon: CategoryIcon } = getCategoryIcon(selectedDimension, item.name);
+                                                const categoryColor = CHART_COLORS[index % CHART_COLORS.length];
                                                 return (
                                                     <View style={[styles.holdingIcon, { backgroundColor: categoryColor + '22' }]}>
                                                         {selectedDimension === 'Company Name' && item.logo ? (

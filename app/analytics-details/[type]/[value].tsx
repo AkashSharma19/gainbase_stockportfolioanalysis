@@ -27,12 +27,13 @@ export default function AnalyticsDetailsScreen() {
     const { type, value } = useLocalSearchParams<{ type: string; value: string }>();
     const getHoldingsData = usePortfolioStore((state) => state.getHoldingsData);
     const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
+    const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
     const addRecentSearch = usePortfolioStore((state) => state.addRecentSearch);
     const router = useRouter();
     const colorScheme = useColorScheme() ?? 'dark';
     const currColors = Colors[colorScheme as 'light' | 'dark'];
 
-    const [viewMode, setViewMode] = useState<'Price' | 'DailyChange' | 'Name'>('DailyChange');
+    const [viewMode, setViewMode] = useState<'Contribution' | 'Invested' | 'Returns'>('Invested');
     const [sortDirection, setSortDirection] = useState<'DESC' | 'ASC'>('DESC');
 
     const holdings = useMemo(() => getHoldingsData(), [getHoldingsData]);
@@ -53,16 +54,16 @@ export default function AnalyticsDetailsScreen() {
             let valA: any;
             let valB: any;
 
-            if (viewMode === 'Name') {
-                valA = a.companyName;
-                valB = b.companyName;
-            } else if (viewMode === 'Price') {
+            if (viewMode === 'Contribution') {
+                valA = a.contributionPercentage;
+                valB = b.contributionPercentage;
+            } else if (viewMode === 'Invested') {
                 valA = a.currentValue;
                 valB = b.currentValue;
             } else {
-                // Default: DailyChange (Returns)
-                valA = a.dayChangePercentage;
-                valB = b.dayChangePercentage;
+                // Returns (%)
+                valA = a.pnlPercentage;
+                valB = b.pnlPercentage;
             }
 
             if (valA !== valB) {
@@ -83,8 +84,6 @@ export default function AnalyticsDetailsScreen() {
     const headerColor = headerData.color;
 
     const renderItem = ({ item, index }: { item: Holding; index: number }) => {
-        const isPositive = item.dayChange >= 0;
-
         return (
             <TouchableOpacity
                 style={[styles.companyItem, { borderBottomColor: currColors.border }]}
@@ -119,16 +118,38 @@ export default function AnalyticsDetailsScreen() {
                     </View>
                 </View>
                 <View style={styles.itemRight}>
-                    <Text style={[styles.currentPrice, { color: currColors.text }]}>
-                        {showCurrencySymbol ? '₹' : ''}
-                        {item.currentPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </Text>
-                    <View style={[styles.changeBadge, { backgroundColor: isPositive ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
-                        <TrendingUp size={12} color={isPositive ? '#4CAF50' : '#F44336'} style={{ transform: [{ rotate: isPositive ? '0deg' : '180deg' }] }} />
-                        <Text style={[styles.changeText, { color: isPositive ? '#4CAF50' : '#F44336' }]}>
-                            {Math.abs(item.dayChangePercentage).toFixed(2)}%
-                        </Text>
-                    </View>
+                    {viewMode === 'Invested' && (
+                        <>
+                            <Text style={[styles.currentPrice, { color: currColors.text }]}>
+                                {isPrivacyMode ? '****' : `${showCurrencySymbol ? '₹' : ''}${item.currentValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+                            </Text>
+                            <Text style={[styles.tickerText, { color: currColors.textSecondary }]}>
+                                {isPrivacyMode ? '****' : `${showCurrencySymbol ? '₹' : ''}${item.investedValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+                            </Text>
+                        </>
+                    )}
+                    {viewMode === 'Returns' && (
+                        <>
+                            <Text style={[styles.currentPrice, { color: item.pnl >= 0 ? '#4CAF50' : '#F44336' }]}>
+                                {isPrivacyMode ? '****' : `${item.pnl >= 0 ? '+' : '-'}${showCurrencySymbol ? '₹' : ''}${Math.abs(item.pnl).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+                            </Text>
+                            <View style={[styles.changeBadge, { backgroundColor: item.pnl >= 0 ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
+                                <Text style={[styles.changeText, { color: item.pnl >= 0 ? '#4CAF50' : '#F44336' }, { marginLeft: 0 }]}>
+                                    {item.pnl >= 0 ? '+' : ''}{item.pnlPercentage.toFixed(2)}%
+                                </Text>
+                            </View>
+                        </>
+                    )}
+                    {viewMode === 'Contribution' && (
+                        <>
+                            <Text style={[styles.currentPrice, { color: currColors.text }]}>
+                                {isPrivacyMode ? '****' : `${item.contributionPercentage.toFixed(2)}%`}
+                            </Text>
+                            <Text style={[styles.tickerText, { color: currColors.textSecondary }]}>
+                                {isPrivacyMode ? '****' : `${showCurrencySymbol ? '₹' : ''}${item.currentValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+                            </Text>
+                        </>
+                    )}
                 </View>
             </TouchableOpacity>
         );
@@ -192,15 +213,15 @@ export default function AnalyticsDetailsScreen() {
                                 style={[styles.viewModeToggle, { backgroundColor: currColors.card, borderColor: currColors.border }]}
                                 onPress={() => {
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                    if (viewMode === 'Price') setViewMode('DailyChange');
-                                    else if (viewMode === 'DailyChange') setViewMode('Name');
-                                    else setViewMode('Price');
+                                    if (viewMode === 'Invested') setViewMode('Returns');
+                                    else if (viewMode === 'Returns') setViewMode('Contribution');
+                                    else setViewMode('Invested');
                                 }}
                             >
                                 <ArrowUpDown size={14} color={currColors.text} />
                                 <Text style={[styles.viewModeText, { color: currColors.text }]}>
-                                    {viewMode === 'Price' ? 'Current value' :
-                                        viewMode === 'DailyChange' ? 'Daily change' : 'Name'}
+                                    {viewMode === 'Invested' ? 'Current (Invested)' :
+                                        viewMode === 'Returns' ? 'Returns (%)' : 'Contribution (Current)'}
                                 </Text>
                             </TouchableOpacity>
                         </View>
