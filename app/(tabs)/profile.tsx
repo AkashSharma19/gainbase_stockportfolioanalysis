@@ -950,7 +950,6 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#FFF',
     fontSize: 16,
-    fontFamily: 'Outfit_400Regular',
   },
   saveButton: {
     backgroundColor: '#007AFF',

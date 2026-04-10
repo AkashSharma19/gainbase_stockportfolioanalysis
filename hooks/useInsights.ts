@@ -64,21 +64,21 @@ export const useInsights = () => {
 
     // Sell/Hold: High Concentration (>25% of portfolio)
     holdings.forEach((h) => {
-      if (h.contributionPercentage > 25) {
+      if ((h.contributionPercentage ?? 0) > 25) {
         list.push({
           id: `concentration-${h.symbol}`,
           category: 'Sell/Hold',
           title: h.companyName || h.symbol,
           subtitle: `Invested: ${formatCurrency(h.investedValue)}`,
-          reason: `This stock makes up ${h.contributionPercentage.toFixed(1)}% of your portfolio. Consider trimming to reduce concentration risk.`,
+          reason: `This stock makes up ${(h.contributionPercentage ?? 0).toFixed(1)}% of your portfolio. Consider trimming to reduce concentration risk.`,
           badge: 'High Concentration',
           symbol: h.symbol,
           logo: h.logo,
           icon: 'TriangleAlert',
-          value: `${h.contributionPercentage.toFixed(1)}% holding`,
+          value: `${(h.contributionPercentage ?? 0).toFixed(1)}% holding`,
           color: '#FF3B30',
           pnlPercentage: h.pnlPercentage,
-          severity: h.contributionPercentage,
+          severity: h.contributionPercentage ?? 0,
         });
         markAdded('Sell/Hold', h.symbol);
       }
@@ -110,7 +110,7 @@ export const useInsights = () => {
     // Only add if NOT already a Buy/DCA candidate (i.e., we skip this if the stock
     // will also appear in Buy — avoid the same stock firing conflicting signals)
     holdings.forEach((h) => {
-      if (h.pnlPercentage < -15 && h.contributionPercentage < 15) {
+      if (h.pnlPercentage < -15 && (h.contributionPercentage ?? 0) < 15) {
         // Only suggest Tax-Loss if we don't also strongly want to DCA
         if (canAdd('Sell/Hold', h.symbol)) {
           list.push({
@@ -278,7 +278,7 @@ export const useInsights = () => {
     holdings.forEach((h) => {
       const sector = h.sector || 'Other';
       sectorTotals[sector] =
-        (sectorTotals[sector] || 0) + h.contributionPercentage;
+        (sectorTotals[sector] || 0) + (h.contributionPercentage ?? 0);
     });
 
     Object.entries(sectorTotals).forEach(([sector, percentage]) => {

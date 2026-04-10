@@ -61,12 +61,12 @@ export const usePortfolioHealth = (): PortfolioHealth => {
 
     // ── 2. CONCENTRATION RISK (20 pts) ──────────────────────────────
     const sortedByContrib = [...holdings].sort(
-      (a, b) => b.contributionPercentage - a.contributionPercentage,
+      (a, b) => (b.contributionPercentage ?? 0) - (a.contributionPercentage ?? 0),
     );
     const maxSingle = sortedByContrib[0]?.contributionPercentage || 0;
     const top3Sum = sortedByContrib
       .slice(0, 3)
-      .reduce((acc, h) => acc + h.contributionPercentage, 0);
+      .reduce((acc, h) => acc + (h.contributionPercentage ?? 0), 0);
 
     const singlePts =
       maxSingle < 15 ? 12 : maxSingle < 25 ? 8 : maxSingle < 40 ? 4 : 1;
