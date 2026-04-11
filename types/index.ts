@@ -22,6 +22,9 @@ export interface Ticker {
   Low52?: number;
   Logo?: string;
   'Market Cap'?: string | number;
+  PE?: number | string | null;
+  DividendYield?: number | string | null;
+  DebtToEquity?: number | string | null;
   [key: string]: string | number | undefined | null; // Support for dynamic 'Today - X' keys
 }
 
@@ -75,6 +78,9 @@ export interface Holding {
   low52?: number;
   logo?: string;
   marketCap?: string | number;
+  PE?: number | string | null;
+  DividendYield?: number | string | null;
+  DebtToEquity?: number | string | null;
 }
 
 export interface AllocationItem {

@@ -45,6 +45,7 @@ export default function StockDetailsScreen() {
   const showCurrencySymbol = usePortfolioStore(
     (state) => state.showCurrencySymbol,
   );
+  const calculateSummary = usePortfolioStore((state) => state.calculateSummary);
 
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
@@ -86,6 +87,7 @@ export default function StockDetailsScreen() {
         low52: ticker.Low52,
         logo: ticker.Logo,
         marketCap: ticker['Market Cap'],
+        PE: ticker.PE,
       };
     }
     return null;
@@ -317,6 +319,12 @@ export default function StockDetailsScreen() {
                   hideOrigin
                   xAxisThickness={0}
                   yAxisThickness={0}
+                  showReferenceLine1={holding.quantity > 0 && holding.avgPrice > 0}
+                  referenceLine1Position={holding.avgPrice}
+                  referenceLine1Config={{
+                    color: currColors.textSecondary,
+                    thickness: 2,
+                  }}
                 />
               </View>
             </View>
@@ -559,8 +567,61 @@ export default function StockDetailsScreen() {
               </ThemedText>
             </View>
 
+            <View style={styles.heroRow}>
+              <ThemedText
+                style={[
+                  styles.heroRowLabel,
+                  { color: currColors.textSecondary },
+                ]}
+              >
+                P/E Valuation
+              </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {holding.PE && holding.PE !== 'N/A' && (
+                  <View
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 6,
+                      backgroundColor:
+                        Number(holding.PE) < 15
+                          ? 'rgba(48, 209, 88, 0.15)'
+                          : Number(holding.PE) > 30
+                            ? 'rgba(255, 69, 58, 0.15)'
+                            : 'rgba(255, 214, 10, 0.15)',
+                    }}
+                  >
+                    <ThemedText
+                      style={{
+                        fontSize: 10,
+                        fontWeight: '600',
+                        color:
+                          Number(holding.PE) < 15
+                            ? '#30D158'
+                            : Number(holding.PE) > 30
+                              ? '#FF453A'
+                              : '#FFD60A',
+                      }}
+                    >
+                      {Number(holding.PE) < 15
+                        ? 'VALUED'
+                        : Number(holding.PE) > 30
+                          ? 'EXPENSIVE'
+                          : 'NEUTRAL'}
+                    </ThemedText>
+                  </View>
+                )}
+                <ThemedText
+                  style={[styles.heroRowValueWhite, { color: currColors.text }]}
+                >
+                  {holding.PE && holding.PE !== 'N/A' ? (typeof holding.PE === 'number' ? holding.PE.toFixed(1) : holding.PE) : 'N/A'}
+                </ThemedText>
+              </View>
+            </View>
+
           </View>
         </View>
+
 
         {/* 52 Week Range */}
         {typeof holding.high52 === 'number' &&
@@ -1149,5 +1210,41 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2C2C2E',
     alignItems: 'center',
+  },
+  analyticsCard: {
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+  },
+  analyticsGrid: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  analyticsItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  analyticsLabel: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  analyticsValue: {
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  analyticsSubtext: {
+    fontSize: 10,
+    color: '#8E8E93',
+    marginTop: 4,
+  },
+  verticalDivider: {
+    width: 1,
+    height: 40,
+    marginHorizontal: 16,
   },
 });

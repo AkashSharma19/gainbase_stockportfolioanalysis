@@ -430,6 +430,9 @@ export const usePortfolioStore = create<PortfolioState>()(
             sector: ticker?.['Sector'] || 'Other',
             high52: ticker?.High52,
             low52: ticker?.Low52,
+            PE: ticker?.PE,
+            DividendYield: ticker?.DividendYield || ticker?.['Dividend Yield'],
+            DebtToEquity: ticker?.DebtToEquity || ticker?.['Debt to Equity'],
             logo: ticker?.Logo,
             marketCap: ticker?.['Market Cap'],
             broker:

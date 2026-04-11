@@ -22,7 +22,7 @@ import {
   getCategoryIcon,
   SECTOR_ICONS,
 } from '@/constants/Icons';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -71,6 +71,7 @@ export default function AnalyticsScreen() {
     active: ['#007AFF', '#004080'] as const,
   };
 
+  const [chartViewMode, setChartViewMode] = useState<'Pie' | 'Heatmap'>('Pie');
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDimension, setSelectedDimension] =
     useState<Dimension>('Sector');
@@ -78,10 +79,91 @@ export default function AnalyticsScreen() {
     'Current' | 'Returns' | 'Contribution'
   >('Current');
   const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('DESC');
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+
+  const scrollRef = useRef<ScrollView>(null);
+  const itemPositions = useRef<Map<number, number>>(new Map());
+
+  const getHeatmapColor = (pnlPercentage: number) => {
+    if (pnlPercentage > 0) {
+      // Scale from neutral to deep green
+      const opacity = Math.min(pnlPercentage / 10, 1);
+      return `rgba(48, 209, 88, ${0.1 + opacity * 0.9})`; // #30D158
+    } else if (pnlPercentage < 0) {
+      // Scale from neutral to deep red
+      const opacity = Math.min(Math.abs(pnlPercentage) / 10, 1);
+      return `rgba(255, 69, 58, ${0.1 + opacity * 0.9})`; // #FF453A
+    }
+    return currColors.card;
+  };
+
+  interface TreemapItem {
+    name: string;
+    value: number; // For area
+    pnl: number; // For color
+    index: number; // To sync with list
+  }
+
+  interface TreemapRect {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    data: TreemapItem;
+  }
+
+  const computeTreemap = (
+    data: TreemapItem[],
+    width: number,
+    height: number,
+  ): TreemapRect[] => {
+    if (data.length === 0) return [];
+
+    const totalValue = data.reduce((sum, item) => sum + item.value, 0);
+    const rects: TreemapRect[] = [];
+
+    // recursive division for reliability in React render
+    const divide = (
+      items: TreemapItem[],
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+    ) => {
+      if (items.length === 0) return;
+      if (items.length === 1) {
+        rects.push({ x, y, width: w, height: h, data: items[0] });
+        return;
+      }
+
+      const half = Math.ceil(items.length / 2);
+      const firstHalf = items.slice(0, half);
+      const secondHalf = items.slice(half);
+
+      const firstSum = firstHalf.reduce((s, i) => s + i.value, 0);
+      const totalSum = items.reduce((s, i) => s + i.value, 0);
+      const ratio = firstSum / totalSum;
+
+      if (w > h) {
+        divide(firstHalf, x, y, w * ratio, h);
+        divide(secondHalf, x + w * ratio, y, w * (1 - ratio), h);
+      } else {
+        divide(firstHalf, x, y, w, h * ratio);
+        divide(secondHalf, x, y + h * ratio, w, h * (1 - ratio));
+      }
+    };
+
+    divide(data, 0, 0, width, height);
+    return rects;
+  };
 
   useEffect(() => {
     fetchTickers();
   }, []);
+
+  useEffect(() => {
+    setFocusedIndex(null);
+  }, [selectedDimension, sortDirection, holdingsViewMode]);
 
   const onRefresh = React.useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -125,6 +207,22 @@ export default function AnalyticsScreen() {
     return data;
   }, [allocation, sortDirection, holdingsViewMode]);
 
+  const handlePiePress = (item: any, index: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (focusedIndex === index) {
+      setFocusedIndex(null);
+    } else {
+      setFocusedIndex(index);
+      const position = itemPositions.current.get(index);
+      if (position !== undefined && scrollRef.current) {
+        scrollRef.current.scrollTo({
+          y: position + 300, // Offset for the chart header
+          animated: true,
+        });
+      }
+    }
+  };
+
   const chartData = useMemo(() => {
     return filteredAllocation.map((item, index) => {
       const color = CHART_COLORS[index % CHART_COLORS.length];
@@ -133,9 +231,13 @@ export default function AnalyticsScreen() {
         color: color,
         text: isPrivacyMode ? '****' : `${item.percentage.toFixed(2)}%`,
         label: item.name,
+        onPress: () => handlePiePress(item, index),
+        focused: focusedIndex === index,
+        shiftOutX: focusedIndex === index ? 6 : 0,
+        shiftOutY: focusedIndex === index ? 6 : 0,
       };
     });
-  }, [filteredAllocation, isPrivacyMode, selectedDimension]);
+  }, [filteredAllocation, isPrivacyMode, selectedDimension, focusedIndex]);
 
   if (transactions.length === 0) {
     return (
@@ -175,6 +277,63 @@ export default function AnalyticsScreen() {
     { id: 'Asset Type', label: 'Asset Type', icon: Layers },
     { id: 'Broker', label: 'Broker', icon: Briefcase },
   ];
+
+  const heatmapData = useMemo(() => {
+    return filteredAllocation.map((item, index) => ({
+      name: item.name,
+      value: Math.max(item.percentage, 0.1), // Ensure visible box
+      pnl: item.pnlPercentage || 0,
+      index: index,
+    }));
+  }, [filteredAllocation]);
+
+  const heatmapRects = useMemo(() => {
+    const containerWidth = SCREEN_WIDTH - 64; // Padding
+    const containerHeight = SCREEN_WIDTH * 0.55;
+    return computeTreemap(heatmapData, containerWidth, containerHeight);
+  }, [heatmapData]);
+
+  const HeatmapView = () => (
+    <View style={styles.heatmapContainer}>
+      {heatmapRects.map((rect, i) => {
+        const isFocused = rect.data.index === focusedIndex;
+        return (
+          <TouchableOpacity
+            key={i}
+            style={[
+              styles.heatmapBox,
+              {
+                left: rect.x,
+                top: rect.y,
+                width: rect.width - 2,
+                height: rect.height - 2,
+                backgroundColor: getHeatmapColor(rect.data.pnl),
+                borderColor: isFocused ? '#FFF' : 'transparent',
+                borderWidth: isFocused ? 2 : 0,
+              },
+            ]}
+            onPress={() => handlePiePress(null, rect.data.index)}
+          >
+            {rect.width > 40 && rect.height > 20 && (
+              <View style={styles.heatmapContent}>
+                <ThemedText
+                  style={styles.heatmapSymbol}
+                  numberOfLines={1}
+                >
+                  {rect.data.name}
+                </ThemedText>
+                {rect.height > 40 && (
+                  <ThemedText style={styles.heatmapPercentage}>
+                    {rect.data.value.toFixed(1)}%
+                  </ThemedText>
+                )}
+              </View>
+            )}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
 
   return (
     <SafeAreaView
@@ -242,6 +401,7 @@ export default function AnalyticsScreen() {
         </View>
 
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={[
             styles.scrollContent,
             { backgroundColor: currColors.background },
@@ -260,35 +420,69 @@ export default function AnalyticsScreen() {
             colors={gradients.card}
             style={[styles.chartContainer, { borderColor: currColors.border }]}
           >
+            <View style={styles.chartHeader}>
+              <View style={styles.viewSwitcher}>
+                <TouchableOpacity
+                  style={[
+                    styles.switchButton,
+                    chartViewMode === 'Pie' && styles.switchButtonActive,
+                  ]}
+                  onPress={() => setChartViewMode('Pie')}
+                >
+                  <ThemedText style={[
+                      styles.switchText,
+                      chartViewMode === 'Pie' ? { color: '#FFF' } : { color: currColors.textSecondary }
+                  ]}>Pie</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.switchButton,
+                    chartViewMode === 'Heatmap' && styles.switchButtonActive,
+                  ]}
+                  onPress={() => setChartViewMode('Heatmap')}
+                >
+                  <ThemedText style={[
+                      styles.switchText,
+                      chartViewMode === 'Heatmap' ? { color: '#FFF' } : { color: currColors.textSecondary }
+                  ]}>Heatmap</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             <View style={styles.pieWrapper}>
               {allocation.length > 0 ? (
-                <PieChart
-                  data={chartData}
-                  donut
-                  sectionAutoFocus
-                  radius={SCREEN_WIDTH * 0.22}
-                  innerRadius={SCREEN_WIDTH * 0.15}
-                  innerCircleColor={currColors.card}
-                  centerLabelComponent={() => (
-                    <View
-                      style={{ justifyContent: 'center', alignItems: 'center' }}
-                    >
-                      <ThemedText style={{ fontSize: 20, color: currColors.text }}>
-                        {allocation.length}
-                      </ThemedText>
-                      <ThemedText
-                        style={{
-                          fontSize: 8,
-                          color: currColors.textSecondary,
-                          textTransform: 'uppercase',
-                          letterSpacing: 1,
-                        }}
+                chartViewMode === 'Pie' ? (
+                  <PieChart
+                    data={chartData}
+                    donut
+                    sectionAutoFocus
+                    onPress={(item: any, index: number) => handlePiePress(item, index)}
+                    radius={SCREEN_WIDTH * 0.22}
+                    innerRadius={SCREEN_WIDTH * 0.15}
+                    innerCircleColor={currColors.card}
+                    centerLabelComponent={() => (
+                      <View
+                        style={{ justifyContent: 'center', alignItems: 'center' }}
                       >
-                        {selectedDimension.split(' ')[0]}s
-                      </ThemedText>
-                    </View>
-                  )}
-                />
+                        <ThemedText style={{ fontSize: 20, color: currColors.text }}>
+                          {allocation.length}
+                        </ThemedText>
+                        <ThemedText
+                          style={{
+                            fontSize: 8,
+                            color: currColors.textSecondary,
+                            textTransform: 'uppercase',
+                            letterSpacing: 1,
+                          }}
+                        >
+                          {selectedDimension.split(' ')[0]}s
+                        </ThemedText>
+                      </View>
+                    )}
+                  />
+                ) : (
+                  <HeatmapView />
+                )
               ) : (
                 <ThemedText
                   style={[
@@ -362,6 +556,7 @@ export default function AnalyticsScreen() {
           >
             {filteredAllocation.map((item, index) => {
               const isLast = index === filteredAllocation.length - 1;
+              const isFocused = index === focusedIndex;
               const isCompanyLink = selectedDimension === 'Company Name';
               const isCategoryLink = [
                 'Sector',
@@ -373,8 +568,13 @@ export default function AnalyticsScreen() {
               return (
                 <TouchableOpacity
                   key={item.name}
+                  onLayout={(event) => {
+                    const layout = event.nativeEvent.layout;
+                    itemPositions.current.set(index, layout.y);
+                  }}
                   style={[
                     styles.holdingItem,
+                    isFocused && { backgroundColor: currColors.cardSecondary },
                     !isLast && [
                       styles.holdingItemBorder,
                       { borderBottomColor: currColors.border },
@@ -781,5 +981,65 @@ const styles = StyleSheet.create({
   contributionProgressBarFill: {
     height: '100%',
     borderRadius: 1.5,
+  },
+  heatmapContainer: {
+    width: SCREEN_WIDTH - 64,
+    height: SCREEN_WIDTH * 0.55,
+    borderRadius: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  heatmapBox: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 4,
+    padding: 4,
+  },
+  heatmapContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heatmapSymbol: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  heatmapPercentage: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 8,
+    marginTop: 2,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 20,
+  },
+  chartTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  viewSwitcher: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 2,
+  },
+  switchButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  switchButtonActive: {
+    backgroundColor: '#3A3A3C',
+  },
+  switchText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
