@@ -108,84 +108,61 @@ export default function PortfolioHealthScreen() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        {/* Premium Hero Card */}
+        {/* Compact Horizontal Hero Card */}
         <View
           style={[
-            styles.heroCard,
+            styles.heroCardCompact,
             { backgroundColor: c.card, borderColor: c.border },
           ]}
         >
-          <View style={styles.heroTop}>
-            <View style={styles.heroHeader}>
-              <ThemedText style={[styles.heroLabel, { color: c.textSecondary }]}>
-                HEALTH SCORE
-              </ThemedText>
-              <View
-                style={[
-                  styles.gradeBadge,
-                  { backgroundColor: `${gradeColor}22` },
-                ]}
-              >
-                <ThemedText style={[styles.gradeText, { color: gradeColor }]}>
-                  {grade.toUpperCase()}
-                </ThemedText>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.gaugeContainer}>
-            <Svg width={svgW} height={svgH} viewBox={`0 0 ${VW} ${VH}`}>
-              <Defs>
-                <LinearGradient
-                  id="hubGradient"
-                  x1="0%"
-                  y1="0%"
-                  x2="0%"
-                  y2="100%"
-                >
-                  <Stop offset="0%" stopColor={gradeColor} stopOpacity="0.8" />
-                  <Stop offset="100%" stopColor={gradeColor} stopOpacity="1" />
-                </LinearGradient>
-              </Defs>
-              <G>
-                <Path d={segPath(0, 100)} fill={trackColor} opacity={0.5} />
-
-                {SEGS.map((seg) => {
-                  if (totalScore <= seg.from) return null;
-                  const clipTo = Math.min(totalScore, seg.to);
-                  if (seg.from >= clipTo) return null;
-                  return (
-                    <Path
-                      key={seg.from}
-                      d={segPath(seg.from, clipTo)}
-                      fill={seg.color}
-                    />
-                  );
-                })}
-
-                <Path
-                  d={needlePath(totalScore)}
-                  fill={needleColor}
-                  opacity={0.9}
-                />
-
-                <Circle cx={CX} cy={CY} r={16} fill={trackColor} />
-                <Circle cx={CX} cy={CY} r={12} fill="url(#hubGradient)" />
-                <Circle cx={CX} cy={CY} r={4} fill={needleColor} />
-              </G>
-            </Svg>
-
-            <View
-              style={[styles.scoreBox, { bottom: svgH - hubY + 10 }]}
-              pointerEvents="none"
-            >
-              <ThemedText style={[styles.scoreNum, { color: c.text }]}>
+          <View style={styles.heroLeft}>
+            <ThemedText style={[styles.heroLabel, { color: c.textSecondary, marginBottom: 8 }]}>
+              HEALTH SCORE
+            </ThemedText>
+            <View style={styles.scoreRow}>
+              <ThemedText style={[styles.scoreNumLarge, { color: c.text }]}>
                 {totalScore}
               </ThemedText>
-              <ThemedText style={[styles.scoreOut, { color: c.textSecondary }]}>
+              <ThemedText style={[styles.scoreOutCompact, { color: c.textSecondary }]}>
                 /100
               </ThemedText>
             </View>
+            <View
+              style={[
+                styles.gradeBadgeCompact,
+                { backgroundColor: `${gradeColor}22`, alignSelf: 'flex-start' },
+              ]}
+            >
+              <ThemedText style={[styles.gradeText, { color: gradeColor }]}>
+                {grade.toUpperCase()}
+              </ThemedText>
+            </View>
+          </View>
+
+          <View style={styles.heroRight}>
+            <Svg width={100} height={100} viewBox="0 0 100 100">
+              <Circle
+                cx="50"
+                cy="50"
+                r="40"
+                stroke={trackColor}
+                strokeWidth="8"
+                fill="none"
+                opacity={0.3}
+              />
+              <Circle
+                cx="50"
+                cy="50"
+                r="40"
+                stroke={gradeColor}
+                strokeWidth="8"
+                strokeDasharray={`${2 * Math.PI * 40}`}
+                strokeDashoffset={`${2 * Math.PI * 40 * (1 - totalScore / 100)}`}
+                strokeLinecap="round"
+                fill="none"
+                transform="rotate(-90 50 50)"
+              />
+            </Svg>
           </View>
         </View>
 
@@ -280,57 +257,52 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   scrollContent: { padding: 20, paddingBottom: 40 },
-  heroCard: {
+  heroCardCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderRadius: 24,
     padding: 24,
-    paddingBottom: 32,
     borderWidth: 1,
     marginBottom: 32,
     overflow: 'hidden',
   },
-  heroTop: {
-    marginBottom: 20,
+  heroLeft: {
+    flex: 1,
   },
-  heroHeader: {
+  scoreRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 4,
+  },
+  scoreNumLarge: {
+    fontSize: 48,
+    fontWeight: '700',
+    letterSpacing: -1,
+  },
+  scoreOutCompact: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 4,
+    opacity: 0.5,
+  },
+  gradeBadgeCompact: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  heroRight: {
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 16,
   },
   heroLabel: {
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
-  },
-  gaugeContainer: {
-    position: 'relative',
-    alignItems: 'center',
-  },
-  scoreBox: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  scoreNum: {
-    fontSize: 48,
-    fontWeight: '400',
-    lineHeight: 52,
-    letterSpacing: -1,
-  },
-  scoreOut: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-    opacity: 0.5,
-  },
-  gradeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
   },
   gradeText: {
     fontSize: 12,
