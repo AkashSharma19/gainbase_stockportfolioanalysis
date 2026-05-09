@@ -59,6 +59,7 @@ interface PortfolioState {
   defaultIndex: string;
   setDefaultIndex: (ticker: string) => void;
   lastSyncedAt: number | null;
+  clearAllData: () => void;
 }
 
 export const usePortfolioStore = create<PortfolioState>()(
@@ -694,6 +695,29 @@ export const usePortfolioStore = create<PortfolioState>()(
       defaultIndex: 'INDEXNSE:NIFTY_50',
       setDefaultIndex: (ticker) => set({ defaultIndex: ticker }),
       lastSyncedAt: null,
+      clearAllData: () => set({
+        transactions: [],
+        tickers: [],
+        isPrivacyMode: false,
+        userName: '',
+        userEmail: '',
+        userMobile: '',
+        userImage: null,
+        theme: 'system',
+        showCurrencySymbol: true,
+        recentSearches: [],
+        headerLogo: null,
+        headerLink: null,
+        watchlist: [],
+        forecastYears: 15,
+        targetCorpus: 50000000,
+        sipStepUp: 10,
+        manualMonthlySIP: null,
+        isInflationAdjusted: false,
+        activeScenarios: ['base', 'bull', 'bear'],
+        defaultIndex: 'INDEXNSE:NIFTY_50',
+        lastSyncedAt: null,
+      }),
     }),
     {
       name: 'portfolio-storage',

@@ -16,6 +16,7 @@ import {
   MessageCircle,
   Phone,
   Settings,
+  Trash2,
   Upload,
   User,
   X,
@@ -60,6 +61,7 @@ export default function ProfileScreen() {
   const showCurrencySymbol = usePortfolioStore(
     (state) => state.showCurrencySymbol,
   );
+  const clearAllData = usePortfolioStore((state) => state.clearAllData);
 
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
@@ -116,6 +118,24 @@ export default function ProfileScreen() {
       mobile: editMobile.trim(),
     });
     setIsEditModalVisible(false);
+  };
+
+  const handleDeleteData = () => {
+    Alert.alert(
+      'Delete All Data',
+      'Are you sure you want to delete all your data? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            clearAllData();
+            Alert.alert('Success', 'All data has been deleted.');
+          },
+        },
+      ]
+    );
   };
 
   const handleExport = async () => {
@@ -611,8 +631,24 @@ export default function ProfileScreen() {
                 </ThemedText>
               </TouchableOpacity>
 
+              <TouchableOpacity
+                style={styles.gridButton}
+                onPress={handleDeleteData}
+              >
+                <View
+                  style={[
+                    styles.gridIconBox,
+                    { backgroundColor: 'rgba(255, 59, 48, 0.1)' },
+                  ]}
+                >
+                  <Trash2 size={24} color="#FF3B30" />
+                </View>
+                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
+                  Delete Data
+                </ThemedText>
+              </TouchableOpacity>
+
               {/* Spacers to align left with space-between */}
-              <View style={{ width: 70 }} />
               <View style={{ width: 70 }} />
             </View>
           </View>
