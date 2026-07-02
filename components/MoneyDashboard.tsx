@@ -58,7 +58,7 @@ export function MoneyDashboard() {
   // Computations
   const netWorth = getNetWorth();
   const monthlyEMIs = getMonthlyEMIBurden();
-  const activeBudget = getActiveBudget();
+
 
   // Group accounts by type for aggregate counts
   const accountTotals = useMemo(() => {
@@ -76,17 +76,6 @@ export function MoneyDashboard() {
     return totals;
   }, [accounts]);
 
-  // Active budget category spend percentage
-  const budgetProgress = useMemo(() => {
-    if (!activeBudget) return { totalLimit: 0, totalSpent: 0, percentage: 0 };
-    const spentMap = getCategorySpending(activeBudget.id);
-    const totalSpent = Object.values(spentMap).reduce((acc, curr) => acc + curr, 0);
-    return {
-      totalLimit: activeBudget.totalLimit,
-      totalSpent,
-      percentage: activeBudget.totalLimit > 0 ? (totalSpent / activeBudget.totalLimit) * 100 : 0,
-    };
-  }, [activeBudget, getCategorySpending]);
 
   const recentTxs = useMemo(() => {
     return moneyTransactions.slice(0, 5);
@@ -230,57 +219,6 @@ export function MoneyDashboard() {
           </TouchableOpacity>
         </ScrollView>
 
-        {/* Budget Progress Card */}
-        {activeBudget ? (
-          <View style={styles.sectionContainer}>
-            <View style={styles.sectionHeaderNoMargin}>
-              <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
-                ACTIVE BUDGET: {activeBudget.name.toUpperCase()}
-              </ThemedText>
-              <TouchableOpacity
-                onPress={() => {
-                  handleHaptic();
-                  router.push('/(tabs)/money-budgets');
-                }}
-              >
-                <ThemedText style={{ color: '#00C9A7', fontSize: 13, fontFamily: 'Outfit_500Medium' }}>
-                  Manage
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.cardContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-              <View style={styles.budgetOverviewRow}>
-                <View>
-                  <ThemedText style={[styles.spentText, { color: currColors.text }]}>
-                    {formatAmount(budgetProgress.totalSpent)}
-                  </ThemedText>
-                  <ThemedText style={[styles.limitText, { color: currColors.textSecondary }]}>
-                    spent of {formatAmount(budgetProgress.totalLimit)}
-                  </ThemedText>
-                </View>
-                <View style={styles.percentageBadge}>
-                  <ThemedText style={[styles.percentageText, { color: budgetProgress.percentage > 90 ? '#FF3B30' : '#00C9A7' }]}>
-                    {budgetProgress.percentage.toFixed(0)}%
-                  </ThemedText>
-                </View>
-              </View>
-
-              {/* Progress bar */}
-              <View style={[styles.progressBarBackground, { backgroundColor: currColors.cardSecondary }]}>
-                <View
-                  style={[
-                    styles.progressBarFill,
-                    {
-                      width: `${Math.min(100, budgetProgress.percentage)}%`,
-                      backgroundColor: budgetProgress.percentage > 100 ? '#FF3B30' : budgetProgress.percentage > 85 ? '#FF9500' : '#00C9A7',
-                    },
-                  ]}
-                />
-              </View>
-            </View>
-          </View>
-        ) : null}
 
         {/* EMI Calendar Card */}
         {loans.filter(l => l.isActive).length > 0 ? (
