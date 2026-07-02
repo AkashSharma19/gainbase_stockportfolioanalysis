@@ -8,6 +8,9 @@ import WinLossCard from '@/components/WinLossCard';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { useAppModeStore } from '@/store/useAppModeStore';
+import { MoneyDashboard } from '@/components/MoneyDashboard';
+import { AppSwitcher } from '@/components/AppSwitcher';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -37,6 +40,10 @@ import { ThemedText } from '@/components/ThemedText';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ViewShot from 'react-native-view-shot';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
+import { Dimensions } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const CHART_COLORS = [
   '#007AFF',
@@ -51,7 +58,7 @@ const CHART_COLORS = [
   '#2C2C2E',
 ];
 
-export default function PortfolioScreen() {
+export function PortfolioScreen() {
   const router = useRouter();
   const transactions = usePortfolioStore((state) => state.transactions);
   const calculateSummary = usePortfolioStore((state) => state.calculateSummary);
@@ -233,14 +240,10 @@ export default function PortfolioScreen() {
   }, [summary, holdings, userName, health.totalScore]);
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: currColors.background }]}
-      edges={['top', 'left', 'right']}
+    <View
+      style={[styles.container, { backgroundColor: currColors.background }]}
     >
-      <View
-        style={[styles.container, { backgroundColor: currColors.background }]}
-      >
-        <ScrollView
+      <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
             { backgroundColor: currColors.background },
@@ -985,19 +988,18 @@ export default function PortfolioScreen() {
             )}
           </View>
         </ScrollView>
-      </View>
 
-      {/* Hidden ViewShot component for capturing */}
-      <View style={styles.hiddenCapture} pointerEvents="none">
-        <ViewShot
-          ref={viewShotRef}
-          options={{ format: 'png', quality: 1.0, result: 'tmpfile' }}
-        >
-          <ShareableCard data={shareData} />
-        </ViewShot>
+        {/* Hidden ViewShot component for capturing */}
+        <View style={styles.hiddenCapture} pointerEvents="none">
+          <ViewShot
+            ref={viewShotRef}
+            options={{ format: 'png', quality: 1.0, result: 'tmpfile' }}
+          >
+            <ShareableCard data={shareData} />
+          </ViewShot>
+        </View>
       </View>
-    </SafeAreaView>
-  );
+    );
 }
 
 const styles = StyleSheet.create({
@@ -1397,3 +1399,43 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
+
+export default function AppHomeScreen() {
+  const { activeMode } = useAppModeStore();
+  const theme = useColorScheme() ?? 'dark';
+  const currColors = Colors[theme];
+
+  const translateX = useSharedValue(activeMode === 'money' ? -SCREEN_WIDTH : 0);
+
+  useEffect(() => {
+    translateX.value = withTiming(activeMode === 'money' ? -SCREEN_WIDTH : 0, {
+      duration: 250,
+      easing: Easing.bezier(0.25, 1, 0.5, 1), // Snappy and smooth slide ease-out, zero bounce
+    });
+  }, [activeMode]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      flexDirection: 'row',
+      width: SCREEN_WIDTH * 2,
+      transform: [{ translateX: translateX.value }],
+    };
+  });
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: currColors.background }} edges={['top', 'left', 'right']}>
+      <AppSwitcher />
+      <View style={{ flex: 1, overflow: 'hidden' }}>
+        <Animated.View style={[animatedStyle, { flex: 1 }]}>
+          <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
+            <PortfolioScreen />
+          </View>
+          <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
+            <MoneyDashboard />
+          </View>
+        </Animated.View>
+      </View>
+    </SafeAreaView>
+  );
+}
+

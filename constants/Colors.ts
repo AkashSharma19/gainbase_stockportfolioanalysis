@@ -1,5 +1,6 @@
 const tintColorLight = '#2f95dc';
 const tintColorDark = '#fff';
+const moneyColor = '#00C9A7'; // Teal/Green accent for Money Manager
 
 export default {
   light: {
@@ -10,6 +11,7 @@ export default {
     cardSecondary: '#F2F2F7',
     border: '#E5E5EA',
     tint: tintColorLight,
+    tintMoney: moneyColor,
     tabIconDefault: '#C7C7CC',
     tabIconSelected: tintColorLight,
   },
@@ -21,7 +23,9 @@ export default {
     cardSecondary: '#2C2C2E',
     border: '#2C2C2E',
     tint: tintColorDark,
+    tintMoney: moneyColor,
     tabIconDefault: '#8E8E93',
     tabIconSelected: tintColorDark,
   },
 };
+

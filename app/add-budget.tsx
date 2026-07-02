@@ -1,0 +1,542 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  StyleSheet,
+  View,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { X, Check, Plus, Trash2 } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+
+import { ThemedText } from '@/components/ThemedText';
+import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
+import { useMoneyStore } from '@/store/useMoneyStore';
+import { Budget, BudgetCategory } from '@/types/money';
+
+const STANDARD_CATEGORIES = [
+  { name: 'Food & Dining', icon: '🍔', color: '#FF3B30' },
+  { name: 'Rent & Bills', icon: '🏠', color: '#007AFF' },
+  { name: 'Shopping', icon: '🛍️', color: '#FF9500' },
+  { name: 'Entertainment', icon: '🎬', color: '#AF52DE' },
+  { name: 'Travel', icon: '🚗', color: '#34C759' },
+  { name: 'Medical', icon: '💊', color: '#FF2D55' },
+  { name: 'Education', icon: '🎓', color: '#5AC8FA' },
+];
+
+export default function AddBudgetScreen() {
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const colorScheme = useColorScheme() ?? 'dark';
+  const currColors = Colors[colorScheme];
+
+  const { budgets, addBudget, updateBudget } = useMoneyStore();
+
+  const editingBudget = useMemo(() => {
+    return id ? budgets.find((b) => b.id === id) : null;
+  }, [id, budgets]);
+
+  // Form State
+  const [name, setName] = useState('');
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date(new Date().setMonth(new Date().getMonth() + 1)));
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+
+  // Category list limits state
+  const [categories, setCategories] = useState<{ id: string; name: string; icon: string; color: string; limit: string }[]>([]);
+  const [newCatName, setNewCatName] = useState('');
+  const [showCustomCatInput, setShowCustomCatInput] = useState(false);
+
+  useEffect(() => {
+    if (editingBudget) {
+      setName(editingBudget.name);
+      setStartDate(new Date(editingBudget.startDate));
+      setEndDate(new Date(editingBudget.endDate));
+      setCategories(
+        editingBudget.categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          icon: c.icon,
+          color: c.color,
+          limit: c.limit.toString(),
+        }))
+      );
+    } else {
+      // Set name defaults e.g. "July 2026"
+      const now = new Date();
+      const monthName = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+      setName(monthName);
+
+      // Prepopulate standard categories
+      setCategories(
+        STANDARD_CATEGORIES.map((c, index) => ({
+          id: Math.random().toString(36).substring(2, 9) + index,
+          name: c.name,
+          icon: c.icon,
+          color: c.color,
+          limit: '0',
+        }))
+      );
+    }
+  }, [editingBudget]);
+
+  const handleHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const totalLimit = useMemo(() => {
+    return categories.reduce((acc, cat) => {
+      const val = parseFloat(cat.limit);
+      return acc + (isNaN(val) ? 0 : val);
+    }, 0);
+  }, [categories]);
+
+  const handleAddCustomCategory = () => {
+    handleHaptic();
+    if (!newCatName.trim()) {
+      Alert.alert('Required Field', 'Please enter a category name.');
+      return;
+    }
+    
+    // Check duplicates
+    if (categories.some((c) => c.name.toLowerCase() === newCatName.trim().toLowerCase())) {
+      Alert.alert('Duplicate Category', 'This category already exists in your budget.');
+      return;
+    }
+
+    setCategories([
+      ...categories,
+      {
+        id: Math.random().toString(36).substring(2, 9),
+        name: newCatName.trim(),
+        icon: '🏷️',
+        color: '#8E8E93',
+        limit: '0',
+      },
+    ]);
+    setNewCatName('');
+    setShowCustomCatInput(false);
+  };
+
+  const handleRemoveCategory = (catId: string) => {
+    handleHaptic();
+    setCategories(categories.filter((c) => c.id !== catId));
+  };
+
+  const handleLimitChange = (catId: string, val: string) => {
+    setCategories(
+      categories.map((c) => (c.id === catId ? { ...c, limit: val } : c))
+    );
+  };
+
+  const handleSave = () => {
+    handleHaptic();
+    if (!name.trim()) {
+      Alert.alert('Required Field', 'Please enter a budget name.');
+      return;
+    }
+
+    if (startDate >= endDate) {
+      Alert.alert('Invalid Date Range', 'End date must be after the start date.');
+      return;
+    }
+
+    if (totalLimit <= 0) {
+      Alert.alert('Empty Budget', 'Please allocate a limit to at least one category.');
+      return;
+    }
+
+    const budgetCategories: BudgetCategory[] = categories
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        icon: c.icon,
+        color: c.color,
+        limit: parseFloat(c.limit) || 0,
+        spent: 0, // dynamically calculated, initialized to 0
+      }))
+      .filter((c) => c.limit > 0);
+
+    const budgetData: Budget = {
+      id: editingBudget ? editingBudget.id : Math.random().toString(36).substring(2, 9),
+      name: name.trim(),
+      period: 'monthly',
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      totalLimit,
+      categories: budgetCategories,
+      isActive: true,
+    };
+
+    if (editingBudget) {
+      updateBudget(editingBudget.id, budgetData);
+    } else {
+      addBudget(budgetData);
+    }
+
+    router.back();
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={[styles.closeBtn, { backgroundColor: currColors.cardSecondary }]}
+            onPress={() => router.back()}
+          >
+            <X size={20} color={currColors.text} />
+          </TouchableOpacity>
+          <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+            {editingBudget ? 'Edit Budget' : 'Create Budget'}
+          </ThemedText>
+          <TouchableOpacity
+            style={[styles.saveBtn, { backgroundColor: '#00C9A7' }]}
+            onPress={handleSave}
+          >
+            <Check size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Budget Name */}
+          <View style={styles.inputGroup}>
+            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>BUDGET NAME</ThemedText>
+            <TextInput
+              style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
+              placeholder="e.g. July 2026, Summer Trip"
+              placeholderTextColor={currColors.textSecondary}
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
+
+          {/* Date Picker row */}
+          <View style={styles.row}>
+            {/* Start Date */}
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>START DATE</ThemedText>
+              {Platform.OS === 'ios' ? (
+                <View style={styles.iosDatePickerContainer}>
+                  <DateTimePicker
+                    value={startDate}
+                    mode="date"
+                    display="default"
+                    onChange={(e, d) => d && setStartDate(d)}
+                    themeVariant={colorScheme}
+                  />
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.selectBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+                  onPress={() => setShowStartPicker(true)}
+                >
+                  <ThemedText style={{ color: currColors.text, fontSize: 14 }}>
+                    {startDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
+              {showStartPicker && Platform.OS !== 'ios' && (
+                <DateTimePicker
+                  value={startDate}
+                  mode="date"
+                  display="default"
+                  onChange={(e, d) => {
+                    setShowStartPicker(false);
+                    if (d) setStartDate(d);
+                  }}
+                />
+              )}
+            </View>
+
+            {/* End Date */}
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>END DATE</ThemedText>
+              {Platform.OS === 'ios' ? (
+                <View style={styles.iosDatePickerContainer}>
+                  <DateTimePicker
+                    value={endDate}
+                    mode="date"
+                    display="default"
+                    onChange={(e, d) => d && setEndDate(d)}
+                    themeVariant={colorScheme}
+                  />
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.selectBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+                  onPress={() => setShowEndPicker(true)}
+                >
+                  <ThemedText style={{ color: currColors.text, fontSize: 14 }}>
+                    {endDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
+              {showEndPicker && Platform.OS !== 'ios' && (
+                <DateTimePicker
+                  value={endDate}
+                  mode="date"
+                  display="default"
+                  onChange={(e, d) => {
+                    setShowEndPicker(false);
+                    if (d) setEndDate(d);
+                  }}
+                />
+              )}
+            </View>
+          </View>
+
+          {/* Total Budget limit highlight */}
+          <View style={styles.totalBurdenHighlight}>
+            <ThemedText style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: '700', letterSpacing: 0.5 }}>
+              TOTAL ALLOCATED BUDGET
+            </ThemedText>
+            <ThemedText style={{ fontSize: 26, fontFamily: 'Outfit_700Bold', color: '#FFFFFF', marginTop: 4 }}>
+              ₹{totalLimit.toLocaleString('en-IN')}
+            </ThemedText>
+          </View>
+
+          {/* Category List */}
+          <View style={styles.sectionHeader}>
+            <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+              ALLOCATE BUDGET BY CATEGORY
+            </ThemedText>
+          </View>
+
+          {categories.map((cat) => (
+            <View key={cat.id} style={[styles.catAllocationCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+              <View style={styles.catLeft}>
+                <ThemedText style={{ fontSize: 18, marginRight: 10 }}>{cat.icon}</ThemedText>
+                <ThemedText style={[styles.catName, { color: currColors.text }]} numberOfLines={1}>
+                  {cat.name}
+                </ThemedText>
+              </View>
+              <View style={styles.catRight}>
+                <ThemedText style={{ color: currColors.textSecondary, marginRight: 6 }}>₹</ThemedText>
+                <TextInput
+                  style={[styles.catLimitInput, { color: currColors.text, borderColor: currColors.border }]}
+                  placeholder="0"
+                  placeholderTextColor={currColors.textSecondary}
+                  keyboardType="numeric"
+                  value={cat.limit}
+                  onChangeText={(val) => handleLimitChange(cat.id, val)}
+                />
+                {!STANDARD_CATEGORIES.some(sc => sc.name === cat.name) && (
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => handleRemoveCategory(cat.id)}
+                  >
+                    <Trash2 size={16} color="#FF3B30" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          ))}
+
+          {/* Add custom category controls */}
+          {showCustomCatInput ? (
+            <View style={[styles.customCatInputBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+              <TextInput
+                style={[styles.textInput, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border, color: currColors.text }]}
+                placeholder="Category name (e.g. Subscriptions)"
+                placeholderTextColor={currColors.textSecondary}
+                value={newCatName}
+                onChangeText={setNewCatName}
+                autoFocus
+              />
+              <View style={styles.customCatActionRow}>
+                <TouchableOpacity
+                  style={[styles.customCatBtn, { backgroundColor: currColors.cardSecondary }]}
+                  onPress={() => {
+                    setNewCatName('');
+                    setShowCustomCatInput(false);
+                  }}
+                >
+                  <ThemedText style={{ color: currColors.textSecondary }}>Cancel</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.customCatBtn, { backgroundColor: '#00C9A7' }]}
+                  onPress={handleAddCustomCategory}
+                >
+                  <ThemedText style={{ color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold' }}>Add</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.addCustomCatBtn, { borderColor: currColors.border }]}
+              onPress={() => setShowCustomCatInput(true)}
+            >
+              <Plus size={16} color="#00C9A7" />
+              <ThemedText style={{ color: '#00C9A7', fontFamily: 'Outfit_600SemiBold', fontSize: 13 }}>
+                Add Custom Category
+              </ThemedText>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 60,
+    paddingTop: 10,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  textInput: {
+    height: 52,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    fontFamily: 'Outfit_400Regular',
+  },
+  selectBox: {
+    height: 52,
+    borderWidth: 1,
+    borderRadius: 12,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  iosDatePickerContainer: {
+    alignItems: 'flex-start',
+  },
+  totalBurdenHighlight: {
+    backgroundColor: '#00C9A7',
+    borderRadius: 18,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  catAllocationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+  },
+  catLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1.2,
+  },
+  catName: {
+    fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
+    flex: 1,
+  },
+  catRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    flex: 1,
+    gap: 4,
+  },
+  catLimitInput: {
+    width: 80,
+    height: 38,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
+    textAlign: 'right',
+  },
+  deleteBtn: {
+    padding: 6,
+  },
+  addCustomCatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    marginTop: 14,
+    gap: 8,
+  },
+  customCatInputBox: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 14,
+  },
+  customCatActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+    gap: 8,
+  },
+  customCatBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+});

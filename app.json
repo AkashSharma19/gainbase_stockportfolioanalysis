@@ -20,7 +20,10 @@
       "infoPlist": {
         "UIFileSharingEnabled": true,
         "LSSupportsOpeningDocumentsInPlace": true,
-        "UIBackgroundModes": ["fetch", "processing"]
+        "UIBackgroundModes": [
+          "fetch",
+          "processing"
+        ]
       }
     },
     "android": {
@@ -40,7 +43,9 @@
     "plugins": [
       "expo-router",
       "@react-native-community/datetimepicker",
-      "expo-background-task"
+      "expo-background-task",
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
