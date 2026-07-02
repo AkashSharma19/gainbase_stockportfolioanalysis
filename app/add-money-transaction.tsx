@@ -23,16 +23,19 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { MoneyTransaction } from '@/types/money';
 
-const INCOME_CATEGORIES = ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'];
-const EXPENSE_CATEGORIES = ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other'];
-
 export default function AddMoneyTransactionScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
 
+  const storeCategories = useMoneyStore((state) => state.categories) || {
+    income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
+    expense: ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other']
+  };
+
   const { accounts, moneyTransactions, addMoneyTransaction, updateMoneyTransaction } = useMoneyStore();
+
 
   const editingTx = useMemo(() => {
     return id ? moneyTransactions.find((tx) => tx.id === id) : null;
@@ -66,15 +69,8 @@ export default function AddMoneyTransactionScreen() {
       if (editingTx.type === 'transfer') {
         setToAccountId(editingTx.toAccountId || '');
       } else {
-        const isPredefined = [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES].includes(editingTx.category);
-        if (isPredefined) {
-          setCategory(editingTx.category);
-          setIsCustomCategory(false);
-        } else {
-          setCategory('Custom');
-          setIsCustomCategory(true);
-          setCustomCategory(editingTx.category);
-        }
+        setCategory(editingTx.category);
+        setIsCustomCategory(false);
       }
     } else {
       // Default to first active account
@@ -87,22 +83,23 @@ export default function AddMoneyTransactionScreen() {
       }
       
       // Default category
-      setCategory(type === 'income' ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0]);
+      setCategory(type === 'income' ? storeCategories.income[0] : storeCategories.expense[0]);
     }
-  }, [editingTx]);
+  }, [editingTx, storeCategories]);
 
   // Auto-switch categories when type changes
   useEffect(() => {
     if (!editingTx) {
       if (type === 'income') {
-        setCategory(INCOME_CATEGORIES[0]);
+        setCategory(storeCategories.income[0]);
         setIsCustomCategory(false);
       } else if (type === 'expense') {
-        setCategory(EXPENSE_CATEGORIES[0]);
+        setCategory(storeCategories.expense[0]);
         setIsCustomCategory(false);
       }
     }
-  }, [type]);
+  }, [type, storeCategories]);
+
 
   const handleHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -135,13 +132,8 @@ export default function AddMoneyTransactionScreen() {
     let finalCategory = category;
     if (type === 'transfer') {
       finalCategory = 'Transfer';
-    } else if (category === 'Custom' || isCustomCategory) {
-      if (!customCategory.trim()) {
-        Alert.alert('Required Field', 'Please enter your custom category name.');
-        return;
-      }
-      finalCategory = customCategory.trim();
     }
+
 
     const txData: MoneyTransaction = {
       id: editingTx ? editingTx.id : Math.random().toString(36).substring(2, 9),
@@ -182,8 +174,9 @@ export default function AddMoneyTransactionScreen() {
   const destAccount = accounts.find((a) => a.id === toAccountId);
 
   const categoriesList = type === 'income' 
-    ? [...INCOME_CATEGORIES, 'Custom'] 
-    : [...EXPENSE_CATEGORIES, 'Custom'];
+    ? storeCategories.income 
+    : storeCategories.expense;
+
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top', 'bottom']}>
@@ -318,19 +311,7 @@ export default function AddMoneyTransactionScreen() {
             </View>
           ) : null}
 
-          {/* Custom Category Input if selected */}
-          {type !== 'transfer' && (category === 'Custom' || isCustomCategory) ? (
-            <View style={styles.inputGroup}>
-              <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>CUSTOM CATEGORY NAME</ThemedText>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
-                placeholder="e.g. Subscriptions, Laundry"
-                placeholderTextColor={currColors.textSecondary}
-                value={customCategory}
-                onChangeText={setCustomCategory}
-              />
-            </View>
-          ) : null}
+
 
           {/* Date Selector */}
           <View style={styles.inputGroup}>
@@ -461,18 +442,15 @@ export default function AddMoneyTransactionScreen() {
                   style={[styles.modalItem, { borderBottomColor: currColors.border }]}
                   onPress={() => {
                     setCategory(item);
-                    if (item === 'Custom') {
-                      setIsCustomCategory(true);
-                    } else {
-                      setIsCustomCategory(false);
-                    }
+                    setIsCustomCategory(false);
                     setShowCategoryModal(false);
                   }}
                 >
                   <ThemedText style={{ color: currColors.text, fontSize: 16 }}>
-                    {item === 'Custom' ? '➕ Custom Category...' : item}
+                    {item}
                   </ThemedText>
                 </TouchableOpacity>
+
               )}
             />
           </View>
