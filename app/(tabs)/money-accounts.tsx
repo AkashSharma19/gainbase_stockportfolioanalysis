@@ -138,7 +138,7 @@ export default function AccountsScreen() {
               <IconComponent size={20} color={item.color} />
             </View>
             <View style={styles.accountInfo}>
-              <ThemedText style={[styles.accountName, { color: currColors.text }]} numberOfLines={1}>
+              <ThemedText type="semiBold" style={[styles.accountName, { color: currColors.text }]} numberOfLines={1}>
                 {item.name}
               </ThemedText>
               <ThemedText style={[styles.accountSub, { color: currColors.textSecondary }]} numberOfLines={1}>
@@ -168,7 +168,7 @@ export default function AccountsScreen() {
                     Limit: {formatAmount(item.creditLimit)}
                   </ThemedText>
                   {blockedAmount > 0 && (
-                    <ThemedText style={{ fontSize: 9, color: '#FF9500', marginTop: 1, fontFamily: 'Outfit_500Medium' }}>
+                    <ThemedText type="medium" style={{ fontSize: 9, color: '#FF9500', marginTop: 1 }}>
                       Blocked (EMI): {formatAmount(blockedAmount)}
                     </ThemedText>
                   )}
@@ -202,7 +202,7 @@ export default function AccountsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
           Accounts
         </ThemedText>
         <TouchableOpacity
@@ -216,20 +216,20 @@ export default function AccountsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Aggregate Overview Bar */}
-      <View style={[styles.overviewBar, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-        <View style={styles.overviewCol}>
-          <ThemedText style={[styles.overviewLabel, { color: currColors.textSecondary }]}>Total Assets</ThemedText>
-          <ThemedText style={[styles.overviewVal, { color: '#00C9A7' }]}>{formatAmount(summary.totalAssets)}</ThemedText>
-        </View>
-        <View style={[styles.verticalDivider, { borderColor: currColors.border }]} />
-        <View style={styles.overviewCol}>
-          <ThemedText style={[styles.overviewLabel, { color: currColors.textSecondary }]}>Total Card Debt</ThemedText>
-          <ThemedText style={[styles.overviewVal, { color: '#FF3B30' }]}>{formatAmount(summary.totalLiabilities)}</ThemedText>
-        </View>
-      </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Aggregate Overview Bar */}
+        <View style={[styles.overviewBar, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <View style={styles.overviewCol}>
+            <ThemedText style={[styles.overviewLabel, { color: currColors.textSecondary }]}>Total Assets</ThemedText>
+            <ThemedText style={[styles.overviewVal, { color: '#00C9A7' }]}>{formatAmount(summary.totalAssets)}</ThemedText>
+          </View>
+          <View style={[styles.verticalDivider, { borderColor: currColors.border }]} />
+          <View style={styles.overviewCol}>
+            <ThemedText style={[styles.overviewLabel, { color: currColors.textSecondary }]}>Total Card Debt</ThemedText>
+            <ThemedText style={[styles.overviewVal, { color: '#FF3B30' }]}>{formatAmount(summary.totalLiabilities)}</ThemedText>
+          </View>
+        </View>
+
         {/* Render accounts grouped by type */}
         {(Object.keys(TYPE_CONFIG) as AccountType[]).map((type) => {
           const list = groupedAccounts[type];
@@ -238,7 +238,7 @@ export default function AccountsScreen() {
           
           return (
             <View key={type} style={styles.groupContainer}>
-              <ThemedText style={[styles.groupTitle, { color: currColors.textSecondary }]}>
+              <ThemedText type="bold" style={[styles.groupTitle, { color: currColors.textSecondary }]}>
                 {config.label.toUpperCase()} ({list.length})
               </ThemedText>
               {list.map(renderAccountItem)}
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   },
   overviewVal: {
     fontSize: 16,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_400Regular',
   },
   verticalDivider: {
     borderRightWidth: 1,
@@ -314,8 +314,9 @@ const styles = StyleSheet.create({
   },
   groupTitle: {
     fontSize: 10,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
+    textTransform: 'uppercase',
     marginHorizontal: 18,
     marginBottom: 8,
   },
@@ -356,6 +357,7 @@ const styles = StyleSheet.create({
   },
   accountSub: {
     fontSize: 11,
+    fontFamily: 'Outfit_400Regular',
   },
   cardRight: {
     flexDirection: 'row',
@@ -365,7 +367,7 @@ const styles = StyleSheet.create({
   },
   accountBalance: {
     fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_400Regular',
   },
   utilizationContainer: {
     width: '100%',
