@@ -93,6 +93,336 @@ export default function ProfileScreen() {
   const updateCategory = useMoneyStore((state) => state.updateCategory);
   const removeCategory = useMoneyStore((state) => state.removeCategory);
 
+  const moneyTransactions = useMoneyStore((state) => state.moneyTransactions);
+  const moneyAccounts = useMoneyStore((state) => state.accounts);
+  const importMoneyData = useMoneyStore((state) => state.importMoneyData);
+
+  const handleDownloadMoneySample = async () => {
+    try {
+      const sampleData = [
+        {
+          Date: '2026-07-01',
+          Type: 'EXPENSE',
+          Amount: 150.0,
+          Category: 'Food & Dining',
+          Account: 'Savings Account',
+          'To Account (Transfers only)': '',
+          Note: 'Coffee and snacks at work',
+        },
+        {
+          Date: '2026-07-02',
+          Type: 'INCOME',
+          Amount: 50000.0,
+          Category: 'Salary',
+          Account: 'Savings Account',
+          'To Account (Transfers only)': '',
+          Note: 'Monthly paycheck',
+        },
+        {
+          Date: '2026-07-03',
+          Type: 'TRANSFER',
+          Amount: 1000.0,
+          Category: 'Transfer',
+          Account: 'Savings Account',
+          'To Account (Transfers only)': 'Cash Wallet',
+          Note: 'ATM Cash Withdrawal',
+        },
+      ];
+
+      const worksheet = XLSX.utils.json_to_sheet(sampleData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Money_Manager_Template');
+
+      const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+      const filename = `Money_Manager_Sample_Template.xlsx`;
+      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+      await FileSystem.writeAsStringAsync(fileUri, wbout, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          dialogTitle: 'Download Money Manager Template',
+          UTI: 'com.microsoft.excel.xlsx',
+        });
+      } else {
+        Alert.alert('Sharing not available', 'Sharing is not available on this device.');
+      }
+    } catch (error) {
+      console.error('Money Sample Download Error:', error);
+      Alert.alert('Error', 'Failed to generate sample template.');
+    }
+  };
+
+  const handleExportMoney = async () => {
+    if (moneyTransactions.length === 0) {
+      Alert.alert('No Data', 'There are no money transactions to export.');
+      return;
+    }
+
+    try {
+      const accountMap = new Map(moneyAccounts.map((a) => [a.id, a.name]));
+      const exportData = moneyTransactions.map((tx) => ({
+        Date: tx.date.split('T')[0],
+        Type: tx.type.toUpperCase(),
+        Amount: tx.amount,
+        Category: tx.category,
+        Account: accountMap.get(tx.accountId) || 'Unknown Account',
+        'To Account (Transfers only)': tx.toAccountId ? accountMap.get(tx.toAccountId) || 'Unknown Account' : '',
+        Note: tx.note || '',
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Cashflow');
+
+      const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+      const filename = `Money_Transactions_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+      await FileSystem.writeAsStringAsync(fileUri, wbout, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          dialogTitle: 'Export Money Transactions',
+          UTI: 'com.microsoft.excel.xlsx',
+        });
+      } else {
+        Alert.alert('Sharing not available', 'Sharing is not available on this device.');
+      }
+    } catch (error) {
+      console.error('Money Export Error:', error);
+      Alert.alert('Export Failed', 'An error occurred while exporting money transactions.');
+    }
+  };
+
+  const handleBackupMoney = async () => {
+    if (moneyTransactions.length === 0) {
+      Alert.alert('No Data', 'There are no money transactions to backup.');
+      return;
+    }
+
+    try {
+      const accountMap = new Map(moneyAccounts.map((a) => [a.id, a.name]));
+      const backupData = moneyTransactions.map((tx) => ({
+        Date: tx.date.split('T')[0],
+        Type: tx.type.toUpperCase(),
+        Amount: tx.amount,
+        Category: tx.category,
+        Account: accountMap.get(tx.accountId) || 'Unknown Account',
+        'To Account (Transfers only)': tx.toAccountId ? accountMap.get(tx.toAccountId) : '',
+        Note: tx.note || '',
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(backupData);
+      const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
+
+      const filename = `Gainbase_Money_Backup_${new Date().toISOString().split('T')[0]}.csv`;
+      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
+
+      await FileSystem.writeAsStringAsync(fileUri, csvOutput, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'text/csv',
+          dialogTitle: 'Backup Money Transactions',
+          UTI: 'public.comma-separated-values-text',
+        });
+      } else {
+        Alert.alert('Sharing not available', 'Sharing is not available on this device.');
+      }
+    } catch (error) {
+      console.error('Money Backup Error:', error);
+      Alert.alert('Backup Failed', 'An error occurred while creating the backup.');
+    }
+  };
+
+  const handleImportMoney = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.ms-excel',
+          'text/csv',
+          'text/comma-separated-values',
+          'application/csv',
+        ],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      const fileUri = result.assets[0].uri;
+      const fileName = result.assets[0].name.toLowerCase();
+      const isCsv = fileName.endsWith('.csv');
+
+      let jsonData;
+
+      if (isCsv) {
+        const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+        const workbook = XLSX.read(fileContent, { type: 'string' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        jsonData = XLSX.utils.sheet_to_json(worksheet);
+      } else {
+        const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        const workbook = XLSX.read(fileContent, { type: 'base64' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        jsonData = XLSX.utils.sheet_to_json(worksheet);
+      }
+
+      if (!jsonData || jsonData.length === 0) {
+        Alert.alert('Empty File', 'The imported file contains no data.');
+        return;
+      }
+
+      const ensureISOString = (val: any) => {
+        if (!val) return new Date().toISOString();
+        if (val instanceof Date) return val.toISOString();
+        if (typeof val === 'number') {
+          const date = new Date((val - 25569) * 86400 * 1000);
+          return date.toISOString();
+        }
+        if (typeof val === 'string') {
+          if (!isNaN(Number(val)) && val.trim() !== '') {
+            const date = new Date((Number(val) - 25569) * 86400 * 1000);
+            return date.toISOString();
+          }
+          const d = new Date(val);
+          if (!isNaN(d.getTime())) return d.toISOString();
+        }
+        return new Date().toISOString();
+      };
+
+      const currentAccounts = [...moneyAccounts];
+      const newTransactions: any[] = [];
+      const categoriesToAdd: { type: 'income' | 'expense'; name: string }[] = [];
+
+      for (const row of jsonData) {
+        const dateStr = ensureISOString(row.Date || row.date || row.DATE);
+        const rawType = (row.Type || row.type || row.TYPE || '').toLowerCase();
+        const amount = Number(row.Amount || row.amount || row.AMOUNT || 0);
+        const category = String(row.Category || row.category || row.CATEGORY || 'Other').trim();
+        const accountName = String(row.Account || row.account || row.ACCOUNT || '').trim();
+        const toAccountName = String(row['To Account (Transfers only)'] || row.toAccount || row.TO_ACCOUNT || '').trim();
+        const note = String(row.Note || row.note || row.NOTE || '').trim();
+
+        if (amount <= 0 || !accountName) continue;
+
+        let type: 'income' | 'expense' | 'transfer' = 'expense';
+        if (rawType.includes('income') || rawType === 'in') {
+          type = 'income';
+        } else if (rawType.includes('transfer') || rawType === 'tr') {
+          type = 'transfer';
+        }
+
+        // Find or create primary account
+        let acc = currentAccounts.find((a) => a.name.toLowerCase() === accountName.toLowerCase());
+        if (!acc) {
+          acc = {
+            id: Math.random().toString(36).substring(2, 9),
+            name: accountName,
+            balance: 0,
+            type: 'cash',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            isArchived: false,
+          };
+          currentAccounts.push(acc);
+        }
+
+        let toAccId: string | undefined;
+        if (type === 'transfer' && toAccountName) {
+          let toAcc = currentAccounts.find((a) => a.name.toLowerCase() === toAccountName.toLowerCase());
+          if (!toAcc) {
+            toAcc = {
+              id: Math.random().toString(36).substring(2, 9),
+              name: toAccountName,
+              balance: 0,
+              type: 'cash',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              isArchived: false,
+            };
+            currentAccounts.push(toAcc);
+          }
+          toAccId = toAcc.id;
+
+          // Adjust balances locally
+          acc.balance -= amount;
+          toAcc.balance += amount;
+        } else if (type === 'income') {
+          acc.balance += amount;
+        } else {
+          acc.balance -= amount;
+        }
+
+        // Check if category is registered in store, otherwise enqueue for addition
+        if (type !== 'transfer') {
+          const currentStoreCats = storeCategories[type];
+          if (!currentStoreCats.map((c) => c.toLowerCase()).includes(category.toLowerCase())) {
+            categoriesToAdd.push({ type, name: category });
+          }
+        }
+
+        newTransactions.push({
+          id: Math.random().toString(36).substring(2, 9),
+          accountId: acc.id,
+          toAccountId: toAccId,
+          type,
+          amount,
+          category: type === 'transfer' ? 'Transfer' : category,
+          date: dateStr,
+          note: note || undefined,
+        });
+      }
+
+      if (newTransactions.length > 0) {
+        // Bulk add imported transactions and updated accounts
+        importMoneyData(newTransactions, currentAccounts);
+
+        // Dynamically add unregistered categories
+        const addedNames = new Set<string>();
+        categoriesToAdd.forEach(({ type, name }) => {
+          const key = `${type}:${name.toLowerCase()}`;
+          if (!addedNames.has(key)) {
+            addCategory(type, name);
+            addedNames.add(key);
+          }
+        });
+
+        Alert.alert(
+          'Success',
+          `Successfully imported ${newTransactions.length} transactions and synchronized account balances.`,
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          'No valid transactions found in the file. Please check the sample format.',
+        );
+      }
+    } catch (error) {
+      console.error('Import Money Error:', error);
+      Alert.alert(
+        'Import Failed',
+        'Ensure the file matches the money manager sample template format.',
+      );
+    }
+  };
+
+
   const handleAddCategory = () => {
     const name = newCategoryName.trim();
     if (!name) return;
@@ -587,13 +917,17 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* Action Grid */}
+          {/* Investment Portfolio Section */}
+          <ThemedText style={[styles.sectionHeading, { color: currColors.textSecondary }]}>
+            INVESTMENT PORTFOLIO (STOCKS)
+          </ThemedText>
           <View
             style={[
               styles.actionGridContainer,
               {
                 backgroundColor: currColors.card,
                 borderColor: currColors.border,
+                marginTop: 8,
               },
             ]}
           >
@@ -666,8 +1000,108 @@ export default function ProfileScreen() {
                 </ThemedText>
               </TouchableOpacity>
             </View>
+          </View>
 
-            <View style={[styles.gridRow, { marginTop: 24 }]}>
+          {/* Money Manager Section */}
+          <ThemedText style={[styles.sectionHeading, { color: currColors.textSecondary, marginTop: 12 }]}>
+            MONEY MANAGER (CASHFLOW)
+          </ThemedText>
+          <View
+            style={[
+              styles.actionGridContainer,
+              {
+                backgroundColor: currColors.card,
+                borderColor: currColors.border,
+                marginTop: 8,
+              },
+            ]}
+          >
+            <View style={styles.gridRow}>
+              <TouchableOpacity
+                style={styles.gridButton}
+                onPress={handleDownloadMoneySample}
+              >
+                <View
+                  style={[
+                    styles.gridIconBox,
+                    { backgroundColor: currColors.cardSecondary },
+                  ]}
+                >
+                  <FileText size={24} color={currColors.tint} />
+                </View>
+                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
+                  Sample
+                </ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.gridButton}
+                onPress={handleImportMoney}
+              >
+                <View
+                  style={[
+                    styles.gridIconBox,
+                    { backgroundColor: currColors.cardSecondary },
+                  ]}
+                >
+                  <Upload size={24} color={currColors.tint} />
+                </View>
+                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
+                  Import
+                </ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.gridButton}
+                onPress={handleBackupMoney}
+              >
+                <View
+                  style={[
+                    styles.gridIconBox,
+                    { backgroundColor: currColors.cardSecondary },
+                  ]}
+                >
+                  <Database size={24} color={currColors.tint} />
+                </View>
+                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
+                  Backup
+                </ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.gridButton}
+                onPress={handleExportMoney}
+              >
+                <View
+                  style={[
+                    styles.gridIconBox,
+                    { backgroundColor: currColors.cardSecondary },
+                  ]}
+                >
+                  <Download size={24} color={currColors.tint} />
+                </View>
+                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
+                  Export
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Settings & Preferences Section */}
+          <ThemedText style={[styles.sectionHeading, { color: currColors.textSecondary, marginTop: 12 }]}>
+            SETTINGS & PREFERENCES
+          </ThemedText>
+          <View
+            style={[
+              styles.actionGridContainer,
+              {
+                backgroundColor: currColors.card,
+                borderColor: currColors.border,
+                marginTop: 8,
+              },
+            ]}
+          >
+            <View style={styles.gridRow}>
               <TouchableOpacity
                 style={styles.gridButton}
                 onPress={() => router.push('/settings')}
@@ -682,6 +1116,23 @@ export default function ProfileScreen() {
                 </View>
                 <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
                   Settings
+                </ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.gridButton}
+                onPress={() => setIsCategoryModalVisible(true)}
+              >
+                <View
+                  style={[
+                    styles.gridIconBox,
+                    { backgroundColor: currColors.cardSecondary },
+                  ]}
+                >
+                  <Tag size={24} color={currColors.tint} />
+                </View>
+                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
+                  Categories
                 </ThemedText>
               </TouchableOpacity>
 
@@ -722,25 +1173,9 @@ export default function ProfileScreen() {
                   Delete Data
                 </ThemedText>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => setIsCategoryModalVisible(true)}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: currColors.cardSecondary },
-                  ]}
-                >
-                  <Tag size={24} color={currColors.tint} />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  Categories
-                </ThemedText>
-              </TouchableOpacity>
             </View>
           </View>
+
         </ScrollView>
 
         {/* Edit Profile Modal */}
@@ -1256,7 +1691,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  sectionHeading: {
+    fontSize: 12,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: 1,
+    marginLeft: 4,
+    marginBottom: 4,
+  },
   modalSegmentContainer: {
+
     flexDirection: 'row',
     height: 40,
     borderRadius: 10,

@@ -21,15 +21,21 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { Budget, BudgetCategory } from '@/types/money';
 
-const STANDARD_CATEGORIES = [
-  { name: 'Food & Dining', icon: '🍔', color: '#FF3B30' },
-  { name: 'Rent & Bills', icon: '🏠', color: '#007AFF' },
-  { name: 'Shopping', icon: '🛍️', color: '#FF9500' },
-  { name: 'Entertainment', icon: '🎬', color: '#AF52DE' },
-  { name: 'Travel', icon: '🚗', color: '#34C759' },
-  { name: 'Medical', icon: '💊', color: '#FF2D55' },
-  { name: 'Education', icon: '🎓', color: '#5AC8FA' },
-];
+const DEFAULT_ICONS_COLORS: { [key: string]: { icon: string; color: string } } = {
+  'Food & Dining': { icon: '🍔', color: '#FF3B30' },
+  'Rent & Bills': { icon: '🏠', color: '#007AFF' },
+  'Shopping': { icon: '🛍️', color: '#FF9500' },
+  'Entertainment': { icon: '🎬', color: '#AF52DE' },
+  'Travel': { icon: '🚗', color: '#34C759' },
+  'Medical': { icon: '💊', color: '#FF2D55' },
+  'Education': { icon: '🎓', color: '#5AC8FA' },
+  'Other': { icon: '🏷️', color: '#8E8E93' }
+};
+
+const getCategoryIconColor = (name: string) => {
+  return DEFAULT_ICONS_COLORS[name] || { icon: '🏷️', color: '#8E8E93' };
+};
+
 
 export default function AddBudgetScreen() {
   const router = useRouter();
@@ -38,6 +44,10 @@ export default function AddBudgetScreen() {
   const currColors = Colors[colorScheme];
 
   const { budgets, addBudget, updateBudget } = useMoneyStore();
+  const storeCategories = useMoneyStore((state) => state.categories) || {
+    income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
+    expense: ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other']
+  };
 
   const editingBudget = useMemo(() => {
     return id ? budgets.find((b) => b.id === id) : null;
@@ -52,41 +62,48 @@ export default function AddBudgetScreen() {
 
   // Category list limits state
   const [categories, setCategories] = useState<{ id: string; name: string; icon: string; color: string; limit: string }[]>([]);
-  const [newCatName, setNewCatName] = useState('');
-  const [showCustomCatInput, setShowCustomCatInput] = useState(false);
 
   useEffect(() => {
+    const expenseCats = storeCategories.expense;
+
     if (editingBudget) {
       setName(editingBudget.name);
       setStartDate(new Date(editingBudget.startDate));
       setEndDate(new Date(editingBudget.endDate));
-      setCategories(
-        editingBudget.categories.map((c) => ({
-          id: c.id,
-          name: c.name,
-          icon: c.icon,
-          color: c.color,
-          limit: c.limit.toString(),
-        }))
-      );
+
+      // Build categories list from store configuration
+      const list = expenseCats.map((cat, index) => {
+        const existing = editingBudget.categories.find((c) => c.name.toLowerCase() === cat.toLowerCase());
+        const info = getCategoryIconColor(cat);
+        return {
+          id: existing ? existing.id : Math.random().toString(36).substring(2, 9) + index,
+          name: cat,
+          icon: info.icon,
+          color: info.color,
+          limit: existing ? existing.limit.toString() : '0',
+        };
+      });
+      setCategories(list);
     } else {
       // Set name defaults e.g. "July 2026"
       const now = new Date();
       const monthName = now.toLocaleString('default', { month: 'long', year: 'numeric' });
       setName(monthName);
 
-      // Prepopulate standard categories
-      setCategories(
-        STANDARD_CATEGORIES.map((c, index) => ({
+      // Prepopulate categories from store configuration
+      const list = expenseCats.map((cat, index) => {
+        const info = getCategoryIconColor(cat);
+        return {
           id: Math.random().toString(36).substring(2, 9) + index,
-          name: c.name,
-          icon: c.icon,
-          color: c.color,
+          name: cat,
+          icon: info.icon,
+          color: info.color,
           limit: '0',
-        }))
-      );
+        };
+      });
+      setCategories(list);
     }
-  }, [editingBudget]);
+  }, [editingBudget, storeCategories]);
 
   const handleHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -99,43 +116,12 @@ export default function AddBudgetScreen() {
     }, 0);
   }, [categories]);
 
-  const handleAddCustomCategory = () => {
-    handleHaptic();
-    if (!newCatName.trim()) {
-      Alert.alert('Required Field', 'Please enter a category name.');
-      return;
-    }
-    
-    // Check duplicates
-    if (categories.some((c) => c.name.toLowerCase() === newCatName.trim().toLowerCase())) {
-      Alert.alert('Duplicate Category', 'This category already exists in your budget.');
-      return;
-    }
-
-    setCategories([
-      ...categories,
-      {
-        id: Math.random().toString(36).substring(2, 9),
-        name: newCatName.trim(),
-        icon: '🏷️',
-        color: '#8E8E93',
-        limit: '0',
-      },
-    ]);
-    setNewCatName('');
-    setShowCustomCatInput(false);
-  };
-
-  const handleRemoveCategory = (catId: string) => {
-    handleHaptic();
-    setCategories(categories.filter((c) => c.id !== catId));
-  };
-
   const handleLimitChange = (catId: string, val: string) => {
     setCategories(
       categories.map((c) => (c.id === catId ? { ...c, limit: val } : c))
     );
   };
+
 
   const handleSave = () => {
     handleHaptic();
@@ -333,58 +319,10 @@ export default function AddBudgetScreen() {
                   value={cat.limit}
                   onChangeText={(val) => handleLimitChange(cat.id, val)}
                 />
-                {!STANDARD_CATEGORIES.some(sc => sc.name === cat.name) && (
-                  <TouchableOpacity
-                    style={styles.deleteBtn}
-                    onPress={() => handleRemoveCategory(cat.id)}
-                  >
-                    <Trash2 size={16} color="#FF3B30" />
-                  </TouchableOpacity>
-                )}
               </View>
             </View>
           ))}
 
-          {/* Add custom category controls */}
-          {showCustomCatInput ? (
-            <View style={[styles.customCatInputBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border, color: currColors.text }]}
-                placeholder="Category name (e.g. Subscriptions)"
-                placeholderTextColor={currColors.textSecondary}
-                value={newCatName}
-                onChangeText={setNewCatName}
-                autoFocus
-              />
-              <View style={styles.customCatActionRow}>
-                <TouchableOpacity
-                  style={[styles.customCatBtn, { backgroundColor: currColors.cardSecondary }]}
-                  onPress={() => {
-                    setNewCatName('');
-                    setShowCustomCatInput(false);
-                  }}
-                >
-                  <ThemedText style={{ color: currColors.textSecondary }}>Cancel</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.customCatBtn, { backgroundColor: '#00C9A7' }]}
-                  onPress={handleAddCustomCategory}
-                >
-                  <ThemedText style={{ color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold' }}>Add</ThemedText>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[styles.addCustomCatBtn, { borderColor: currColors.border }]}
-              onPress={() => setShowCustomCatInput(true)}
-            >
-              <Plus size={16} color="#00C9A7" />
-              <ThemedText style={{ color: '#00C9A7', fontFamily: 'Outfit_600SemiBold', fontSize: 13 }}>
-                Add Custom Category
-              </ThemedText>
-            </TouchableOpacity>
-          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

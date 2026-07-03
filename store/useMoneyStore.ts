@@ -41,8 +41,11 @@ interface MoneyState {
   removeCategory: (type: 'income' | 'expense', name: string) => void;
 
   
+  importMoneyData: (transactions: MoneyTransaction[], accounts: Account[]) => void;
+
   // Reset Data
   clearAllMoneyData: () => void;
+
   
   // Computed Selectors (Invoked as store functions)
   getNetWorth: () => number;
@@ -290,7 +293,14 @@ export const useMoneyStore = create<MoneyState>()(
         }),
 
 
+      importMoneyData: (transactions, accounts) =>
+        set((state) => ({
+          moneyTransactions: [...transactions, ...state.moneyTransactions],
+          accounts: accounts,
+        })),
+
       clearAllMoneyData: () =>
+
         set({
           accounts: [],
           moneyTransactions: [],
