@@ -13,6 +13,7 @@ import {
   Plus,
   PiggyBank,
   ChevronRight,
+  ChevronLeft,
   TrendingUp,
   AlertTriangle,
 } from 'lucide-react-native';
@@ -34,24 +35,25 @@ export default function BudgetsScreen() {
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
 
   const [activeBudgetId, setActiveBudgetId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const activeBudget = useMemo(() => {
     if (budgets.length === 0) return null;
     if (activeBudgetId) {
       return budgets.find((b) => b.id === activeBudgetId) || budgets[0];
     }
-    // find active based on current date
-    const now = new Date();
-    const current = budgets.find(
-      (b) => b.isActive && new Date(b.startDate) <= now && new Date(b.endDate) >= now
-    );
+    const current = budgets.find((b) => b.isActive);
     return current || budgets[0];
   }, [budgets, activeBudgetId]);
 
   const spendingDetails = useMemo(() => {
     if (!activeBudget) return { totalSpent: 0, categories: [] };
     
-    const spentMap = getCategorySpending(activeBudget.id);
+    const spentMap = getCategorySpending(
+      activeBudget.id,
+      selectedDate.getFullYear(),
+      selectedDate.getMonth()
+    );
     let totalSpent = 0;
 
     const categoriesWithSpending = activeBudget.categories.map((cat) => {
@@ -67,7 +69,7 @@ export default function BudgetsScreen() {
       totalSpent,
       categories: categoriesWithSpending,
     };
-  }, [activeBudget, getCategorySpending]);
+  }, [activeBudget, getCategorySpending, selectedDate]);
 
   const formatAmount = (val: number) => {
     if (isPrivacyMode) return '****';
@@ -84,6 +86,16 @@ export default function BudgetsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
+  const handlePrevMonth = () => {
+    handleHaptic();
+    setSelectedDate(new Date(selectedDate.setMonth(selectedDate.getMonth() - 1)));
+  };
+
+  const handleNextMonth = () => {
+    handleHaptic();
+    setSelectedDate(new Date(selectedDate.setMonth(selectedDate.getMonth() + 1)));
+  };
+
   const overallPercentage = useMemo(() => {
     if (!activeBudget || activeBudget.totalLimit === 0) return 0;
     return (spendingDetails.totalSpent / activeBudget.totalLimit) * 100;
@@ -93,7 +105,7 @@ export default function BudgetsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
           Budgets
         </ThemedText>
         <TouchableOpacity
@@ -137,9 +149,9 @@ export default function BudgetsScreen() {
                   }}
                 >
                   <ThemedText
+                    type={activeBudget?.id === b.id ? 'semiBold' : 'medium'}
                     style={{
                       color: activeBudget?.id === b.id ? '#00C9A7' : currColors.textSecondary,
-                      fontFamily: activeBudget?.id === b.id ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
                     }}
                   >
                     {b.name}
@@ -151,6 +163,19 @@ export default function BudgetsScreen() {
 
           {activeBudget && (
             <View>
+              {/* Month Switcher Banner */}
+              <View style={[styles.monthSwitcher, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+                <TouchableOpacity onPress={handlePrevMonth} style={styles.monthArrow}>
+                  <ChevronLeft size={20} color={currColors.text} />
+                </TouchableOpacity>
+                <ThemedText type="semiBold" style={[styles.monthLabel, { color: currColors.text }]}>
+                  {selectedDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </ThemedText>
+                <TouchableOpacity onPress={handleNextMonth} style={styles.monthArrow}>
+                  <ChevronRight size={20} color={currColors.text} />
+                </TouchableOpacity>
+              </View>
+
               {/* Overview Progress Card */}
               <TouchableOpacity
                 style={[styles.overviewCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
@@ -162,7 +187,7 @@ export default function BudgetsScreen() {
               >
                 <View style={styles.overviewHeader}>
                   <View>
-                    <ThemedText style={[styles.cardSubTitle, { color: currColors.textSecondary }]}>
+                    <ThemedText type="bold" style={[styles.cardSubTitle, { color: currColors.textSecondary }]}>
                       {activeBudget.name.toUpperCase()} OVERALL SPENDING
                     </ThemedText>
                     <ThemedText style={[styles.cardVal, { color: currColors.text }]}>
@@ -200,7 +225,7 @@ export default function BudgetsScreen() {
                       : `${formatAmount(activeBudget.totalLimit - spendingDetails.totalSpent)} remaining`}
                   </ThemedText>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <ThemedText style={{ fontSize: 12, color: '#00C9A7', fontFamily: 'Outfit_500Medium', marginRight: 4 }}>
+                    <ThemedText type="medium" style={{ fontSize: 12, color: '#00C9A7', marginRight: 4 }}>
                       Analyze Details
                     </ThemedText>
                     <ChevronRight size={14} color="#00C9A7" />
@@ -210,7 +235,7 @@ export default function BudgetsScreen() {
 
               {/* Categories list */}
               <View style={styles.sectionHeader}>
-                <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+                <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
                   CATEGORY ALLOCATIONS
                 </ThemedText>
               </View>
@@ -234,7 +259,7 @@ export default function BudgetsScreen() {
                         <View style={[styles.catIconWrapper, { backgroundColor: `${cat.color}15` }]}>
                           <ThemedText style={{ fontSize: 16 }}>{cat.icon}</ThemedText>
                         </View>
-                        <ThemedText style={[styles.catNameText, { color: currColors.text }]}>
+                        <ThemedText type="semiBold" style={[styles.catNameText, { color: currColors.text }]}>
                           {cat.name}
                         </ThemedText>
                       </View>
@@ -332,16 +357,18 @@ const styles = StyleSheet.create({
   },
   cardSubTitle: {
     fontSize: 10,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
+    textTransform: 'uppercase',
     marginBottom: 6,
   },
   cardVal: {
     fontSize: 24,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_400Regular',
   },
   cardLimit: {
     fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
     marginTop: 2,
   },
   percentageRing: {
@@ -354,7 +381,7 @@ const styles = StyleSheet.create({
   },
   ringText: {
     fontSize: 13,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_400Regular',
   },
   progressBackground: {
     height: 6,
@@ -377,8 +404,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 10,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   categoryCard: {
     marginHorizontal: 16,
@@ -407,7 +435,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   catNameText: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: 'Outfit_600SemiBold',
     flex: 1,
   },
@@ -418,11 +446,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   catSpentVal: {
-    fontSize: 15,
-    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 14,
+    fontFamily: 'Outfit_400Regular',
   },
   catLimitVal: {
     fontSize: 11,
+    fontFamily: 'Outfit_400Regular',
   },
   catFooter: {
     flexDirection: 'row',
@@ -440,5 +469,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  monthSwitcher: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  monthArrow: {
+    padding: 6,
+  },
+  monthLabel: {
+    fontSize: 15,
+    fontFamily: 'Outfit_500Medium',
   },
 });

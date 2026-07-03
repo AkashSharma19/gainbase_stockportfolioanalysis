@@ -13,8 +13,6 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { X, Check, Plus, Trash2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-
 import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -55,10 +53,6 @@ export default function AddBudgetScreen() {
 
   // Form State
   const [name, setName] = useState('');
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date(new Date().setMonth(new Date().getMonth() + 1)));
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
 
   // Category list limits state
   const [categories, setCategories] = useState<{ id: string; name: string; icon: string; color: string; limit: string }[]>([]);
@@ -68,8 +62,6 @@ export default function AddBudgetScreen() {
 
     if (editingBudget) {
       setName(editingBudget.name);
-      setStartDate(new Date(editingBudget.startDate));
-      setEndDate(new Date(editingBudget.endDate));
 
       // Build categories list from store configuration
       const list = expenseCats.map((cat, index) => {
@@ -85,10 +77,8 @@ export default function AddBudgetScreen() {
       });
       setCategories(list);
     } else {
-      // Set name defaults e.g. "July 2026"
-      const now = new Date();
-      const monthName = now.toLocaleString('default', { month: 'long', year: 'numeric' });
-      setName(monthName);
+      // Set name defaults e.g. "Monthly Budget"
+      setName('Monthly Budget');
 
       // Prepopulate categories from store configuration
       const list = expenseCats.map((cat, index) => {
@@ -130,11 +120,6 @@ export default function AddBudgetScreen() {
       return;
     }
 
-    if (startDate >= endDate) {
-      Alert.alert('Invalid Date Range', 'End date must be after the start date.');
-      return;
-    }
-
     if (totalLimit <= 0) {
       Alert.alert('Empty Budget', 'Please allocate a limit to at least one category.');
       return;
@@ -155,8 +140,8 @@ export default function AddBudgetScreen() {
       id: editingBudget ? editingBudget.id : Math.random().toString(36).substring(2, 9),
       name: name.trim(),
       period: 'monthly',
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
+      startDate: '',
+      endDate: '',
       totalLimit,
       categories: budgetCategories,
       isActive: true,
@@ -209,80 +194,6 @@ export default function AddBudgetScreen() {
             />
           </View>
 
-          {/* Date Picker row */}
-          <View style={styles.row}>
-            {/* Start Date */}
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>START DATE</ThemedText>
-              {Platform.OS === 'ios' ? (
-                <View style={styles.iosDatePickerContainer}>
-                  <DateTimePicker
-                    value={startDate}
-                    mode="date"
-                    display="default"
-                    onChange={(e, d) => d && setStartDate(d)}
-                    themeVariant={colorScheme}
-                  />
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.selectBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-                  onPress={() => setShowStartPicker(true)}
-                >
-                  <ThemedText style={{ color: currColors.text, fontSize: 14 }}>
-                    {startDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                  </ThemedText>
-                </TouchableOpacity>
-              )}
-              {showStartPicker && Platform.OS !== 'ios' && (
-                <DateTimePicker
-                  value={startDate}
-                  mode="date"
-                  display="default"
-                  onChange={(e, d) => {
-                    setShowStartPicker(false);
-                    if (d) setStartDate(d);
-                  }}
-                />
-              )}
-            </View>
-
-            {/* End Date */}
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>END DATE</ThemedText>
-              {Platform.OS === 'ios' ? (
-                <View style={styles.iosDatePickerContainer}>
-                  <DateTimePicker
-                    value={endDate}
-                    mode="date"
-                    display="default"
-                    onChange={(e, d) => d && setEndDate(d)}
-                    themeVariant={colorScheme}
-                  />
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.selectBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-                  onPress={() => setShowEndPicker(true)}
-                >
-                  <ThemedText style={{ color: currColors.text, fontSize: 14 }}>
-                    {endDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                  </ThemedText>
-                </TouchableOpacity>
-              )}
-              {showEndPicker && Platform.OS !== 'ios' && (
-                <DateTimePicker
-                  value={endDate}
-                  mode="date"
-                  display="default"
-                  onChange={(e, d) => {
-                    setShowEndPicker(false);
-                    if (d) setEndDate(d);
-                  }}
-                />
-              )}
-            </View>
-          </View>
 
           {/* Total Budget limit highlight */}
           <View style={styles.totalBurdenHighlight}>

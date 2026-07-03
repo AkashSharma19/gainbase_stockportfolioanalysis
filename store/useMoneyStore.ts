@@ -59,7 +59,7 @@ interface MoneyState {
   getNetWorth: () => number;
   getMonthlyEMIBurden: () => number;
   getActiveBudget: () => Budget | null;
-  getCategorySpending: (budgetId: string) => { [category: string]: number };
+  getCategorySpending: (budgetId: string, year: number, month: number) => { [category: string]: number };
 }
 
 export const useMoneyStore = create<MoneyState>()(
@@ -344,22 +344,18 @@ export const useMoneyStore = create<MoneyState>()(
 
       getActiveBudget: () => {
         const { budgets } = get();
-        const now = new Date();
-        const active = budgets.find(
-          (b) => b.isActive && new Date(b.startDate) <= now && new Date(b.endDate) >= now
-        );
-        return active || budgets[0] || null; // fallback to first budget if none matches date range
+        const active = budgets.find((b) => b.isActive);
+        return active || budgets[0] || null;
       },
 
-      getCategorySpending: (budgetId) => {
+      getCategorySpending: (budgetId, year, month) => {
         const { budgets, moneyTransactions } = get();
         const budget = budgets.find((b) => b.id === budgetId);
         if (!budget) return {};
 
-        const start = new Date(budget.startDate).getTime();
-        const end = new Date(budget.endDate).getTime();
+        const start = new Date(year, month, 1, 0, 0, 0, 0).getTime();
+        const end = new Date(year, month + 1, 0, 23, 59, 59, 999).getTime();
 
-        // Calculate total expense transactions falling in this range grouped by category
         const totals: { [category: string]: number } = {};
         
         moneyTransactions.forEach((tx) => {
