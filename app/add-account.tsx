@@ -36,6 +36,7 @@ const TYPES: { type: AccountType; label: string; emoji: string }[] = [
   { type: 'savings', label: 'Savings / Bank', emoji: '🏦' },
   { type: 'investment', label: 'Investment', emoji: '📈' },
   { type: 'credit_card', label: 'Credit Card', emoji: '💳' },
+  { type: 'emergency_fund', label: 'Emergency Fund', emoji: '🛡️' },
 ];
 
 export default function AddAccountScreen() {
@@ -182,6 +183,8 @@ export default function AddAccountScreen() {
                     setType(t.type);
                     if (t.type === 'credit_card' && color === COLORS[0]) {
                       setColor(COLORS[3]); // default CC to orange color
+                    } else if (t.type === 'emergency_fund' && color === COLORS[0]) {
+                      setColor('#FF2D55'); // default EF to pink/rose color
                     }
                   }}
                 >

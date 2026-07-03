@@ -94,7 +94,7 @@ export default function LoansScreen() {
               <IconComponent size={20} color={config.color} />
             </View>
             <View style={styles.loanTitleInfo}>
-              <ThemedText style={[styles.loanName, { color: currColors.text }]} numberOfLines={1}>
+              <ThemedText type="semiBold" style={[styles.loanName, { color: currColors.text }]} numberOfLines={1}>
                 {item.name}
               </ThemedText>
               <ThemedText style={[styles.loanLender, { color: currColors.textSecondary }]} numberOfLines={1}>
@@ -153,7 +153,7 @@ export default function LoansScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
           Loans & EMIs
         </ThemedText>
         <TouchableOpacity
@@ -173,7 +173,7 @@ export default function LoansScreen() {
           <View style={styles.burdenRow}>
             <Calendar size={24} color="#FF9500" />
             <View style={styles.burdenInfo}>
-              <ThemedText style={[styles.burdenTitle, { color: currColors.textSecondary }]}>
+              <ThemedText type="bold" style={[styles.burdenTitle, { color: currColors.textSecondary }]}>
                 TOTAL MONTHLY EMI BURDEN
               </ThemedText>
               <ThemedText style={[styles.burdenValue, { color: currColors.text }]}>
@@ -194,7 +194,7 @@ export default function LoansScreen() {
 
         {/* Active Loans */}
         <View style={styles.sectionHeader}>
-          <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+          <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
             ACTIVE LOANS ({activeLoans.length})
           </ThemedText>
         </View>
@@ -214,7 +214,7 @@ export default function LoansScreen() {
         {completedLoans.length > 0 ? (
           <View style={{ marginTop: 20 }}>
             <View style={styles.sectionHeader}>
-              <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+              <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
                 PAID OFF / COMPLETED LOANS ({completedLoans.length})
               </ThemedText>
             </View>
@@ -268,13 +268,14 @@ const styles = StyleSheet.create({
   },
   burdenTitle: {
     fontSize: 10,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
+    textTransform: 'uppercase',
     marginBottom: 4,
   },
   burdenValue: {
     fontSize: 24,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_400Regular',
   },
   divider: {
     borderBottomWidth: 1,
@@ -288,10 +289,11 @@ const styles = StyleSheet.create({
   },
   footerLabel: {
     fontSize: 13,
+    fontFamily: 'Outfit_400Regular',
   },
   footerValue: {
     fontSize: 15,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_400Regular',
   },
   sectionHeader: {
     marginHorizontal: 16,
@@ -299,8 +301,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 10,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   emptyCard: {
     marginHorizontal: 16,
@@ -346,6 +349,7 @@ const styles = StyleSheet.create({
   },
   loanLender: {
     fontSize: 11,
+    fontFamily: 'Outfit_400Regular',
   },
   loanAmountsRow: {
     flexDirection: 'row',
@@ -362,19 +366,20 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 10,
+    fontFamily: 'Outfit_400Regular',
     marginBottom: 4,
   },
   amountValue: {
     fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_400Regular',
   },
   amountValueSecondary: {
     fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_400Regular',
   },
   emiValText: {
     fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_400Regular',
   },
   progressContainer: {
     width: '100%',

@@ -61,16 +61,17 @@ export function MoneyDashboard() {
   const monthlyEMIs = getMonthlyEMIBurden();
 
 
-  // Group accounts by type for aggregate counts
   const accountTotals = useMemo(() => {
     const totals = {
       wallet: 0,
       savings: 0,
       investment: 0,
       credit_card: 0,
+      emergency_fund: 0,
     };
     accounts.forEach((acc) => {
       if (!acc.isArchived) {
+        // @ts-ignore
         totals[acc.type] = (totals[acc.type] || 0) + acc.balance;
       }
     });
@@ -105,9 +106,23 @@ export function MoneyDashboard() {
       >
         {/* Net Worth Card (Teal Gradient Theme) */}
         <View style={[styles.netWorthCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-          <ThemedText type="bold" style={[styles.cardTitle, { color: currColors.textSecondary }]}>
-            TOTAL NET WORTH
-          </ThemedText>
+          <View style={styles.netWorthHeaderRow}>
+            <ThemedText type="bold" style={[styles.cardTitle, { color: currColors.textSecondary }]}>
+              TOTAL NET WORTH
+            </ThemedText>
+            <TouchableOpacity
+              style={[styles.analyticsBadge, { backgroundColor: currColors.cardSecondary }]}
+              onPress={() => {
+                handleHaptic();
+                router.push('/money-analytics');
+              }}
+            >
+              <Activity size={12} color="#00C9A7" style={{ marginRight: 4 }} />
+              <ThemedText type="medium" style={{ fontSize: 11, color: '#00C9A7' }}>
+                Analytics
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
           <ThemedText style={[styles.netWorthVal, { color: currColors.text }]}>
             {formatAmount(netWorth)}
           </ThemedText>
@@ -216,6 +231,24 @@ export function MoneyDashboard() {
             </View>
             <ThemedText style={[styles.accountTypeBalance, { color: currColors.text }]}>
               {formatAmount(accountTotals.credit_card)}
+            </ThemedText>
+          </TouchableOpacity>
+
+          {/* Card: Emergency Fund */}
+          <TouchableOpacity
+            style={[styles.accountSummaryCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+            activeOpacity={0.8}
+            onPress={() => {
+              handleHaptic();
+              router.push('/(tabs)/money-accounts');
+            }}
+          >
+            <View style={styles.cardHeader}>
+              <PiggyBank size={20} color="#FF2D55" />
+              <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Emergency Fund</ThemedText>
+            </View>
+            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text }]}>
+              {formatAmount(accountTotals.emergency_fund)}
             </ThemedText>
           </TouchableOpacity>
         </ScrollView>
@@ -594,5 +627,18 @@ const styles = StyleSheet.create({
   txAmount: {
     fontSize: 14,
     fontFamily: 'Outfit_400Regular',
+  },
+  netWorthHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  analyticsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
 });
