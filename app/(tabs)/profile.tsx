@@ -86,8 +86,8 @@ export default function ProfileScreen() {
   const [editCategoryName, setEditCategoryName] = useState('');
 
   const storeCategories = useMoneyStore((state) => state.categories) || {
-    income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
-    expense: ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other']
+    income: [],
+    expense: []
   };
   const addCategory = useMoneyStore((state) => state.addCategory);
   const updateCategory = useMoneyStore((state) => state.updateCategory);
@@ -95,7 +95,14 @@ export default function ProfileScreen() {
 
   const moneyTransactions = useMoneyStore((state) => state.moneyTransactions);
   const moneyAccounts = useMoneyStore((state) => state.accounts);
+  const moneyLoans = useMoneyStore((state) => state.loans);
+  const moneyBudgets = useMoneyStore((state) => state.budgets);
+  const moneyEmiPayments = useMoneyStore((state) => state.emiPayments);
   const importMoneyData = useMoneyStore((state) => state.importMoneyData);
+  const restoreMoneyData = useMoneyStore((state) => state.restoreMoneyData);
+  const clearAllMoneyData = useMoneyStore((state) => state.clearAllMoneyData);
+
+
 
   const handleDownloadMoneySample = async () => {
     try {
@@ -157,14 +164,16 @@ export default function ProfileScreen() {
   };
 
   const handleExportMoney = async () => {
-    if (moneyTransactions.length === 0) {
-      Alert.alert('No Data', 'There are no money transactions to export.');
+    if (moneyTransactions.length === 0 && moneyAccounts.length === 0) {
+      Alert.alert('No Data', 'There is no data to export.');
       return;
     }
 
     try {
       const accountMap = new Map(moneyAccounts.map((a) => [a.id, a.name]));
-      const exportData = moneyTransactions.map((tx) => ({
+
+      // 1. Transactions
+      const txsSheetData = moneyTransactions.map((tx) => ({
         Date: tx.date.split('T')[0],
         Type: tx.type.toUpperCase(),
         Amount: tx.amount,
@@ -173,10 +182,100 @@ export default function ProfileScreen() {
         'To Account (Transfers only)': tx.toAccountId ? accountMap.get(tx.toAccountId) || 'Unknown Account' : '',
         Note: tx.note || '',
       }));
+      const worksheetTxs = XLSX.utils.json_to_sheet(txsSheetData);
 
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      // 2. Accounts
+      const accsSheetData = moneyAccounts.map((a) => ({
+        'Account Name': a.name,
+        Type: a.type,
+        Balance: a.balance,
+        Icon: a.icon || 'wallet',
+        Color: a.color || '#007AFF',
+      }));
+      const worksheetAccs = XLSX.utils.json_to_sheet(accsSheetData);
+
+      // 3. Loans
+      const loansSheetData = moneyLoans.map((l) => ({
+        'Loan Name': l.name,
+        'Lender Name': l.lenderName,
+        Principal: l.principalAmount,
+        Outstanding: l.outstandingAmount,
+        'Interest Rate': l.interestRate,
+        'Tenure Months': l.tenureMonths,
+        'Start Date': l.startDate.split('T')[0],
+        'End Date': l.endDate.split('T')[0],
+        'Linked Account': l.linkedAccountId ? accountMap.get(l.linkedAccountId) || '' : '',
+        Type: l.type,
+        'Is Active': l.isActive ? 'YES' : 'NO',
+      }));
+      const worksheetLoans = XLSX.utils.json_to_sheet(loansSheetData);
+
+      // 4. Budgets
+      const budgetsSheetData: any[] = [];
+      moneyBudgets.forEach((b) => {
+        if (b.categories.length === 0) {
+          budgetsSheetData.push({
+            'Budget Name': b.name,
+            Period: b.period,
+            'Start Date': b.startDate.split('T')[0],
+            'End Date': b.endDate.split('T')[0],
+            'Total Limit': b.totalLimit,
+            'Category Name': '',
+            'Category Icon': '',
+            'Category Color': '',
+            'Category Limit': 0,
+            'Category Spent': 0,
+            'Is Active': b.isActive ? 'YES' : 'NO',
+          });
+        } else {
+          b.categories.forEach((cat) => {
+            budgetsSheetData.push({
+              'Budget Name': b.name,
+              Period: b.period,
+              'Start Date': b.startDate.split('T')[0],
+              'End Date': b.endDate.split('T')[0],
+              'Total Limit': b.totalLimit,
+              'Category Name': cat.name,
+              'Category Icon': cat.icon,
+              'Category Color': cat.color,
+              'Category Limit': cat.limit,
+              'Category Spent': cat.spent,
+              'Is Active': b.isActive ? 'YES' : 'NO',
+            });
+          });
+        }
+      });
+      const worksheetBudgets = XLSX.utils.json_to_sheet(budgetsSheetData);
+
+      // 5. Categories
+      const categoriesSheetData: any[] = [];
+      (storeCategories.income || []).forEach((name) => {
+        categoriesSheetData.push({ Type: 'INCOME', 'Category Name': name });
+      });
+      (storeCategories.expense || []).forEach((name) => {
+        categoriesSheetData.push({ Type: 'EXPENSE', 'Category Name': name });
+      });
+      const worksheetCategories = XLSX.utils.json_to_sheet(categoriesSheetData);
+
+      // 6. EMI Payments
+      const loanMap = new Map(moneyLoans.map((l) => [l.id, l.name]));
+      const emiSheetData = moneyEmiPayments.map((p) => ({
+        'Loan Name': loanMap.get(p.loanId) || 'Unknown Loan',
+        Amount: p.amount,
+        'Principal Portion': p.principalPortion,
+        'Interest Portion': p.interestPortion,
+        Date: p.date.split('T')[0],
+        Status: p.status.toUpperCase(),
+      }));
+      const worksheetEmi = XLSX.utils.json_to_sheet(emiSheetData);
+
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Cashflow');
+      XLSX.utils.book_append_sheet(workbook, worksheetTxs, 'Transactions');
+      XLSX.utils.book_append_sheet(workbook, worksheetAccs, 'Accounts');
+      XLSX.utils.book_append_sheet(workbook, worksheetLoans, 'Loans');
+      XLSX.utils.book_append_sheet(workbook, worksheetBudgets, 'Budgets');
+      XLSX.utils.book_append_sheet(workbook, worksheetCategories, 'Categories');
+      XLSX.utils.book_append_sheet(workbook, worksheetEmi, 'EMIPayments');
 
       const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
       const filename = `Money_Transactions_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -202,38 +301,132 @@ export default function ProfileScreen() {
   };
 
   const handleBackupMoney = async () => {
-    if (moneyTransactions.length === 0) {
-      Alert.alert('No Data', 'There are no money transactions to backup.');
+    if (moneyTransactions.length === 0 && moneyAccounts.length === 0) {
+      Alert.alert('No Data', 'There is no data to backup.');
       return;
     }
 
     try {
       const accountMap = new Map(moneyAccounts.map((a) => [a.id, a.name]));
-      const backupData = moneyTransactions.map((tx) => ({
+
+      // 1. Transactions
+      const txsSheetData = moneyTransactions.map((tx) => ({
         Date: tx.date.split('T')[0],
         Type: tx.type.toUpperCase(),
         Amount: tx.amount,
         Category: tx.category,
         Account: accountMap.get(tx.accountId) || 'Unknown Account',
-        'To Account (Transfers only)': tx.toAccountId ? accountMap.get(tx.toAccountId) : '',
+        'To Account (Transfers only)': tx.toAccountId ? accountMap.get(tx.toAccountId) || 'Unknown Account' : '',
         Note: tx.note || '',
       }));
+      const worksheetTxs = XLSX.utils.json_to_sheet(txsSheetData);
 
-      const worksheet = XLSX.utils.json_to_sheet(backupData);
-      const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
+      // 2. Accounts
+      const accsSheetData = moneyAccounts.map((a) => ({
+        'Account Name': a.name,
+        Type: a.type,
+        Balance: a.balance,
+        Icon: a.icon || 'wallet',
+        Color: a.color || '#007AFF',
+      }));
+      const worksheetAccs = XLSX.utils.json_to_sheet(accsSheetData);
 
-      const filename = `Gainbase_Money_Backup_${new Date().toISOString().split('T')[0]}.csv`;
+      // 3. Loans
+      const loansSheetData = moneyLoans.map((l) => ({
+        'Loan Name': l.name,
+        'Lender Name': l.lenderName,
+        Principal: l.principalAmount,
+        Outstanding: l.outstandingAmount,
+        'Interest Rate': l.interestRate,
+        'Tenure Months': l.tenureMonths,
+        'Start Date': l.startDate.split('T')[0],
+        'End Date': l.endDate.split('T')[0],
+        'Linked Account': l.linkedAccountId ? accountMap.get(l.linkedAccountId) || '' : '',
+        Type: l.type,
+        'Is Active': l.isActive ? 'YES' : 'NO',
+      }));
+      const worksheetLoans = XLSX.utils.json_to_sheet(loansSheetData);
+
+      // 4. Budgets
+      const budgetsSheetData: any[] = [];
+      moneyBudgets.forEach((b) => {
+        if (b.categories.length === 0) {
+          budgetsSheetData.push({
+            'Budget Name': b.name,
+            Period: b.period,
+            'Start Date': b.startDate.split('T')[0],
+            'End Date': b.endDate.split('T')[0],
+            'Total Limit': b.totalLimit,
+            'Category Name': '',
+            'Category Icon': '',
+            'Category Color': '',
+            'Category Limit': 0,
+            'Category Spent': 0,
+            'Is Active': b.isActive ? 'YES' : 'NO',
+          });
+        } else {
+          b.categories.forEach((cat) => {
+            budgetsSheetData.push({
+              'Budget Name': b.name,
+              Period: b.period,
+              'Start Date': b.startDate.split('T')[0],
+              'End Date': b.endDate.split('T')[0],
+              'Total Limit': b.totalLimit,
+              'Category Name': cat.name,
+              'Category Icon': cat.icon,
+              'Category Color': cat.color,
+              'Category Limit': cat.limit,
+              'Category Spent': cat.spent,
+              'Is Active': b.isActive ? 'YES' : 'NO',
+            });
+          });
+        }
+      });
+      const worksheetBudgets = XLSX.utils.json_to_sheet(budgetsSheetData);
+
+      // 5. Categories
+      const categoriesSheetData: any[] = [];
+      (storeCategories.income || []).forEach((name) => {
+        categoriesSheetData.push({ Type: 'INCOME', 'Category Name': name });
+      });
+      (storeCategories.expense || []).forEach((name) => {
+        categoriesSheetData.push({ Type: 'EXPENSE', 'Category Name': name });
+      });
+      const worksheetCategories = XLSX.utils.json_to_sheet(categoriesSheetData);
+
+      // 6. EMI Payments
+      const loanMap = new Map(moneyLoans.map((l) => [l.id, l.name]));
+      const emiSheetData = moneyEmiPayments.map((p) => ({
+        'Loan Name': loanMap.get(p.loanId) || 'Unknown Loan',
+        Amount: p.amount,
+        'Principal Portion': p.principalPortion,
+        'Interest Portion': p.interestPortion,
+        Date: p.date.split('T')[0],
+        Status: p.status.toUpperCase(),
+      }));
+      const worksheetEmi = XLSX.utils.json_to_sheet(emiSheetData);
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheetTxs, 'Transactions');
+      XLSX.utils.book_append_sheet(workbook, worksheetAccs, 'Accounts');
+      XLSX.utils.book_append_sheet(workbook, worksheetLoans, 'Loans');
+      XLSX.utils.book_append_sheet(workbook, worksheetBudgets, 'Budgets');
+      XLSX.utils.book_append_sheet(workbook, worksheetCategories, 'Categories');
+      XLSX.utils.book_append_sheet(workbook, worksheetEmi, 'EMIPayments');
+
+      const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+      const filename = `Gainbase_Money_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
       const fileUri = `${FileSystem.cacheDirectory}${filename}`;
 
-      await FileSystem.writeAsStringAsync(fileUri, csvOutput, {
-        encoding: FileSystem.EncodingType.UTF8,
+      await FileSystem.writeAsStringAsync(fileUri, wbout, {
+        encoding: FileSystem.EncodingType.Base64,
       });
 
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(fileUri, {
-          mimeType: 'text/csv',
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           dialogTitle: 'Backup Money Transactions',
-          UTI: 'public.comma-separated-values-text',
+          UTI: 'com.microsoft.excel.xlsx',
         });
       } else {
         Alert.alert('Sharing not available', 'Sharing is not available on this device.');
@@ -263,27 +456,44 @@ export default function ProfileScreen() {
       const fileName = result.assets[0].name.toLowerCase();
       const isCsv = fileName.endsWith('.csv');
 
-      let jsonData;
+      let accountsDataList: any[] = [];
+      let transactionsDataList: any[] = [];
+      let loansDataList: any[] = [];
+      let budgetsDataList: any[] = [];
+      let categoriesDataList: any[] = [];
+      let emiDataList: any[] = [];
 
-      if (isCsv) {
-        const fileContent = await FileSystem.readAsStringAsync(fileUri, {
-          encoding: FileSystem.EncodingType.UTF8,
-        });
-        const workbook = XLSX.read(fileContent, { type: 'string' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        jsonData = XLSX.utils.sheet_to_json(worksheet);
-      } else {
+      if (!isCsv) {
         const fileContent = await FileSystem.readAsStringAsync(fileUri, {
           encoding: FileSystem.EncodingType.Base64,
         });
         const workbook = XLSX.read(fileContent, { type: 'base64' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        const getSheetData = (sheetNameSub: string) => {
+          const sheetName = workbook.SheetNames.find(
+            (name) => name.toLowerCase().includes(sheetNameSub.toLowerCase())
+          );
+          if (sheetName) {
+            return XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]) || [];
+          }
+          return [];
+        };
+
+        transactionsDataList = getSheetData('transaction') || getSheetData('cashflow') || XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]) || [];
+        accountsDataList = getSheetData('account');
+        loansDataList = getSheetData('loan');
+        budgetsDataList = getSheetData('budget');
+        categoriesDataList = getSheetData('categor');
+        emiDataList = getSheetData('emi');
+      } else {
+        const fileContent = await FileSystem.readAsStringAsync(fileUri, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+        const workbook = XLSX.read(fileContent, { type: 'string' });
+        transactionsDataList = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]) || [];
       }
 
-      if (!jsonData || jsonData.length === 0) {
+      if (transactionsDataList.length === 0 && accountsDataList.length === 0) {
         Alert.alert('Empty File', 'The imported file contains no data.');
         return;
       }
@@ -306,11 +516,205 @@ export default function ProfileScreen() {
         return new Date().toISOString();
       };
 
-      const currentAccounts = [...moneyAccounts];
-      const newTransactions: any[] = [];
-      const categoriesToAdd: { type: 'income' | 'expense'; name: string }[] = [];
+      const newCategories: { income: string[]; expense: string[] } = { income: [], expense: [] };
+      if (categoriesDataList.length > 0) {
+        categoriesDataList.forEach((row: any) => {
+          const type = String(row.Type || row.type || '').trim().toLowerCase();
+          const catName = String(row['Category Name'] || row.name || '').trim();
+          if (catName) {
+            if (type.includes('income') || type === 'in') {
+              if (!newCategories.income.includes(catName)) newCategories.income.push(catName);
+            } else {
+              if (!newCategories.expense.includes(catName)) newCategories.expense.push(catName);
+            }
+          }
+        });
+      } else {
+        newCategories.income = [...storeCategories.income];
+        newCategories.expense = [...storeCategories.expense];
+      }
 
-      for (const row of jsonData) {
+      const newAccounts: Account[] = [];
+      const accountNameToIdMap = new Map<string, string>();
+
+      if (accountsDataList.length > 0) {
+        accountsDataList.forEach((row: any) => {
+          const name = String(row['Account Name'] || row.name || row.Account || '').trim();
+          const rawType = String(row.Type || row.type || 'wallet').trim().toLowerCase();
+          const balance = Number(row.Balance || row.balance || 0);
+          const icon = String(row.Icon || row.icon || 'wallet').trim();
+          const color = String(row.Color || row.color || '#007AFF').trim();
+
+          if (!name) return;
+
+          let type: AccountType = 'wallet';
+          if (['wallet', 'savings', 'investment', 'credit_card'].includes(rawType)) {
+            type = rawType as AccountType;
+          }
+
+          const id = Math.random().toString(36).substring(2, 9);
+          newAccounts.push({
+            id,
+            name,
+            type,
+            balance,
+            icon,
+            color,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            isArchived: false,
+          });
+          accountNameToIdMap.set(name.toLowerCase(), id);
+        });
+      } else {
+        moneyAccounts.forEach((acc) => {
+          newAccounts.push({ ...acc });
+          accountNameToIdMap.set(acc.name.toLowerCase(), acc.id);
+        });
+      }
+
+      const newLoans: Loan[] = [];
+      const loanNameToIdMap = new Map<string, string>();
+
+      if (loansDataList.length > 0) {
+        loansDataList.forEach((row: any) => {
+          const name = String(row['Loan Name'] || row.name || '').trim();
+          const lenderName = String(row['Lender Name'] || row.lenderName || '').trim();
+          const principal = Number(row.Principal || row.principalAmount || 0);
+          const outstanding = Number(row.Outstanding || row.outstandingAmount || 0);
+          const rate = Number(row['Interest Rate'] || row.interestRate || 0);
+          const tenure = Number(row['Tenure Months'] || row.tenureMonths || 0);
+          const start = ensureISOString(row['Start Date'] || row.startDate);
+          const end = ensureISOString(row['End Date'] || row.endDate);
+          const linkedAccName = String(row['Linked Account'] || row.linkedAccount || '').trim();
+          const rawType = String(row.Type || row.type || 'other').trim().toLowerCase();
+          const isActive = String(row['Is Active'] || row.isActive || 'YES').trim().toUpperCase() === 'YES';
+
+          if (!name) return;
+
+          let type: 'home' | 'car' | 'personal' | 'education' | 'other' = 'other';
+          if (['home', 'car', 'personal', 'education', 'other'].includes(rawType)) {
+            type = rawType as any;
+          }
+
+          const linkedAccountId = linkedAccName ? accountNameToIdMap.get(linkedAccName.toLowerCase()) : undefined;
+          const id = Math.random().toString(36).substring(2, 9);
+
+          newLoans.push({
+            id,
+            name,
+            lenderName,
+            principalAmount: principal,
+            outstandingAmount: outstanding,
+            interestRate: rate,
+            emiAmount: 0,
+            tenureMonths: tenure,
+            startDate: start,
+            endDate: end,
+            linkedAccountId,
+            type,
+            isActive,
+          });
+          loanNameToIdMap.set(name.toLowerCase(), id);
+        });
+      } else {
+        moneyLoans.forEach((l) => {
+          newLoans.push({ ...l });
+          loanNameToIdMap.set(l.name.toLowerCase(), l.id);
+        });
+      }
+
+      const newEmiPayments: EMIPayment[] = [];
+      if (emiDataList.length > 0) {
+        emiDataList.forEach((row: any) => {
+          const loanName = String(row['Loan Name'] || row.loanName || '').trim();
+          const amount = Number(row.Amount || row.amount || 0);
+          const principal = Number(row['Principal Portion'] || row.principalPortion || 0);
+          const interest = Number(row['Interest Portion'] || row.interestPortion || 0);
+          const date = ensureISOString(row.Date || row.date);
+          const statusRaw = String(row.Status || row.status || 'paid').trim().toLowerCase();
+
+          const loanId = loanName ? loanNameToIdMap.get(loanName.toLowerCase()) : undefined;
+          if (!loanId) return;
+
+          let status: 'paid' | 'upcoming' | 'overdue' = 'paid';
+          if (['paid', 'upcoming', 'overdue'].includes(statusRaw)) {
+            status = statusRaw as any;
+          }
+
+          newEmiPayments.push({
+            id: Math.random().toString(36).substring(2, 9),
+            loanId,
+            amount,
+            principalPortion: principal,
+            interestPortion: interest,
+            date,
+            status,
+          });
+        });
+      } else {
+        moneyEmiPayments.forEach((p) => {
+          newEmiPayments.push({ ...p });
+        });
+      }
+
+      const newBudgets: Budget[] = [];
+      if (budgetsDataList.length > 0) {
+        const budgetGroups = new Map<string, any>();
+        budgetsDataList.forEach((row: any) => {
+          const bName = String(row['Budget Name'] || row.name || '').trim();
+          if (!bName) return;
+          if (!budgetGroups.has(bName)) {
+            budgetGroups.set(bName, {
+              name: bName,
+              period: String(row.Period || row.period || 'monthly').trim().toLowerCase(),
+              startDate: ensureISOString(row['Start Date'] || row.startDate),
+              endDate: ensureISOString(row['End Date'] || row.endDate),
+              totalLimit: Number(row['Total Limit'] || row.totalLimit || 0),
+              isActive: String(row['Is Active'] || row.isActive || 'YES').trim().toUpperCase() === 'YES',
+              categories: [],
+            });
+          }
+          const group = budgetGroups.get(bName);
+          const catName = String(row['Category Name'] || '').trim();
+          const catIcon = String(row['Category Icon'] || '🏷️').trim();
+          const catColor = String(row['Category Color'] || '#8E8E93').trim();
+          const catLimit = Number(row['Category Limit'] || 0);
+          const catSpent = Number(row['Category Spent'] || 0);
+
+          if (catName && catLimit > 0) {
+            group.categories.push({
+              id: Math.random().toString(36).substring(2, 9),
+              name: catName,
+              icon: catIcon,
+              color: catColor,
+              limit: catLimit,
+              spent: catSpent,
+            });
+          }
+        });
+
+        budgetGroups.forEach((val) => {
+          newBudgets.push({
+            id: Math.random().toString(36).substring(2, 9),
+            name: val.name,
+            period: val.period,
+            startDate: val.startDate,
+            endDate: val.endDate,
+            totalLimit: val.totalLimit,
+            categories: val.categories,
+            isActive: val.isActive,
+          });
+        });
+      } else {
+        moneyBudgets.forEach((b) => {
+          newBudgets.push({ ...b });
+        });
+      }
+
+      const newTransactions: any[] = [];
+
+      for (const row of transactionsDataList) {
         const dateStr = ensureISOString(row.Date || row.date || row.DATE);
         const rawType = (row.Type || row.type || row.TYPE || '').toLowerCase();
         const amount = Number(row.Amount || row.amount || row.AMOUNT || 0);
@@ -328,58 +732,69 @@ export default function ProfileScreen() {
           type = 'transfer';
         }
 
-        // Find or create primary account
-        let acc = currentAccounts.find((a) => a.name.toLowerCase() === accountName.toLowerCase());
-        if (!acc) {
-          acc = {
-            id: Math.random().toString(36).substring(2, 9),
+        let accId = accountNameToIdMap.get(accountName.toLowerCase());
+        if (!accId) {
+          const newId = Math.random().toString(36).substring(2, 9);
+          const newAcc: Account = {
+            id: newId,
             name: accountName,
             balance: 0,
-            type: 'cash',
+            type: 'wallet',
+            icon: 'wallet',
+            color: '#007AFF',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             isArchived: false,
           };
-          currentAccounts.push(acc);
+          newAccounts.push(newAcc);
+          accountNameToIdMap.set(accountName.toLowerCase(), newId);
+          accId = newId;
         }
+        const acc = newAccounts.find((a) => a.id === accId)!;
 
         let toAccId: string | undefined;
         if (type === 'transfer' && toAccountName) {
-          let toAcc = currentAccounts.find((a) => a.name.toLowerCase() === toAccountName.toLowerCase());
-          if (!toAcc) {
-            toAcc = {
-              id: Math.random().toString(36).substring(2, 9),
+          toAccId = accountNameToIdMap.get(toAccountName.toLowerCase());
+          if (!toAccId) {
+            const newId = Math.random().toString(36).substring(2, 9);
+            const newAcc: Account = {
+              id: newId,
               name: toAccountName,
               balance: 0,
-              type: 'cash',
+              type: 'wallet',
+              icon: 'wallet',
+              color: '#007AFF',
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
               isArchived: false,
             };
-            currentAccounts.push(toAcc);
+            newAccounts.push(newAcc);
+            accountNameToIdMap.set(toAccountName.toLowerCase(), newId);
+            toAccId = newId;
           }
-          toAccId = toAcc.id;
+          const toAcc = newAccounts.find((a) => a.id === toAccId)!;
 
-          // Adjust balances locally
-          acc.balance -= amount;
-          toAcc.balance += amount;
-        } else if (type === 'income') {
-          acc.balance += amount;
-        } else {
-          acc.balance -= amount;
+          if (accountsDataList.length === 0) {
+            acc.balance -= amount;
+            toAcc.balance += amount;
+          }
+        } else if (accountsDataList.length === 0) {
+          if (type === 'income') {
+            acc.balance += amount;
+          } else {
+            acc.balance -= amount;
+          }
         }
 
-        // Check if category is registered in store, otherwise enqueue for addition
         if (type !== 'transfer') {
-          const currentStoreCats = storeCategories[type];
-          if (!currentStoreCats.map((c) => c.toLowerCase()).includes(category.toLowerCase())) {
-            categoriesToAdd.push({ type, name: category });
+          if (!newCategories[type].map((c) => c.toLowerCase()).includes(category.toLowerCase())) {
+            newCategories[type].push(category);
           }
         }
 
         newTransactions.push({
           id: Math.random().toString(36).substring(2, 9),
-          accountId: acc.id,
+          accountId: accId,
           toAccountId: toAccId,
           type,
           amount,
@@ -389,38 +804,36 @@ export default function ProfileScreen() {
         });
       }
 
-      if (newTransactions.length > 0) {
-        // Bulk add imported transactions and updated accounts
-        importMoneyData(newTransactions, currentAccounts);
-
-        // Dynamically add unregistered categories
-        const addedNames = new Set<string>();
-        categoriesToAdd.forEach(({ type, name }) => {
-          const key = `${type}:${name.toLowerCase()}`;
-          if (!addedNames.has(key)) {
-            addCategory(type, name);
-            addedNames.add(key);
-          }
+      if (newTransactions.length > 0 || accountsDataList.length > 0 || loansDataList.length > 0 || budgetsDataList.length > 0) {
+        restoreMoneyData({
+          accounts: newAccounts,
+          transactions: newTransactions,
+          loans: newLoans,
+          emiPayments: newEmiPayments,
+          budgets: newBudgets,
+          categories: newCategories,
         });
 
         Alert.alert(
           'Success',
-          `Successfully imported ${newTransactions.length} transactions and synchronized account balances.`,
+          `Successfully restored all Money Manager accounts, transactions, loans, EMIs, budgets, and categories.`,
         );
       } else {
         Alert.alert(
           'Error',
-          'No valid transactions found in the file. Please check the sample format.',
+          'No valid configurations found in the backup file.',
         );
       }
     } catch (error) {
       console.error('Import Money Error:', error);
       Alert.alert(
         'Import Failed',
-        'Ensure the file matches the money manager sample template format.',
+        'Ensure the file is a valid Gainbase Excel backup file.',
       );
     }
   };
+
+
 
 
   const handleAddCategory = () => {
@@ -536,12 +949,14 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: () => {
             clearAllData();
+            clearAllMoneyData();
             Alert.alert('Success', 'All data has been deleted.');
           },
         },
       ]
     );
   };
+
 
   const handleExport = async () => {
     if (transactions.length === 0) {

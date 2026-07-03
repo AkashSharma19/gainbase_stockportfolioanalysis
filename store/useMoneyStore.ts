@@ -42,6 +42,14 @@ interface MoneyState {
 
   
   importMoneyData: (transactions: MoneyTransaction[], accounts: Account[]) => void;
+  restoreMoneyData: (data: {
+    accounts: Account[];
+    transactions: MoneyTransaction[];
+    loans: Loan[];
+    emiPayments: EMIPayment[];
+    budgets: Budget[];
+    categories: { income: string[]; expense: string[] };
+  }) => void;
 
   // Reset Data
   clearAllMoneyData: () => void;
@@ -63,9 +71,10 @@ export const useMoneyStore = create<MoneyState>()(
       emiPayments: [],
       budgets: [],
       categories: {
-        income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
-        expense: ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other']
+        income: [],
+        expense: []
       },
+
 
 
       // --- Account Actions ---
@@ -228,18 +237,15 @@ export const useMoneyStore = create<MoneyState>()(
           budgets: state.budgets.filter((b) => b.id !== id),
         })),
 
-      // --- Category Actions ---
       addCategory: (type, name) =>
         set((state) => {
-          const current = state.categories?.[type] || (type === 'income' 
-            ? ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'] 
-            : ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other']);
+          const current = state.categories?.[type] || [];
           if (current.includes(name)) return state;
           return {
             categories: {
               ...(state.categories || {
-                income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
-                expense: ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other']
+                income: [],
+                expense: []
               }),
               [type]: [...current, name],
             },
@@ -247,9 +253,7 @@ export const useMoneyStore = create<MoneyState>()(
         }),
       updateCategory: (type, oldName, newName) =>
         set((state) => {
-          const current = state.categories?.[type] || (type === 'income' 
-            ? ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'] 
-            : ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other']);
+          const current = state.categories?.[type] || [];
           const updatedCategories = current.map((c) => (c === oldName ? newName : c));
           const updatedTransactions = state.moneyTransactions.map((tx) => {
             if (tx.type === type && tx.category === oldName) {
@@ -260,8 +264,8 @@ export const useMoneyStore = create<MoneyState>()(
           return {
             categories: {
               ...(state.categories || {
-                income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
-                expense: ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other']
+                income: [],
+                expense: []
               }),
               [type]: updatedCategories,
             },
@@ -270,9 +274,7 @@ export const useMoneyStore = create<MoneyState>()(
         }),
       removeCategory: (type, name) =>
         set((state) => {
-          const current = state.categories?.[type] || (type === 'income' 
-            ? ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'] 
-            : ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other']);
+          const current = state.categories?.[type] || [];
           const updatedCategories = current.filter((c) => c !== name);
           const updatedTransactions = state.moneyTransactions.map((tx) => {
             if (tx.type === type && tx.category === name) {
@@ -283,8 +285,8 @@ export const useMoneyStore = create<MoneyState>()(
           return {
             categories: {
               ...(state.categories || {
-                income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
-                expense: ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other']
+                income: [],
+                expense: []
               }),
               [type]: updatedCategories,
             },
@@ -299,8 +301,17 @@ export const useMoneyStore = create<MoneyState>()(
           accounts: accounts,
         })),
 
-      clearAllMoneyData: () =>
+      restoreMoneyData: (data) =>
+        set(() => ({
+          accounts: data.accounts,
+          moneyTransactions: data.transactions,
+          loans: data.loans,
+          emiPayments: data.emiPayments,
+          budgets: data.budgets,
+          categories: data.categories,
+        })),
 
+      clearAllMoneyData: () =>
         set({
           accounts: [],
           moneyTransactions: [],
@@ -308,8 +319,8 @@ export const useMoneyStore = create<MoneyState>()(
           emiPayments: [],
           budgets: [],
           categories: {
-            income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
-            expense: ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other']
+            income: [],
+            expense: []
           },
         }),
 

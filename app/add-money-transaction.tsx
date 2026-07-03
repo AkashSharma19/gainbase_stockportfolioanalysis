@@ -30,8 +30,8 @@ export default function AddMoneyTransactionScreen() {
   const currColors = Colors[colorScheme];
 
   const storeCategories = useMoneyStore((state) => state.categories) || {
-    income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
-    expense: ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other']
+    income: [],
+    expense: []
   };
 
   const { accounts, moneyTransactions, addMoneyTransaction, updateMoneyTransaction } = useMoneyStore();
@@ -83,22 +83,27 @@ export default function AddMoneyTransactionScreen() {
       }
       
       // Default category
-      setCategory(type === 'income' ? storeCategories.income[0] : storeCategories.expense[0]);
+      const categoriesList = type === 'income' ? storeCategories.income : storeCategories.expense;
+      if (categoriesList && categoriesList.length > 0) {
+        setCategory(categoriesList[0]);
+      } else {
+        setCategory('');
+      }
     }
-  }, [editingTx, storeCategories]);
+  }, [editingTx, type, storeCategories, accounts]);
 
   // Auto-switch categories when type changes
   useEffect(() => {
     if (!editingTx) {
-      if (type === 'income') {
-        setCategory(storeCategories.income[0]);
+      const categoriesList = type === 'income' ? storeCategories.income : storeCategories.expense;
+      if (categoriesList && categoriesList.length > 0) {
+        setCategory(categoriesList[0]);
         setIsCustomCategory(false);
-      } else if (type === 'expense') {
-        setCategory(storeCategories.expense[0]);
-        setIsCustomCategory(false);
+      } else {
+        setCategory('');
       }
     }
-  }, [type, storeCategories]);
+  }, [type, storeCategories, editingTx]);
 
 
   const handleHaptic = () => {
@@ -114,7 +119,7 @@ export default function AddMoneyTransactionScreen() {
     }
 
     if (!accountId) {
-      Alert.alert('Required Field', 'Please select an account.');
+      Alert.alert('Required Field', 'Please select an account. If none exist, please create an account on the Accounts tab first.');
       return;
     }
 
@@ -127,6 +132,12 @@ export default function AddMoneyTransactionScreen() {
       Alert.alert('Invalid Operation', 'Source and destination accounts must be different.');
       return;
     }
+
+    if (type !== 'transfer' && !category) {
+      Alert.alert('Required Field', 'Please select a category. If none exist, please configure categories in the Profile settings.');
+      return;
+    }
+
 
     // Determine final category string
     let finalCategory = category;
