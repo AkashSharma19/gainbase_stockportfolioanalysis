@@ -32,6 +32,7 @@ import { useMoneyStore } from '../store/useMoneyStore';
 import { usePortfolioStore } from '../store/usePortfolioStore';
 import { formatIndianNumber } from '../lib/finance';
 import { MoneyTransaction } from '../types/money';
+import { MoneyActivityCalendar } from './MoneyActivityCalendar';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -104,7 +105,7 @@ export function MoneyDashboard() {
       >
         {/* Net Worth Card (Teal Gradient Theme) */}
         <View style={[styles.netWorthCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-          <ThemedText style={[styles.cardTitle, { color: currColors.textSecondary }]}>
+          <ThemedText type="bold" style={[styles.cardTitle, { color: currColors.textSecondary }]}>
             TOTAL NET WORTH
           </ThemedText>
           <ThemedText style={[styles.netWorthVal, { color: currColors.text }]}>
@@ -137,7 +138,7 @@ export function MoneyDashboard() {
 
         {/* Accounts Summary Cards List */}
         <View style={styles.sectionHeader}>
-          <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+          <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
             ACCOUNTS BY TYPE
           </ThemedText>
         </View>
@@ -157,7 +158,7 @@ export function MoneyDashboard() {
           >
             <View style={styles.cardHeader}>
               <Wallet size={20} color="#00C9A7" />
-              <ThemedText style={[styles.accountTypeLabel, { color: currColors.text }]}>Cash / Wallets</ThemedText>
+              <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Cash / Wallets</ThemedText>
             </View>
             <ThemedText style={[styles.accountTypeBalance, { color: currColors.text }]}>
               {formatAmount(accountTotals.wallet)}
@@ -175,7 +176,7 @@ export function MoneyDashboard() {
           >
             <View style={styles.cardHeader}>
               <Landmark size={20} color="#007AFF" />
-              <ThemedText style={[styles.accountTypeLabel, { color: currColors.text }]}>Savings</ThemedText>
+              <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Savings</ThemedText>
             </View>
             <ThemedText style={[styles.accountTypeBalance, { color: currColors.text }]}>
               {formatAmount(accountTotals.savings)}
@@ -193,7 +194,7 @@ export function MoneyDashboard() {
           >
             <View style={styles.cardHeader}>
               <Activity size={20} color="#AF52DE" />
-              <ThemedText style={[styles.accountTypeLabel, { color: currColors.text }]}>Investments</ThemedText>
+              <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Investments</ThemedText>
             </View>
             <ThemedText style={[styles.accountTypeBalance, { color: currColors.text }]}>
               {formatAmount(accountTotals.investment)}
@@ -211,7 +212,7 @@ export function MoneyDashboard() {
           >
             <View style={styles.cardHeader}>
               <CreditCard size={20} color="#FF9500" />
-              <ThemedText style={[styles.accountTypeLabel, { color: currColors.text }]}>Credit Cards</ThemedText>
+              <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Credit Cards</ThemedText>
             </View>
             <ThemedText style={[styles.accountTypeBalance, { color: currColors.text }]}>
               {formatAmount(accountTotals.credit_card)}
@@ -224,7 +225,7 @@ export function MoneyDashboard() {
         {loans.filter(l => l.isActive).length > 0 ? (
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderNoMargin}>
-              <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+              <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
                 MONTHLY EMI LIABILITIES
               </ThemedText>
               <TouchableOpacity
@@ -233,7 +234,7 @@ export function MoneyDashboard() {
                   router.push('/(tabs)/money-loans');
                 }}
               >
-                <ThemedText style={{ color: '#00C9A7', fontSize: 13, fontFamily: 'Outfit_500Medium' }}>
+                <ThemedText type="medium" style={{ color: '#00C9A7', fontSize: 13 }}>
                   View Loans
                 </ThemedText>
               </TouchableOpacity>
@@ -243,7 +244,7 @@ export function MoneyDashboard() {
               <View style={styles.emiRow}>
                 <Calendar size={22} color="#FF9500" />
                 <View style={styles.emiInfo}>
-                  <ThemedText style={[styles.emiTitleText, { color: currColors.text }]}>
+                  <ThemedText type="semiBold" style={[styles.emiTitleText, { color: currColors.text }]}>
                     Total Monthly EMIs
                   </ThemedText>
                   <ThemedText style={[styles.emiCountText, { color: currColors.textSecondary }]}>
@@ -260,11 +261,11 @@ export function MoneyDashboard() {
 
         {/* Recent Transactions List */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: 16, marginTop: 28, marginBottom: 12 }}>
-          <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary, marginBottom: 0 }]}>
+          <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary, marginBottom: 0 }]}>
             RECENT TRANSACTIONS
           </ThemedText>
           <TouchableOpacity onPress={() => { handleHaptic(); router.push('/all-money-transactions'); }}>
-            <ThemedText style={{ color: '#00C9A7', fontSize: 13, fontFamily: 'Outfit_500Medium' }}>
+            <ThemedText type="medium" style={{ color: '#00C9A7', fontSize: 13 }}>
               View All
             </ThemedText>
           </TouchableOpacity>
@@ -320,7 +321,7 @@ export function MoneyDashboard() {
                       )}
                     </View>
                     <View style={styles.txInfo}>
-                      <ThemedText style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
+                      <ThemedText type="semiBold" style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
                         {tx.type === 'transfer' ? `Transfer: ${account?.name} → ${toAccount?.name}` : tx.category}
                       </ThemedText>
                       <ThemedText style={[styles.txDate, { color: currColors.textSecondary }]}>
@@ -351,6 +352,8 @@ export function MoneyDashboard() {
             })}
           </View>
         )}
+
+        <MoneyActivityCalendar transactions={moneyTransactions} />
       </ScrollView>
     </View>
   );
@@ -379,14 +382,15 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   cardTitle: {
-    fontSize: 11,
-    fontFamily: 'Outfit_500Medium',
+    fontSize: 10,
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
+    textTransform: 'uppercase',
     marginBottom: 8,
   },
   netWorthVal: {
     fontSize: 24,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Outfit_400Regular',
   },
   divider: {
     borderBottomWidth: 1,
@@ -402,12 +406,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summaryLabel: {
-    fontSize: 11,
+    fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
     marginBottom: 4,
   },
   summaryValue: {
     fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_400Regular',
   },
   quickActionsContainer: {
     flexDirection: 'row',
@@ -444,9 +449,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 11,
-    fontFamily: 'Outfit_500Medium',
+    fontSize: 10,
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   horizontalScroll: {
     paddingLeft: 16,
@@ -467,12 +473,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   accountTypeLabel: {
-    fontSize: 11,
-    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
   },
   accountTypeBalance: {
     fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_400Regular',
   },
   sectionContainer: {
     marginTop: 8,
@@ -491,10 +497,11 @@ const styles = StyleSheet.create({
   },
   spentText: {
     fontSize: 18,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_400Regular',
   },
   limitText: {
     fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
     marginTop: 2,
   },
   percentageBadge: {
@@ -505,7 +512,7 @@ const styles = StyleSheet.create({
   },
   percentageText: {
     fontSize: 13,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_500Medium',
   },
   progressBarBackground: {
     height: 8,
@@ -530,11 +537,12 @@ const styles = StyleSheet.create({
   },
   emiCountText: {
     fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
     marginTop: 2,
   },
   emiBurdenText: {
     fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_400Regular',
   },
   emptyTxsCard: {
     marginHorizontal: 16,
@@ -579,11 +587,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_600SemiBold',
   },
   txDate: {
-    fontSize: 11,
+    fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
     marginTop: 2,
   },
   txAmount: {
-    fontSize: 15,
-    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 14,
+    fontFamily: 'Outfit_400Regular',
   },
 });
