@@ -30,8 +30,35 @@ const DEFAULT_ICONS_COLORS: { [key: string]: { icon: string; color: string } } =
   'Other': { icon: '🏷️', color: '#8E8E93' }
 };
 
+const CATEGORY_COLORS = [
+  '#FF3B30', // Red
+  '#007AFF', // Blue
+  '#FF9500', // Orange
+  '#34C759', // Green
+  '#AF52DE', // Purple
+  '#FF2D55', // Pink
+  '#5AC8FA', // Teal
+  '#FFCC00', // Yellow
+  '#5856D6', // Indigo
+  '#00C9A7', // Emerald
+  '#FF5E3A', // Coral red
+  '#9B59B6', // Amethyst
+  '#34495E', // Wet asphalt
+  '#16A085', // Greenish teal
+  '#E67E22', // Carrot
+  '#D35400', // Pumpkin
+];
+
 const getCategoryIconColor = (name: string) => {
-  return DEFAULT_ICONS_COLORS[name] || { icon: '🏷️', color: '#8E8E93' };
+  const meta = DEFAULT_ICONS_COLORS[name];
+  if (meta) return meta;
+  
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % CATEGORY_COLORS.length;
+  return { icon: '🏷️', color: CATEGORY_COLORS[index] };
 };
 
 
