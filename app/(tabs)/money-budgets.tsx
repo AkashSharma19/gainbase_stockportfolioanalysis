@@ -182,7 +182,14 @@ export default function BudgetsScreen() {
                 activeOpacity={0.8}
                 onPress={() => {
                   handleHaptic();
-                  router.push(`/budget-details/${activeBudget.id}`);
+                  router.push({
+                    pathname: '/budget-details/[id]',
+                    params: {
+                      id: activeBudget.id,
+                      year: selectedDate.getFullYear(),
+                      month: selectedDate.getMonth(),
+                    }
+                  });
                 }}
               >
                 <View style={styles.overviewHeader}>
@@ -251,7 +258,14 @@ export default function BudgetsScreen() {
                     activeOpacity={0.7}
                     onPress={() => {
                       handleHaptic();
-                      router.push(`/budget-details/${activeBudget.id}`);
+                      router.push({
+                        pathname: '/budget-details/[id]',
+                        params: {
+                          id: activeBudget.id,
+                          year: selectedDate.getFullYear(),
+                          month: selectedDate.getMonth(),
+                        }
+                      });
                     }}
                   >
                     <View style={styles.catHeader}>

@@ -29,7 +29,8 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function BudgetDetailsScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, year, month } = useLocalSearchParams<{ id: string; year?: string; month?: string }>();
+  
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
 
@@ -45,6 +46,9 @@ export default function BudgetDetailsScreen() {
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
 
+  const selectedYear = useMemo(() => year ? parseInt(year) : new Date().getFullYear(), [year]);
+  const selectedMonth = useMemo(() => month ? parseInt(month) : new Date().getMonth(), [month]);
+
   const budget = useMemo(() => {
     return budgets.find((b) => b.id === id);
   }, [id, budgets]);
@@ -52,7 +56,7 @@ export default function BudgetDetailsScreen() {
   // Compute category spending
   const spendingDetails = useMemo(() => {
     if (!budget) return { totalSpent: 0, categories: [] };
-    const spentMap = getCategorySpending(budget.id);
+    const spentMap = getCategorySpending(budget.id, selectedYear, selectedMonth);
     let totalSpent = 0;
 
     const categoriesWithSpending = budget.categories.map((cat) => {
@@ -68,20 +72,20 @@ export default function BudgetDetailsScreen() {
       totalSpent,
       categories: categoriesWithSpending,
     };
-  }, [budget, getCategorySpending]);
+  }, [budget, getCategorySpending, selectedYear, selectedMonth]);
 
   // Get transactions falling inside the budget period
   const budgetTransactions = useMemo(() => {
     if (!budget) return [];
-    const start = new Date(budget.startDate).getTime();
-    const end = new Date(budget.endDate).getTime();
+    const start = new Date(selectedYear, selectedMonth, 1, 0, 0, 0, 0).getTime();
+    const end = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59, 999).getTime();
 
     return moneyTransactions.filter((tx) => {
       if (tx.type !== 'expense') return false;
       const txTime = new Date(tx.date).getTime();
       return txTime >= start && txTime <= end;
     });
-  }, [budget, moneyTransactions]);
+  }, [budget, moneyTransactions, selectedYear, selectedMonth]);
 
   const formatAmount = (val: number) => {
     if (isPrivacyMode) return '****';

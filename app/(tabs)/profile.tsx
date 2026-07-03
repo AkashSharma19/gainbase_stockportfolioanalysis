@@ -25,6 +25,7 @@ import {
   Check,
 } from 'lucide-react-native';
 import { useMoneyStore } from '@/store/useMoneyStore';
+import { AccountType, Account, Loan, EMIPayment, Budget } from '@/types/money';
 
 
 import React, { useMemo, useState } from 'react';
@@ -548,7 +549,7 @@ export default function ProfileScreen() {
           if (!name) return;
 
           let type: AccountType = 'wallet';
-          if (['wallet', 'savings', 'investment', 'credit_card'].includes(rawType)) {
+          if (['wallet', 'savings', 'investment', 'credit_card', 'emergency_fund'].includes(rawType)) {
             type = rawType as AccountType;
           }
 

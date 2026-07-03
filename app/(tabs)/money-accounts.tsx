@@ -17,6 +17,7 @@ import {
   CreditCard,
   ChevronRight,
   TrendingUp,
+  PiggyBank,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -32,6 +33,7 @@ const TYPE_CONFIG = {
   savings: { label: 'Savings Accounts', color: '#007AFF', icon: Landmark },
   investment: { label: 'Investment Accounts', color: '#AF52DE', icon: Activity },
   credit_card: { label: 'Credit Cards', color: '#FF9500', icon: CreditCard },
+  emergency_fund: { label: 'Emergency Fund', color: '#FF2D55', icon: PiggyBank },
 };
 
 export default function AccountsScreen() {
@@ -50,6 +52,7 @@ export default function AccountsScreen() {
       savings: [],
       investment: [],
       credit_card: [],
+      emergency_fund: [],
     };
     
     accounts.forEach((acc) => {
