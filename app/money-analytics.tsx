@@ -31,16 +31,34 @@ import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+import { CategoryIcon } from '@/components/CategoryIcon';
 
 const DEFAULT_CATEGORY_METADATA: Record<string, { icon: string; color: string }> = {
-  'Food & Dining': { icon: '🍔', color: '#FF3B30' },
-  'Rent & Bills': { icon: '🏠', color: '#007AFF' },
-  'Shopping': { icon: '🛍️', color: '#FF9500' },
-  'Entertainment': { icon: '🎬', color: '#AF52DE' },
-  'Travel': { icon: '🚗', color: '#34C759' },
-  'Medical': { icon: '💊', color: '#FF2D55' },
-  'Education': { icon: '🎓', color: '#5AC8FA' },
-  'Other': { icon: '🏷️', color: '#8E8E93' },
+  'Food & Dining': { icon: 'Utensils', color: '#FF3B30' },
+  'Rent & Bills': { icon: 'Receipt', color: '#007AFF' },
+  'Shopping': { icon: 'ShoppingBag', color: '#FF9500' },
+  'Entertainment': { icon: 'Clapperboard', color: '#AF52DE' },
+  'Travel': { icon: 'Plane', color: '#34C759' },
+  'Medical': { icon: 'Pill', color: '#FF2D55' },
+  'Education': { icon: 'GraduationCap', color: '#5AC8FA' },
+  'Food': { icon: 'UtensilsCrossed', color: '#FF3B30' },
+  'Junk': { icon: 'Cookie', color: '#FF9500' },
+  'Shopping - Electronics': { icon: 'Laptop', color: '#5856D6' },
+  'Shopping - Clothes': { icon: 'Shirt', color: '#FF2D55' },
+  'Subscriptions - OTT': { icon: 'Tv', color: '#AF52DE' },
+  'Subscriptions - WiFi': { icon: 'Wifi', color: '#5AC8FA' },
+  'House': { icon: 'Home', color: '#34C759' },
+  'Electricity Bill': { icon: 'Zap', color: '#FFCC00' },
+  'Transport - Fuel': { icon: 'Fuel', color: '#FF9500' },
+  'Transport - Cab': { icon: 'Car', color: '#FFCC00' },
+  'Maintainance': { icon: 'Wrench', color: '#8E8E93' },
+  'Maintenance': { icon: 'Wrench', color: '#8E8E93' },
+  'Travel/ Trips': { icon: 'Compass', color: '#007AFF' },
+  'Family': { icon: 'Users', color: '#FF2D55' },
+  'Gifts': { icon: 'Gift', color: '#AF52DE' },
+  'EMI Payments': { icon: 'CalendarRange', color: '#FF9500' },
+  'Others': { icon: 'Tag', color: '#8E8E93' },
+  'Other': { icon: 'Tag', color: '#8E8E93' },
 };
 
 const CATEGORY_COLORS = [
@@ -437,7 +455,7 @@ export default function MoneyAnalyticsScreen() {
                       <View style={styles.holdingRow}>
                         <View style={styles.holdingMain}>
                           <View style={[styles.categoryIconCircle, { backgroundColor: `${item.color}15` }]}>
-                            <ThemedText style={{ fontSize: 16 }}>{item.icon}</ThemedText>
+                            <CategoryIcon name={item.icon} color={item.color} size={16} />
                           </View>
                           <View style={{ flex: 1, paddingRight: 10 }}>
                             <ThemedText type="semiBold" style={[styles.holdingName, { color: currColors.text }]}>
@@ -615,7 +633,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
+    fontFamily: 'Outfit_600SemiBold',
   },
   backBtn: {
     width: 40,

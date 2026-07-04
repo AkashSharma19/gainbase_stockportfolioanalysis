@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -14,7 +14,9 @@ import {
   Trash2,
   ArrowDownLeft,
   ArrowUpRight,
-  Activity,
+  ArrowRightLeft,
+  Info,
+  Layers,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -37,15 +39,22 @@ export default function AllTransactionsScreen() {
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
 
-  // All transactions sorted chronologically (latest first)
-  const sortedTxs = useMemo(() => {
-    return [...moneyTransactions].sort((a, b) => b.date.localeCompare(a.date));
-  }, [moneyTransactions]);
+  // Filter state
+  const [activeFilter, setActiveFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
+
+  // Filter & sort transactions chronologically (latest first)
+  const filteredTxs = useMemo(() => {
+    let list = moneyTransactions;
+    if (activeFilter !== 'all') {
+      list = list.filter((tx) => tx.type === activeFilter);
+    }
+    return [...list].sort((a, b) => b.date.localeCompare(a.date));
+  }, [moneyTransactions, activeFilter]);
 
   const formatAmount = (val: number) => {
-    if (isPrivacyMode) return '****';
+    if (isPrivacyMode) return '••••••';
     const formatted = Math.abs(val).toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
+      minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     });
     const prefix = val < 0 ? '-' : '';
@@ -76,6 +85,8 @@ export default function AllTransactionsScreen() {
     );
   };
 
+  const activeFilterBg = '#00C9A7';
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
       {/* Header */}
@@ -92,16 +103,69 @@ export default function AllTransactionsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
+      {/* Dynamic Filter Chips strip */}
+      <View style={styles.filterStripContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterChipsScroll}
+        >
+          {([
+            { key: 'all', label: 'All', icon: Layers },
+            { key: 'expense', label: 'Expenses', icon: ArrowUpRight },
+            { key: 'income', label: 'Income', icon: ArrowDownLeft },
+            { key: 'transfer', label: 'Transfers', icon: ArrowRightLeft },
+          ] as const).map((filter) => {
+            const IconComponent = filter.icon;
+            const isSelected = activeFilter === filter.key;
+            const iconColor = isSelected ? '#FFFFFF' : currColors.textSecondary;
+            return (
+              <TouchableOpacity
+                key={filter.key}
+                style={[
+                  styles.filterChip,
+                  {
+                    backgroundColor: isSelected ? activeFilterBg : currColors.cardSecondary,
+                    borderColor: isSelected ? activeFilterBg : currColors.border,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingLeft: 10,
+                  },
+                ]}
+                onPress={() => {
+                  handleHaptic();
+                  setActiveFilter(filter.key);
+                }}
+              >
+                <IconComponent size={12} color={iconColor} style={{ marginRight: 6 }} />
+                <ThemedText
+                  style={[
+                    styles.filterChipText,
+                    {
+                      color: isSelected ? '#FFFFFF' : currColors.textSecondary,
+                      fontFamily: isSelected ? 'Outfit_500Medium' : 'Outfit_400Regular',
+                    },
+                  ]}
+                >
+                  {filter.label}
+                </ThemedText>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {sortedTxs.length === 0 ? (
+        {filteredTxs.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center' }}>
-              No transactions logged yet.
+            <Info size={36} color={currColors.textSecondary} style={{ marginBottom: 12 }} />
+            <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', lineHeight: 22 }}>
+              No transactions match the selected filter.
             </ThemedText>
           </View>
         ) : (
           <View style={[styles.txsList, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            {sortedTxs.map((tx, index) => {
+            {filteredTxs.map((tx, index) => {
               const account = accounts.find((a) => a.id === tx.accountId);
               const toAccount = tx.toAccountId ? accounts.find((a) => a.id === tx.toAccountId) : null;
               
@@ -118,12 +182,13 @@ export default function AllTransactionsScreen() {
               if (isTransfer) {
                 typeLabel = `Transfer`;
                 subtitle = `${account?.name || 'Unknown'} → ${toAccount?.name || 'Unknown'}`;
-                txColor = '#FF9500';
+                txColor = currColors.text;
+                displayAmount = tx.amount;
               } else {
                 typeLabel = tx.category;
                 subtitle = account?.name || '';
                 txColor = isIncome ? '#34C759' : '#FF3B30';
-                displayAmount = isIncome ? tx.amount : -tx.amount;
+                displayAmount = tx.amount;
               }
 
               return (
@@ -131,7 +196,7 @@ export default function AllTransactionsScreen() {
                   key={tx.id}
                   style={[
                     styles.txItem,
-                    { borderBottomColor: currColors.border, borderBottomWidth: index === sortedTxs.length - 1 ? 0 : 1 }
+                    { borderBottomColor: currColors.border, borderBottomWidth: index === filteredTxs.length - 1 ? 0 : 1 }
                   ]}
                   activeOpacity={0.7}
                   onPress={() => {
@@ -146,7 +211,7 @@ export default function AllTransactionsScreen() {
                         {
                           backgroundColor:
                             isTransfer
-                              ? 'rgba(255, 149, 0, 0.1)'
+                              ? 'rgba(142, 142, 147, 0.1)'
                               : isIncome
                               ? 'rgba(52, 199, 89, 0.1)'
                               : 'rgba(255, 59, 48, 0.1)',
@@ -154,7 +219,7 @@ export default function AllTransactionsScreen() {
                       ]}
                     >
                       {isTransfer ? (
-                        <Activity size={18} color="#FF9500" />
+                        <ArrowRightLeft size={18} color="#8E8E93" />
                       ) : isIncome ? (
                         <ArrowDownLeft size={18} color="#34C759" />
                       ) : (
@@ -175,13 +240,13 @@ export default function AllTransactionsScreen() {
 
                   <View style={styles.txRight}>
                     <ThemedText style={[styles.txAmountText, { color: txColor }]}>
-                      {displayAmount > 0 ? '+' : ''}{formatAmount(displayAmount)}
+                      {isIncome ? '+' : isExpense ? '-' : ''}{formatAmount(displayAmount)}
                     </ThemedText>
                     <TouchableOpacity
                       style={styles.deleteTxBtn}
                       onPress={() => handleDeleteTransaction(tx.id)}
                     >
-                      <Trash2 size={14} color={currColors.textSecondary} />
+                      <Trash2 size={13} color={currColors.textSecondary} />
                     </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
@@ -213,8 +278,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
+  },
+  filterStripContainer: {
+    marginBottom: 8,
+  },
+  filterChipsScroll: {
+    paddingLeft: 16,
+    paddingRight: 8,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  filterChipText: {
+    fontSize: 12,
   },
   scrollContent: {
     paddingBottom: 40,
@@ -223,8 +305,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    padding: 24,
+    padding: 28,
     marginTop: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderStyle: 'dashed',
   },
   txsList: {
     marginHorizontal: 16,
@@ -232,6 +317,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 16,
     marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   txItem: {
     flexDirection: 'row',

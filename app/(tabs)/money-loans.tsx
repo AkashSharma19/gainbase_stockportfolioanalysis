@@ -8,6 +8,7 @@ import {
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Plus,
   Landmark,
@@ -17,6 +18,7 @@ import {
   User,
   GraduationCap,
   ChevronRight,
+  Info,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -54,7 +56,7 @@ export default function LoansScreen() {
   }, [activeLoans]);
 
   const formatAmount = (val: number) => {
-    if (isPrivacyMode) return '****';
+    if (isPrivacyMode) return '••••••';
     const formatted = Math.abs(val).toLocaleString('en-IN', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
@@ -82,7 +84,7 @@ export default function LoansScreen() {
       <TouchableOpacity
         key={item.id}
         style={[styles.loanCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-        activeOpacity={0.7}
+        activeOpacity={0.75}
         onPress={() => {
           handleHaptic();
           router.push(`/loan-details/${item.id}`);
@@ -91,7 +93,7 @@ export default function LoansScreen() {
         <View style={styles.loanHeader}>
           <View style={styles.headerLeft}>
             <View style={[styles.iconBox, { backgroundColor: `${config.color}15` }]}>
-              <IconComponent size={20} color={config.color} />
+              <IconComponent size={18} color={config.color} />
             </View>
             <View style={styles.loanTitleInfo}>
               <ThemedText type="semiBold" style={[styles.loanName, { color: currColors.text }]} numberOfLines={1}>
@@ -108,20 +110,20 @@ export default function LoansScreen() {
         <View style={styles.loanAmountsRow}>
           <View style={styles.amountCol}>
             <ThemedText style={[styles.amountLabel, { color: currColors.textSecondary }]}>Outstanding</ThemedText>
-            <ThemedText style={[styles.amountValue, { color: currColors.text }]}>
+            <ThemedText style={[styles.amountValue, { color: currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
               {formatAmount(item.outstandingAmount)}
             </ThemedText>
           </View>
           <View style={styles.amountCol}>
             <ThemedText style={[styles.amountLabel, { color: currColors.textSecondary }]}>Principal</ThemedText>
-            <ThemedText style={[styles.amountValueSecondary, { color: currColors.text }]}>
+            <ThemedText style={[styles.amountValueSecondary, { color: currColors.textSecondary, fontFamily: 'Outfit_400Regular' }]}>
               {formatAmount(item.principalAmount)}
             </ThemedText>
           </View>
           <View style={styles.amountColEnd}>
             <ThemedText style={[styles.amountLabel, { color: currColors.textSecondary }]}>Monthly EMI</ThemedText>
-            <ThemedText style={[styles.emiValText, { color: config.color }]}>
-              {formatAmount(item.emiAmount)}/mo
+            <ThemedText style={[styles.emiValText, { color: config.color, fontFamily: 'Outfit_700Bold' }]}>
+              {formatAmount(item.emiAmount)}
             </ThemedText>
           </View>
         </View>
@@ -137,10 +139,10 @@ export default function LoansScreen() {
             />
           </View>
           <View style={styles.progressLabels}>
-            <ThemedText style={[styles.progressText, { color: currColors.textSecondary }]}>
+            <ThemedText style={[styles.progressText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
               {paidPercentage.toFixed(0)}% Paid
             </ThemedText>
-            <ThemedText style={[styles.progressText, { color: currColors.textSecondary }]}>
+            <ThemedText style={[styles.progressText, { color: currColors.textSecondary, fontFamily: 'Outfit_400Regular' }]}>
               {formatAmount(item.outstandingAmount)} remaining
             </ThemedText>
           </View>
@@ -148,6 +150,10 @@ export default function LoansScreen() {
       </TouchableOpacity>
     );
   };
+
+  const overviewGradient = colorScheme === 'dark'
+    ? ['#1C1C1E', '#2C2C2E'] as const
+    : ['#FFFFFF', '#F2F2F7'] as const;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
@@ -168,15 +174,22 @@ export default function LoansScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Total EMI Burden Card */}
-        <View style={[styles.burdenCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+        {/* Total EMI Burden Card with Gradient */}
+        <LinearGradient
+          colors={overviewGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[styles.burdenCard, { borderColor: currColors.border }]}
+        >
           <View style={styles.burdenRow}>
-            <Calendar size={24} color="#FF9500" />
+            <View style={[styles.iconRoundBox, { backgroundColor: '#FF950015', width: 44, height: 44 }]}>
+              <Calendar size={22} color="#FF9500" />
+            </View>
             <View style={styles.burdenInfo}>
               <ThemedText type="bold" style={[styles.burdenTitle, { color: currColors.textSecondary }]}>
                 TOTAL MONTHLY EMI BURDEN
               </ThemedText>
-              <ThemedText style={[styles.burdenValue, { color: currColors.text }]}>
+              <ThemedText style={[styles.burdenValue, { color: currColors.text, fontFamily: 'Outfit_700Bold' }]}>
                 {formatAmount(monthlyEMI)}
               </ThemedText>
             </View>
@@ -186,11 +199,11 @@ export default function LoansScreen() {
             <ThemedText style={[styles.footerLabel, { color: currColors.textSecondary }]}>
               Total Outstanding Debt:
             </ThemedText>
-            <ThemedText style={[styles.footerValue, { color: '#FF3B30' }]}>
+            <ThemedText style={[styles.footerValue, { color: '#FF3B30', fontFamily: 'Outfit_700Bold' }]}>
               {formatAmount(totalOutstanding)}
             </ThemedText>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Active Loans */}
         <View style={styles.sectionHeader}>
@@ -201,9 +214,9 @@ export default function LoansScreen() {
 
         {activeLoans.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            <Landmark size={32} color={currColors.textSecondary} style={{ marginBottom: 12 }} />
-            <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center' }}>
-              No active loans tracked. Tap the '+' button above to log a Home loan, Car loan, etc.
+            <Info size={44} color={currColors.textSecondary} style={{ marginBottom: 12 }} />
+            <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', lineHeight: 22, paddingHorizontal: 16 }}>
+              No active loans tracked. Tap the '+' button above to log a Home loan, Car loan, or other EMIs.
             </ThemedText>
           </View>
         ) : (
@@ -212,7 +225,7 @@ export default function LoansScreen() {
 
         {/* Completed Loans */}
         {completedLoans.length > 0 ? (
-          <View style={{ marginTop: 20 }}>
+          <View style={{ marginTop: 24 }}>
             <View style={styles.sectionHeader}>
               <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
                 PAID OFF / COMPLETED LOANS ({completedLoans.length})
@@ -238,18 +251,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
   },
   addBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 110,
   },
   burdenCard: {
     marginHorizontal: 16,
@@ -257,7 +270,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 20,
     marginTop: 8,
-    marginBottom: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   burdenRow: {
     flexDirection: 'row',
@@ -267,15 +285,15 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   burdenTitle: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 4,
   },
   burdenValue: {
-    fontSize: 24,
-    fontFamily: 'Outfit_400Regular',
+    fontSize: 26,
+    letterSpacing: -0.5,
   },
   divider: {
     borderBottomWidth: 1,
@@ -292,15 +310,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_400Regular',
   },
   footerValue: {
-    fontSize: 15,
-    fontFamily: 'Outfit_400Regular',
+    fontSize: 16,
   },
   sectionHeader: {
     marginHorizontal: 16,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
     textTransform: 'uppercase',
@@ -309,8 +326,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    padding: 24,
+    padding: 28,
     alignItems: 'center',
+    borderStyle: 'dashed',
   },
   loanCard: {
     marginHorizontal: 16,
@@ -318,6 +336,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 16,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   loanHeader: {
     flexDirection: 'row',
@@ -332,12 +355,12 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   iconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
   },
   loanTitleInfo: {
     flex: 1,
@@ -370,16 +393,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   amountValue: {
-    fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
+    fontSize: 15,
   },
   amountValueSecondary: {
     fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
   },
   emiValText: {
-    fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
+    fontSize: 15,
   },
   progressContainer: {
     width: '100%',
@@ -400,5 +420,10 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 10,
+  },
+  iconRoundBox: {
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

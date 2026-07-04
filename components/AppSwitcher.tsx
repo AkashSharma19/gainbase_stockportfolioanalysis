@@ -8,6 +8,8 @@ import Animated, {
   interpolateColor,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { TrendingUp, Wallet } from 'lucide-react-native';
+
 import { useAppModeStore, AppMode } from '../store/useAppModeStore';
 import { ThemedText } from './ThemedText';
 import { useColorScheme } from './useColorScheme';
@@ -23,13 +25,13 @@ export function AppSwitcher() {
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
 
-  // Reanimated shared values
+  // Shared value going from 0 (investments) to 1 (money)
   const transitionVal = useSharedValue(activeMode === 'investments' ? 0 : 1);
 
   useEffect(() => {
     transitionVal.value = withTiming(activeMode === 'investments' ? 0 : 1, {
-      duration: 250,
-      easing: Easing.bezier(0.25, 1, 0.5, 1), // matches dashboard smooth slide
+      duration: 280,
+      easing: Easing.bezier(0.25, 1, 0.5, 1),
     });
   }, [activeMode]);
 
@@ -38,23 +40,46 @@ export function AppSwitcher() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsTransitioning(true);
     
-    // Switch the mode state
     setActiveMode(mode);
     
-    // Wait for the fade out to start/finish before resetting isTransitioning (handled in screens or root view)
     setTimeout(() => {
       setIsTransitioning(false);
     }, 350);
   };
 
-  // Animated slider style
+  // Slider style with smooth horizontal translation and background color interpolation
   const sliderStyle = useAnimatedStyle(() => {
+    const backgroundColor = interpolateColor(
+      transitionVal.value,
+      [0, 1],
+      ['#007AFF', '#00C9A7'] // Investments = Blue, Money = Teal
+    );
     return {
       transform: [
         {
-          translateX: transitionVal.value * (TAB_WIDTH - 2), // accounts for inner margin/border
+          translateX: transitionVal.value * (TAB_WIDTH - 4),
         },
       ],
+      backgroundColor,
+    };
+  });
+
+  // Animated styles for tab text and icons to scale and fade smoothly
+  const investmentsTabStyle = useAnimatedStyle(() => {
+    const opacity = 1 - (transitionVal.value * 0.4); // 1.0 (active) -> 0.6 (inactive)
+    const scale = 1.03 - (transitionVal.value * 0.03); // 1.03 -> 1.0
+    return {
+      opacity,
+      transform: [{ scale }],
+    };
+  });
+
+  const moneyTabStyle = useAnimatedStyle(() => {
+    const opacity = 0.6 + (transitionVal.value * 0.4); // 0.6 (inactive) -> 1.0 (active)
+    const scale = 1.0 + (transitionVal.value * 0.03); // 1.0 -> 1.03
+    return {
+      opacity,
+      transform: [{ scale }],
     };
   });
 
@@ -74,7 +99,6 @@ export function AppSwitcher() {
           styles.slider,
           {
             width: TAB_WIDTH - 4,
-            backgroundColor: activeMode === 'investments' ? '#007AFF' : '#00C9A7',
           },
           sliderStyle,
         ]}
@@ -86,17 +110,20 @@ export function AppSwitcher() {
         activeOpacity={0.9}
         onPress={() => handleSwitch('investments')}
       >
-        <ThemedText
-          style={[
-            styles.tabText,
-            {
-              color: activeMode === 'investments' ? '#FFFFFF' : currColors.textSecondary,
-              fontFamily: activeMode === 'investments' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
-            },
-          ]}
-        >
-          📈 Investments
-        </ThemedText>
+        <Animated.View style={[styles.tabContent, investmentsTabStyle]}>
+          <TrendingUp size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+          <ThemedText
+            style={[
+              styles.tabText,
+              {
+                color: '#FFFFFF',
+                fontFamily: activeMode === 'investments' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+              },
+            ]}
+          >
+            Investments
+          </ThemedText>
+        </Animated.View>
       </TouchableOpacity>
 
       {/* Money Manager Tab */}
@@ -105,17 +132,20 @@ export function AppSwitcher() {
         activeOpacity={0.9}
         onPress={() => handleSwitch('money')}
       >
-        <ThemedText
-          style={[
-            styles.tabText,
-            {
-              color: activeMode === 'money' ? '#FFFFFF' : currColors.textSecondary,
-              fontFamily: activeMode === 'money' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
-            },
-          ]}
-        >
-          💰 Money Manager
-        </ThemedText>
+        <Animated.View style={[styles.tabContent, moneyTabStyle]}>
+          <Wallet size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
+          <ThemedText
+            style={[
+              styles.tabText,
+              {
+                color: '#FFFFFF',
+                fontFamily: activeMode === 'money' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+              },
+            ]}
+          >
+            Money Manager
+          </ThemedText>
+        </Animated.View>
       </TouchableOpacity>
     </View>
   );
@@ -132,6 +162,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 3,
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   slider: {
     position: 'absolute',
@@ -141,8 +176,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
+    shadowOpacity: 0.16,
+    shadowRadius: 4,
     elevation: 3,
   },
   tab: {
@@ -151,6 +186,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,
+  },
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabText: {
     fontSize: 13,

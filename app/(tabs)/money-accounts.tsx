@@ -4,11 +4,11 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Plus,
   Wallet,
@@ -16,17 +16,17 @@ import {
   Activity,
   CreditCard,
   ChevronRight,
-  TrendingUp,
   PiggyBank,
+  Info,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
-import { BackButton } from '@/components/BackButton';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Account, AccountType } from '@/types/money';
+import { BankLogo } from '@/components/BankLogo';
 
 const TYPE_CONFIG = {
   wallet: { label: 'Cash & Wallets', color: '#00C9A7', icon: Wallet },
@@ -95,7 +95,7 @@ export default function AccountsScreen() {
   }, [accounts]);
 
   const formatAmount = (val: number) => {
-    if (isPrivacyMode) return '****';
+    if (isPrivacyMode) return '••••••';
     const formatted = Math.abs(val).toLocaleString('en-IN', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
@@ -109,11 +109,11 @@ export default function AccountsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const renderAccountItem = (item: Account) => {
+  const renderAccountItem = (item: Account, isLast: boolean) => {
     const config = TYPE_CONFIG[item.type];
     const IconComponent = config.icon;
     const isCreditCard = item.type === 'credit_card';
-    
+
     // Find outstanding principal blocked on this credit card from linked loans
     const blockedAmount = isCreditCard
       ? loans.filter(l => l.isActive && l.linkedAccountId === item.id).reduce((sum, l) => sum + l.outstandingAmount, 0)
@@ -128,8 +128,11 @@ export default function AccountsScreen() {
     return (
       <TouchableOpacity
         key={item.id}
-        style={[styles.accountCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-        activeOpacity={0.7}
+        style={[
+          styles.accountListItem,
+          !isLast && { borderBottomWidth: 1, borderBottomColor: currColors.border }
+        ]}
+        activeOpacity={0.75}
         onPress={() => {
           handleHaptic();
           router.push(`/account-details/${item.id}`);
@@ -137,26 +140,31 @@ export default function AccountsScreen() {
       >
         <View style={styles.cardMainRow}>
           <View style={styles.cardLeft}>
-            <View style={[styles.iconWrapper, { backgroundColor: `${item.color}15` }]}>
-              <IconComponent size={20} color={item.color} />
-            </View>
+            {item.logo ? (
+              <BankLogo logo={item.logo} size={30} style={{ marginRight: 14 }} />
+            ) : (
+              <View style={[styles.iconWrapper, { backgroundColor: `${item.color}15` }]}>
+                <IconComponent size={18} color={item.color} />
+              </View>
+            )}
             <View style={styles.accountInfo}>
               <ThemedText type="semiBold" style={[styles.accountName, { color: currColors.text }]} numberOfLines={1}>
                 {item.name}
               </ThemedText>
               <ThemedText style={[styles.accountSub, { color: currColors.textSecondary }]} numberOfLines={1}>
                 {item.institution || config.label}
-                {item.accountNumber ? ` • ${item.accountNumber}` : ''}
+                {item.accountNumber ? ` • •••• ${item.accountNumber}` : ''}
               </ThemedText>
             </View>
           </View>
 
           <View style={styles.cardRight}>
-            <View style={{ alignItems: 'flex-end', marginRight: 8 }}>
+            <View style={{ alignItems: 'flex-end', marginRight: 10 }}>
               <ThemedText
                 style={[
                   styles.accountBalance,
                   {
+                    fontFamily: 'Outfit_600SemiBold',
                     color: isCreditCard 
                       ? (item.balance < 0 ? '#FF3B30' : currColors.text)
                       : (item.balance < 0 ? '#FF3B30' : currColors.text)
@@ -166,13 +174,13 @@ export default function AccountsScreen() {
                 {formatAmount(item.balance)}
               </ThemedText>
               {isCreditCard && item.creditLimit ? (
-                <View style={{ alignItems: 'flex-end', marginTop: 2 }}>
-                  <ThemedText style={{ fontSize: 10, color: currColors.textSecondary }}>
+                <View style={{ alignItems: 'flex-end', marginTop: 3 }}>
+                  <ThemedText style={{ fontSize: 10, color: currColors.textSecondary, fontFamily: 'Outfit_400Regular' }}>
                     Limit: {formatAmount(item.creditLimit)}
                   </ThemedText>
                   {blockedAmount > 0 && (
-                    <ThemedText type="medium" style={{ fontSize: 9, color: '#FF9500', marginTop: 1 }}>
-                      Blocked (EMI): {formatAmount(blockedAmount)}
+                    <ThemedText type="medium" style={{ fontSize: 9, color: '#FF9500', marginTop: 1, fontFamily: 'Outfit_500Medium' }}>
+                      Blocked: {formatAmount(blockedAmount)}
                     </ThemedText>
                   )}
                 </View>
@@ -195,11 +203,21 @@ export default function AccountsScreen() {
                 ]} 
               />
             </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+              <ThemedText style={{ fontSize: 9, color: currColors.textSecondary }}>Utilization</ThemedText>
+              <ThemedText style={{ fontSize: 9, color: utilization > 80 ? '#FF3B30' : currColors.textSecondary }}>
+                {utilization.toFixed(0)}%
+              </ThemedText>
+            </View>
           </View>
         ) : null}
       </TouchableOpacity>
     );
   };
+
+  const overviewGradient = colorScheme === 'dark'
+    ? ['#1C1C1E', '#2C2C2E'] as const
+    : ['#FFFFFF', '#F2F2F7'] as const;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
@@ -220,18 +238,48 @@ export default function AccountsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Aggregate Overview Bar */}
-        <View style={[styles.overviewBar, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-          <View style={styles.overviewCol}>
-            <ThemedText style={[styles.overviewLabel, { color: currColors.textSecondary }]}>Total Assets</ThemedText>
-            <ThemedText style={[styles.overviewVal, { color: '#00C9A7' }]}>{formatAmount(summary.totalAssets)}</ThemedText>
+        {/* Aggregate Overview Gradient Bar */}
+        <LinearGradient
+          colors={colorScheme === 'dark' ? ['#0A2540', '#001529'] : ['#F4F9FF', '#EAF2F9']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.premiumOverviewCard, { borderColor: currColors.border }]}
+        >
+          <View style={styles.netWorthHeader}>
+            <ThemedText style={[styles.netWorthLabel, { color: colorScheme === 'dark' ? 'rgba(255,255,255,0.7)' : currColors.textSecondary }]}>
+              NET WORTH
+            </ThemedText>
+            <ThemedText style={[styles.netWorthVal, { color: colorScheme === 'dark' ? '#FFFFFF' : currColors.text, fontFamily: 'Outfit_500Medium' }]}>
+              {formatAmount(summary.totalAssets - summary.totalLiabilities)}
+            </ThemedText>
           </View>
-          <View style={[styles.verticalDivider, { borderColor: currColors.border }]} />
-          <View style={styles.overviewCol}>
-            <ThemedText style={[styles.overviewLabel, { color: currColors.textSecondary }]}>Total Card Debt</ThemedText>
-            <ThemedText style={[styles.overviewVal, { color: '#FF3B30' }]}>{formatAmount(summary.totalLiabilities)}</ThemedText>
+          
+          <View style={[styles.cardDivider, { backgroundColor: currColors.border }]} />
+          
+          <View style={styles.metricsRow}>
+            <View style={styles.metricItem}>
+              <View style={styles.metricDotText}>
+                <View style={[styles.metricDot, { backgroundColor: '#00C9A7' }]} />
+                <ThemedText style={[styles.metricLabel, { color: currColors.textSecondary }]}>Total Assets</ThemedText>
+              </View>
+              <ThemedText style={[styles.metricVal, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+                {formatAmount(summary.totalAssets)}
+              </ThemedText>
+            </View>
+            
+            <View style={[styles.verticalDivider, { borderColor: currColors.border, height: 24 }]} />
+            
+            <View style={styles.metricItem}>
+              <View style={styles.metricDotText}>
+                <View style={[styles.metricDot, { backgroundColor: '#FF3B30' }]} />
+                <ThemedText style={[styles.metricLabel, { color: currColors.textSecondary }]}>Liabilities</ThemedText>
+              </View>
+              <ThemedText style={[styles.metricVal, { color: '#FF3B30', fontFamily: 'Outfit_600SemiBold' }]}>
+                {formatAmount(summary.totalLiabilities)}
+              </ThemedText>
+            </View>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Render accounts grouped by type */}
         {(Object.keys(TYPE_CONFIG) as AccountType[]).map((type) => {
@@ -244,15 +292,17 @@ export default function AccountsScreen() {
               <ThemedText type="bold" style={[styles.groupTitle, { color: currColors.textSecondary }]}>
                 {config.label.toUpperCase()} ({list.length})
               </ThemedText>
-              {list.map(renderAccountItem)}
+              <View style={[styles.groupWrapperCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+                {list.map((item, index) => renderAccountItem(item, index === list.length - 1))}
+              </View>
             </View>
           );
         })}
 
         {accounts.filter(a => !a.isArchived).length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Wallet size={48} color={currColors.textSecondary} style={{ marginBottom: 16 }} />
-            <ThemedText style={[styles.emptyText, { color: currColors.textSecondary }]}>
+            <Info size={44} color={currColors.textSecondary} style={{ marginBottom: 16 }} />
+            <ThemedText style={[styles.emptyText, { color: currColors.textSecondary, fontFamily: 'Outfit_400Regular', lineHeight: 22 }]}>
               No accounts added yet. Tap the '+' button at the top to add your wallet, bank accounts, or credit cards.
             </ThemedText>
           </View>
@@ -274,62 +324,105 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
   },
   addBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  overviewBar: {
-    flexDirection: 'row',
+  premiumOverviewCard: {
     marginHorizontal: 16,
-    borderRadius: 18,
+    borderRadius: 24,
     borderWidth: 1,
-    paddingVertical: 14,
+    padding: 20,
     marginTop: 8,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  netWorthHeader: {
+    alignItems: 'center',
     marginBottom: 16,
   },
-  overviewCol: {
+  netWorthLabel: {
+    fontSize: 10,
+    fontFamily: 'Outfit_500Medium',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  netWorthVal: {
+    fontSize: 28,
+  },
+  cardDivider: {
+    height: 1,
+    width: '100%',
+    opacity: 0.15,
+    marginBottom: 16,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metricItem: {
     flex: 1,
     alignItems: 'center',
   },
-  overviewLabel: {
-    fontSize: 11,
+  metricDotText: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 4,
   },
-  overviewVal: {
-    fontSize: 16,
+  metricDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  metricLabel: {
+    fontSize: 11,
     fontFamily: 'Outfit_400Regular',
+  },
+  metricVal: {
+    fontSize: 15,
   },
   verticalDivider: {
     borderRightWidth: 1,
-    height: '100%',
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 110,
   },
   groupContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   groupTitle: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginHorizontal: 18,
-    marginBottom: 8,
-  },
-  accountCard: {
-    flexDirection: 'column',
-    marginHorizontal: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
+    marginHorizontal: 20,
     marginBottom: 10,
+  },
+  groupWrapperCard: {
+    marginHorizontal: 16,
+    borderRadius: 22,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  accountListItem: {
+    flexDirection: 'column',
+    padding: 16,
   },
   cardMainRow: {
     flexDirection: 'row',
@@ -343,12 +436,12 @@ const styles = StyleSheet.create({
     flex: 1.2,
   },
   iconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
   },
   accountInfo: {
     flex: 1,
@@ -369,32 +462,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   accountBalance: {
-    fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
+    fontSize: 15,
   },
   utilizationContainer: {
     width: '100%',
     marginTop: 12,
   },
   progressBarBG: {
-    height: 5,
-    borderRadius: 2.5,
+    height: 6,
+    borderRadius: 3,
     width: '100%',
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 2.5,
+    borderRadius: 3,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    marginTop: 80,
+    paddingHorizontal: 36,
+    marginTop: 100,
   },
   emptyText: {
     fontSize: 14,
     textAlign: 'center',
-    lineHeight: 20,
   },
 });

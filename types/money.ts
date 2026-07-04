@@ -8,6 +8,7 @@ export interface Account {
   icon: string;              // Lucide icon name or emoji representation
   color: string;             // Hex color code for branding/charts
   institution?: string;      // e.g. "SBI", "HDFC"
+  logo?: string;             // Bank brand identifier, e.g. "sbi", "hdfc", "icici", "axis", "federal"
   accountNumber?: string;    // Masked account number, e.g. "...1234"
   creditLimit?: number;      // For credit cards only
   interestRate?: number;     // For savings accounts

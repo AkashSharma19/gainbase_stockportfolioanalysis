@@ -18,16 +18,34 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { Budget, BudgetCategory } from '@/types/money';
+import { CategoryIcon } from '@/components/CategoryIcon';
 
 const DEFAULT_ICONS_COLORS: { [key: string]: { icon: string; color: string } } = {
-  'Food & Dining': { icon: '🍔', color: '#FF3B30' },
-  'Rent & Bills': { icon: '🏠', color: '#007AFF' },
-  'Shopping': { icon: '🛍️', color: '#FF9500' },
-  'Entertainment': { icon: '🎬', color: '#AF52DE' },
-  'Travel': { icon: '🚗', color: '#34C759' },
-  'Medical': { icon: '💊', color: '#FF2D55' },
-  'Education': { icon: '🎓', color: '#5AC8FA' },
-  'Other': { icon: '🏷️', color: '#8E8E93' }
+  'Food & Dining': { icon: 'Utensils', color: '#FF3B30' },
+  'Rent & Bills': { icon: 'Receipt', color: '#007AFF' },
+  'Shopping': { icon: 'ShoppingBag', color: '#FF9500' },
+  'Entertainment': { icon: 'Clapperboard', color: '#AF52DE' },
+  'Travel': { icon: 'Plane', color: '#34C759' },
+  'Medical': { icon: 'Pill', color: '#FF2D55' },
+  'Education': { icon: 'GraduationCap', color: '#5AC8FA' },
+  'Food': { icon: 'UtensilsCrossed', color: '#FF3B30' },
+  'Junk': { icon: 'Cookie', color: '#FF9500' },
+  'Shopping - Electronics': { icon: 'Laptop', color: '#5856D6' },
+  'Shopping - Clothes': { icon: 'Shirt', color: '#FF2D55' },
+  'Subscriptions - OTT': { icon: 'Tv', color: '#AF52DE' },
+  'Subscriptions - WiFi': { icon: 'Wifi', color: '#5AC8FA' },
+  'House': { icon: 'Home', color: '#34C759' },
+  'Electricity Bill': { icon: 'Zap', color: '#FFCC00' },
+  'Transport - Fuel': { icon: 'Fuel', color: '#FF9500' },
+  'Transport - Cab': { icon: 'Car', color: '#FFCC00' },
+  'Maintainance': { icon: 'Wrench', color: '#8E8E93' },
+  'Maintenance': { icon: 'Wrench', color: '#8E8E93' },
+  'Travel/ Trips': { icon: 'Compass', color: '#007AFF' },
+  'Family': { icon: 'Users', color: '#FF2D55' },
+  'Gifts': { icon: 'Gift', color: '#AF52DE' },
+  'EMI Payments': { icon: 'CalendarRange', color: '#FF9500' },
+  'Others': { icon: 'Tag', color: '#8E8E93' },
+  'Other': { icon: 'Tag', color: '#8E8E93' }
 };
 
 const CATEGORY_COLORS = [
@@ -71,15 +89,39 @@ export default function AddBudgetScreen() {
   const { budgets, addBudget, updateBudget } = useMoneyStore();
   const storeCategories = useMoneyStore((state) => state.categories) || {
     income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
-    expense: ['Food & Dining', 'Rent & Bills', 'Shopping', 'Entertainment', 'Travel', 'Medical', 'Education', 'Other']
+    expense: [
+      'Food & Dining',
+      'Food',
+      'Junk',
+      'Rent & Bills',
+      'House',
+      'Electricity Bill',
+      'Shopping',
+      'Shopping - Electronics',
+      'Shopping - Clothes',
+      'Entertainment',
+      'Subscriptions - OTT',
+      'Subscriptions - WiFi',
+      'Travel',
+      'Travel/ Trips',
+      'Transport - Fuel',
+      'Transport - Cab',
+      'Medical',
+      'Education',
+      'Maintainance',
+      'Family',
+      'Gifts',
+      'EMI Payments',
+      'Others'
+    ]
   };
 
   const editingBudget = useMemo(() => {
-    return id ? budgets.find((b) => b.id === id) : null;
-  }, [id, budgets]);
+    return budgets[0] || null;
+  }, [budgets]);
 
   // Form State
-  const [name, setName] = useState('');
+  // (We use a fixed name for the single budget)
 
   // Category list limits state
   const [categories, setCategories] = useState<{ id: string; name: string; icon: string; color: string; limit: string }[]>([]);
@@ -88,8 +130,6 @@ export default function AddBudgetScreen() {
     const expenseCats = storeCategories.expense;
 
     if (editingBudget) {
-      setName(editingBudget.name);
-
       // Build categories list from store configuration
       const list = expenseCats.map((cat, index) => {
         const existing = editingBudget.categories.find((c) => c.name.toLowerCase() === cat.toLowerCase());
@@ -104,9 +144,6 @@ export default function AddBudgetScreen() {
       });
       setCategories(list);
     } else {
-      // Set name defaults e.g. "Monthly Budget"
-      setName('Monthly Budget');
-
       // Prepopulate categories from store configuration
       const list = expenseCats.map((cat, index) => {
         const info = getCategoryIconColor(cat);
@@ -142,15 +179,6 @@ export default function AddBudgetScreen() {
 
   const handleSave = () => {
     handleHaptic();
-    if (!name.trim()) {
-      Alert.alert('Required Field', 'Please enter a budget name.');
-      return;
-    }
-
-    if (totalLimit <= 0) {
-      Alert.alert('Empty Budget', 'Please allocate a limit to at least one category.');
-      return;
-    }
 
     const budgetCategories: BudgetCategory[] = categories
       .map((c) => ({
@@ -159,13 +187,12 @@ export default function AddBudgetScreen() {
         icon: c.icon,
         color: c.color,
         limit: parseFloat(c.limit) || 0,
-        spent: 0, // dynamically calculated, initialized to 0
-      }))
-      .filter((c) => c.limit > 0);
+        spent: 0,
+      }));
 
     const budgetData: Budget = {
-      id: editingBudget ? editingBudget.id : Math.random().toString(36).substring(2, 9),
-      name: name.trim(),
+      id: editingBudget ? editingBudget.id : 'global-budget',
+      name: 'Monthly Budget',
       period: 'monthly',
       startDate: '',
       endDate: '',
@@ -209,17 +236,6 @@ export default function AddBudgetScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Budget Name */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>BUDGET NAME</ThemedText>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
-              placeholder="e.g. July 2026, Summer Trip"
-              placeholderTextColor={currColors.textSecondary}
-              value={name}
-              onChangeText={setName}
-            />
-          </View>
 
 
           {/* Total Budget limit highlight */}
@@ -242,7 +258,7 @@ export default function AddBudgetScreen() {
           {categories.map((cat) => (
             <View key={cat.id} style={[styles.catAllocationCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
               <View style={styles.catLeft}>
-                <ThemedText style={{ fontSize: 18, marginRight: 10 }}>{cat.icon}</ThemedText>
+                <CategoryIcon name={cat.icon} color={cat.color} size={18} style={{ marginRight: 10 }} />
                 <ThemedText style={[styles.catName, { color: currColors.text }]} numberOfLines={1}>
                   {cat.name}
                 </ThemedText>
@@ -279,7 +295,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
   },
   closeBtn: {

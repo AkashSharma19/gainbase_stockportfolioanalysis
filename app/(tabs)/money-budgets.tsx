@@ -4,18 +4,19 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect } from 'react';
 import {
-  Plus,
+  Sliders,
   PiggyBank,
   ChevronRight,
   ChevronLeft,
-  TrendingUp,
   AlertTriangle,
+  Info,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -23,16 +24,92 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
-import { Budget } from '@/types/money';
+import { CategoryIcon } from '@/components/CategoryIcon';
 
 export default function BudgetsScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
 
-  const { budgets, getCategorySpending } = useMoneyStore();
+  const { budgets, getCategorySpending, addBudget, updateBudget, categories: storeCategories } = useMoneyStore();
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
+
+  const CATEGORY_META: { [key: string]: string } = {
+    'Food & Dining': '#FF3B30',
+    'Rent & Bills': '#007AFF',
+    'Shopping': '#FF9500',
+    'Entertainment': '#AF52DE',
+    'Travel': '#34C759',
+    'Medical': '#FF2D55',
+    'Education': '#5AC8FA',
+    'Food': '#FF3B30',
+    'Junk': '#FF9500',
+    'Shopping - Electronics': '#5856D6',
+    'Shopping - Clothes': '#FF2D55',
+    'Subscriptions - OTT': '#AF52DE',
+    'Subscriptions - WiFi': '#5AC8FA',
+    'House': '#34C759',
+    'Electricity Bill': '#FFCC00',
+    'Transport - Fuel': '#FF9500',
+    'Transport - Cab': '#FFCC00',
+    'Maintainance': '#8E8E93',
+    'Maintenance': '#8E8E93',
+    'Travel/ Trips': '#007AFF',
+    'Family': '#FF2D55',
+    'Gifts': '#AF52DE',
+    'EMI Payments': '#FF9500',
+    'Others': '#8E8E93',
+  };
+
+  useEffect(() => {
+    const expenseCategories = storeCategories.expense || [];
+    if (budgets.length === 0) {
+      const budgetCats = expenseCategories.map((name, index) => {
+        return {
+          id: Math.random().toString(36).substring(2, 9) + index,
+          name,
+          icon: name,
+          color: CATEGORY_META[name] || '#8E8E93',
+          limit: 0,
+          spent: 0,
+        };
+      });
+      addBudget({
+        id: 'global-budget',
+        name: 'Monthly Budget',
+        period: 'monthly',
+        startDate: '',
+        endDate: '',
+        totalLimit: 0,
+        categories: budgetCats,
+        isActive: true,
+      });
+    } else {
+      const currentBudget = budgets[0];
+      const missingNames = expenseCategories.filter(
+        (name) => !currentBudget.categories.some((c) => c.name.toLowerCase() === name.toLowerCase())
+      );
+      if (missingNames.length > 0) {
+        const newCats = [
+          ...currentBudget.categories,
+          ...missingNames.map((name, index) => {
+            return {
+              id: Math.random().toString(36).substring(2, 9) + index,
+              name,
+              icon: name,
+              color: CATEGORY_META[name] || '#8E8E93',
+              limit: 0,
+              spent: 0,
+            };
+          }),
+        ];
+        updateBudget(currentBudget.id, {
+          categories: newCats,
+        });
+      }
+    }
+  }, [budgets, storeCategories.expense]);
 
   const [activeBudgetId, setActiveBudgetId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -72,7 +149,7 @@ export default function BudgetsScreen() {
   }, [activeBudget, getCategorySpending, selectedDate]);
 
   const formatAmount = (val: number) => {
-    if (isPrivacyMode) return '****';
+    if (isPrivacyMode) return '••••••';
     const formatted = Math.abs(val).toLocaleString('en-IN', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
@@ -101,6 +178,17 @@ export default function BudgetsScreen() {
     return (spendingDetails.totalSpent / activeBudget.totalLimit) * 100;
   }, [activeBudget, spendingDetails]);
 
+  const getProgressColor = (pct: number) => {
+    if (pct > 100) return '#FF3B30'; // Red for overspent
+    if (pct > 80) return '#FF9500';  // Orange for warning
+    return '#00C9A7';               // Teal for safe
+  };
+
+  const ringColor = getProgressColor(overallPercentage);
+  const cardGradient = colorScheme === 'dark'
+    ? ['#1C1C1E', '#2C2C2E'] as const
+    : ['#FFFFFF', '#F2F2F7'] as const;
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
       {/* Header */}
@@ -115,130 +203,27 @@ export default function BudgetsScreen() {
             router.push('/add-budget');
           }}
         >
-          <Plus size={20} color="#00C9A7" />
+          <Sliders size={20} color="#00C9A7" />
         </TouchableOpacity>
       </View>
 
-      {budgets.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <PiggyBank size={48} color={currColors.textSecondary} style={{ marginBottom: 16 }} />
-          <ThemedText style={[styles.emptyText, { color: currColors.textSecondary }]}>
-            No budgets created yet. Tap the '+' button above to create your first monthly budget and allocate limits per category.
-          </ThemedText>
-        </View>
-      ) : (
+      {activeBudget ? (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Budget Selector Tabs if multiple budgets */}
-          {budgets.length > 1 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tabsScroll}
-            >
-              {budgets.map((b) => (
-                <TouchableOpacity
-                  key={b.id}
-                  style={[
-                    styles.tabItem,
-                    { borderColor: currColors.border, backgroundColor: currColors.card },
-                    activeBudget?.id === b.id && { borderColor: '#00C9A7', backgroundColor: '#00C9A710' },
-                  ]}
-                  onPress={() => {
-                    handleHaptic();
-                    setActiveBudgetId(b.id);
-                  }}
-                >
-                  <ThemedText
-                    type={activeBudget?.id === b.id ? 'semiBold' : 'medium'}
-                    style={{
-                      color: activeBudget?.id === b.id ? '#00C9A7' : currColors.textSecondary,
-                    }}
-                  >
-                    {b.name}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
-
           {activeBudget && (
             <View>
               {/* Month Switcher Banner */}
               <View style={[styles.monthSwitcher, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
                 <TouchableOpacity onPress={handlePrevMonth} style={styles.monthArrow}>
-                  <ChevronLeft size={20} color={currColors.text} />
+                  <ChevronLeft size={18} color={currColors.text} />
                 </TouchableOpacity>
                 <ThemedText type="semiBold" style={[styles.monthLabel, { color: currColors.text }]}>
                   {selectedDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
                 </ThemedText>
                 <TouchableOpacity onPress={handleNextMonth} style={styles.monthArrow}>
-                  <ChevronRight size={20} color={currColors.text} />
+                  <ChevronRight size={18} color={currColors.text} />
                 </TouchableOpacity>
               </View>
 
-              {/* Overview Progress Card */}
-              <TouchableOpacity
-                style={[styles.overviewCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-                activeOpacity={0.8}
-                onPress={() => {
-                  handleHaptic();
-                  router.push({
-                    pathname: '/budget-details/[id]',
-                    params: {
-                      id: activeBudget.id,
-                      year: selectedDate.getFullYear(),
-                      month: selectedDate.getMonth(),
-                    }
-                  });
-                }}
-              >
-                <View style={styles.overviewHeader}>
-                  <View>
-                    <ThemedText type="bold" style={[styles.cardSubTitle, { color: currColors.textSecondary }]}>
-                      {activeBudget.name.toUpperCase()} OVERALL SPENDING
-                    </ThemedText>
-                    <ThemedText style={[styles.cardVal, { color: currColors.text }]}>
-                      {formatAmount(spendingDetails.totalSpent)}
-                    </ThemedText>
-                    <ThemedText style={[styles.cardLimit, { color: currColors.textSecondary }]}>
-                      of {formatAmount(activeBudget.totalLimit)} budget
-                    </ThemedText>
-                  </View>
-                  
-                  <View style={[styles.percentageRing, { borderColor: overallPercentage > 90 ? '#FF3B30' : '#00C9A7' }]}>
-                    <ThemedText style={[styles.ringText, { color: overallPercentage > 90 ? '#FF3B30' : '#00C9A7' }]}>
-                      {overallPercentage.toFixed(0)}%
-                    </ThemedText>
-                  </View>
-                </View>
-
-                {/* Progress bar */}
-                <View style={[styles.progressBackground, { backgroundColor: currColors.cardSecondary, marginTop: 20 }]}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${Math.min(100, overallPercentage)}%`,
-                        backgroundColor: overallPercentage > 100 ? '#FF3B30' : overallPercentage > 80 ? '#FF9500' : '#00C9A7',
-                      },
-                    ]}
-                  />
-                </View>
-
-                <View style={styles.cardFooter}>
-                  <ThemedText style={{ fontSize: 12, color: currColors.textSecondary }}>
-                    {overallPercentage > 100 
-                      ? `Overspent by ${formatAmount(spendingDetails.totalSpent - activeBudget.totalLimit)}`
-                      : `${formatAmount(activeBudget.totalLimit - spendingDetails.totalSpent)} remaining`}
-                  </ThemedText>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <ThemedText type="medium" style={{ fontSize: 12, color: '#00C9A7', marginRight: 4 }}>
-                      Analyze Details
-                    </ThemedText>
-                    <ChevronRight size={14} color="#00C9A7" />
-                  </View>
-                </View>
-              </TouchableOpacity>
 
               {/* Categories list */}
               <View style={styles.sectionHeader}>
@@ -247,15 +232,16 @@ export default function BudgetsScreen() {
                 </ThemedText>
               </View>
 
-              {spendingDetails.categories.map((cat) => {
+              {spendingDetails.categories.filter((cat) => cat.limit > 0).map((cat) => {
                 const percentage = cat.limit > 0 ? (cat.spent / cat.limit) * 100 : 0;
                 const isOverspent = cat.spent > cat.limit;
+                const catProgressColor = getProgressColor(percentage);
                 
                 return (
                   <TouchableOpacity
                     key={cat.id}
                     style={[styles.categoryCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-                    activeOpacity={0.7}
+                    activeOpacity={0.75}
                     onPress={() => {
                       handleHaptic();
                       router.push({
@@ -271,14 +257,14 @@ export default function BudgetsScreen() {
                     <View style={styles.catHeader}>
                       <View style={styles.catHeaderLeft}>
                         <View style={[styles.catIconWrapper, { backgroundColor: `${cat.color}15` }]}>
-                          <ThemedText style={{ fontSize: 16 }}>{cat.icon}</ThemedText>
+                          <CategoryIcon name={cat.icon} color={cat.color} size={16} />
                         </View>
-                        <ThemedText type="semiBold" style={[styles.catNameText, { color: currColors.text }]}>
+                        <ThemedText type="semiBold" style={[styles.catNameText, { color: currColors.text }]} numberOfLines={1}>
                           {cat.name}
                         </ThemedText>
                       </View>
                       <View style={styles.catHeaderRight}>
-                        <ThemedText style={[styles.catSpentVal, { color: isOverspent ? '#FF3B30' : currColors.text }]}>
+                        <ThemedText style={[styles.catSpentVal, { color: isOverspent ? '#FF3B30' : currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
                           {formatAmount(cat.spent)}
                         </ThemedText>
                         <ThemedText style={[styles.catLimitVal, { color: currColors.textSecondary }]}>
@@ -294,14 +280,14 @@ export default function BudgetsScreen() {
                           styles.progressFill,
                           {
                             width: `${Math.min(100, percentage)}%`,
-                            backgroundColor: isOverspent ? '#FF3B30' : percentage > 85 ? '#FF9500' : '#00C9A7',
+                            backgroundColor: catProgressColor,
                           },
                         ]}
                       />
                     </View>
 
                     <View style={styles.catFooter}>
-                      <ThemedText style={{ fontSize: 11, color: isOverspent ? '#FF3B30' : currColors.textSecondary }}>
+                      <ThemedText style={{ fontSize: 11, color: isOverspent ? '#FF3B30' : currColors.textSecondary, fontFamily: 'Outfit_400Regular' }}>
                         {isOverspent 
                           ? `Overspent by ${formatAmount(cat.spent - cat.limit)}` 
                           : `${formatAmount(cat.limit - cat.spent)} remaining`}
@@ -314,6 +300,13 @@ export default function BudgetsScreen() {
             </View>
           )}
         </ScrollView>
+      ) : (
+        <View style={styles.emptyContainer}>
+          <Info size={44} color={currColors.textSecondary} style={{ marginBottom: 16 }} />
+          <ThemedText style={[styles.emptyText, { color: currColors.textSecondary, fontFamily: 'Outfit_400Regular', lineHeight: 22 }]}>
+            Initializing budget limits config...
+          </ThemedText>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -331,18 +324,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
   },
   addBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 110,
   },
   tabsScroll: {
     paddingLeft: 16,
@@ -356,29 +349,21 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
   },
-  overviewCard: {
-    marginHorizontal: 16,
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: 20,
-    marginTop: 8,
-    marginBottom: 20,
-  },
   overviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   cardSubTitle: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 6,
   },
   cardVal: {
-    fontSize: 24,
-    fontFamily: 'Outfit_400Regular',
+    fontSize: 26,
+    letterSpacing: -0.5,
   },
   cardLimit: {
     fontSize: 12,
@@ -386,16 +371,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   percentageRing: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     borderWidth: 4,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 16,
   },
   ringText: {
     fontSize: 13,
-    fontFamily: 'Outfit_400Regular',
   },
   progressBackground: {
     height: 6,
@@ -410,24 +395,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 14,
+    marginTop: 16,
   },
   sectionHeader: {
     marginHorizontal: 16,
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   categoryCard: {
     marginHorizontal: 16,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     padding: 16,
-    marginBottom: 10,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   catHeader: {
     flexDirection: 'row',
@@ -442,9 +432,9 @@ const styles = StyleSheet.create({
     flex: 1.2,
   },
   catIconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -460,12 +450,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   catSpentVal: {
-    fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
+    fontSize: 15,
   },
   catLimitVal: {
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
+    marginLeft: 2,
   },
   catFooter: {
     flexDirection: 'row',
@@ -476,28 +466,27 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    marginTop: 120,
+    paddingHorizontal: 36,
+    marginTop: 100,
   },
   emptyText: {
     fontSize: 14,
     textAlign: 'center',
-    lineHeight: 20,
   },
   monthSwitcher: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginHorizontal: 16,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     paddingVertical: 10,
     paddingHorizontal: 16,
     marginTop: 8,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   monthArrow: {
-    padding: 6,
+    padding: 4,
   },
   monthLabel: {
     fontSize: 15,

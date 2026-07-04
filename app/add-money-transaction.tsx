@@ -22,6 +22,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { MoneyTransaction } from '@/types/money';
+import { BankLogo } from '@/components/BankLogo';
 
 export default function AddMoneyTransactionScreen() {
   const router = useRouter();
@@ -36,7 +37,6 @@ export default function AddMoneyTransactionScreen() {
 
   const { accounts, moneyTransactions, addMoneyTransaction, updateMoneyTransaction } = useMoneyStore();
 
-
   const editingTx = useMemo(() => {
     return id ? moneyTransactions.find((tx) => tx.id === id) : null;
   }, [id, moneyTransactions]);
@@ -45,8 +45,6 @@ export default function AddMoneyTransactionScreen() {
   const [type, setType] = useState<'income' | 'expense' | 'transfer'>('expense');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
-  const [customCategory, setCustomCategory] = useState('');
-  const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [accountId, setAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
   const [date, setDate] = useState(new Date());
@@ -56,6 +54,75 @@ export default function AddMoneyTransactionScreen() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showToAccountModal, setShowToAccountModal] = useState(false);
+
+  // Sort categories by usage frequency (most used first)
+  const sortedCategoriesByUsage = useMemo(() => {
+    const list = type === 'income' ? storeCategories.income : storeCategories.expense;
+    if (!list) return [];
+    
+    // Count occurrences of each category in moneyTransactions of the current type
+    const counts: { [key: string]: number } = {};
+    list.forEach(cat => {
+      counts[cat] = 0;
+    });
+    
+    moneyTransactions.forEach(tx => {
+      if (tx.type === type && counts[tx.category] !== undefined) {
+        counts[tx.category]++;
+      }
+    });
+    
+    // Sort by count (descending), then alphabetically
+    return [...list].sort((a, b) => {
+      const diff = counts[b] - counts[a];
+      if (diff !== 0) return diff;
+      return a.localeCompare(b);
+    });
+  }, [type, storeCategories, moneyTransactions]);
+
+  // Distribute categories + See All into exactly 3 rows
+  const tagRows = useMemo(() => {
+    const maxToShow = 8;
+    const visibleCats = sortedCategoriesByUsage.slice(0, maxToShow);
+    const items = [...visibleCats, 'SEE_ALL'];
+    const count = items.length;
+    
+    let r1: string[] = [];
+    let r2: string[] = [];
+    let r3: string[] = [];
+    
+    if (count >= 9) {
+      r1 = items.slice(0, 3);
+      r2 = items.slice(3, 6);
+      r3 = items.slice(6, 9);
+    } else if (count === 8) {
+      r1 = items.slice(0, 3);
+      r2 = items.slice(3, 6);
+      r3 = items.slice(6, 8);
+    } else if (count === 7) {
+      r1 = items.slice(0, 3);
+      r2 = items.slice(3, 5);
+      r3 = items.slice(5, 7);
+    } else if (count === 6) {
+      r1 = items.slice(0, 2);
+      r2 = items.slice(2, 4);
+      r3 = items.slice(4, 6);
+    } else if (count === 5) {
+      r1 = items.slice(0, 2);
+      r2 = items.slice(2, 4);
+      r3 = items.slice(4, 5);
+    } else if (count === 4) {
+      r1 = items.slice(0, 2);
+      r2 = items.slice(2, 3);
+      r3 = items.slice(3, 4);
+    } else {
+      r1 = items.slice(0, 1);
+      r2 = items.slice(1, 2);
+      r3 = items.slice(2, 3);
+    }
+    
+    return [r1, r2, r3];
+  }, [sortedCategoriesByUsage]);
 
   // Load defaults or editing values
   useEffect(() => {
@@ -70,7 +137,6 @@ export default function AddMoneyTransactionScreen() {
         setToAccountId(editingTx.toAccountId || '');
       } else {
         setCategory(editingTx.category);
-        setIsCustomCategory(false);
       }
     } else {
       // Default to first active account
@@ -90,7 +156,7 @@ export default function AddMoneyTransactionScreen() {
         setCategory('');
       }
     }
-  }, [editingTx, type, storeCategories, accounts]);
+  }, [editingTx, storeCategories, accounts]);
 
   // Auto-switch categories when type changes
   useEffect(() => {
@@ -98,13 +164,11 @@ export default function AddMoneyTransactionScreen() {
       const categoriesList = type === 'income' ? storeCategories.income : storeCategories.expense;
       if (categoriesList && categoriesList.length > 0) {
         setCategory(categoriesList[0]);
-        setIsCustomCategory(false);
       } else {
         setCategory('');
       }
     }
   }, [type, storeCategories, editingTx]);
-
 
   const handleHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -134,17 +198,15 @@ export default function AddMoneyTransactionScreen() {
     }
 
     if (type !== 'transfer' && !category) {
-      Alert.alert('Required Field', 'Please select a category. If none exist, please configure categories in the Profile settings.');
+      Alert.alert('Required Field', 'Please select a category.');
       return;
     }
-
 
     // Determine final category string
     let finalCategory = category;
     if (type === 'transfer') {
       finalCategory = 'Transfer';
     }
-
 
     const txData: MoneyTransaction = {
       id: editingTx ? editingTx.id : Math.random().toString(36).substring(2, 9),
@@ -188,6 +250,18 @@ export default function AddMoneyTransactionScreen() {
     ? storeCategories.income 
     : storeCategories.expense;
 
+  // Amount color coding based on transaction type
+  const getAmountColor = () => {
+    if (type === 'income') return '#34C759'; // Green
+    if (type === 'expense') return '#FF3B30'; // Red
+    return currColors.text; // Default/white
+  };
+
+  const segmentActiveColor = () => {
+    if (type === 'income') return '#34C759';
+    if (type === 'expense') return '#FF3B30';
+    return '#00C9A7';
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top', 'bottom']}>
@@ -222,14 +296,7 @@ export default function AddMoneyTransactionScreen() {
                 key={t}
                 style={[
                   styles.segmentTab,
-                  type === t && {
-                    backgroundColor:
-                      t === 'income'
-                        ? '#34C759'
-                        : t === 'expense'
-                        ? '#FF3B30'
-                        : currColors.card,
-                  },
+                  type === t && { backgroundColor: segmentActiveColor() },
                 ]}
                 onPress={() => {
                   handleHaptic();
@@ -254,16 +321,83 @@ export default function AddMoneyTransactionScreen() {
           {/* Amount input */}
           <View style={styles.inputGroup}>
             <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>AMOUNT</ThemedText>
-            <TextInput
-              style={[styles.amountInput, { color: currColors.text, borderBottomColor: currColors.border }]}
-              placeholder="0"
-              placeholderTextColor={currColors.textSecondary}
-              keyboardType="numeric"
-              autoFocus={!editingTx}
-              value={amount}
-              onChangeText={setAmount}
-            />
+            <View style={[styles.amountInputContainer, { borderBottomColor: currColors.border }]}>
+              <ThemedText style={[styles.currencyPrefix, { color: getAmountColor() }]}>₹</ThemedText>
+              <TextInput
+                style={[styles.amountInput, { color: getAmountColor() }]}
+                placeholder="0"
+                placeholderTextColor={currColors.textSecondary}
+                keyboardType="numeric"
+                autoFocus={!editingTx}
+                value={amount}
+                onChangeText={setAmount}
+              />
+            </View>
           </View>
+
+          {/* Category Tags Selection Grid (Income/Expense only) */}
+          {type !== 'transfer' ? (
+            <View style={styles.inputGroup}>
+              <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>CATEGORY</ThemedText>
+              <View style={styles.tagsContainer}>
+                {tagRows.map((row, rowIndex) => (
+                  <View key={rowIndex} style={styles.tagRow}>
+                    {row.map((item) => {
+                      if (item === 'SEE_ALL') {
+                        return (
+                          <TouchableOpacity
+                            key="see-all"
+                            style={[styles.tagButton, styles.seeAllTagButton, { borderColor: '#00C9A7' }]}
+                            onPress={() => {
+                              handleHaptic();
+                              setShowCategoryModal(true);
+                            }}
+                          >
+                            <ThemedText style={[styles.tagText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+                              See All
+                            </ThemedText>
+                          </TouchableOpacity>
+                        );
+                      }
+
+                      const isSelected = category === item;
+                      const activeColor = type === 'income' ? '#34C759' : '#FF3B30';
+                      
+                      return (
+                        <TouchableOpacity
+                          key={item}
+                          style={[
+                            styles.tagButton,
+                            { 
+                              backgroundColor: isSelected ? activeColor : currColors.card,
+                              borderColor: isSelected ? activeColor : currColors.border,
+                            }
+                          ]}
+                          onPress={() => {
+                            handleHaptic();
+                            setCategory(item);
+                          }}
+                        >
+                          <ThemedText 
+                            style={[
+                              styles.tagText, 
+                              { 
+                                color: isSelected ? '#FFFFFF' : currColors.text,
+                                fontFamily: isSelected ? 'Outfit_600SemiBold' : 'Outfit_400Regular'
+                              }
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {item}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
 
           {/* Account Selector (Source Account) */}
           <View style={styles.inputGroup}>
@@ -277,9 +411,14 @@ export default function AddMoneyTransactionScreen() {
                 setShowAccountModal(true);
               }}
             >
-              <ThemedText style={{ color: sourceAccount ? currColors.text : currColors.textSecondary, fontSize: 16 }}>
-                {sourceAccount ? sourceAccount.name : 'Select Account'}
-              </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                {sourceAccount && sourceAccount.logo ? (
+                  <BankLogo logo={sourceAccount.logo} size={24} style={{ marginRight: 12 }} />
+                ) : null}
+                <ThemedText style={{ color: sourceAccount ? currColors.text : currColors.textSecondary, fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
+                  {sourceAccount ? sourceAccount.name : 'Select Account'}
+                </ThemedText>
+              </View>
               <ChevronDown size={18} color={currColors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -295,34 +434,18 @@ export default function AddMoneyTransactionScreen() {
                   setShowToAccountModal(true);
                 }}
               >
-                <ThemedText style={{ color: destAccount ? currColors.text : currColors.textSecondary, fontSize: 16 }}>
-                  {destAccount ? destAccount.name : 'Select Destination Account'}
-                </ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  {destAccount && destAccount.logo ? (
+                    <BankLogo logo={destAccount.logo} size={24} style={{ marginRight: 12 }} />
+                  ) : null}
+                  <ThemedText style={{ color: destAccount ? currColors.text : currColors.textSecondary, fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
+                    {destAccount ? destAccount.name : 'Select Destination Account'}
+                  </ThemedText>
+                </View>
                 <ChevronDown size={18} color={currColors.textSecondary} />
               </TouchableOpacity>
             </View>
           ) : null}
-
-          {/* Category Selector (Income/Expense only) */}
-          {type !== 'transfer' ? (
-            <View style={styles.inputGroup}>
-              <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>CATEGORY</ThemedText>
-              <TouchableOpacity
-                style={[styles.selectBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-                onPress={() => {
-                  handleHaptic();
-                  setShowCategoryModal(true);
-                }}
-              >
-                <ThemedText style={{ color: category ? currColors.text : currColors.textSecondary, fontSize: 16 }}>
-                  {category === 'Custom' && customCategory ? `Custom: ${customCategory}` : category || 'Select Category'}
-                </ThemedText>
-                <ChevronDown size={18} color={currColors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
-
 
           {/* Date Selector */}
           <View style={styles.inputGroup}>
@@ -342,7 +465,7 @@ export default function AddMoneyTransactionScreen() {
                 style={[styles.selectBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}
                 onPress={() => setShowDatePicker(true)}
               >
-                <ThemedText style={{ color: currColors.text, fontSize: 16 }}>
+                <ThemedText style={{ color: currColors.text, fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
                   {date.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </ThemedText>
               </TouchableOpacity>
@@ -371,19 +494,22 @@ export default function AddMoneyTransactionScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Account Selection Modal */}
+      {/* Account Selection Modal Bottom Sheet */}
       <Modal visible={showAccountModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: currColors.card }]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowAccountModal(false)} />
+          <View style={[styles.modalContent, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            <View style={styles.modalDragHandle} />
             <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
               <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Select Account</ThemedText>
-              <TouchableOpacity onPress={() => setShowAccountModal(false)}>
-                <X size={22} color={currColors.text} />
+              <TouchableOpacity onPress={() => setShowAccountModal(false)} style={styles.modalCloseIcon}>
+                <X size={20} color={currColors.text} />
               </TouchableOpacity>
             </View>
             <FlatList
               data={activeAccounts}
               keyExtractor={(item) => item.id}
+              contentContainerStyle={{ paddingBottom: 24 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.modalItem, { borderBottomColor: currColors.border }]}
@@ -392,10 +518,18 @@ export default function AddMoneyTransactionScreen() {
                     setShowAccountModal(false);
                   }}
                 >
-                  <ThemedText style={{ color: currColors.text, fontSize: 16 }}>{item.name}</ThemedText>
-                  <ThemedText style={{ color: currColors.textSecondary, fontSize: 12 }}>
-                    {item.balance.toLocaleString('en-IN')}
-                  </ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    {item.logo ? (
+                      <BankLogo logo={item.logo} size={26} style={{ marginRight: 12 }} />
+                    ) : null}
+                    <View style={{ flex: 1 }}>
+                      <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 15 }}>{item.name}</ThemedText>
+                      <ThemedText style={{ color: currColors.textSecondary, fontSize: 11, marginTop: 2, fontFamily: 'Outfit_400Regular' }}>
+                        Balance: {item.balance.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  {accountId === item.id && <Check size={18} color="#00C9A7" />}
                 </TouchableOpacity>
               )}
             />
@@ -403,19 +537,22 @@ export default function AddMoneyTransactionScreen() {
         </View>
       </Modal>
 
-      {/* Destination Account Selection Modal */}
+      {/* Destination Account Selection Modal Bottom Sheet */}
       <Modal visible={showToAccountModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: currColors.card }]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowToAccountModal(false)} />
+          <View style={[styles.modalContent, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            <View style={styles.modalDragHandle} />
             <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
-              <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Select Destination</ThemedText>
-              <TouchableOpacity onPress={() => setShowToAccountModal(false)}>
-                <X size={22} color={currColors.text} />
+              <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Select Destination Account</ThemedText>
+              <TouchableOpacity onPress={() => setShowToAccountModal(false)} style={styles.modalCloseIcon}>
+                <X size={20} color={currColors.text} />
               </TouchableOpacity>
             </View>
             <FlatList
               data={activeAccounts.filter((a) => a.id !== accountId)}
               keyExtractor={(item) => item.id}
+              contentContainerStyle={{ paddingBottom: 24 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.modalItem, { borderBottomColor: currColors.border }]}
@@ -424,10 +561,18 @@ export default function AddMoneyTransactionScreen() {
                     setShowToAccountModal(false);
                   }}
                 >
-                  <ThemedText style={{ color: currColors.text, fontSize: 16 }}>{item.name}</ThemedText>
-                  <ThemedText style={{ color: currColors.textSecondary, fontSize: 12 }}>
-                    {item.balance.toLocaleString('en-IN')}
-                  </ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    {item.logo ? (
+                      <BankLogo logo={item.logo} size={26} style={{ marginRight: 12 }} />
+                    ) : null}
+                    <View style={{ flex: 1 }}>
+                      <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 15 }}>{item.name}</ThemedText>
+                      <ThemedText style={{ color: currColors.textSecondary, fontSize: 11, marginTop: 2, fontFamily: 'Outfit_400Regular' }}>
+                        Balance: {item.balance.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  {toAccountId === item.id && <Check size={18} color="#00C9A7" />}
                 </TouchableOpacity>
               )}
             />
@@ -435,33 +580,33 @@ export default function AddMoneyTransactionScreen() {
         </View>
       </Modal>
 
-      {/* Category Selection Modal */}
+      {/* Category Selection Modal Bottom Sheet */}
       <Modal visible={showCategoryModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: currColors.card }]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowCategoryModal(false)} />
+          <View style={[styles.modalContent, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            <View style={styles.modalDragHandle} />
             <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
               <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Select Category</ThemedText>
-              <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
-                <X size={22} color={currColors.text} />
+              <TouchableOpacity onPress={() => setShowCategoryModal(false)} style={styles.modalCloseIcon}>
+                <X size={20} color={currColors.text} />
               </TouchableOpacity>
             </View>
             <FlatList
               data={categoriesList}
               keyExtractor={(item) => item}
+              contentContainerStyle={{ paddingBottom: 24 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.modalItem, { borderBottomColor: currColors.border }]}
                   onPress={() => {
                     setCategory(item);
-                    setIsCustomCategory(false);
                     setShowCategoryModal(false);
                   }}
                 >
-                  <ThemedText style={{ color: currColors.text, fontSize: 16 }}>
-                    {item}
-                  </ThemedText>
+                  <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 15, flex: 1 }}>{item}</ThemedText>
+                  {category === item && <Check size={18} color="#00C9A7" />}
                 </TouchableOpacity>
-
               )}
             />
           </View>
@@ -483,7 +628,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
   },
   closeBtn: {
@@ -507,8 +652,8 @@ const styles = StyleSheet.create({
   },
   segmentContainer: {
     flexDirection: 'row',
-    height: 44,
-    borderRadius: 12,
+    height: 46,
+    borderRadius: 14,
     padding: 3,
     marginBottom: 26,
   },
@@ -517,13 +662,14 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
+    borderRadius: 12,
   },
   segmentLabel: {
-    fontSize: 12,
+    fontSize: 11,
+    letterSpacing: 0.3,
   },
   inputGroup: {
-    marginBottom: 22,
+    marginBottom: 24,
   },
   label: {
     fontSize: 10,
@@ -531,28 +677,64 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 8,
   },
-  amountInput: {
-    fontSize: 36,
-    fontFamily: 'Outfit_700Bold',
+  amountInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderBottomWidth: 1,
-    paddingVertical: 8,
-    textAlign: 'center',
+    paddingVertical: 4,
+  },
+  currencyPrefix: {
+    fontSize: 34,
+    fontFamily: 'Outfit_700Bold',
+    marginRight: 6,
+  },
+  amountInput: {
+    fontSize: 40,
+    fontFamily: 'Outfit_700Bold',
+    textAlign: 'left',
+    minWidth: 100,
+    padding: 0,
   },
   selectBox: {
-    height: 52,
+    height: 54,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
-  textInput: {
-    height: 52,
-    borderWidth: 1,
+  tagsContainer: {
+    marginTop: 4,
+  },
+  tagRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  tagButton: {
+    flex: 1,
+    height: 42,
     borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  seeAllTagButton: {
+    borderStyle: 'dashed',
+    backgroundColor: 'transparent',
+  },
+  tagText: {
+    fontSize: 13,
+  },
+  textInput: {
+    height: 54,
+    borderWidth: 1,
+    borderRadius: 14,
     paddingHorizontal: 16,
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: 'Outfit_400Regular',
   },
   iosDatePickerContainer: {
@@ -560,14 +742,26 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    height: '50%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
+    maxHeight: '65%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  modalDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(142, 142, 147, 0.3)',
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 16,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -578,8 +772,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'Outfit_600SemiBold',
+  },
+  modalCloseIcon: {
+    padding: 4,
   },
   modalItem: {
     flexDirection: 'row',

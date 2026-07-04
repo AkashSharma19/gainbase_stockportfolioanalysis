@@ -19,6 +19,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { Account, AccountType } from '@/types/money';
+import { BANK_BRANDS } from '@/components/BankLogo';
 
 const COLORS = [
   '#00C9A7', // Teal
@@ -57,8 +58,10 @@ export default function AddAccountScreen() {
   const [balance, setBalance] = useState('');
   const [creditLimit, setCreditLimit] = useState('');
   const [institution, setInstitution] = useState('');
+  const [logo, setLogo] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [color, setColor] = useState(COLORS[0]);
+  const [isLogoManuallySelected, setIsLogoManuallySelected] = useState(false);
 
   useEffect(() => {
     if (editingAccount) {
@@ -67,10 +70,25 @@ export default function AddAccountScreen() {
       setBalance(Math.abs(editingAccount.balance).toString());
       setCreditLimit(editingAccount.creditLimit ? editingAccount.creditLimit.toString() : '');
       setInstitution(editingAccount.institution || '');
+      setLogo(editingAccount.logo || '');
       setAccountNumber(editingAccount.accountNumber || '');
       setColor(editingAccount.color);
     }
   }, [editingAccount]);
+
+  const checkBrandMatch = (inputText: string, otherFieldText: string) => {
+    if (editingAccount || isLogoManuallySelected) return;
+    const lowerText = (inputText + ' ' + otherFieldText).toLowerCase();
+    const matchedBrand = BANK_BRANDS.find(brand => {
+      return lowerText.includes(brand.id) || 
+             lowerText.includes(brand.initials.toLowerCase()) || 
+             lowerText.includes(brand.name.toLowerCase());
+    });
+    if (matchedBrand) {
+      setLogo(matchedBrand.id);
+      setColor(matchedBrand.color);
+    }
+  };
 
   const handleHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -104,6 +122,7 @@ export default function AddAccountScreen() {
         balance: type === 'credit_card' ? -Math.abs(parsedBalance || 0) : parsedBalance || 0,
         creditLimit: type === 'credit_card' ? (parsedLimit || 0) : undefined,
         institution: institution.trim() || undefined,
+        logo: logo || undefined,
         accountNumber: accountNumber.trim() || undefined,
         color,
       });
@@ -116,6 +135,7 @@ export default function AddAccountScreen() {
         balance: finalBalance,
         creditLimit: type === 'credit_card' ? (parsedLimit || 0) : undefined,
         institution: institution.trim() || undefined,
+        logo: logo || undefined,
         accountNumber: accountNumber.trim() || undefined,
         color,
         isArchived: false,
@@ -162,7 +182,10 @@ export default function AddAccountScreen() {
               placeholder="e.g. Cash Wallet, SBI Savings"
               placeholderTextColor={currColors.textSecondary}
               value={name}
-              onChangeText={setName}
+              onChangeText={(val) => {
+                setName(val);
+                checkBrandMatch(val, institution);
+              }}
             />
           </View>
 
@@ -200,6 +223,54 @@ export default function AddAccountScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+          </View>
+
+          {/* Account Logo Selector */}
+          <View style={styles.inputGroup}>
+            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>ACCOUNT LOGO / BRAND (OPTIONAL)</ThemedText>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bankBrandsScroll}>
+              <TouchableOpacity
+                style={[
+                  styles.bankBrandOption,
+                  { backgroundColor: currColors.card, borderColor: currColors.border },
+                  !logo && { borderColor: '#00C9A7', backgroundColor: '#00C9A710' }
+                ]}
+                onPress={() => {
+                  handleHaptic();
+                  setLogo('');
+                  setIsLogoManuallySelected(true);
+                }}
+              >
+                <ThemedText style={[styles.bankBrandInitials, { color: currColors.textSecondary }]}>None</ThemedText>
+              </TouchableOpacity>
+              {BANK_BRANDS.map((brand) => (
+                <TouchableOpacity
+                  key={brand.id}
+                  style={[
+                    styles.bankBrandOption,
+                    { backgroundColor: currColors.card, borderColor: currColors.border },
+                    logo === brand.id && { borderColor: brand.color, backgroundColor: `${brand.color}15` }
+                  ]}
+                  onPress={() => {
+                    handleHaptic();
+                    setLogo(brand.id);
+                    setColor(brand.color);
+                    setInstitution(brand.name);
+                    setIsLogoManuallySelected(true);
+                    if (!name.trim()) {
+                      setName(brand.initials + ' Account');
+                    }
+                  }}
+                >
+                  <View style={[styles.bankBrandBadge, { backgroundColor: brand.color }]}>
+                    <ThemedText style={styles.bankBrandBadgeText}>{brand.initials}</ThemedText>
+                  </View>
+                  <ThemedText style={[styles.bankBrandLabel, { color: currColors.text }]} numberOfLines={1}>
+                    {brand.initials}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
 
           {/* Balance Input */}
@@ -240,7 +311,10 @@ export default function AddAccountScreen() {
               placeholder="e.g. SBI, HDFC, Upstox"
               placeholderTextColor={currColors.textSecondary}
               value={institution}
-              onChangeText={setInstitution}
+              onChangeText={(val) => {
+                setInstitution(val);
+                checkBrandMatch(val, name);
+              }}
             />
           </View>
 
@@ -296,7 +370,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
   },
   closeBtn: {
@@ -319,7 +393,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   inputGroup: {
-    marginBottom: 22,
+    marginBottom: 24,
   },
   label: {
     fontSize: 10,
@@ -352,6 +426,40 @@ const styles = StyleSheet.create({
   typeLabel: {
     fontSize: 12,
     fontFamily: 'Outfit_600SemiBold',
+  },
+  bankBrandsScroll: {
+    gap: 10,
+    paddingVertical: 4,
+  },
+  bankBrandOption: {
+    width: 76,
+    height: 72,
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 6,
+  },
+  bankBrandInitials: {
+    fontSize: 13,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  bankBrandBadge: {
+    width: 48,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  bankBrandBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontFamily: 'Outfit_700Bold',
+  },
+  bankBrandLabel: {
+    fontSize: 10,
+    fontFamily: 'Outfit_500Medium',
   },
   colorPalette: {
     flexDirection: 'row',

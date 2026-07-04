@@ -24,6 +24,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { BankLogo } from '@/components/BankLogo';
 
 export default function AccountDetailsScreen() {
   const router = useRouter();
@@ -163,11 +164,16 @@ export default function AccountDetailsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Balance Hero Card */}
         <View style={[styles.balanceCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-          <View style={[styles.indicatorPill, { backgroundColor: `${account.color}15` }]}>
-            <View style={[styles.indicatorDot, { backgroundColor: account.color }]} />
-            <ThemedText style={[styles.indicatorText, { color: account.color }]}>
-              {account.type.replace('_', ' ').toUpperCase()}
-            </ThemedText>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <View style={[styles.indicatorPill, { backgroundColor: `${account.color}15`, marginBottom: 0 }]}>
+              <View style={[styles.indicatorDot, { backgroundColor: account.color }]} />
+              <ThemedText style={[styles.indicatorText, { color: account.color }]}>
+                {account.type.replace('_', ' ').toUpperCase()}
+              </ThemedText>
+            </View>
+            {account.logo ? (
+              <BankLogo logo={account.logo} size={28} />
+            ) : null}
           </View>
           <ThemedText style={[styles.balanceLabel, { color: currColors.textSecondary }]}>
             {isCreditCard ? 'CURRENT OUTSTANDING' : 'AVAILABLE BALANCE'}

@@ -71,8 +71,32 @@ export const useMoneyStore = create<MoneyState>()(
       emiPayments: [],
       budgets: [],
       categories: {
-        income: [],
-        expense: []
+        income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
+        expense: [
+          'Food & Dining',
+          'Food',
+          'Junk',
+          'Rent & Bills',
+          'House',
+          'Electricity Bill',
+          'Shopping',
+          'Shopping - Electronics',
+          'Shopping - Clothes',
+          'Entertainment',
+          'Subscriptions - OTT',
+          'Subscriptions - WiFi',
+          'Travel',
+          'Travel/ Trips',
+          'Transport - Fuel',
+          'Transport - Cab',
+          'Medical',
+          'Education',
+          'Maintainance',
+          'Family',
+          'Gifts',
+          'EMI Payments',
+          'Others'
+        ]
       },
 
 

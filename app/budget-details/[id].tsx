@@ -24,6 +24,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { CategoryIcon } from '@/components/CategoryIcon';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -255,59 +256,62 @@ export default function BudgetDetailsScreen() {
         </View>
 
         <View style={[styles.categoriesContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-          {spendingDetails.categories.map((cat, index) => {
-            const percentage = cat.limit > 0 ? (cat.spent / cat.limit) * 100 : 0;
-            const isOverspent = cat.spent > cat.limit;
+          {(() => {
+            const filteredCats = spendingDetails.categories.filter((c) => c.limit > 0);
+            return filteredCats.map((cat, index) => {
+              const percentage = cat.limit > 0 ? (cat.spent / cat.limit) * 100 : 0;
+              const isOverspent = cat.spent > cat.limit;
 
-            return (
-              <View
-                key={cat.id}
-                style={[
-                  styles.catItem,
-                  { borderBottomColor: currColors.border, borderBottomWidth: index === spendingDetails.categories.length - 1 ? 0 : 1 }
-                ]}
-              >
-                <View style={styles.catRow}>
-                  <View style={styles.catLeft}>
-                    <ThemedText style={{ fontSize: 16, marginRight: 8 }}>{cat.icon}</ThemedText>
-                    <ThemedText style={[styles.catName, { color: currColors.text }]} numberOfLines={1}>
-                      {cat.name}
-                    </ThemedText>
+              return (
+                <View
+                  key={cat.id}
+                  style={[
+                    styles.catItem,
+                    { borderBottomColor: currColors.border, borderBottomWidth: index === filteredCats.length - 1 ? 0 : 1 }
+                  ]}
+                >
+                  <View style={styles.catRow}>
+                    <View style={styles.catLeft}>
+                      <CategoryIcon name={cat.icon} color={cat.color} size={16} style={{ marginRight: 8 }} />
+                      <ThemedText style={[styles.catName, { color: currColors.text }]} numberOfLines={1}>
+                        {cat.name}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.catRight}>
+                      <ThemedText style={[styles.catSpent, { color: isOverspent ? '#FF3B30' : currColors.text }]}>
+                        {formatAmount(cat.spent)}
+                      </ThemedText>
+                      <ThemedText style={[styles.catLimit, { color: currColors.textSecondary }]}>
+                        / {formatAmount(cat.limit)}
+                      </ThemedText>
+                    </View>
                   </View>
-                  <View style={styles.catRight}>
-                    <ThemedText style={[styles.catSpent, { color: isOverspent ? '#FF3B30' : currColors.text }]}>
-                      {formatAmount(cat.spent)}
+
+                  {/* Progress bar */}
+                  <View style={[styles.progressBackground, { backgroundColor: currColors.cardSecondary, marginTop: 10 }]}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${Math.min(100, percentage)}%`,
+                          backgroundColor: isOverspent ? '#FF3B30' : percentage > 85 ? '#FF9500' : '#00C9A7',
+                        },
+                      ]}
+                    />
+                  </View>
+
+                  <View style={styles.catFooter}>
+                    <ThemedText style={{ fontSize: 11, color: isOverspent ? '#FF3B30' : currColors.textSecondary }}>
+                      {isOverspent 
+                        ? `Overspent by ${formatAmount(cat.spent - cat.limit)}` 
+                        : `${formatAmount(cat.limit - cat.spent)} remaining`}
                     </ThemedText>
-                    <ThemedText style={[styles.catLimit, { color: currColors.textSecondary }]}>
-                      / {formatAmount(cat.limit)}
-                    </ThemedText>
+                    {isOverspent && <AlertTriangle size={12} color="#FF3B30" />}
                   </View>
                 </View>
-
-                {/* Progress bar */}
-                <View style={[styles.progressBackground, { backgroundColor: currColors.cardSecondary, marginTop: 10 }]}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${Math.min(100, percentage)}%`,
-                        backgroundColor: isOverspent ? '#FF3B30' : percentage > 85 ? '#FF9500' : '#00C9A7',
-                      },
-                    ]}
-                  />
-                </View>
-
-                <View style={styles.catFooter}>
-                  <ThemedText style={{ fontSize: 11, color: isOverspent ? '#FF3B30' : currColors.textSecondary }}>
-                    {isOverspent 
-                      ? `Overspent by ${formatAmount(cat.spent - cat.limit)}` 
-                      : `${formatAmount(cat.limit - cat.spent)} remaining`}
-                  </ThemedText>
-                  {isOverspent && <AlertTriangle size={12} color="#FF3B30" />}
-                </View>
-              </View>
-            );
-          })}
+              );
+            });
+          })()}
         </View>
 
         {/* Transactions logged in this budget */}

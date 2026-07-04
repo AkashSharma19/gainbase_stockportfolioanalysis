@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
   },
   closeBtn: {

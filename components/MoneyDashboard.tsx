@@ -1,38 +1,39 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  FlatList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
-  Plus,
   CreditCard,
   Landmark,
   PiggyBank,
   ArrowDownLeft,
   ArrowUpRight,
-  TrendingUp,
   Wallet,
   Activity,
   Calendar,
-  ChevronRight,
+  ArrowRightLeft,
+  Info,
+  Layers,
+  Eye,
+  EyeOff,
+  PieChart,
 } from 'lucide-react-native';
 
 import { ThemedText } from './ThemedText';
-import { AppSwitcher } from './AppSwitcher';
 import { useColorScheme } from './useColorScheme';
 import Colors from '../constants/Colors';
 import { useMoneyStore } from '../store/useMoneyStore';
 import { usePortfolioStore } from '../store/usePortfolioStore';
-import { formatIndianNumber } from '../lib/finance';
 import { MoneyTransaction } from '../types/money';
 import { MoneyActivityCalendar } from './MoneyActivityCalendar';
+import { FinancialInsights } from './FinancialInsights';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -46,20 +47,20 @@ export function MoneyDashboard() {
     accounts,
     moneyTransactions,
     loans,
-    budgets,
     getNetWorth,
     getMonthlyEMIBurden,
-    getActiveBudget,
-    getCategorySpending,
   } = useMoneyStore();
 
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
+  const togglePrivacyMode = usePortfolioStore((state) => state.togglePrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
+
+  // Filter state for transactions list
+  const [activeFilter, setActiveFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
 
   // Computations
   const netWorth = getNetWorth();
   const monthlyEMIs = getMonthlyEMIBurden();
-
 
   const accountTotals = useMemo(() => {
     const totals = {
@@ -78,13 +79,45 @@ export function MoneyDashboard() {
     return totals;
   }, [accounts]);
 
+  // Filter and limit recent transactions
+  const filteredRecentTxs = useMemo(() => {
+    let list = moneyTransactions;
+    if (activeFilter !== 'all') {
+      list = list.filter((tx) => tx.type === activeFilter);
+    }
+    return list.slice(0, 5);
+  }, [moneyTransactions, activeFilter]);
 
-  const recentTxs = useMemo(() => {
-    return moneyTransactions.slice(0, 5);
-  }, [moneyTransactions]);
+  // Chronologically group the filtered recent transactions
+  const groupedTxs = useMemo(() => {
+    const groups: { title: string; data: MoneyTransaction[] }[] = [];
+    const today = new Date().toDateString();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toDateString();
+
+    filteredRecentTxs.forEach((tx) => {
+      const dateObj = new Date(tx.date);
+      const txDateStr = dateObj.toDateString();
+      let title = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      if (txDateStr === today) {
+        title = 'Today';
+      } else if (txDateStr === yesterdayStr) {
+        title = 'Yesterday';
+      }
+
+      const existing = groups.find((g) => g.title === title);
+      if (existing) {
+        existing.data.push(tx);
+      } else {
+        groups.push({ title, data: [tx] });
+      }
+    });
+    return groups;
+  }, [filteredRecentTxs]);
 
   const formatAmount = (val: number) => {
-    if (isPrivacyMode) return '****';
+    if (isPrivacyMode) return '••••••';
     const formatted = Math.abs(val).toLocaleString('en-IN', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
@@ -98,58 +131,88 @@ export function MoneyDashboard() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
+  // Gradient background colors for Net Worth Card based on theme
+  const netWorthGradient = colorScheme === 'dark'
+    ? ['#052E2B', '#0A4E46'] as const
+    : ['#E6F4F2', '#D1EFEA'] as const;
+
+  const activeFilterBg = '#00C9A7';
+
   return (
     <View style={[styles.container, { backgroundColor: currColors.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Net Worth Card (Teal Gradient Theme) */}
-        <View style={[styles.netWorthCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+        {/* Net Worth Gradient Card */}
+        <LinearGradient
+          colors={netWorthGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.netWorthCard, colorScheme === 'light' && { borderWidth: 0 }]}
+        >
           <View style={styles.netWorthHeaderRow}>
-            <ThemedText type="bold" style={[styles.cardTitle, { color: currColors.textSecondary }]}>
+            <ThemedText type="medium" style={[styles.cardTitle, { color: colorScheme === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,77,64,0.7)', fontFamily: 'Outfit_500Medium' }]}>
               TOTAL NET WORTH
             </ThemedText>
-            <TouchableOpacity
-              style={[styles.analyticsBadge, { backgroundColor: currColors.cardSecondary }]}
-              onPress={() => {
-                handleHaptic();
-                router.push('/money-analytics');
-              }}
-            >
-              <Activity size={12} color="#00C9A7" style={{ marginRight: 4 }} />
-              <ThemedText type="medium" style={{ fontSize: 11, color: '#00C9A7' }}>
-                Analytics
-              </ThemedText>
-            </TouchableOpacity>
+            <View style={styles.heroIcons}>
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  togglePrivacyMode();
+                }}
+                style={[
+                  styles.iconButton,
+                  { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,77,64,0.06)' },
+                ]}
+              >
+                {isPrivacyMode ? (
+                  <EyeOff size={16} color={colorScheme === 'dark' ? '#FFF' : '#004D40'} />
+                ) : (
+                  <Eye size={16} color={colorScheme === 'dark' ? '#FFF' : '#004D40'} />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  router.push('/money-analytics');
+                }}
+                style={[
+                  styles.iconButton,
+                  { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,77,64,0.06)' },
+                ]}
+              >
+                <PieChart size={16} color={colorScheme === 'dark' ? '#FFF' : '#004D40'} />
+              </TouchableOpacity>
+            </View>
           </View>
-          <ThemedText style={[styles.netWorthVal, { color: currColors.text }]}>
+          <ThemedText style={[styles.netWorthVal, { color: colorScheme === 'dark' ? '#FFF' : '#004D40', fontFamily: 'Outfit_500Medium' }]}>
             {formatAmount(netWorth)}
           </ThemedText>
           
-          <View style={[styles.divider, { borderColor: currColors.border }]} />
+          <View style={[styles.divider, { borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,77,64,0.1)' }]} />
 
           <View style={styles.summaryRow}>
             <View style={styles.summaryCol}>
-              <ThemedText style={[styles.summaryLabel, { color: currColors.textSecondary }]}>
+              <ThemedText style={[styles.summaryLabel, { color: colorScheme === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,77,64,0.7)' }]}>
                 Accounts Value
               </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: '#00C9A7' }]}>
+              <ThemedText style={[styles.summaryValue, { color: colorScheme === 'dark' ? '#A7FFEB' : '#00796B', fontFamily: 'Outfit_500Medium' }]}>
                 {formatAmount(accounts.reduce((acc, a) => acc + (a.isArchived ? 0 : a.balance), 0))}
               </ThemedText>
             </View>
             <View style={styles.summaryCol}>
-              <ThemedText style={[styles.summaryLabel, { color: currColors.textSecondary }]}>
+              <ThemedText style={[styles.summaryLabel, { color: colorScheme === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,77,64,0.7)' }]}>
                 Outstanding Loans
               </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: '#FF3B30' }]}>
+              <ThemedText style={[styles.summaryValue, { color: colorScheme === 'dark' ? '#FF8A80' : '#C62828', fontFamily: 'Outfit_500Medium' }]}>
                 {formatAmount(loans.filter(l => l.isActive).reduce((acc, l) => acc + l.outstandingAmount, 0))}
               </ThemedText>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
-
+        <FinancialInsights />
 
         {/* Accounts Summary Cards List */}
         <View style={styles.sectionHeader}>
@@ -157,6 +220,7 @@ export function MoneyDashboard() {
             ACCOUNTS BY TYPE
           </ThemedText>
         </View>
+        
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -172,10 +236,12 @@ export function MoneyDashboard() {
             }}
           >
             <View style={styles.cardHeader}>
-              <Wallet size={20} color="#00C9A7" />
+              <View style={[styles.iconRoundBox, { backgroundColor: '#00C9A715' }]}>
+                <Wallet size={16} color="#00C9A7" />
+              </View>
               <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Cash / Wallets</ThemedText>
             </View>
-            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text }]}>
+            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
               {formatAmount(accountTotals.wallet)}
             </ThemedText>
           </TouchableOpacity>
@@ -190,10 +256,12 @@ export function MoneyDashboard() {
             }}
           >
             <View style={styles.cardHeader}>
-              <Landmark size={20} color="#007AFF" />
+              <View style={[styles.iconRoundBox, { backgroundColor: '#007AFF15' }]}>
+                <Landmark size={16} color="#007AFF" />
+              </View>
               <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Savings</ThemedText>
             </View>
-            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text }]}>
+            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
               {formatAmount(accountTotals.savings)}
             </ThemedText>
           </TouchableOpacity>
@@ -208,10 +276,12 @@ export function MoneyDashboard() {
             }}
           >
             <View style={styles.cardHeader}>
-              <Activity size={20} color="#AF52DE" />
+              <View style={[styles.iconRoundBox, { backgroundColor: '#AF52DE15' }]}>
+                <Activity size={16} color="#AF52DE" />
+              </View>
               <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Investments</ThemedText>
             </View>
-            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text }]}>
+            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
               {formatAmount(accountTotals.investment)}
             </ThemedText>
           </TouchableOpacity>
@@ -226,10 +296,12 @@ export function MoneyDashboard() {
             }}
           >
             <View style={styles.cardHeader}>
-              <CreditCard size={20} color="#FF9500" />
+              <View style={[styles.iconRoundBox, { backgroundColor: '#FF950015' }]}>
+                <CreditCard size={16} color="#FF9500" />
+              </View>
               <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Credit Cards</ThemedText>
             </View>
-            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text }]}>
+            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
               {formatAmount(accountTotals.credit_card)}
             </ThemedText>
           </TouchableOpacity>
@@ -244,15 +316,16 @@ export function MoneyDashboard() {
             }}
           >
             <View style={styles.cardHeader}>
-              <PiggyBank size={20} color="#FF2D55" />
+              <View style={[styles.iconRoundBox, { backgroundColor: '#FF2D5515' }]}>
+                <PiggyBank size={16} color="#FF2D55" />
+              </View>
               <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Emergency Fund</ThemedText>
             </View>
-            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text }]}>
+            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
               {formatAmount(accountTotals.emergency_fund)}
             </ThemedText>
           </TouchableOpacity>
         </ScrollView>
-
 
         {/* EMI Calendar Card */}
         {loans.filter(l => l.isActive).length > 0 ? (
@@ -273,27 +346,33 @@ export function MoneyDashboard() {
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.cardContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[styles.cardContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+              onPress={() => router.push('/(tabs)/money-loans')}
+            >
               <View style={styles.emiRow}>
-                <Calendar size={22} color="#FF9500" />
+                <View style={[styles.iconRoundBox, { backgroundColor: '#FF950015', width: 44, height: 44 }]}>
+                  <Calendar size={22} color="#FF9500" />
+                </View>
                 <View style={styles.emiInfo}>
-                  <ThemedText type="semiBold" style={[styles.emiTitleText, { color: currColors.text }]}>
+                  <ThemedText type="semiBold" style={[styles.emiTitleText, { color: currColors.text, fontSize: 15 }]}>
                     Total Monthly EMIs
                   </ThemedText>
                   <ThemedText style={[styles.emiCountText, { color: currColors.textSecondary }]}>
-                    {loans.filter(l => l.isActive).length} active loans
+                    {loans.filter(l => l.isActive).length} active loans outstanding
                   </ThemedText>
                 </View>
-                <ThemedText style={[styles.emiBurdenText, { color: currColors.text }]}>
+                <ThemedText style={[styles.emiBurdenText, { color: currColors.text, fontFamily: 'Outfit_700Bold', fontSize: 16 }]}>
                   {formatAmount(monthlyEMIs)}
                 </ThemedText>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
         ) : null}
 
-        {/* Recent Transactions List */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: 16, marginTop: 28, marginBottom: 12 }}>
+        {/* Recent Transactions List with Type Filters */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: 16, marginTop: 28, marginBottom: 8 }}>
           <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary, marginBottom: 0 }]}>
             RECENT TRANSACTIONS
           </ThemedText>
@@ -304,85 +383,149 @@ export function MoneyDashboard() {
           </TouchableOpacity>
         </View>
 
-        {recentTxs.length === 0 ? (
-          <View style={[styles.emptyTxsCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center' }}>
-              No transactions added yet. Tap the '+' button to log your first income/expense.
-            </ThemedText>
-          </View>
-        ) : (
-          <View style={[styles.txsListContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            {recentTxs.map((tx, index) => {
-              const account = accounts.find((a) => a.id === tx.accountId);
-              const toAccount = tx.toAccountId ? accounts.find((a) => a.id === tx.toAccountId) : null;
-              const isIncome = tx.type === 'income';
-              const isExpense = tx.type === 'expense';
-              
+        {/* Dynamic Filter Chips strip */}
+        <View style={styles.filterStripContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterChipsScroll}
+          >
+            {([
+              { key: 'all', label: 'All', icon: Layers },
+              { key: 'expense', label: 'Expenses', icon: ArrowUpRight },
+              { key: 'income', label: 'Income', icon: ArrowDownLeft },
+              { key: 'transfer', label: 'Transfers', icon: ArrowRightLeft },
+            ] as const).map((filter) => {
+              const IconComponent = filter.icon;
+              const isSelected = activeFilter === filter.key;
+              const iconColor = isSelected ? '#FFFFFF' : currColors.textSecondary;
               return (
                 <TouchableOpacity
-                  key={tx.id}
+                  key={filter.key}
                   style={[
-                    styles.txItem,
-                    { borderBottomColor: currColors.border, borderBottomWidth: index === recentTxs.length - 1 ? 0 : 1 }
+                    styles.filterChip,
+                    {
+                      backgroundColor: isSelected ? activeFilterBg : currColors.cardSecondary,
+                      borderColor: isSelected ? activeFilterBg : currColors.border,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingLeft: 10,
+                    },
                   ]}
-                  activeOpacity={0.7}
                   onPress={() => {
                     handleHaptic();
-                    router.push({ pathname: '/add-money-transaction', params: { id: tx.id } });
+                    setActiveFilter(filter.key);
                   }}
                 >
-                  <View style={styles.txLeft}>
-                    <View
-                      style={[
-                        styles.txIconBox,
-                        {
-                          backgroundColor:
-                            tx.type === 'income'
-                              ? '#34C7591A'
-                              : tx.type === 'expense'
-                              ? '#FF3B301A'
-                              : '#8E8E931A',
-                        },
-                      ]}
-                    >
-                      {tx.type === 'income' ? (
-                        <ArrowDownLeft size={20} color="#34C759" />
-                      ) : tx.type === 'expense' ? (
-                        <ArrowUpRight size={20} color="#FF3B30" />
-                      ) : (
-                        <Activity size={20} color="#8E8E93" />
-                      )}
-                    </View>
-                    <View style={styles.txInfo}>
-                      <ThemedText type="semiBold" style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
-                        {tx.type === 'transfer' ? `Transfer: ${account?.name} → ${toAccount?.name}` : tx.category}
-                      </ThemedText>
-                      <ThemedText style={[styles.txDate, { color: currColors.textSecondary }]}>
-                        {new Date(tx.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                        {tx.note ? ` • ${tx.note}` : ''}
-                      </ThemedText>
-                    </View>
-                  </View>
-
+                  <IconComponent size={12} color={iconColor} style={{ marginRight: 6 }} />
                   <ThemedText
                     style={[
-                      styles.txAmount,
+                      styles.filterChipText,
                       {
-                        color:
-                          tx.type === 'income'
-                            ? '#34C759'
-                            : tx.type === 'expense'
-                            ? '#FF3B30'
-                            : currColors.text,
+                        color: isSelected ? '#FFFFFF' : currColors.textSecondary,
+                        fontFamily: isSelected ? 'Outfit_500Medium' : 'Outfit_400Regular',
                       },
                     ]}
                   >
-                    {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
-                    {formatAmount(tx.amount)}
+                    {filter.label}
                   </ThemedText>
                 </TouchableOpacity>
               );
             })}
+          </ScrollView>
+        </View>
+
+        {filteredRecentTxs.length === 0 ? (
+          <View style={[styles.emptyTxsCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            <Info size={32} color={currColors.textSecondary} style={{ marginBottom: 12 }} />
+            <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', lineHeight: 20, paddingHorizontal: 12 }}>
+              No transactions matching the selected filter found. Tap the '+' button below to log one.
+            </ThemedText>
+          </View>
+        ) : (
+          <View style={styles.txsGroupsContainer}>
+            {groupedTxs.map((group) => (
+              <View key={group.title} style={styles.txGroup}>
+                <ThemedText type="bold" style={[styles.txGroupHeader, { color: currColors.textSecondary }]}>
+                  {group.title.toUpperCase()}
+                </ThemedText>
+                <View style={[styles.txsListContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+                  {group.data.map((tx, index) => {
+                    const account = accounts.find((a) => a.id === tx.accountId);
+                    const toAccount = tx.toAccountId ? accounts.find((a) => a.id === tx.toAccountId) : null;
+                    
+                    return (
+                      <TouchableOpacity
+                        key={tx.id}
+                        style={[
+                          styles.txItem,
+                          {
+                            borderBottomColor: currColors.border,
+                            borderBottomWidth: index === group.data.length - 1 ? 0 : 1,
+                          },
+                        ]}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          handleHaptic();
+                          router.push({ pathname: '/add-money-transaction', params: { id: tx.id } });
+                        }}
+                      >
+                        <View style={styles.txLeft}>
+                          <View
+                            style={[
+                              styles.txIconBox,
+                              {
+                                backgroundColor:
+                                  tx.type === 'income'
+                                    ? 'rgba(52, 199, 89, 0.1)'
+                                    : tx.type === 'expense'
+                                    ? 'rgba(255, 59, 48, 0.1)'
+                                    : 'rgba(142, 142, 147, 0.1)',
+                              },
+                            ]}
+                          >
+                            {tx.type === 'income' ? (
+                              <ArrowDownLeft size={20} color="#34C759" />
+                            ) : tx.type === 'expense' ? (
+                              <ArrowUpRight size={20} color="#FF3B30" />
+                            ) : (
+                              <ArrowRightLeft size={18} color="#8E8E93" />
+                            )}
+                          </View>
+                          <View style={styles.txInfo}>
+                            <ThemedText type="semiBold" style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
+                              {tx.type === 'transfer' ? `Transfer: ${account?.name} → ${toAccount?.name}` : tx.category}
+                            </ThemedText>
+                            <ThemedText style={[styles.txDate, { color: currColors.textSecondary }]} numberOfLines={1}>
+                              {account?.name || 'Unknown Account'}
+                              {tx.note ? ` • ${tx.note}` : ''}
+                            </ThemedText>
+                          </View>
+                        </View>
+
+                        <ThemedText
+                          style={[
+                            styles.txAmount,
+                            {
+                              fontFamily: 'Outfit_600SemiBold',
+                              color:
+                                tx.type === 'income'
+                                  ? '#34C759'
+                                  : tx.type === 'expense'
+                                  ? '#FF3B30'
+                                  : currColors.text,
+                            },
+                          ]}
+                        >
+                          {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
+                          {formatAmount(tx.amount)}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
           </View>
         )}
 
@@ -393,14 +536,11 @@ export function MoneyDashboard() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 110,
   },
   netWorthCard: {
     marginHorizontal: 16,
@@ -409,21 +549,20 @@ const styles = StyleSheet.create({
     padding: 24,
     marginTop: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 6,
   },
   cardTitle: {
     fontSize: 10,
-    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   netWorthVal: {
-    fontSize: 24,
-    fontFamily: 'Outfit_400Regular',
+    fontSize: 32,
+    letterSpacing: -0.5,
   },
   divider: {
     borderBottomWidth: 1,
@@ -439,34 +578,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summaryLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'Outfit_400Regular',
     marginBottom: 4,
   },
   summaryValue: {
-    fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
-  },
-  quickActionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginTop: 24,
-  },
-  actionItem: {
-    alignItems: 'center',
-  },
-  actionIconWrapper: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  actionLabel: {
-    fontSize: 11,
-    fontFamily: 'Outfit_500Medium',
+    fontSize: 15,
   },
   sectionHeader: {
     marginHorizontal: 16,
@@ -492,26 +609,38 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   accountSummaryCard: {
-    width: 140,
-    height: 90,
-    borderRadius: 16,
+    width: 144,
+    height: 96,
+    borderRadius: 20,
     borderWidth: 1,
     padding: 14,
     marginRight: 10,
     justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
+  iconRoundBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   accountTypeLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'Outfit_500Medium',
+    flex: 1,
   },
   accountTypeBalance: {
-    fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
+    fontSize: 15,
   },
   sectionContainer: {
     marginTop: 8,
@@ -520,41 +649,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    padding: 18,
-  },
-  budgetOverviewRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  spentText: {
-    fontSize: 18,
-    fontFamily: 'Outfit_400Regular',
-  },
-  limitText: {
-    fontSize: 12,
-    fontFamily: 'Outfit_400Regular',
-    marginTop: 2,
-  },
-  percentageBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.03)',
-  },
-  percentageText: {
-    fontSize: 13,
-    fontFamily: 'Outfit_500Medium',
-  },
-  progressBarBackground: {
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 4,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   emiRow: {
     flexDirection: 'row',
@@ -566,7 +666,6 @@ const styles = StyleSheet.create({
   },
   emiTitleText: {
     fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
   },
   emiCountText: {
     fontSize: 12,
@@ -575,21 +674,37 @@ const styles = StyleSheet.create({
   },
   emiBurdenText: {
     fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
   },
   emptyTxsCard: {
     marginHorizontal: 16,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 24,
+    padding: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    borderStyle: 'dashed',
+  },
+  txsGroupsContainer: {
+    marginHorizontal: 16,
+    gap: 16,
+  },
+  txGroup: {
+    gap: 8,
+  },
+  txGroupHeader: {
+    fontSize: 9,
+    letterSpacing: 1,
+    marginLeft: 4,
   },
   txsListContainer: {
-    marginHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   txItem: {
     flexDirection: 'row',
@@ -617,7 +732,6 @@ const styles = StyleSheet.create({
   },
   txCategory: {
     fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
   },
   txDate: {
     fontSize: 12,
@@ -626,19 +740,39 @@ const styles = StyleSheet.create({
   },
   txAmount: {
     fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
   },
   netWorthHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  analyticsBadge: {
+  heroIcons: {
     flexDirection: 'row',
+    gap: 8,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+  },
+  filterStripContainer: {
+    marginBottom: 14,
+  },
+  filterChipsScroll: {
+    paddingLeft: 16,
+    paddingRight: 8,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  filterChipText: {
+    fontSize: 12,
   },
 });
