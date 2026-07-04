@@ -158,11 +158,13 @@ export default function AccountsScreen() {
               <ThemedText type="semiBold" style={[styles.accountName, { color: currColors.text }]} numberOfLines={1}>
                 {item.name}
               </ThemedText>
-              <ThemedText style={[styles.accountSub, { color: currColors.textSecondary }]} numberOfLines={1}>
-                {item.institution || config.label}
-                {item.accountNumber ? ` • •••• ${item.accountNumber}` : ''}
-                {item.includeInAssets === false ? ' • Excluded' : ''}
-              </ThemedText>
+              {(item.institution || item.accountNumber || item.includeInAssets === false) ? (
+                <ThemedText style={[styles.accountSub, { color: currColors.textSecondary }]} numberOfLines={1}>
+                  {item.institution || ''}
+                  {item.accountNumber ? `${item.institution ? ' • ' : ''}•••• ${item.accountNumber}` : ''}
+                  {item.includeInAssets === false ? `${(item.institution || item.accountNumber) ? ' • ' : ''}Excluded` : ''}
+                </ThemedText>
+              ) : null}
             </View>
           </View>
 
@@ -246,48 +248,45 @@ export default function AccountsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Aggregate Overview Gradient Bar */}
-        <LinearGradient
-          colors={colorScheme === 'dark' ? ['#0A2540', '#001529'] : ['#F4F9FF', '#EAF2F9']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.premiumOverviewCard, { borderColor: currColors.border }]}
+        {/* Aggregate Overview Card (flat, matching net worth hero) */}
+        <View
+          style={[
+            styles.premiumOverviewCard,
+            {
+              backgroundColor: currColors.card,
+              borderColor: currColors.border,
+            },
+          ]}
         >
           <View style={styles.netWorthHeader}>
-            <ThemedText style={[styles.netWorthLabel, { color: colorScheme === 'dark' ? 'rgba(255,255,255,0.7)' : currColors.textSecondary }]}>
-              NET WORTH
+            <ThemedText style={[styles.netWorthLabel, { color: currColors.textSecondary }]}>
+              TOTAL NET WORTH
             </ThemedText>
-            <ThemedText style={[styles.netWorthVal, { color: colorScheme === 'dark' ? '#FFFFFF' : currColors.text, fontFamily: 'Outfit_500Medium' }]}>
+            <ThemedText style={[styles.netWorthVal, { color: currColors.text, fontFamily: 'Outfit_400Regular' }]}>
               {formatAmount(summary.totalAssets - summary.totalLiabilities)}
             </ThemedText>
           </View>
-          
-          <View style={[styles.cardDivider, { backgroundColor: currColors.border }]} />
-          
-          <View style={styles.metricsRow}>
-            <View style={styles.metricItem}>
-              <View style={styles.metricDotText}>
-                <View style={[styles.metricDot, { backgroundColor: '#00C9A7' }]} />
-                <ThemedText style={[styles.metricLabel, { color: currColors.textSecondary }]}>Total Assets</ThemedText>
-              </View>
-              <ThemedText style={[styles.metricVal, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
-                {formatAmount(summary.totalAssets)}
-              </ThemedText>
-            </View>
-            
-            <View style={[styles.verticalDivider, { borderColor: currColors.border, height: 24 }]} />
-            
-            <View style={styles.metricItem}>
-              <View style={styles.metricDotText}>
-                <View style={[styles.metricDot, { backgroundColor: '#FF3B30' }]} />
-                <ThemedText style={[styles.metricLabel, { color: currColors.textSecondary }]}>Liabilities</ThemedText>
-              </View>
-              <ThemedText style={[styles.metricVal, { color: '#FF3B30', fontFamily: 'Outfit_600SemiBold' }]}>
-                {formatAmount(summary.totalLiabilities)}
-              </ThemedText>
-            </View>
+
+          <View style={[styles.dashedDivider, { borderColor: currColors.border }]} />
+
+          <View style={styles.heroRow}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+              Total Assets
+            </ThemedText>
+            <ThemedText style={[styles.heroRowValue, { color: '#00C9A7' }]}>
+              {formatAmount(summary.totalAssets)}
+            </ThemedText>
           </View>
-        </LinearGradient>
+
+          <View style={[styles.heroRow, { marginBottom: 0 }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+              Liabilities
+            </ThemedText>
+            <ThemedText style={[styles.heroRowValue, { color: '#FF3B30' }]}>
+              {formatAmount(summary.totalLiabilities)}
+            </ThemedText>
+          </View>
+        </View>
 
         {/* Render accounts grouped by type */}
         {(Object.keys(TYPE_CONFIG) as AccountType[]).map((type) => {
@@ -356,52 +355,39 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   netWorthHeader: {
-    alignItems: 'center',
-    marginBottom: 16,
+    alignItems: 'flex-start',
+    marginBottom: 2,
   },
   netWorthLabel: {
     fontSize: 10,
     fontFamily: 'Outfit_500Medium',
-    letterSpacing: 0.8,
-    marginBottom: 4,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   netWorthVal: {
-    fontSize: 28,
-  },
-  cardDivider: {
-    height: 1,
-    width: '100%',
-    opacity: 0.15,
+    fontSize: 24,
     marginBottom: 16,
   },
-  metricsRow: {
+  dashedDivider: {
+    height: 1,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 1,
+    marginBottom: 16,
+  },
+  heroRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
-  metricItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  metricDotText: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  metricDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 6,
-  },
-  metricLabel: {
-    fontSize: 11,
+  heroRowLabel: {
+    fontSize: 14,
     fontFamily: 'Outfit_400Regular',
   },
-  metricVal: {
-    fontSize: 15,
-  },
-  verticalDivider: {
-    borderRightWidth: 1,
+  heroRowValue: {
+    fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
   },
   scrollContent: {
     paddingBottom: 110,
@@ -410,7 +396,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   groupTitle: {
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: 'Outfit_500Medium',
     letterSpacing: 1,
     textTransform: 'uppercase',
@@ -470,7 +456,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   accountBalance: {
-    fontSize: 15,
+    fontSize: 14,
   },
   utilizationContainer: {
     width: '100%',

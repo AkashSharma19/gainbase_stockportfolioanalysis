@@ -227,7 +227,7 @@ export default function BudgetsScreen() {
 
               {/* Categories list */}
               <View style={styles.sectionHeader}>
-                <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+                <ThemedText type="medium" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
                   CATEGORY ALLOCATIONS
                 </ThemedText>
               </View>
@@ -236,6 +236,7 @@ export default function BudgetsScreen() {
                 const percentage = cat.limit > 0 ? (cat.spent / cat.limit) * 100 : 0;
                 const isOverspent = cat.spent > cat.limit;
                 const catProgressColor = getProgressColor(percentage);
+                const catColor = cat.color || '#8E8E93';
                 
                 return (
                   <TouchableOpacity
@@ -256,8 +257,8 @@ export default function BudgetsScreen() {
                   >
                     <View style={styles.catHeader}>
                       <View style={styles.catHeaderLeft}>
-                        <View style={[styles.catIconWrapper, { backgroundColor: `${cat.color}15` }]}>
-                          <CategoryIcon name={cat.icon} color={cat.color} size={16} />
+                        <View style={[styles.catIconWrapper, { backgroundColor: `${catColor}15` }]}>
+                          <CategoryIcon name={cat.icon || cat.name} color={catColor} size={16} />
                         </View>
                         <ThemedText type="semiBold" style={[styles.catNameText, { color: currColors.text }]} numberOfLines={1}>
                           {cat.name}
@@ -355,8 +356,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardSubTitle: {
-    fontSize: 9,
-    fontFamily: 'Outfit_700Bold',
+    fontSize: 10,
+    fontFamily: 'Outfit_500Medium',
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 6,
@@ -402,8 +403,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 9,
-    fontFamily: 'Outfit_700Bold',
+    fontSize: 10,
+    fontFamily: 'Outfit_500Medium',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },

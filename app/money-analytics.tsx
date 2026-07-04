@@ -41,43 +41,63 @@ const DEFAULT_CATEGORY_METADATA: Record<string, { icon: string; color: string }>
   'Travel': { icon: 'Plane', color: '#34C759' },
   'Medical': { icon: 'Pill', color: '#FF2D55' },
   'Education': { icon: 'GraduationCap', color: '#5AC8FA' },
-  'Food': { icon: 'UtensilsCrossed', color: '#FF3B30' },
-  'Junk': { icon: 'Cookie', color: '#FF9500' },
+  'Food': { icon: 'UtensilsCrossed', color: '#FF6B6B' },
+  'Junk': { icon: 'Cookie', color: '#FF922B' },
   'Shopping - Electronics': { icon: 'Laptop', color: '#5856D6' },
-  'Shopping - Clothes': { icon: 'Shirt', color: '#FF2D55' },
-  'Subscriptions - OTT': { icon: 'Tv', color: '#AF52DE' },
-  'Subscriptions - WiFi': { icon: 'Wifi', color: '#5AC8FA' },
-  'House': { icon: 'Home', color: '#34C759' },
+  'Shopping - Clothes': { icon: 'Shirt', color: '#FD79A8' },
+  'Subscriptions - OTT': { icon: 'Tv', color: '#CC5DE8' },
+  'Subscriptions - WiFi': { icon: 'Wifi', color: '#4DABF7' },
+  'House': { icon: 'Home', color: '#20C997' },
   'Electricity Bill': { icon: 'Zap', color: '#FFCC00' },
-  'Transport - Fuel': { icon: 'Fuel', color: '#FF9500' },
-  'Transport - Cab': { icon: 'Car', color: '#FFCC00' },
+  'Transport - Fuel': { icon: 'Fuel', color: '#FF8E53' },
+  'Transport - Cab': { icon: 'Car', color: '#FCC419' },
   'Maintainance': { icon: 'Wrench', color: '#8E8E93' },
   'Maintenance': { icon: 'Wrench', color: '#8E8E93' },
-  'Travel/ Trips': { icon: 'Compass', color: '#007AFF' },
-  'Family': { icon: 'Users', color: '#FF2D55' },
-  'Gifts': { icon: 'Gift', color: '#AF52DE' },
-  'EMI Payments': { icon: 'CalendarRange', color: '#FF9500' },
-  'Others': { icon: 'Tag', color: '#8E8E93' },
-  'Other': { icon: 'Tag', color: '#8E8E93' },
+  'Travel/ Trips': { icon: 'Compass', color: '#748FFC' },
+  'Family': { icon: 'Users', color: '#B33771' },
+  'Gifts': { icon: 'Gift', color: '#E84393' },
+  'EMI Payments': { icon: 'CalendarRange', color: '#A06A42' },
+  'Others': { icon: 'Tag', color: '#2D3436' },
+  'Other': { icon: 'Tag', color: '#2D3436' },
 };
 
 const CATEGORY_COLORS = [
-  '#FF3B30', // Red
-  '#007AFF', // Blue
-  '#FF9500', // Orange
-  '#34C759', // Green
-  '#AF52DE', // Purple
-  '#FF2D55', // Pink
-  '#5AC8FA', // Teal
-  '#FFCC00', // Yellow
-  '#5856D6', // Indigo
+  '#FF3B30', // System Red
+  '#007AFF', // System Blue
+  '#FF9500', // System Orange
+  '#34C759', // System Green
+  '#AF52DE', // System Purple
+  '#FF2D55', // System Pink
+  '#5AC8FA', // System Teal
+  '#FFCC00', // System Yellow
+  '#5856D6', // System Indigo
   '#00C9A7', // Emerald
-  '#FF5E3A', // Coral red
-  '#9B59B6', // Amethyst
-  '#34495E', // Wet asphalt
-  '#16A085', // Greenish teal
-  '#E67E22', // Carrot
-  '#D35400', // Pumpkin
+  '#FF6B6B', // Pastel Red
+  '#4DABF7', // Pastel Blue
+  '#FF922B', // Pastel Orange
+  '#51CF66', // Pastel Green
+  '#CC5DE8', // Pastel Purple
+  '#FF8787', // Coral Pink
+  '#20C997', // Mint
+  '#FCC419', // Amber
+  '#748FFC', // Cornflower Blue
+  '#FF8E53', // Flame Orange
+  '#A06A42', // Brown
+  '#8E8E93', // Cool Grey
+  '#FF7675', // Soft Red
+  '#74B9FF', // Soft Blue
+  '#FDCB6E', // Soft Yellow
+  '#55E6C1', // Soft Mint
+  '#B33771', // Magenta
+  '#FD79A8', // Soft Pink
+  '#E17055', // Soft Teracotta
+  '#00B894', // Teal Green
+  '#0984E3', // Deep Blue
+  '#D63031', // Crimson
+  '#E84393', // Orchid Pink
+  '#2D3436', // Charcoal
+  '#6C5CE7', // Royal Purple
+  '#10AC84', // Dark Mint
 ];
 
 const getCategoryColor = (name: string) => {
@@ -105,8 +125,6 @@ export default function MoneyAnalyticsScreen() {
 
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('distribution');
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('DESC');
-  const [holdingsViewMode, setHoldingsViewMode] = useState<'Current' | 'Contribution'>('Current');
 
   const formatAmount = (val: number) => {
     if (isPrivacyMode) return '****';
@@ -232,7 +250,7 @@ export default function MoneyAnalyticsScreen() {
     return Object.values(currentMonthExpenses).reduce((acc, c) => acc + c.amount, 0);
   }, [currentMonthExpenses]);
 
-  // List of expenses sorted by amount or name
+  // List of expenses sorted by amount descending
   const sortedCategoryExpenses = useMemo(() => {
     const list = Object.keys(currentMonthExpenses).map((name) => ({
       name,
@@ -242,22 +260,14 @@ export default function MoneyAnalyticsScreen() {
     }));
 
     list.sort((a, b) => {
-      let valA = a.amount;
-      let valB = b.amount;
-
-      if (holdingsViewMode === 'Contribution') {
-        valA = totalCurrentMonthExpense > 0 ? (a.amount / totalCurrentMonthExpense) : 0;
-        valB = totalCurrentMonthExpense > 0 ? (b.amount / totalCurrentMonthExpense) : 0;
-      }
-
-      if (valA !== valB) {
-        return sortDirection === 'DESC' ? valB - valA : valA - valB;
+      if (a.amount !== b.amount) {
+        return b.amount - a.amount; // Descending by amount
       }
       return a.name.localeCompare(b.name);
     });
 
     return list;
-  }, [currentMonthExpenses, sortDirection, holdingsViewMode, totalCurrentMonthExpense]);
+  }, [currentMonthExpenses]);
 
   // Pie chart data
   const pieChartData = useMemo(() => {
@@ -391,48 +401,6 @@ export default function MoneyAnalyticsScreen() {
                 />
               </View>
             </LinearGradient>
-
-            {/* View mode selectors */}
-            <View style={styles.holdingsHeader}>
-              <TouchableOpacity
-                style={[
-                  styles.actionIconButton,
-                  {
-                    backgroundColor: currColors.card,
-                    borderColor: currColors.border,
-                  },
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setSortDirection((prev) => (prev === 'DESC' ? 'ASC' : 'DESC'));
-                }}
-              >
-                {sortDirection === 'DESC' ? (
-                  <ArrowDown size={14} color={currColors.text} />
-                ) : (
-                  <ArrowUp size={14} color={currColors.text} />
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.viewModeToggle,
-                  {
-                    backgroundColor: currColors.card,
-                    borderColor: currColors.border,
-                  },
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setHoldingsViewMode((prev) => prev === 'Current' ? 'Contribution' : 'Current');
-                }}
-              >
-                <ArrowUpDown size={14} color={currColors.text} />
-                <ThemedText type="medium" style={[styles.viewModeText, { color: currColors.text }]}>
-                  {holdingsViewMode === 'Current' ? 'Sort by Amount' : 'Sort by Contribution'}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
 
             {/* Distribution Details list */}
             <View style={[styles.holdingsList, { backgroundColor: currColors.card, borderColor: currColors.border }]}>

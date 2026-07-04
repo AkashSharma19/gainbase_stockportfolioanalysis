@@ -258,7 +258,7 @@ export default function AddBudgetScreen() {
           {categories.map((cat) => (
             <View key={cat.id} style={[styles.catAllocationCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
               <View style={styles.catLeft}>
-                <CategoryIcon name={cat.icon} color={cat.color} size={18} style={{ marginRight: 10 }} />
+                <CategoryIcon name={cat.icon || cat.name} color={cat.color || '#8E8E93'} size={18} style={{ marginRight: 10 }} />
                 <ThemedText style={[styles.catName, { color: currColors.text }]} numberOfLines={1}>
                   {cat.name}
                 </ThemedText>

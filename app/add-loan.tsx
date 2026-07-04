@@ -311,15 +311,15 @@ export default function AddLoanScreen() {
           {/* EMI Indicator and Override */}
           <View style={styles.emiHighlightCard}>
             <View>
-              <ThemedText style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontWeight: '700', letterSpacing: 0.5 }}>
+              <ThemedText style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontFamily: 'Outfit_500Medium', letterSpacing: 0.5 }}>
                 CALCULATED MONTHLY EMI
               </ThemedText>
-              <ThemedText style={{ fontSize: 24, fontFamily: 'Outfit_700Bold', color: '#FFFFFF', marginTop: 4 }}>
+              <ThemedText style={{ fontSize: 24, fontFamily: 'Outfit_600SemiBold', color: '#FFFFFF', marginTop: 4 }}>
                 ₹{calculatedEMI.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
               </ThemedText>
             </View>
             <View style={{ flex: 1, marginLeft: 16 }}>
-              <ThemedText style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontWeight: '700', letterSpacing: 0.5 }}>
+              <ThemedText style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontFamily: 'Outfit_500Medium', letterSpacing: 0.5 }}>
                 MANUAL EMI OVERRIDE (OPTIONAL)
               </ThemedText>
               <TextInput

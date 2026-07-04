@@ -122,7 +122,7 @@ export default function LoansScreen() {
           </View>
           <View style={styles.amountColEnd}>
             <ThemedText style={[styles.amountLabel, { color: currColors.textSecondary }]}>Monthly EMI</ThemedText>
-            <ThemedText style={[styles.emiValText, { color: config.color, fontFamily: 'Outfit_700Bold' }]}>
+            <ThemedText style={[styles.emiValText, { color: config.color, fontFamily: 'Outfit_600SemiBold' }]}>
               {formatAmount(item.emiAmount)}
             </ThemedText>
           </View>
@@ -174,40 +174,45 @@ export default function LoansScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Total EMI Burden Card with Gradient */}
-        <LinearGradient
-          colors={overviewGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[styles.burdenCard, { borderColor: currColors.border }]}
+        {/* Total EMI Burden Card (flat, matching net worth hero) */}
+        <View
+          style={[
+            styles.burdenCard,
+            {
+              backgroundColor: currColors.card,
+              borderColor: currColors.border,
+            },
+          ]}
         >
           <View style={styles.burdenRow}>
-            <View style={[styles.iconRoundBox, { backgroundColor: '#FF950015', width: 44, height: 44 }]}>
-              <Calendar size={22} color="#FF9500" />
+            <View style={[styles.iconRoundBox, { backgroundColor: '#FF950015', width: 40, height: 40 }]}>
+              <Calendar size={20} color="#FF9500" />
             </View>
             <View style={styles.burdenInfo}>
-              <ThemedText type="bold" style={[styles.burdenTitle, { color: currColors.textSecondary }]}>
+              <ThemedText style={[styles.burdenTitle, { color: currColors.textSecondary }]}>
                 TOTAL MONTHLY EMI BURDEN
               </ThemedText>
-              <ThemedText style={[styles.burdenValue, { color: currColors.text, fontFamily: 'Outfit_700Bold' }]}>
+              <ThemedText style={[styles.burdenValue, { color: currColors.text }]}>
                 {formatAmount(monthlyEMI)}
               </ThemedText>
             </View>
           </View>
-          <View style={[styles.divider, { borderColor: currColors.border }]} />
+
+          <View style={[styles.dashedDivider, { borderColor: currColors.border }]} />
+
           <View style={styles.burdenFooter}>
             <ThemedText style={[styles.footerLabel, { color: currColors.textSecondary }]}>
-              Total Outstanding Debt:
+              Total Outstanding Debt
             </ThemedText>
-            <ThemedText style={[styles.footerValue, { color: '#FF3B30', fontFamily: 'Outfit_700Bold' }]}>
+            <ThemedText style={[styles.footerValue, { color: '#FF3B30', fontFamily: 'Outfit_600SemiBold' }]}>
               {formatAmount(totalOutstanding)}
             </ThemedText>
           </View>
-        </LinearGradient>
+        </View>
 
         {/* Active Loans */}
         <View style={styles.sectionHeader}>
-          <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+          <ThemedText type="medium" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
             ACTIVE LOANS ({activeLoans.length})
           </ThemedText>
         </View>
@@ -227,7 +232,7 @@ export default function LoansScreen() {
         {completedLoans.length > 0 ? (
           <View style={{ marginTop: 24 }}>
             <View style={styles.sectionHeader}>
-              <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+              <ThemedText type="medium" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
                 PAID OFF / COMPLETED LOANS ({completedLoans.length})
               </ThemedText>
             </View>
@@ -286,19 +291,22 @@ const styles = StyleSheet.create({
   },
   burdenTitle: {
     fontSize: 9,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'Outfit_500Medium',
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 4,
   },
   burdenValue: {
     fontSize: 26,
+    fontFamily: 'Outfit_500Medium',
     letterSpacing: -0.5,
   },
-  divider: {
-    borderBottomWidth: 1,
-    marginVertical: 16,
+  dashedDivider: {
+    height: 1,
+    borderWidth: 1,
     borderStyle: 'dashed',
+    borderRadius: 1,
+    marginVertical: 16,
   },
   burdenFooter: {
     flexDirection: 'row',
@@ -318,7 +326,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 9,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'Outfit_500Medium',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
