@@ -67,9 +67,11 @@ export function MoneyDashboard() {
       investment: 0,
       credit_card: 0,
       emergency_fund: 0,
+      receivable: 0,
+      payable: 0,
     };
     accounts.forEach((acc) => {
-      if (!acc.isArchived) {
+      if (!acc.isArchived && acc.includeInAssets !== false) {
         // @ts-ignore
         totals[acc.type] = (totals[acc.type] || 0) + acc.balance;
       }
@@ -153,13 +155,14 @@ export function MoneyDashboard() {
 
   const activeFilterBg = '#00C9A7';
 
-  // Account types config for the overview rows
   const accountTypes = [
     { key: 'wallet', label: 'Cash / Wallets', icon: Wallet, color: '#00C9A7', balance: accountTotals.wallet },
     { key: 'savings', label: 'Savings', icon: Landmark, color: '#007AFF', balance: accountTotals.savings },
     { key: 'investment', label: 'Investments', icon: Activity, color: '#AF52DE', balance: accountTotals.investment },
     { key: 'credit_card', label: 'Credit Cards', icon: CreditCard, color: '#FF9500', balance: accountTotals.credit_card },
     { key: 'emergency_fund', label: 'Emergency Fund', icon: PiggyBank, color: '#FF2D55', balance: accountTotals.emergency_fund },
+    { key: 'receivable', label: 'Accounts Receivable', icon: ArrowDownLeft, color: '#34C759', balance: accountTotals.receivable },
+    { key: 'payable', label: 'Accounts Payable', icon: ArrowUpRight, color: '#FF3B30', balance: accountTotals.payable },
   ];
 
   return (
@@ -321,16 +324,23 @@ export function MoneyDashboard() {
             </TouchableOpacity>
           </View>
 
-          {accountTypes.map((item, index) => {
-            const IconComp = item.icon;
-            return (
-              <TouchableOpacity
-                key={item.key}
-                style={[
-                  styles.accountRow,
-                  { borderBottomColor: currColors.border },
-                  index === accountTypes.length - 1 && { borderBottomWidth: 0 },
-                ]}
+          {accountTypes
+            .filter((item) => {
+              if (item.key === 'receivable' || item.key === 'payable') {
+                return accounts.some((a) => !a.isArchived && a.type === item.key);
+              }
+              return true;
+            })
+            .map((item, index, arr) => {
+              const IconComp = item.icon;
+              return (
+                <TouchableOpacity
+                  key={item.key}
+                  style={[
+                    styles.accountRow,
+                    { borderBottomColor: currColors.border },
+                    index === arr.length - 1 && { borderBottomWidth: 0 },
+                  ]}
                 activeOpacity={0.7}
                 onPress={() => {
                   handleHaptic();

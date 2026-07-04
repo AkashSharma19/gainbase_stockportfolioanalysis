@@ -8,10 +8,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Modal,
+  FlatList,
+  Switch,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { X, Check } from 'lucide-react-native';
+import { X, Check, ChevronDown } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -38,6 +41,8 @@ const TYPES: { type: AccountType; label: string; emoji: string }[] = [
   { type: 'investment', label: 'Investment', emoji: '📈' },
   { type: 'credit_card', label: 'Credit Card', emoji: '💳' },
   { type: 'emergency_fund', label: 'Emergency Fund', emoji: '🛡️' },
+  { type: 'receivable', label: 'Accounts Receivable', emoji: '📥' },
+  { type: 'payable', label: 'Accounts Payable', emoji: '📤' },
 ];
 
 export default function AddAccountScreen() {
@@ -62,6 +67,12 @@ export default function AddAccountScreen() {
   const [accountNumber, setAccountNumber] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [isLogoManuallySelected, setIsLogoManuallySelected] = useState(false);
+  const [includeInAssets, setIncludeInAssets] = useState(true);
+  const [showTypeModal, setShowTypeModal] = useState(false);
+
+  const selectedTypeObj = useMemo(() => {
+    return TYPES.find((t) => t.type === type);
+  }, [type]);
 
   useEffect(() => {
     if (editingAccount) {
@@ -73,6 +84,7 @@ export default function AddAccountScreen() {
       setLogo(editingAccount.logo || '');
       setAccountNumber(editingAccount.accountNumber || '');
       setColor(editingAccount.color);
+      setIncludeInAssets(editingAccount.includeInAssets !== false);
     }
   }, [editingAccount]);
 
@@ -109,8 +121,10 @@ export default function AddAccountScreen() {
 
     // For credit cards, balance is negative (debt) or positive (credit)
     let finalBalance = parsedBalance || 0;
-    if (type === 'credit_card') {
-      finalBalance = -Math.abs(finalBalance); // credit card outstanding is negative balance
+    if (type === 'credit_card' || type === 'payable') {
+      finalBalance = -Math.abs(finalBalance); // credit card / payable outstanding is negative balance
+    } else {
+      finalBalance = Math.abs(finalBalance);
     }
 
     const parsedLimit = parseFloat(creditLimit);
@@ -119,12 +133,13 @@ export default function AddAccountScreen() {
       updateAccount(editingAccount.id, {
         name: name.trim(),
         type,
-        balance: type === 'credit_card' ? -Math.abs(parsedBalance || 0) : parsedBalance || 0,
+        balance: finalBalance,
         creditLimit: type === 'credit_card' ? (parsedLimit || 0) : undefined,
         institution: institution.trim() || undefined,
         logo: logo || undefined,
         accountNumber: accountNumber.trim() || undefined,
         color,
+        includeInAssets,
       });
     } else {
       const newAccount: Account = {
@@ -138,6 +153,7 @@ export default function AddAccountScreen() {
         logo: logo || undefined,
         accountNumber: accountNumber.trim() || undefined,
         color,
+        includeInAssets,
         isArchived: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -189,40 +205,43 @@ export default function AddAccountScreen() {
             />
           </View>
 
-          {/* Account Type Selector */}
+          {/* Account Type Selector (Dropdown modal) */}
           <View style={styles.inputGroup}>
             <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>ACCOUNT TYPE</ThemedText>
-            <View style={styles.typeSelector}>
-              {TYPES.map((t) => (
-                <TouchableOpacity
-                  key={t.type}
-                  style={[
-                    styles.typeOption,
-                    { backgroundColor: currColors.card, borderColor: currColors.border },
-                    type === t.type && { borderColor: color, backgroundColor: `${color}1A` },
-                  ]}
-                  onPress={() => {
-                    handleHaptic();
-                    setType(t.type);
-                    if (t.type === 'credit_card' && color === COLORS[0]) {
-                      setColor(COLORS[3]); // default CC to orange color
-                    } else if (t.type === 'emergency_fund' && color === COLORS[0]) {
-                      setColor('#FF2D55'); // default EF to pink/rose color
-                    }
-                  }}
-                >
-                  <ThemedText style={{ fontSize: 18, marginBottom: 4 }}>{t.emoji}</ThemedText>
-                  <ThemedText
-                    style={[
-                      styles.typeLabel,
-                      { color: type === t.type ? color : currColors.textSecondary },
-                    ]}
-                  >
-                    {t.label}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
+            <TouchableOpacity
+              style={[styles.selectBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+              onPress={() => {
+                handleHaptic();
+                setShowTypeModal(true);
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <ThemedText style={{ fontSize: 16, marginRight: 8 }}>{selectedTypeObj?.emoji}</ThemedText>
+                <ThemedText style={{ color: currColors.text, fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
+                  {selectedTypeObj?.label || 'Select Account Type'}
+                </ThemedText>
+              </View>
+              <ChevronDown size={18} color={currColors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Include in Assets Toggle Switch */}
+          <View style={[styles.inputGroup, styles.toggleContainer, { backgroundColor: currColors.card, borderColor: currColors.border, borderWidth: 1, borderRadius: 12, padding: 16 }]}>
+            <View style={{ flex: 1, marginRight: 16 }}>
+              <ThemedText style={[styles.label, { color: currColors.textSecondary, marginBottom: 4 }]}>INCLUDE IN ASSETS</ThemedText>
+              <ThemedText style={{ color: currColors.textSecondary, fontSize: 11, fontFamily: 'Outfit_400Regular', lineHeight: 15 }}>
+                If enabled, this account's balance will be counted towards net worth and asset stats.
+              </ThemedText>
             </View>
+            <Switch
+              value={includeInAssets}
+              onValueChange={(val) => {
+                handleHaptic();
+                setIncludeInAssets(val);
+              }}
+              trackColor={{ false: colorScheme === 'dark' ? '#3A3A3C' : '#E5E5EA', true: '#00C9A7' }}
+              thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : includeInAssets ? '#FFFFFF' : '#F4F3F4'}
+            />
           </View>
 
           {/* Account Logo Selector */}
@@ -354,6 +373,52 @@ export default function AddAccountScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Account Type Selection Modal Bottom Sheet */}
+      <Modal visible={showTypeModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowTypeModal(false)} />
+          <View style={[styles.modalContent, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            <View style={styles.modalDragHandle} />
+            <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
+              <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Select Account Type</ThemedText>
+              <TouchableOpacity onPress={() => setShowTypeModal(false)} style={styles.modalCloseIcon}>
+                <X size={20} color={currColors.text} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={TYPES}
+              keyExtractor={(item) => item.type}
+              contentContainerStyle={{ paddingBottom: 24 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalItem, { borderBottomColor: currColors.border }]}
+                  onPress={() => {
+                    handleHaptic();
+                    setType(item.type);
+                    setShowTypeModal(false);
+                    if (item.type === 'credit_card' && color === COLORS[0]) {
+                      setColor(COLORS[3]);
+                    } else if (item.type === 'emergency_fund' && color === COLORS[0]) {
+                      setColor('#FF2D55');
+                    } else if (item.type === 'receivable' && color === COLORS[0]) {
+                      setColor('#34C759');
+                    } else if (item.type === 'payable' && color === COLORS[0]) {
+                      setColor('#FF3B30');
+                    }
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <ThemedText style={{ fontSize: 18, marginRight: 12 }}>{item.emoji}</ThemedText>
+                    <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 15 }}>{item.label}</ThemedText>
+                  </View>
+                  {type === item.type && <Check size={18} color="#00C9A7" />}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -409,23 +474,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Outfit_400Regular',
   },
-  typeSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  typeOption: {
-    width: '48%',
-    height: 80,
-    borderRadius: 14,
+  selectBox: {
+    height: 52,
     borderWidth: 1,
-    justifyContent: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
+    justifyContent: 'space-between',
   },
-  typeLabel: {
-    fontSize: 12,
-    fontFamily: 'Outfit_600SemiBold',
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
   },
   bankBrandsScroll: {
     gap: 10,
@@ -471,5 +533,50 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    maxHeight: '65%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  modalDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(142, 142, 147, 0.3)',
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  modalCloseIcon: {
+    padding: 4,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
   },
 });

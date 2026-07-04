@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { X, Check, ChevronDown, Wallet, Landmark, Activity, CreditCard, PiggyBank } from 'lucide-react-native';
+import { X, Check, ChevronDown, Wallet, Landmark, Activity, CreditCard, PiggyBank, ArrowDownLeft, ArrowUpRight } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
@@ -31,6 +31,8 @@ const ACCOUNT_TYPE_ICONS: Record<AccountType, { icon: any; color: string }> = {
   investment: { icon: Activity, color: '#AF52DE' },
   credit_card: { icon: CreditCard, color: '#FF9500' },
   emergency_fund: { icon: PiggyBank, color: '#FF2D55' },
+  receivable: { icon: ArrowDownLeft, color: '#34C759' },
+  payable: { icon: ArrowUpRight, color: '#FF3B30' },
 };
 
 function AccountIcon({ account, size = 24 }: { account: { logo?: string; type: AccountType }; size?: number }) {
@@ -534,7 +536,7 @@ export default function AddMoneyTransactionScreen() {
               contentContainerStyle={{ paddingBottom: 24 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.modalItem, { borderBottomColor: currColors.border }]}
+                  style={[styles.modalItem, { borderBottomColor: currColors.border }, item.includeInAssets === false && { opacity: 0.55 }]}
                   onPress={() => {
                     setAccountId(item.id);
                     setShowAccountModal(false);
@@ -575,7 +577,7 @@ export default function AddMoneyTransactionScreen() {
               contentContainerStyle={{ paddingBottom: 24 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.modalItem, { borderBottomColor: currColors.border }]}
+                  style={[styles.modalItem, { borderBottomColor: currColors.border }, item.includeInAssets === false && { opacity: 0.55 }]}
                   onPress={() => {
                     setToAccountId(item.id);
                     setShowToAccountModal(false);

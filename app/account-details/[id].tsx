@@ -203,8 +203,8 @@ export default function AccountDetailsScreen() {
             </View>
           ) : null}
 
-          {account.institution || account.accountNumber ? (
-            <View style={[styles.detailsRow, { borderTopColor: currColors.border }]}>
+          {(account.institution || account.accountNumber || account.includeInAssets === false) ? (
+            <View style={[styles.detailsRow, { borderTopColor: currColors.border, flexWrap: 'wrap', gap: 12 }]}>
               {account.institution ? (
                 <ThemedText style={{ color: currColors.textSecondary, fontSize: 13 }}>
                   Bank: <ThemedText style={{ color: currColors.text }}>{account.institution}</ThemedText>
@@ -215,6 +215,11 @@ export default function AccountDetailsScreen() {
                   Number: <ThemedText style={{ color: currColors.text }}>{account.accountNumber}</ThemedText>
                 </ThemedText>
               ) : null}
+              <ThemedText style={{ color: currColors.textSecondary, fontSize: 13 }}>
+                Asset Inclusion: <ThemedText style={{ color: account.includeInAssets !== false ? '#00C9A7' : '#FF3B30' }}>
+                  {account.includeInAssets !== false ? 'Included' : 'Excluded'}
+                </ThemedText>
+              </ThemedText>
             </View>
           ) : null}
         </View>

@@ -18,6 +18,8 @@ import {
   ChevronRight,
   PiggyBank,
   Info,
+  ArrowDownLeft,
+  ArrowUpRight,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -34,6 +36,8 @@ const TYPE_CONFIG = {
   investment: { label: 'Investment Accounts', color: '#AF52DE', icon: Activity },
   credit_card: { label: 'Credit Cards', color: '#FF9500', icon: CreditCard },
   emergency_fund: { label: 'Emergency Fund', color: '#FF2D55', icon: PiggyBank },
+  receivable: { label: 'Accounts Receivable', color: '#34C759', icon: ArrowDownLeft },
+  payable: { label: 'Accounts Payable', color: '#FF3B30', icon: ArrowUpRight },
 };
 
 export default function AccountsScreen() {
@@ -53,6 +57,8 @@ export default function AccountsScreen() {
       investment: [],
       credit_card: [],
       emergency_fund: [],
+      receivable: [],
+      payable: [],
     };
     
     accounts.forEach((acc) => {
@@ -70,8 +76,8 @@ export default function AccountsScreen() {
     let totalLiabilities = 0; // Credit Card debts are liabilities (when negative balance)
     
     accounts.forEach((acc) => {
-      if (!acc.isArchived) {
-        if (acc.type === 'credit_card') {
+      if (!acc.isArchived && acc.includeInAssets !== false) {
+        if (acc.type === 'credit_card' || acc.type === 'payable') {
           if (acc.balance < 0) {
             totalLiabilities += Math.abs(acc.balance);
           } else {
@@ -130,7 +136,8 @@ export default function AccountsScreen() {
         key={item.id}
         style={[
           styles.accountListItem,
-          !isLast && { borderBottomWidth: 1, borderBottomColor: currColors.border }
+          !isLast && { borderBottomWidth: 1, borderBottomColor: currColors.border },
+          item.includeInAssets === false && { opacity: 0.55 }
         ]}
         activeOpacity={0.75}
         onPress={() => {
@@ -154,6 +161,7 @@ export default function AccountsScreen() {
               <ThemedText style={[styles.accountSub, { color: currColors.textSecondary }]} numberOfLines={1}>
                 {item.institution || config.label}
                 {item.accountNumber ? ` • •••• ${item.accountNumber}` : ''}
+                {item.includeInAssets === false ? ' • Excluded' : ''}
               </ThemedText>
             </View>
           </View>
@@ -289,7 +297,7 @@ export default function AccountsScreen() {
           
           return (
             <View key={type} style={styles.groupContainer}>
-              <ThemedText type="bold" style={[styles.groupTitle, { color: currColors.textSecondary }]}>
+              <ThemedText type="medium" style={[styles.groupTitle, { color: currColors.textSecondary }]}>
                 {config.label.toUpperCase()} ({list.length})
               </ThemedText>
               <View style={[styles.groupWrapperCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
@@ -403,7 +411,7 @@ const styles = StyleSheet.create({
   },
   groupTitle: {
     fontSize: 9,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'Outfit_500Medium',
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginHorizontal: 20,

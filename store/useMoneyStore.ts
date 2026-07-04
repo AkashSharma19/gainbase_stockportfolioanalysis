@@ -352,7 +352,9 @@ export const useMoneyStore = create<MoneyState>()(
       // --- Computed Values ---
       getNetWorth: () => {
         const { accounts, loans } = get();
-        const assetBalance = accounts.reduce((acc, current) => acc + current.balance, 0);
+        const assetBalance = accounts
+          .filter((a) => a.includeInAssets !== false)
+          .reduce((acc, current) => acc + current.balance, 0);
         const activeLoansOutstanding = loans
           .filter((l) => l.isActive)
           .reduce((acc, current) => acc + current.outstandingAmount, 0);

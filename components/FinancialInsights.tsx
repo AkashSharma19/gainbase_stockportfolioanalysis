@@ -208,7 +208,7 @@ export function FinancialInsights() {
     if (activeLoans.length > 0) {
       const monthlyEMIs = activeLoans.reduce((sum, l) => sum + l.emiAmount, 0);
       const totalLiquidCash = accounts
-        .filter((a) => !a.isArchived && (a.type === 'wallet' || a.type === 'savings'))
+        .filter((a) => !a.isArchived && a.includeInAssets !== false && (a.type === 'wallet' || a.type === 'savings'))
         .reduce((sum, a) => sum + a.balance, 0);
       if (monthlyEMIs > 0 && totalLiquidCash < monthlyEMIs * 1.5) {
         list.push({

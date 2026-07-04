@@ -1,4 +1,4 @@
-export type AccountType = 'wallet' | 'savings' | 'investment' | 'credit_card' | 'emergency_fund';
+export type AccountType = 'wallet' | 'savings' | 'investment' | 'credit_card' | 'emergency_fund' | 'receivable' | 'payable';
 
 export interface Account {
   id: string;
@@ -12,6 +12,7 @@ export interface Account {
   accountNumber?: string;    // Masked account number, e.g. "...1234"
   creditLimit?: number;      // For credit cards only
   interestRate?: number;     // For savings accounts
+  includeInAssets?: boolean; // If false, exclude from calculations
   isArchived: boolean;
   createdAt: string;
   updatedAt: string;
