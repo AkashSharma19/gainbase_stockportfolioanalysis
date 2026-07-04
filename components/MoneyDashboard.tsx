@@ -4,29 +4,29 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
   CreditCard,
   Landmark,
   PiggyBank,
-  ArrowDownLeft,
-  ArrowUpRight,
+  ArrowRightLeft,
   Wallet,
   Activity,
   Calendar,
-  ArrowRightLeft,
   Info,
   Layers,
   Eye,
   EyeOff,
   PieChart,
+  ArrowDownLeft,
+  ArrowUpRight,
+  ChevronRight,
 } from 'lucide-react-native';
 
 import { ThemedText } from './ThemedText';
+import { CategoryIcon } from './CategoryIcon';
 import { useColorScheme } from './useColorScheme';
 import Colors from '../constants/Colors';
 import { useMoneyStore } from '../store/useMoneyStore';
@@ -34,8 +34,6 @@ import { usePortfolioStore } from '../store/usePortfolioStore';
 import { MoneyTransaction } from '../types/money';
 import { MoneyActivityCalendar } from './MoneyActivityCalendar';
 import { FinancialInsights } from './FinancialInsights';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export function MoneyDashboard() {
   const router = useRouter();
@@ -78,6 +76,28 @@ export function MoneyDashboard() {
     });
     return totals;
   }, [accounts]);
+
+  // Monthly income/expense computations
+  const monthlyStats = useMemo(() => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+
+    let income = 0;
+    let expense = 0;
+
+    moneyTransactions.forEach((tx) => {
+      const txTime = new Date(tx.date).getTime();
+      if (txTime >= startOfMonth && txTime <= endOfMonth) {
+        if (tx.type === 'income') income += tx.amount;
+        else if (tx.type === 'expense') expense += tx.amount;
+      }
+    });
+
+    const savingsRate = income > 0 ? ((income - expense) / income) * 100 : 0;
+
+    return { income, expense, savingsRate };
+  }, [moneyTransactions]);
 
   // Filter and limit recent transactions
   const filteredRecentTxs = useMemo(() => {
@@ -131,12 +151,16 @@ export function MoneyDashboard() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  // Gradient background colors for Net Worth Card based on theme
-  const netWorthGradient = colorScheme === 'dark'
-    ? ['#052E2B', '#0A4E46'] as const
-    : ['#E6F4F2', '#D1EFEA'] as const;
-
   const activeFilterBg = '#00C9A7';
+
+  // Account types config for the overview rows
+  const accountTypes = [
+    { key: 'wallet', label: 'Cash / Wallets', icon: Wallet, color: '#00C9A7', balance: accountTotals.wallet },
+    { key: 'savings', label: 'Savings', icon: Landmark, color: '#007AFF', balance: accountTotals.savings },
+    { key: 'investment', label: 'Investments', icon: Activity, color: '#AF52DE', balance: accountTotals.investment },
+    { key: 'credit_card', label: 'Credit Cards', icon: CreditCard, color: '#FF9500', balance: accountTotals.credit_card },
+    { key: 'emergency_fund', label: 'Emergency Fund', icon: PiggyBank, color: '#FF2D55', balance: accountTotals.emergency_fund },
+  ];
 
   return (
     <View style={[styles.container, { backgroundColor: currColors.background }]}>
@@ -144,15 +168,23 @@ export function MoneyDashboard() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Net Worth Gradient Card */}
-        <LinearGradient
-          colors={netWorthGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.netWorthCard, colorScheme === 'light' && { borderWidth: 0 }]}
+        {/* ─── Hero Card (flat, matching investments) ─── */}
+        <View
+          style={[
+            styles.heroCard,
+            {
+              backgroundColor: currColors.card,
+              borderColor: currColors.border,
+            },
+          ]}
         >
-          <View style={styles.netWorthHeaderRow}>
-            <ThemedText type="medium" style={[styles.cardTitle, { color: colorScheme === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,77,64,0.7)', fontFamily: 'Outfit_500Medium' }]}>
+          <View style={styles.heroHeaderRow}>
+            <ThemedText
+              style={[
+                styles.heroLabel,
+                { color: currColors.textSecondary },
+              ]}
+            >
               TOTAL NET WORTH
             </ThemedText>
             <View style={styles.heroIcons}>
@@ -163,13 +195,13 @@ export function MoneyDashboard() {
                 }}
                 style={[
                   styles.iconButton,
-                  { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,77,64,0.06)' },
+                  { backgroundColor: currColors.cardSecondary },
                 ]}
               >
                 {isPrivacyMode ? (
-                  <EyeOff size={16} color={colorScheme === 'dark' ? '#FFF' : '#004D40'} />
+                  <EyeOff size={16} color={currColors.text} />
                 ) : (
-                  <Eye size={16} color={colorScheme === 'dark' ? '#FFF' : '#004D40'} />
+                  <Eye size={16} color={currColors.text} />
                 )}
               </TouchableOpacity>
               <TouchableOpacity
@@ -179,266 +211,166 @@ export function MoneyDashboard() {
                 }}
                 style={[
                   styles.iconButton,
-                  { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,77,64,0.06)' },
+                  { backgroundColor: currColors.cardSecondary },
                 ]}
               >
-                <PieChart size={16} color={colorScheme === 'dark' ? '#FFF' : '#004D40'} />
+                <PieChart size={16} color={currColors.text} />
               </TouchableOpacity>
             </View>
           </View>
-          <ThemedText style={[styles.netWorthVal, { color: colorScheme === 'dark' ? '#FFF' : '#004D40', fontFamily: 'Outfit_500Medium' }]}>
+
+          <ThemedText style={[styles.heroValue, { color: currColors.text }]}>
             {formatAmount(netWorth)}
           </ThemedText>
-          
-          <View style={[styles.divider, { borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,77,64,0.1)' }]} />
 
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryCol}>
-              <ThemedText style={[styles.summaryLabel, { color: colorScheme === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,77,64,0.7)' }]}>
-                Accounts Value
-              </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: colorScheme === 'dark' ? '#A7FFEB' : '#00796B', fontFamily: 'Outfit_500Medium' }]}>
-                {formatAmount(accounts.reduce((acc, a) => acc + (a.isArchived ? 0 : a.balance), 0))}
-              </ThemedText>
-            </View>
-            <View style={styles.summaryCol}>
-              <ThemedText style={[styles.summaryLabel, { color: colorScheme === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,77,64,0.7)' }]}>
-                Outstanding Loans
-              </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: colorScheme === 'dark' ? '#FF8A80' : '#C62828', fontFamily: 'Outfit_500Medium' }]}>
-                {formatAmount(loans.filter(l => l.isActive).reduce((acc, l) => acc + l.outstandingAmount, 0))}
-              </ThemedText>
-            </View>
+          <View
+            style={[
+              styles.dashedDivider,
+              { borderColor: currColors.border },
+            ]}
+          />
+
+          {/* Stat rows — matching investments heroRow pattern */}
+          <View style={styles.heroRow}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+              This month income
+            </ThemedText>
+            <ThemedText style={[styles.heroRowValue, { color: '#34C759' }]}>
+              {isPrivacyMode ? '••••••' : `+${formatAmount(monthlyStats.income)}`}
+            </ThemedText>
           </View>
-        </LinearGradient>
 
+          <View style={styles.heroRow}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+              This month expenses
+            </ThemedText>
+            <ThemedText style={[styles.heroRowValue, { color: '#FF3B30' }]}>
+              {isPrivacyMode ? '••••••' : `-${formatAmount(monthlyStats.expense)}`}
+            </ThemedText>
+          </View>
+
+          <View style={styles.heroRow}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+              Monthly EMIs
+            </ThemedText>
+            <ThemedText style={[styles.heroRowValue, { color: currColors.text }]}>
+              {formatAmount(monthlyEMIs)}
+            </ThemedText>
+          </View>
+
+          <View style={[styles.heroRow, { marginBottom: 0 }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+              Savings rate
+            </ThemedText>
+            <ThemedText
+              style={[
+                styles.heroRowValue,
+                {
+                  color: isPrivacyMode
+                    ? currColors.text
+                    : monthlyStats.savingsRate >= 20
+                    ? '#34C759'
+                    : monthlyStats.savingsRate > 0
+                    ? '#FF9500'
+                    : '#FF3B30',
+                },
+              ]}
+            >
+              {isPrivacyMode ? '••••••' : `${monthlyStats.savingsRate.toFixed(0)}%`}
+            </ThemedText>
+          </View>
+        </View>
+
+        {/* ─── Smart Insights ─── */}
         <FinancialInsights />
 
-        {/* Accounts Summary Cards List */}
-        <View style={styles.sectionHeader}>
-          <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
-            ACCOUNTS BY TYPE
-          </ThemedText>
-        </View>
-        
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalScroll}
+        {/* ─── Accounts Overview (inline rows inside a card) ─── */}
+        <View
+          style={[
+            styles.accordionContainer,
+            {
+              backgroundColor: currColors.card,
+              borderColor: currColors.border,
+            },
+          ]}
         >
-          {/* Card: Wallets */}
-          <TouchableOpacity
-            style={[styles.accountSummaryCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-            activeOpacity={0.8}
-            onPress={() => {
-              handleHaptic();
-              router.push('/(tabs)/money-accounts');
-            }}
-          >
-            <View style={styles.cardHeader}>
-              <View style={[styles.iconRoundBox, { backgroundColor: '#00C9A715' }]}>
-                <Wallet size={16} color="#00C9A7" />
-              </View>
-              <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Cash / Wallets</ThemedText>
-            </View>
-            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
-              {formatAmount(accountTotals.wallet)}
-            </ThemedText>
-          </TouchableOpacity>
-
-          {/* Card: Savings Accounts */}
-          <TouchableOpacity
-            style={[styles.accountSummaryCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-            activeOpacity={0.8}
-            onPress={() => {
-              handleHaptic();
-              router.push('/(tabs)/money-accounts');
-            }}
-          >
-            <View style={styles.cardHeader}>
-              <View style={[styles.iconRoundBox, { backgroundColor: '#007AFF15' }]}>
-                <Landmark size={16} color="#007AFF" />
-              </View>
-              <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Savings</ThemedText>
-            </View>
-            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
-              {formatAmount(accountTotals.savings)}
-            </ThemedText>
-          </TouchableOpacity>
-
-          {/* Card: Investment Accounts */}
-          <TouchableOpacity
-            style={[styles.accountSummaryCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-            activeOpacity={0.8}
-            onPress={() => {
-              handleHaptic();
-              router.push('/(tabs)/money-accounts');
-            }}
-          >
-            <View style={styles.cardHeader}>
-              <View style={[styles.iconRoundBox, { backgroundColor: '#AF52DE15' }]}>
-                <Activity size={16} color="#AF52DE" />
-              </View>
-              <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Investments</ThemedText>
-            </View>
-            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
-              {formatAmount(accountTotals.investment)}
-            </ThemedText>
-          </TouchableOpacity>
-
-          {/* Card: Credit Cards */}
-          <TouchableOpacity
-            style={[styles.accountSummaryCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-            activeOpacity={0.8}
-            onPress={() => {
-              handleHaptic();
-              router.push('/(tabs)/money-accounts');
-            }}
-          >
-            <View style={styles.cardHeader}>
-              <View style={[styles.iconRoundBox, { backgroundColor: '#FF950015' }]}>
-                <CreditCard size={16} color="#FF9500" />
-              </View>
-              <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Credit Cards</ThemedText>
-            </View>
-            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
-              {formatAmount(accountTotals.credit_card)}
-            </ThemedText>
-          </TouchableOpacity>
-
-          {/* Card: Emergency Fund */}
-          <TouchableOpacity
-            style={[styles.accountSummaryCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-            activeOpacity={0.8}
-            onPress={() => {
-              handleHaptic();
-              router.push('/(tabs)/money-accounts');
-            }}
-          >
-            <View style={styles.cardHeader}>
-              <View style={[styles.iconRoundBox, { backgroundColor: '#FF2D5515' }]}>
-                <PiggyBank size={16} color="#FF2D55" />
-              </View>
-              <ThemedText type="medium" style={[styles.accountTypeLabel, { color: currColors.text }]}>Emergency Fund</ThemedText>
-            </View>
-            <ThemedText style={[styles.accountTypeBalance, { color: currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
-              {formatAmount(accountTotals.emergency_fund)}
-            </ThemedText>
-          </TouchableOpacity>
-        </ScrollView>
-
-        {/* EMI Calendar Card */}
-        {loans.filter(l => l.isActive).length > 0 ? (
-          <View style={styles.sectionContainer}>
-            <View style={styles.sectionHeaderNoMargin}>
-              <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
-                MONTHLY EMI LIABILITIES
-              </ThemedText>
-              <TouchableOpacity
-                onPress={() => {
-                  handleHaptic();
-                  router.push('/(tabs)/money-loans');
-                }}
-              >
-                <ThemedText type="medium" style={{ color: '#00C9A7', fontSize: 13 }}>
-                  View Loans
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              activeOpacity={0.85}
-              style={[styles.cardContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-              onPress={() => router.push('/(tabs)/money-loans')}
+          <View style={styles.headerWithAction}>
+            <ThemedText
+              style={[
+                styles.innerSectionTitle,
+                { color: currColors.textSecondary },
+              ]}
             >
-              <View style={styles.emiRow}>
-                <View style={[styles.iconRoundBox, { backgroundColor: '#FF950015', width: 44, height: 44 }]}>
-                  <Calendar size={22} color="#FF9500" />
-                </View>
-                <View style={styles.emiInfo}>
-                  <ThemedText type="semiBold" style={[styles.emiTitleText, { color: currColors.text, fontSize: 15 }]}>
-                    Total Monthly EMIs
-                  </ThemedText>
-                  <ThemedText style={[styles.emiCountText, { color: currColors.textSecondary }]}>
-                    {loans.filter(l => l.isActive).length} active loans outstanding
-                  </ThemedText>
-                </View>
-                <ThemedText style={[styles.emiBurdenText, { color: currColors.text, fontFamily: 'Outfit_700Bold', fontSize: 16 }]}>
-                  {formatAmount(monthlyEMIs)}
-                </ThemedText>
+              ACCOUNTS OVERVIEW
+            </ThemedText>
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                router.push('/(tabs)/money-accounts');
+              }}
+              style={styles.viewMoreButton}
+            >
+              <View
+                style={[
+                  styles.iconCircle,
+                  { backgroundColor: currColors.cardSecondary },
+                ]}
+              >
+                <ChevronRight size={14} color={currColors.tint} />
               </View>
             </TouchableOpacity>
           </View>
-        ) : null}
 
-        {/* Recent Transactions List with Type Filters */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: 16, marginTop: 28, marginBottom: 8 }}>
-          <ThemedText type="bold" style={[styles.sectionTitle, { color: currColors.textSecondary, marginBottom: 0 }]}>
+          {accountTypes.map((item, index) => {
+            const IconComp = item.icon;
+            return (
+              <TouchableOpacity
+                key={item.key}
+                style={[
+                  styles.accountRow,
+                  { borderBottomColor: currColors.border },
+                  index === accountTypes.length - 1 && { borderBottomWidth: 0 },
+                ]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  handleHaptic();
+                  router.push('/(tabs)/money-accounts');
+                }}
+              >
+                <View style={styles.accountRowLeft}>
+                  <View style={[styles.accountIconBox, { backgroundColor: `${item.color}15` }]}>
+                    <IconComp size={16} color={item.color} />
+                  </View>
+                  <ThemedText style={[styles.accountRowLabel, { color: currColors.text }]}>
+                    {item.label}
+                  </ThemedText>
+                </View>
+                <ThemedText style={[styles.accountRowValue, { color: currColors.text }]}>
+                  {formatAmount(item.balance)}
+                </ThemedText>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* ─── Recent Transactions ─── */}
+        <View style={styles.sectionHeaderRow}>
+          <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
             RECENT TRANSACTIONS
           </ThemedText>
           <TouchableOpacity onPress={() => { handleHaptic(); router.push('/all-money-transactions'); }}>
-            <ThemedText type="medium" style={{ color: '#00C9A7', fontSize: 13 }}>
+            <ThemedText style={styles.viewAllLink}>
               View All
             </ThemedText>
           </TouchableOpacity>
         </View>
 
-        {/* Dynamic Filter Chips strip */}
-        <View style={styles.filterStripContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterChipsScroll}
-          >
-            {([
-              { key: 'all', label: 'All', icon: Layers },
-              { key: 'expense', label: 'Expenses', icon: ArrowUpRight },
-              { key: 'income', label: 'Income', icon: ArrowDownLeft },
-              { key: 'transfer', label: 'Transfers', icon: ArrowRightLeft },
-            ] as const).map((filter) => {
-              const IconComponent = filter.icon;
-              const isSelected = activeFilter === filter.key;
-              const iconColor = isSelected ? '#FFFFFF' : currColors.textSecondary;
-              return (
-                <TouchableOpacity
-                  key={filter.key}
-                  style={[
-                    styles.filterChip,
-                    {
-                      backgroundColor: isSelected ? activeFilterBg : currColors.cardSecondary,
-                      borderColor: isSelected ? activeFilterBg : currColors.border,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingLeft: 10,
-                    },
-                  ]}
-                  onPress={() => {
-                    handleHaptic();
-                    setActiveFilter(filter.key);
-                  }}
-                >
-                  <IconComponent size={12} color={iconColor} style={{ marginRight: 6 }} />
-                  <ThemedText
-                    style={[
-                      styles.filterChipText,
-                      {
-                        color: isSelected ? '#FFFFFF' : currColors.textSecondary,
-                        fontFamily: isSelected ? 'Outfit_500Medium' : 'Outfit_400Regular',
-                      },
-                    ]}
-                  >
-                    {filter.label}
-                  </ThemedText>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+
 
         {filteredRecentTxs.length === 0 ? (
           <View style={[styles.emptyTxsCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
             <Info size={32} color={currColors.textSecondary} style={{ marginBottom: 12 }} />
-            <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', lineHeight: 20, paddingHorizontal: 12 }}>
+            <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', fontSize: 14, lineHeight: 20, paddingHorizontal: 12 }}>
               No transactions matching the selected filter found. Tap the '+' button below to log one.
             </ThemedText>
           </View>
@@ -446,7 +378,7 @@ export function MoneyDashboard() {
           <View style={styles.txsGroupsContainer}>
             {groupedTxs.map((group) => (
               <View key={group.title} style={styles.txGroup}>
-                <ThemedText type="bold" style={[styles.txGroupHeader, { color: currColors.textSecondary }]}>
+                <ThemedText style={[styles.txGroupHeader, { color: currColors.textSecondary }]}>
                   {group.title.toUpperCase()}
                 </ThemedText>
                 <View style={[styles.txsListContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
@@ -484,16 +416,18 @@ export function MoneyDashboard() {
                               },
                             ]}
                           >
-                            {tx.type === 'income' ? (
-                              <ArrowDownLeft size={20} color="#34C759" />
-                            ) : tx.type === 'expense' ? (
-                              <ArrowUpRight size={20} color="#FF3B30" />
-                            ) : (
+                            {tx.type === 'transfer' ? (
                               <ArrowRightLeft size={18} color="#8E8E93" />
+                            ) : (
+                              <CategoryIcon
+                                name={tx.category}
+                                size={18}
+                                color={tx.type === 'income' ? '#34C759' : '#FF3B30'}
+                              />
                             )}
                           </View>
                           <View style={styles.txInfo}>
-                            <ThemedText type="semiBold" style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
+                            <ThemedText style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
                               {tx.type === 'transfer' ? `Transfer: ${account?.name} → ${toAccount?.name}` : tx.category}
                             </ThemedText>
                             <ThemedText style={[styles.txDate, { color: currColors.textSecondary }]} numberOfLines={1}>
@@ -507,7 +441,6 @@ export function MoneyDashboard() {
                           style={[
                             styles.txAmount,
                             {
-                              fontFamily: 'Outfit_600SemiBold',
                               color:
                                 tx.type === 'income'
                                   ? '#34C759'
@@ -529,6 +462,51 @@ export function MoneyDashboard() {
           </View>
         )}
 
+        {/* ─── Monthly EMI Liabilities ─── */}
+        {loans.filter(l => l.isActive).length > 0 ? (
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeaderRow}>
+              <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+                MONTHLY EMI LIABILITIES
+              </ThemedText>
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  router.push('/(tabs)/money-loans');
+                }}
+              >
+                <ThemedText style={styles.viewAllLink}>
+                  View Loans
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[styles.emiCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+              onPress={() => router.push('/(tabs)/money-loans')}
+            >
+              <View style={styles.emiRow}>
+                <View style={[styles.accountIconBox, { backgroundColor: '#FF950015', width: 40, height: 40 }]}>
+                  <Calendar size={20} color="#FF9500" />
+                </View>
+                <View style={styles.emiInfo}>
+                  <ThemedText style={[styles.emiTitleText, { color: currColors.text }]}>
+                    Total Monthly EMIs
+                  </ThemedText>
+                  <ThemedText style={[styles.emiSubText, { color: currColors.textSecondary }]}>
+                    {loans.filter(l => l.isActive).length} active loans outstanding
+                  </ThemedText>
+                </View>
+                <ThemedText style={[styles.emiAmountText, { color: currColors.text }]}>
+                  {formatAmount(monthlyEMIs)}
+                </ThemedText>
+              </View>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {/* ─── Activity Calendar ─── */}
         <MoneyActivityCalendar transactions={moneyTransactions} />
       </ScrollView>
     </View>
@@ -542,61 +520,136 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 110,
   },
-  netWorthCard: {
+
+  // ─── Hero Card ───
+  heroCard: {
     marginHorizontal: 16,
     borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
-    padding: 24,
     marginTop: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 6,
   },
-  cardTitle: {
+  heroHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  heroLabel: {
     fontSize: 10,
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  heroIcons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroValue: {
+    fontSize: 24,
+    fontFamily: 'Outfit_400Regular',
+    marginBottom: 16,
+  },
+  dashedDivider: {
+    height: 1,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 1,
+    marginBottom: 16,
+  },
+  heroRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  heroRowLabel: {
+    fontSize: 14,
+    fontFamily: 'Outfit_400Regular',
+  },
+  heroRowValue: {
+    fontSize: 14,
+    fontFamily: 'Outfit_400Regular',
+  },
+
+  // ─── Accounts Overview (accordion-style card) ───
+  accordionContainer: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    paddingTop: 16,
+  },
+  headerWithAction: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingRight: 16,
     marginBottom: 4,
   },
-  netWorthVal: {
-    fontSize: 32,
-    letterSpacing: -0.5,
+  innerSectionTitle: {
+    fontSize: 10,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginLeft: 16,
   },
-  divider: {
+  viewMoreButton: {
+    padding: 2,
+  },
+  iconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  accountRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
-    marginVertical: 18,
-    borderStyle: 'dashed',
   },
-  summaryRow: {
+  accountRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  summaryCol: {
     flex: 1,
   },
-  summaryLabel: {
-    fontSize: 11,
+  accountIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  accountRowLabel: {
+    fontSize: 14,
     fontFamily: 'Outfit_400Regular',
-    marginBottom: 4,
+    marginLeft: 12,
   },
-  summaryValue: {
-    fontSize: 15,
+  accountRowValue: {
+    fontSize: 14,
+    fontFamily: 'Outfit_400Regular',
   },
-  sectionHeader: {
-    marginHorizontal: 16,
-    marginTop: 28,
-    marginBottom: 12,
-  },
-  sectionHeaderNoMargin: {
+
+  // ─── Section Headers ───
+  sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 12,
+    marginTop: 20,
+    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 10,
@@ -604,86 +657,34 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
-  horizontalScroll: {
+  viewAllLink: {
+    color: '#00C9A7',
+    fontSize: 13,
+    fontFamily: 'Outfit_500Medium',
+  },
+
+  // ─── Filter Chips ───
+  filterStripContainer: {
+    marginBottom: 14,
+  },
+  filterChipsScroll: {
     paddingLeft: 16,
     paddingRight: 8,
-  },
-  accountSummaryCard: {
-    width: 144,
-    height: 96,
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 14,
-    marginRight: 10,
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 8,
   },
-  iconRoundBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  accountTypeLabel: {
-    fontSize: 11,
-    fontFamily: 'Outfit_500Medium',
-    flex: 1,
-  },
-  accountTypeBalance: {
-    fontSize: 15,
-  },
-  sectionContainer: {
-    marginTop: 8,
-  },
-  cardContainer: {
-    marginHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  emiRow: {
+  filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  emiInfo: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  emiTitleText: {
-    fontSize: 14,
-  },
-  emiCountText: {
-    fontSize: 12,
-    fontFamily: 'Outfit_400Regular',
-    marginTop: 2,
-  },
-  emiBurdenText: {
-    fontSize: 14,
-  },
-  emptyTxsCard: {
-    marginHorizontal: 16,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderStyle: 'dashed',
   },
+  filterChipText: {
+    fontSize: 12,
+  },
+
+  // ─── Transaction Items ───
   txsGroupsContainer: {
     marginHorizontal: 16,
     gap: 16,
@@ -693,18 +694,14 @@ const styles = StyleSheet.create({
   },
   txGroupHeader: {
     fontSize: 9,
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
     marginLeft: 4,
   },
   txsListContainer: {
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
   },
   txItem: {
     flexDirection: 'row',
@@ -732,6 +729,7 @@ const styles = StyleSheet.create({
   },
   txCategory: {
     fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
   },
   txDate: {
     fontSize: 12,
@@ -740,39 +738,47 @@ const styles = StyleSheet.create({
   },
   txAmount: {
     fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
   },
-  netWorthHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  heroIcons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  filterStripContainer: {
-    marginBottom: 14,
-  },
-  filterChipsScroll: {
-    paddingLeft: 16,
-    paddingRight: 8,
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+  emptyTxsCard: {
+    marginHorizontal: 16,
     borderRadius: 16,
     borderWidth: 1,
+    padding: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderStyle: 'dashed',
   },
-  filterChipText: {
+
+  // ─── EMI Card ───
+  sectionContainer: {
+    marginTop: 8,
+  },
+  emiCard: {
+    marginHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+  },
+  emiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  emiInfo: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  emiTitleText: {
+    fontSize: 14,
+    fontFamily: 'Outfit_500Medium',
+  },
+  emiSubText: {
     fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
+    marginTop: 2,
+  },
+  emiAmountText: {
+    fontSize: 14,
+    fontFamily: 'Outfit_500Medium',
   },
 });

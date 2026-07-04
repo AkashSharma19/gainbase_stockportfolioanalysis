@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { X, Check, ChevronDown } from 'lucide-react-native';
+import { X, Check, ChevronDown, Wallet, Landmark, Activity, CreditCard, PiggyBank } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
@@ -23,6 +23,28 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { MoneyTransaction } from '@/types/money';
 import { BankLogo } from '@/components/BankLogo';
+import { AccountType } from '@/types/money';
+
+const ACCOUNT_TYPE_ICONS: Record<AccountType, { icon: any; color: string }> = {
+  wallet: { icon: Wallet, color: '#00C9A7' },
+  savings: { icon: Landmark, color: '#007AFF' },
+  investment: { icon: Activity, color: '#AF52DE' },
+  credit_card: { icon: CreditCard, color: '#FF9500' },
+  emergency_fund: { icon: PiggyBank, color: '#FF2D55' },
+};
+
+function AccountIcon({ account, size = 24 }: { account: { logo?: string; type: AccountType }; size?: number }) {
+  if (account.logo) {
+    return <BankLogo logo={account.logo} size={size} style={{ marginRight: 12 }} />;
+  }
+  const config = ACCOUNT_TYPE_ICONS[account.type] || ACCOUNT_TYPE_ICONS.wallet;
+  const IconComp = config.icon;
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: `${config.color}15`, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+      <IconComp size={size * 0.6} color={config.color} />
+    </View>
+  );
+}
 
 export default function AddMoneyTransactionScreen() {
   const router = useRouter();
@@ -412,8 +434,8 @@ export default function AddMoneyTransactionScreen() {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                {sourceAccount && sourceAccount.logo ? (
-                  <BankLogo logo={sourceAccount.logo} size={24} style={{ marginRight: 12 }} />
+                {sourceAccount ? (
+                  <AccountIcon account={sourceAccount} size={24} />
                 ) : null}
                 <ThemedText style={{ color: sourceAccount ? currColors.text : currColors.textSecondary, fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
                   {sourceAccount ? sourceAccount.name : 'Select Account'}
@@ -435,8 +457,8 @@ export default function AddMoneyTransactionScreen() {
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  {destAccount && destAccount.logo ? (
-                    <BankLogo logo={destAccount.logo} size={24} style={{ marginRight: 12 }} />
+                  {destAccount ? (
+                    <AccountIcon account={destAccount} size={24} />
                   ) : null}
                   <ThemedText style={{ color: destAccount ? currColors.text : currColors.textSecondary, fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
                     {destAccount ? destAccount.name : 'Select Destination Account'}
@@ -519,9 +541,7 @@ export default function AddMoneyTransactionScreen() {
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    {item.logo ? (
-                      <BankLogo logo={item.logo} size={26} style={{ marginRight: 12 }} />
-                    ) : null}
+                    <AccountIcon account={item} size={26} />
                     <View style={{ flex: 1 }}>
                       <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 15 }}>{item.name}</ThemedText>
                       <ThemedText style={{ color: currColors.textSecondary, fontSize: 11, marginTop: 2, fontFamily: 'Outfit_400Regular' }}>
@@ -562,9 +582,7 @@ export default function AddMoneyTransactionScreen() {
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    {item.logo ? (
-                      <BankLogo logo={item.logo} size={26} style={{ marginRight: 12 }} />
-                    ) : null}
+                    <AccountIcon account={item} size={26} />
                     <View style={{ flex: 1 }}>
                       <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 15 }}>{item.name}</ThemedText>
                       <ThemedText style={{ color: currColors.textSecondary, fontSize: 11, marginTop: 2, fontFamily: 'Outfit_400Regular' }}>
