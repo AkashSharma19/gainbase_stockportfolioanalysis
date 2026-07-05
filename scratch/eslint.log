@@ -1,0 +1,460 @@
+
+/Users/akashsharma/Documents/Gainbase/.expo/types/router.d.ts
+  1:1  warning  Unused eslint-disable directive (no problems were reported)
+
+/Users/akashsharma/Documents/Gainbase/app/(tabs)/_layout.tsx
+   17:17  warning  'useEffect' is defined but never used         @typescript-eslint/no-unused-vars
+   24:8   warning  'Animated' is defined but never used          @typescript-eslint/no-unused-vars
+   25:3   warning  'useSharedValue' is defined but never used    @typescript-eslint/no-unused-vars
+   26:3   warning  'useAnimatedStyle' is defined but never used  @typescript-eslint/no-unused-vars
+   27:3   warning  'withTiming' is defined but never used        @typescript-eslint/no-unused-vars
+  113:60  warning  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/app/(tabs)/explore.tsx
+   73:6   warning  React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array                               react-hooks/exhaustive-deps
+   84:6   warning  React Hook useEffect has missing dependencies: 'fetchTickers' and 'tickers.length'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  341:33  warning  'index' is defined but never used. Allowed unused args must match /^_/u                                                                 @typescript-eslint/no-unused-vars
+  806:15  warning  Unexpected any. Specify a different type                                                                                                @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/app/(tabs)/index.tsx
+    85:9   warning  'setDefaultIndex' is assigned a value but never used                                                                               @typescript-eslint/no-unused-vars
+   116:30  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   117:10  warning  'isCapturing' is assigned a value but never used                                                                                   @typescript-eslint/no-unused-vars
+   121:5   warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+   125:5   warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+   129:5   warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+   132:9   warning  'indices' is assigned a value but never used                                                                                       @typescript-eslint/no-unused-vars
+   159:5   warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+   167:6   warning  React Hook useEffect has a missing dependency: 'fetchTickers'. Either include it or remove the dependency array                    react-hooks/exhaustive-deps
+   664:51  warning  'index' is defined but never used. Allowed unused args must match /^_/u                                                            @typescript-eslint/no-unused-vars
+  1006:3   warning  Unused style detected: styles.safeArea                                                                                             react-native/no-unused-styles
+  1102:3   warning  Unused style detected: styles.sectionTitle                                                                                         react-native/no-unused-styles
+  1107:3   warning  Unused style detected: styles.chartPlaceholder                                                                                     react-native/no-unused-styles
+  1199:3   warning  Unused style detected: styles.chevron                                                                                              react-native/no-unused-styles
+  1255:3   warning  Unused style detected: styles.modalList                                                                                            react-native/no-unused-styles
+  1264:3   warning  Unused style detected: styles.modalOverlay                                                                                         react-native/no-unused-styles
+  1269:3   warning  Unused style detected: styles.bottomSheet                                                                                          react-native/no-unused-styles
+  1276:3   warning  Unused style detected: styles.sheetHeader                                                                                          react-native/no-unused-styles
+  1282:3   warning  Unused style detected: styles.sheetTitle                                                                                           react-native/no-unused-styles
+  1286:3   warning  Unused style detected: styles.sheetSubtitle                                                                                        react-native/no-unused-styles
+  1291:3   warning  Unused style detected: styles.optionItem                                                                                           react-native/no-unused-styles
+  1298:3   warning  Unused style detected: styles.optionText                                                                                           react-native/no-unused-styles
+  1302:3   warning  Unused style detected: styles.communityCard                                                                                        react-native/no-unused-styles
+  1312:3   warning  Unused style detected: styles.communityText                                                                                        react-native/no-unused-styles
+  1316:3   warning  Unused style detected: styles.filterChip                                                                                           react-native/no-unused-styles
+  1323:3   warning  Unused style detected: styles.filterChipText                                                                                       react-native/no-unused-styles
+  1329:3   warning  Unused style detected: styles.doneButton                                                                                           react-native/no-unused-styles
+  1334:3   warning  Unused style detected: styles.comparisonCard                                                                                       react-native/no-unused-styles
+  1340:3   warning  Unused style detected: styles.benchmarkChip                                                                                        react-native/no-unused-styles
+  1347:3   warning  Unused style detected: styles.benchmarkChipText                                                                                    react-native/no-unused-styles
+  1351:3   warning  Unused style detected: styles.chartTitleRow                                                                                        react-native/no-unused-styles
+  1357:3   warning  Unused style detected: styles.chartTitle                                                                                           react-native/no-unused-styles
+  1363:3   warning  Unused style detected: styles.deltaContainer                                                                                       react-native/no-unused-styles
+  1367:3   warning  Unused style detected: styles.deltaBadge                                                                                           react-native/no-unused-styles
+  1376:3   warning  Unused style detected: styles.deltaText                                                                                            react-native/no-unused-styles
+  1381:3   warning  Unused style detected: styles.deltaSummary                                                                                         react-native/no-unused-styles
+  1415:6   warning  React Hook useEffect has a missing dependency: 'translateX'. Either include it or remove the dependency array                      react-hooks/exhaustive-deps
+
+/Users/akashsharma/Documents/Gainbase/app/(tabs)/insights.tsx
+   30:31  warning  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+   41:31  warning  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  373:3   warning  Unused style detected: styles.summaryBanner   react-native/no-unused-styles
+  382:3   warning  Unused style detected: styles.summaryItem     react-native/no-unused-styles
+  389:3   warning  Unused style detected: styles.summaryDot      react-native/no-unused-styles
+  394:3   warning  Unused style detected: styles.summaryLabel    react-native/no-unused-styles
+  397:3   warning  Unused style detected: styles.summaryDivider  react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/app/(tabs)/money-accounts.tsx
+   11:10  warning  'LinearGradient' is defined but never used             @typescript-eslint/no-unused-vars
+  226:9   warning  'overviewGradient' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/akashsharma/Documents/Gainbase/app/(tabs)/money-budgets.tsx
+   11:10  warning  'LinearGradient' is defined but never used                                                                                                           @typescript-eslint/no-unused-vars
+   15:3   warning  'PiggyBank' is defined but never used                                                                                                                @typescript-eslint/no-unused-vars
+   18:3   warning  'AlertTriangle' is defined but never used                                                                                                            @typescript-eslint/no-unused-vars
+  112:6   warning  React Hook useEffect has missing dependencies: 'CATEGORY_META', 'addBudget', and 'updateBudget'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  114:26  warning  'setActiveBudgetId' is assigned a value but never used                                                                                               @typescript-eslint/no-unused-vars
+  191:9   warning  'ringColor' is assigned a value but never used                                                                                                       @typescript-eslint/no-unused-vars
+  192:9   warning  'cardGradient' is assigned a value but never used                                                                                                    @typescript-eslint/no-unused-vars
+  351:3   warning  Unused style detected: styles.tabsScroll                                                                                                             react-native/no-unused-styles
+  357:3   warning  Unused style detected: styles.tabItem                                                                                                                react-native/no-unused-styles
+  363:3   warning  Unused style detected: styles.overviewHeader                                                                                                         react-native/no-unused-styles
+  368:3   warning  Unused style detected: styles.cardSubTitle                                                                                                           react-native/no-unused-styles
+  375:3   warning  Unused style detected: styles.cardVal                                                                                                                react-native/no-unused-styles
+  379:3   warning  Unused style detected: styles.cardLimit                                                                                                              react-native/no-unused-styles
+  384:3   warning  Unused style detected: styles.percentageRing                                                                                                         react-native/no-unused-styles
+  393:3   warning  Unused style detected: styles.ringText                                                                                                               react-native/no-unused-styles
+  405:3   warning  Unused style detected: styles.cardFooter                                                                                                             react-native/no-unused-styles
+  482:3   warning  Unused style detected: styles.catFooter                                                                                                              react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/app/(tabs)/money-loans.tsx
+  11:10  warning  'LinearGradient' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/akashsharma/Documents/Gainbase/app/(tabs)/profile.tsx
+    66:9   warning  'setTheme' is assigned a value but never used                                                                                      @typescript-eslint/no-unused-vars
+   102:9   warning  'importMoneyData' is assigned a value but never used                                                                               @typescript-eslint/no-unused-vars
+   215:31  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   252:34  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   352:31  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   389:34  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   460:29  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   461:33  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   462:26  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   463:28  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   464:31  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   465:24  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   502:37  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   522:42  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   542:40  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   581:37  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   598:31  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   630:35  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   643:35  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   664:46  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   665:39  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   716:30  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   899:5   warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+  1171:37  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+  1193:20  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+  1911:3   warning  Unused style detected: styles.header                                                                                               react-native/no-unused-styles
+  1918:3   warning  Unused style detected: styles.headerText                                                                                           react-native/no-unused-styles
+  1923:3   warning  Unused style detected: styles.headerIcons                                                                                          react-native/no-unused-styles
+  1927:3   warning  Unused style detected: styles.headerIconButton                                                                                     react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/app/(tabs)/two.tsx
+   41:17  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+  100:17  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+  206:10  warning  'isSearchFocused' is assigned a value but never used                                                                               @typescript-eslint/no-unused-vars
+  216:6   warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+  462:3   warning  Unused style detected: styles.headerIcon                                                                                           react-native/no-unused-styles
+  468:3   warning  Unused style detected: styles.headerTitle                                                                                          react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/app/_layout.tsx
+  41:16  warning  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+/Users/akashsharma/Documents/Gainbase/app/account-details/[id].tsx
+   18:3   warning  'TrendingDown' is defined but never used        @typescript-eslint/no-unused-vars
+  245:21  warning  'isExpense' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/akashsharma/Documents/Gainbase/app/add-budget.tsx
+   10:3   warning  'Alert' is defined but never used                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   14:20  warning  'Plus' is defined but never used                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+   14:26  warning  'Trash2' is defined but never used                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   85:11  warning  'id' is assigned a value but never used                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   90:9   warning  The 'storeCategories' logical expression could make the dependencies of useEffect Hook (at line 160) change on every render. Move it inside the useEffect callback. Alternatively, wrap the initialization of 'storeCategories' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  320:3   warning  Unused style detected: styles.inputGroup                                                                                                                                                                                                                   react-native/no-unused-styles
+  323:3   warning  Unused style detected: styles.row                                                                                                                                                                                                                          react-native/no-unused-styles
+  327:3   warning  Unused style detected: styles.label                                                                                                                                                                                                                        react-native/no-unused-styles
+  333:3   warning  Unused style detected: styles.textInput                                                                                                                                                                                                                    react-native/no-unused-styles
+  341:3   warning  Unused style detected: styles.selectBox                                                                                                                                                                                                                    react-native/no-unused-styles
+  348:3   warning  Unused style detected: styles.iosDatePickerContainer                                                                                                                                                                                                       react-native/no-unused-styles
+  403:3   warning  Unused style detected: styles.deleteBtn                                                                                                                                                                                                                    react-native/no-unused-styles
+  406:3   warning  Unused style detected: styles.addCustomCatBtn                                                                                                                                                                                                              react-native/no-unused-styles
+  417:3   warning  Unused style detected: styles.customCatInputBox                                                                                                                                                                                                            react-native/no-unused-styles
+  423:3   warning  Unused style detected: styles.customCatActionRow                                                                                                                                                                                                           react-native/no-unused-styles
+  429:3   warning  Unused style detected: styles.customCatBtn                                                                                                                                                                                                                 react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/app/add-loan.tsx
+  82:6  warning  React Hook useEffect has a missing dependency: 'accounts'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/akashsharma/Documents/Gainbase/app/add-money-transaction.tsx
+   28:55  warning  Unexpected any. Specify a different type                                                                                                                                                                          @typescript-eslint/no-explicit-any
+   57:9   warning  The 'storeCategories' logical expression could make the dependencies of useMemo Hook (at line 105) change on every render. To fix this, wrap the initialization of 'storeCategories' in its own useMemo() Hook    react-hooks/exhaustive-deps
+   57:9   warning  The 'storeCategories' logical expression could make the dependencies of useEffect Hook (at line 195) change on every render. To fix this, wrap the initialization of 'storeCategories' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  183:6   warning  React Hook useEffect has a missing dependency: 'type'. Either include it or remove the dependency array                                                                                                           react-hooks/exhaustive-deps
+
+/Users/akashsharma/Documents/Gainbase/app/add-transaction.tsx
+   99:6  warning  React Hook useEffect has a missing dependency: 'fetchTickers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  919:3  warning  Unused style detected: styles.companyInfoRow                                                                     react-native/no-unused-styles
+  947:3  warning  Unused style detected: styles.currencyPrefix                                                                     react-native/no-unused-styles
+  952:3  warning  Unused style detected: styles.companyName                                                                        react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/app/analytics-details/[type]/[value].tsx
+   2:10  warning  'getSectorIcon' is defined but never used  @typescript-eslint/no-unused-vars
+   3:10  warning  'Ionicons' is defined but never used       @typescript-eslint/no-unused-vars
+  12:3   warning  'Briefcase' is defined but never used      @typescript-eslint/no-unused-vars
+  13:3   warning  'Layers' is defined but never used         @typescript-eslint/no-unused-vars
+  14:3   warning  'LayoutGrid' is defined but never used     @typescript-eslint/no-unused-vars
+  15:3   warning  'TrendingUp' is defined but never used     @typescript-eslint/no-unused-vars
+  71:17  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  72:17  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/app/analytics.tsx
+    16:3   warning  'TrendingUp' is defined but never used                                                                                             @typescript-eslint/no-unused-vars
+    19:3   warning  'ASSET_TYPE_ICONS' is defined but never used                                                                                       @typescript-eslint/no-unused-vars
+    20:3   warning  'BROKER_ICONS' is defined but never used                                                                                           @typescript-eslint/no-unused-vars
+    23:3   warning  'SECTOR_ICONS' is defined but never used                                                                                           @typescript-eslint/no-unused-vars
+    32:3   warning  'TextInput' is defined but never used                                                                                              @typescript-eslint/no-unused-vars
+    43:7   warning  'GRADIENTS' is assigned a value but never used                                                                                     @typescript-eslint/no-unused-vars
+   122:11  warning  'totalValue' is assigned a value but never used                                                                                    @typescript-eslint/no-unused-vars
+   162:6   warning  React Hook useEffect has a missing dependency: 'fetchTickers'. Either include it or remove the dependency array                    react-hooks/exhaustive-deps
+   177:5   warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+   210:33  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   240:6   warning  React Hook useMemo has a missing dependency: 'handlePiePress'. Either include it or remove the dependency array                    react-hooks/exhaustive-deps
+   274:68  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   281:23  error    React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render         react-hooks/rules-of-hooks
+   290:24  error    React Hook "useMemo" is called conditionally. React Hooks must be called in the exact same order in every component render         react-hooks/rules-of-hooks
+   294:6   warning  React Hook useMemo has a missing dependency: 'computeTreemap'. Either include it or remove the dependency array                    react-hooks/exhaustive-deps
+   459:37  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+   937:3   warning  Unused style detected: styles.iconLetter                                                                                           react-native/no-unused-styles
+  1021:3   warning  Unused style detected: styles.chartTitle                                                                                           react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/app/budget-details/[id].tsx
+  160:6  warning  React Hook useMemo has a missing dependency: 'formatAmount'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/akashsharma/Documents/Gainbase/app/forecast-details.tsx
+   18:3   warning  'Switch' is defined but never used                                                                                  @typescript-eslint/no-unused-vars
+   28:9   warning  'router' is assigned a value but never used                                                                         @typescript-eslint/no-unused-vars
+   34:9   warning  'showCurrencySymbol' is assigned a value but never used                                                             @typescript-eslint/no-unused-vars
+   48:9   warning  'isInflationAdjusted' is assigned a value but never used                                                            @typescript-eslint/no-unused-vars
+   49:9   warning  'setIsInflationAdjusted' is assigned a value but never used                                                         @typescript-eslint/no-unused-vars
+   72:53  warning  React Hook useMemo has a missing dependency: 'calculateSummary'. Either include it or remove the dependency array   react-hooks/exhaustive-deps
+   73:61  warning  React Hook useMemo has a missing dependency: 'getYearlyAnalysis'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   85:9   warning  'handleManualSIPChange' is assigned a value but never used                                                          @typescript-eslint/no-unused-vars
+  402:3   warning  Unused style detected: styles.activePointIndicator                                                                  react-native/no-unused-styles
+  405:3   warning  Unused style detected: styles.activeYear                                                                            react-native/no-unused-styles
+  423:3   warning  Unused style detected: styles.legendContainer                                                                       react-native/no-unused-styles
+  430:3   warning  Unused style detected: styles.legendItem                                                                            react-native/no-unused-styles
+  439:3   warning  Unused style detected: styles.legendDot                                                                             react-native/no-unused-styles
+  444:3   warning  Unused style detected: styles.legendText                                                                            react-native/no-unused-styles
+  448:3   warning  Unused style detected: styles.controlsCard                                                                          react-native/no-unused-styles
+  454:3   warning  Unused style detected: styles.controlHeader                                                                         react-native/no-unused-styles
+  460:3   warning  Unused style detected: styles.controlTitle                                                                          react-native/no-unused-styles
+  466:3   warning  Unused style detected: styles.inputGroup                                                                            react-native/no-unused-styles
+  469:3   warning  Unused style detected: styles.inputLabelRow                                                                         react-native/no-unused-styles
+  475:3   warning  Unused style detected: styles.inputLabel                                                                            react-native/no-unused-styles
+  479:3   warning  Unused style detected: styles.inputValueDisplay                                                                     react-native/no-unused-styles
+  483:3   warning  Unused style detected: styles.textInputWrap                                                                         react-native/no-unused-styles
+  491:3   warning  Unused style detected: styles.textInput                                                                             react-native/no-unused-styles
+  496:3   warning  Unused style detected: styles.tabRow                                                                                react-native/no-unused-styles
+  500:3   warning  Unused style detected: styles.tabMini                                                                               react-native/no-unused-styles
+  507:3   warning  Unused style detected: styles.tabMiniText                                                                           react-native/no-unused-styles
+  511:3   warning  Unused style detected: styles.divider                                                                               react-native/no-unused-styles
+  516:3   warning  Unused style detected: styles.toggleRow                                                                             react-native/no-unused-styles
+  521:3   warning  Unused style detected: styles.toggleLabelGroup                                                                      react-native/no-unused-styles
+  527:3   warning  Unused style detected: styles.toggleDesc                                                                            react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/app/index-comparison.tsx
+   22:9   warning  'router' is assigned a value but never used                                                                    @typescript-eslint/no-unused-vars
+   40:5   warning  React Hook useMemo has an unnecessary dependency: 'tickers'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+   49:28  warning  Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+   53:9   warning  'index1YReturn' is assigned a value but never used                                                             @typescript-eslint/no-unused-vars
+   84:27  warning  Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  248:34  warning  Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/app/loan-details/[id].tsx
+    22:3  warning  'DollarSign' is defined but never used            @typescript-eslint/no-unused-vars
+  1077:3  warning  Unused style detected: styles.nestedModalContent  react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/app/loans.tsx
+   7:3  warning  'Dimensions' is defined but never used  @typescript-eslint/no-unused-vars
+  17:3  warning  'Activity' is defined but never used    @typescript-eslint/no-unused-vars
+
+/Users/akashsharma/Documents/Gainbase/app/money-analytics.tsx
+   15:3   warning  'TrendingUp' is defined but never used          @typescript-eslint/no-unused-vars
+   20:3   warning  'ArrowDown' is defined but never used           @typescript-eslint/no-unused-vars
+   21:3   warning  'ArrowUp' is defined but never used             @typescript-eslint/no-unused-vars
+   22:3   warning  'ArrowUpDown' is defined but never used         @typescript-eslint/no-unused-vars
+   23:15  warning  'PieIcon' is defined but never used             @typescript-eslint/no-unused-vars
+  664:3   warning  Unused style detected: styles.holdingsHeader    react-native/no-unused-styles
+  673:3   warning  Unused style detected: styles.actionIconButton  react-native/no-unused-styles
+  681:3   warning  Unused style detected: styles.viewModeToggle    react-native/no-unused-styles
+  690:3   warning  Unused style detected: styles.viewModeText      react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/app/monthly-analysis.tsx
+   25:9   warning  'router' is assigned a value but never used                                                                                        @typescript-eslint/no-unused-vars
+   28:9   warning  'fetchTickers' is assigned a value but never used                                                                                  @typescript-eslint/no-unused-vars
+   42:5   warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+  212:43  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+  478:3   warning  Unused style detected: styles.horizontalChartScroll                                                                                react-native/no-unused-styles
+  481:3   warning  Unused style detected: styles.horizontalChartContent                                                                               react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/app/portfolio-health-formula.tsx
+   3:13  warning  'Haptics' is defined but never used           @typescript-eslint/no-unused-vars
+   7:3   warning  'Activity' is defined but never used          @typescript-eslint/no-unused-vars
+  18:3   warning  'TouchableOpacity' is defined but never used  @typescript-eslint/no-unused-vars
+  26:9   warning  'router' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  30:61  warning  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  53:50  warning  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/app/portfolio-health.tsx
+  19:10  warning  'LucideIcon' is defined but never used  @typescript-eslint/no-unused-vars
+  19:28  warning  'TrendingUp' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/akashsharma/Documents/Gainbase/app/sector-details/[sector].tsx
+    3:10  warning  'Ionicons' is defined but never used      @typescript-eslint/no-unused-vars
+   67:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   68:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  101:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/app/sectors.tsx
+  22:16  warning  'SCREEN_WIDTH' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/akashsharma/Documents/Gainbase/app/settings.tsx
+  22:9  warning  'router' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/akashsharma/Documents/Gainbase/app/stock-details/[symbol].tsx
+     6:13  warning  'Haptics' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+    18:3   warning  'TextInput' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+    40:9   warning  'router' is assigned a value but never used                                                                         @typescript-eslint/no-unused-vars
+    48:9   warning  'calculateSummary' is assigned a value but never used                                                               @typescript-eslint/no-unused-vars
+    94:6   warning  React Hook useMemo has an unnecessary dependency: 'transactions'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+   130:22  warning  'e' is defined but never used                                                                                       @typescript-eslint/no-unused-vars
+   151:6   warning  React Hook React.useEffect has a missing dependency: 'holding'. Either include it or remove the dependency array    react-hooks/exhaustive-deps
+   758:45  warning  Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+   935:3   warning  Unused style detected: styles.symbol                                                                                react-native/no-unused-styles
+   965:3   warning  Unused style detected: styles.priceHeader                                                                           react-native/no-unused-styles
+   968:3   warning  Unused style detected: styles.currentPriceLabel                                                                     react-native/no-unused-styles
+   975:3   warning  Unused style detected: styles.currentPrice                                                                          react-native/no-unused-styles
+   980:3   warning  Unused style detected: styles.divider                                                                               react-native/no-unused-styles
+   985:3   warning  Unused style detected: styles.pnlRow                                                                                react-native/no-unused-styles
+   990:3   warning  Unused style detected: styles.pnlLabel                                                                              react-native/no-unused-styles
+   995:3   warning  Unused style detected: styles.pnlValueContainer                                                                     react-native/no-unused-styles
+  1000:3   warning  Unused style detected: styles.pnlValue                                                                              react-native/no-unused-styles
+  1168:3   warning  Unused style detected: styles.heroChartContainer                                                                    react-native/no-unused-styles
+  1214:3   warning  Unused style detected: styles.analyticsCard                                                                         react-native/no-unused-styles
+  1219:3   warning  Unused style detected: styles.analyticsGrid                                                                         react-native/no-unused-styles
+  1224:3   warning  Unused style detected: styles.analyticsItem                                                                         react-native/no-unused-styles
+  1228:3   warning  Unused style detected: styles.analyticsLabel                                                                        react-native/no-unused-styles
+  1235:3   warning  Unused style detected: styles.analyticsValue                                                                        react-native/no-unused-styles
+  1240:3   warning  Unused style detected: styles.analyticsSubtext                                                                      react-native/no-unused-styles
+  1245:3   warning  Unused style detected: styles.verticalDivider                                                                       react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/app/subscription-details/[id].tsx
+   22:3   warning  'DollarSign' is defined but never used               @typescript-eslint/no-unused-vars
+   23:3   warning  'Repeat' is defined but never used                   @typescript-eslint/no-unused-vars
+   27:3   warning  'Check' is defined but never used                    @typescript-eslint/no-unused-vars
+   35:10  warning  'Subscription' is defined but never used             @typescript-eslint/no-unused-vars
+   36:10  warning  'advanceDateByCycle' is defined but never used       @typescript-eslint/no-unused-vars
+  192:17  error    'nextDate' is never reassigned. Use 'const' instead  prefer-const
+
+/Users/akashsharma/Documents/Gainbase/app/win-loss-details.tsx
+   39:5  warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+   86:9  warning  'currentTotal' is assigned a value but never used                                                                                  @typescript-eslint/no-unused-vars
+   89:9  warning  'CurrentIcon' is assigned a value but never used                                                                                   @typescript-eslint/no-unused-vars
+  466:3  warning  Unused style detected: styles.sectionHeader                                                                                        react-native/no-unused-styles
+  473:3  warning  Unused style detected: styles.sectionTitle                                                                                         react-native/no-unused-styles
+  479:3  warning  Unused style detected: styles.sectionSubtitle                                                                                      react-native/no-unused-styles
+  515:3  warning  Unused style detected: styles.logoPlaceholder                                                                                      react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/app/yearly-analysis.tsx
+   38:9   warning  'router' is assigned a value but never used                                                                                        @typescript-eslint/no-unused-vars
+   41:9   warning  'fetchTickers' is assigned a value but never used                                                                                  @typescript-eslint/no-unused-vars
+   62:5   warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+   70:31  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+  218:43  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+  387:61  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+  485:3   warning  Unused style detected: styles.horizontalChartScroll                                                                                react-native/no-unused-styles
+  488:3   warning  Unused style detected: styles.horizontalChartContent                                                                               react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/components/ActivityCalendar.tsx
+  148:16  warning  Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  182:3   warning  Unused style detected: styles.disabledText  react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/components/AppSwitcher.tsx
+  36:6  warning  React Hook useEffect has a missing dependency: 'transitionVal'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/akashsharma/Documents/Gainbase/components/BankLogo.tsx
+  24:93  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/components/CategoryIcon.tsx
+  32:119  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  36:41   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/components/EditScreenInfo.tsx
+  8:8  warning  'Colors' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/akashsharma/Documents/Gainbase/components/FinancialInsights.tsx
+   70:13  warning  Unexpected any. Specify a different type                                                                                                                       @typescript-eslint/no-explicit-any
+   72:19  warning  Unexpected any. Specify a different type                                                                                                                       @typescript-eslint/no-explicit-any
+  227:6   warning  React Hook useMemo has missing dependencies: 'formatAmount', 'getActiveBudget', and 'getCategorySpending'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/akashsharma/Documents/Gainbase/components/ForecastCard.tsx
+  13:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/components/HealthGauge.tsx
+   3:59  warning  'SvgText' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+   4:38  warning  'withSpring' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+  31:6   warning  React Hook useEffect has a missing dependency: 'animatedScore'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/akashsharma/Documents/Gainbase/components/MoneyActivityCalendar.tsx
+  155:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/components/MoneyDashboard.tsx
+   19:3   warning  'Layers' is defined but never used                    @typescript-eslint/no-unused-vars
+   61:24  warning  'setActiveFilter' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  245:9   warning  'activeFilterBg' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  884:3   warning  Unused style detected: styles.filterStripContainer    react-native/no-unused-styles
+  887:3   warning  Unused style detected: styles.filterChipsScroll       react-native/no-unused-styles
+  892:3   warning  Unused style detected: styles.filterChip              react-native/no-unused-styles
+  900:3   warning  Unused style detected: styles.filterChipText          react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/components/PortfolioHealthCard.tsx
+  26:7  warning  'GAP' is assigned a value but never used                                 @typescript-eslint/no-unused-vars
+  75:3  warning  'grade' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  77:4  warning  Unexpected any. Specify a different type                                 @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/components/ShareableCard.tsx
+  33:9  warning  'Icon' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  35:4  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/components/SummaryCard.tsx
+  20:3  warning  'prefix' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/akashsharma/Documents/Gainbase/components/ThemedText.tsx
+  1:37  warning  'StyleSheet' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/akashsharma/Documents/Gainbase/components/TopMovers.tsx
+   61:18  warning  Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  101:6   warning  React Hook useMemo has an unnecessary dependency: 'tickers'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+  127:41  warning  Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/components/WinLossCard.tsx
+   22:3  warning  'trackColor' is defined but never used. Allowed unused args must match /^_/u                                                       @typescript-eslint/no-unused-vars
+   26:4  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+  103:5  warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+  358:3  warning  Unused style detected: styles.titleRow                                                                                             react-native/no-unused-styles
+
+/Users/akashsharma/Documents/Gainbase/constants/Icons.tsx
+   2:3   warning  'Antenna' is defined but never used           @typescript-eslint/no-unused-vars
+   4:3   warning  'BarChart3' is defined but never used         @typescript-eslint/no-unused-vars
+   5:3   warning  'Bolt' is defined but never used              @typescript-eslint/no-unused-vars
+   7:3   warning  'Building2' is defined but never used         @typescript-eslint/no-unused-vars
+  10:3   warning  'CarFront' is defined but never used          @typescript-eslint/no-unused-vars
+  12:3   warning  'CircleDollarSign' is defined but never used  @typescript-eslint/no-unused-vars
+  14:3   warning  'Cpu' is defined but never used               @typescript-eslint/no-unused-vars
+  20:3   warning  'Fuel' is defined but never used              @typescript-eslint/no-unused-vars
+  21:3   warning  'Gem' is defined but never used               @typescript-eslint/no-unused-vars
+  23:3   warning  'HandCoins' is defined but never used         @typescript-eslint/no-unused-vars
+  29:3   warning  'Package' is defined but never used           @typescript-eslint/no-unused-vars
+  39:43  warning  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  59:47  warning  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  66:43  warning  Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/constants/Sectors.tsx
+  22:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/hooks/useInsights.ts
+   33:5  warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+  305:6  warning  React Hook useMemo has a missing dependency: 'formatCurrency'. Either include it or remove the dependency array                    react-hooks/exhaustive-deps
+
+/Users/akashsharma/Documents/Gainbase/hooks/usePortfolioHealth.ts
+    2:10  warning  'Ticker' is defined but never used                                                                                                 @typescript-eslint/no-unused-vars
+   38:5   warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+   42:5   warning  React Hook useMemo has unnecessary dependencies: 'tickers' and 'transactions'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+  189:24  warning  Unexpected any. Specify a different type                                                                                           @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/lib/finance.ts
+  48:9  warning  'inflationFactor' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/akashsharma/Documents/Gainbase/services/DataExportService.ts
+  18:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/akashsharma/Documents/Gainbase/store/useMoneyStore.ts
+    4:63  warning  'AccountType' is defined but never used                  @typescript-eslint/no-unused-vars
+  170:15  error    'tempAccounts' is never reassigned. Use 'const' instead  prefer-const
+
+✖ 342 problems (4 errors, 338 warnings)
+  2 errors and 1 warning potentially fixable with the `--fix` option.
+
