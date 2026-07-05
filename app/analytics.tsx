@@ -239,6 +239,21 @@ export default function AnalyticsScreen() {
     });
   }, [filteredAllocation, isPrivacyMode, selectedDimension, focusedIndex]);
 
+  const heatmapData = useMemo(() => {
+    return filteredAllocation.map((item, index) => ({
+      name: item.name,
+      value: Math.max(item.percentage, 0.1), // Ensure visible box
+      pnl: item.pnlPercentage || 0,
+      index: index,
+    }));
+  }, [filteredAllocation]);
+
+  const heatmapRects = useMemo(() => {
+    const containerWidth = SCREEN_WIDTH - 64; // Padding
+    const containerHeight = SCREEN_WIDTH * 0.55;
+    return computeTreemap(heatmapData, containerWidth, containerHeight);
+  }, [heatmapData]);
+
   if (transactions.length === 0) {
     return (
       <SafeAreaView
@@ -277,21 +292,6 @@ export default function AnalyticsScreen() {
     { id: 'Asset Type', label: 'Asset Type', icon: Layers },
     { id: 'Broker', label: 'Broker', icon: Briefcase },
   ];
-
-  const heatmapData = useMemo(() => {
-    return filteredAllocation.map((item, index) => ({
-      name: item.name,
-      value: Math.max(item.percentage, 0.1), // Ensure visible box
-      pnl: item.pnlPercentage || 0,
-      index: index,
-    }));
-  }, [filteredAllocation]);
-
-  const heatmapRects = useMemo(() => {
-    const containerWidth = SCREEN_WIDTH - 64; // Padding
-    const containerHeight = SCREEN_WIDTH * 0.55;
-    return computeTreemap(heatmapData, containerWidth, containerHeight);
-  }, [heatmapData]);
 
   const HeatmapView = () => (
     <View style={styles.heatmapContainer}>
@@ -786,7 +786,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: '#FFF',
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
   },
   selectorBar: {
     paddingVertical: 12,
@@ -821,12 +821,12 @@ const styles = StyleSheet.create({
   selectorText: {
     color: '#8E8E93',
     fontSize: 10,
-    fontWeight: '500',
+    fontFamily: 'Outfit_500Medium',
     textAlign: 'center',
   },
   selectorTextActive: {
     color: '#FFF',
-    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
   },
   scrollContent: {
     padding: 16,
@@ -858,7 +858,7 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#FFF',
     fontSize: 18,
-    fontWeight: '400',
+    fontFamily: 'Outfit_400Regular',
     marginBottom: 8,
   },
   emptySubtext: {
@@ -897,7 +897,7 @@ const styles = StyleSheet.create({
   viewModeText: {
     color: '#FFF',
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Outfit_500Medium',
   },
   holdingsList: {
     backgroundColor: '#1C1C1E',
@@ -937,7 +937,7 @@ const styles = StyleSheet.create({
   iconLetter: {
     color: '#FFF',
     fontSize: 18,
-    fontWeight: '500',
+    fontFamily: 'Outfit_500Medium',
   },
   holdingInfo: {
     justifyContent: 'center',
@@ -947,7 +947,7 @@ const styles = StyleSheet.create({
   holdingSymbol: {
     color: '#FFF',
     fontSize: 15,
-    fontWeight: '400',
+    fontFamily: 'Outfit_400Regular',
     flexShrink: 1,
   },
   holdingSub: {
@@ -963,7 +963,7 @@ const styles = StyleSheet.create({
   primaryValue: {
     color: '#FFF',
     fontSize: 15,
-    fontWeight: '400',
+    fontFamily: 'Outfit_400Regular',
   },
   secondaryValue: {
     color: '#8E8E93',
@@ -1003,7 +1003,7 @@ const styles = StyleSheet.create({
   heatmapSymbol: {
     color: '#FFF',
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
     textAlign: 'center',
   },
   heatmapPercentage: {
@@ -1020,7 +1020,7 @@ const styles = StyleSheet.create({
   },
   chartTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -1040,6 +1040,6 @@ const styles = StyleSheet.create({
   },
   switchText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Outfit_500Medium',
   },
 });

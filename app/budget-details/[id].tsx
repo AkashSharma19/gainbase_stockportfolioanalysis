@@ -211,7 +211,7 @@ export default function BudgetDetailsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         {/* Pie / Donut Chart Card */}
         <View style={[styles.chartCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
           <View style={styles.pieWrapper}>

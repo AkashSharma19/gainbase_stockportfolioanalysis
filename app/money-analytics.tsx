@@ -358,7 +358,7 @@ export default function MoneyAnalyticsScreen() {
         })}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         
         {activeTab === 'distribution' && (
           <View>

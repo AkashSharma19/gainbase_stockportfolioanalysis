@@ -212,7 +212,7 @@ export default function BudgetsScreen() {
       </View>
 
       {activeBudget ? (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
           {activeBudget && (
             <View>
               {/* Month Switcher Banner */}
@@ -253,24 +253,12 @@ export default function BudgetsScreen() {
                     const isLast = index === activeCategories.length - 1;
                     
                     return (
-                      <TouchableOpacity
+                      <View
                         key={cat.id}
                         style={[
                           styles.categoryRow,
                           !isLast && { borderBottomWidth: 1, borderBottomColor: currColors.border }
                         ]}
-                        activeOpacity={0.75}
-                        onPress={() => {
-                          handleHaptic();
-                          router.push({
-                            pathname: '/budget-details/[id]',
-                            params: {
-                              id: activeBudget.id,
-                              year: selectedDate.getFullYear(),
-                              month: selectedDate.getMonth(),
-                            }
-                          });
-                        }}
                       >
                         <View style={styles.catHeader}>
                           <View style={styles.catHeaderLeft}>
@@ -303,7 +291,7 @@ export default function BudgetsScreen() {
                             ]}
                           />
                         </View>
-                      </TouchableOpacity>
+                      </View>
                     );
                   })}
                 </View>

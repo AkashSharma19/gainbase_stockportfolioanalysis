@@ -130,10 +130,7 @@ function RootLayoutNav() {
             name="settings"
             options={{ animation: 'slide_from_right', headerShown: false }}
           />
-          <Stack.Screen
-            name="insights"
-            options={{ animation: 'slide_from_right', headerShown: false }}
-          />
+
           <Stack.Screen
             name="index-comparison"
             options={{ animation: 'slide_from_right', headerShown: false }}

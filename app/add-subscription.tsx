@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { X, Check, ChevronDown } from 'lucide-react-native';
+import { X, Check, ChevronDown, Tv, Music, Youtube, ShoppingBag, Cloud, Gamepad2, Sparkles, Layers, Repeat } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
@@ -24,6 +24,29 @@ import { useMoneyStore } from '@/store/useMoneyStore';
 import { Subscription } from '@/types/money';
 
 const COLORS = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF2D55', '#00C9A7', '#5AC8FA'];
+
+const BRAND_PRESETS = [
+  { id: 'netflix', name: 'Netflix', iconName: 'tv', icon: Tv, color: '#E50914', category: 'Entertainment' },
+  { id: 'spotify', name: 'Spotify', iconName: 'music', icon: Music, color: '#1DB954', category: 'Entertainment' },
+  { id: 'youtube', name: 'YouTube Premium', iconName: 'youtube', icon: Youtube, color: '#FF0000', category: 'Entertainment' },
+  { id: 'prime', name: 'Amazon Prime', iconName: 'shopping-bag', icon: ShoppingBag, color: '#FF9900', category: 'Shopping' },
+  { id: 'chatgpt', name: 'ChatGPT Plus', iconName: 'sparkles', icon: Sparkles, color: '#10A37F', category: 'Software' },
+  { id: 'googleone', name: 'Google One', iconName: 'cloud', icon: Cloud, color: '#4285F4', category: 'Utilities' },
+  { id: 'playstation', name: 'PS Plus', iconName: 'gamepad-2', icon: Gamepad2, color: '#003087', category: 'Entertainment' },
+  { id: 'adobe', name: 'Adobe CC', iconName: 'layers', icon: Layers, color: '#FF0000', category: 'Software' },
+] as const;
+
+const AVAILABLE_ICONS = [
+  { name: 'tv', icon: Tv, label: 'Video' },
+  { name: 'music', icon: Music, label: 'Music' },
+  { name: 'youtube', icon: Youtube, label: 'Social' },
+  { name: 'shopping-bag', icon: ShoppingBag, label: 'Shopping' },
+  { name: 'sparkles', icon: Sparkles, label: 'AI/Tech' },
+  { name: 'cloud', icon: Cloud, label: 'Cloud' },
+  { name: 'gamepad-2', icon: Gamepad2, label: 'Gaming' },
+  { name: 'layers', icon: Layers, label: 'Design' },
+  { name: 'repeat', icon: Repeat, label: 'Other' },
+] as const;
 
 const CYCLES: { cycle: Subscription['billingCycle']; label: string }[] = [
   { cycle: 'weekly', label: 'Weekly' },
@@ -45,13 +68,13 @@ export default function AddSubscriptionScreen() {
   }, [id, subscriptions]);
 
   const [name, setName] = useState('');
-  const [provider, setProvider] = useState('');
   const [amount, setAmount] = useState('');
   const [billingCycle, setBillingCycle] = useState<Subscription['billingCycle']>('monthly');
   const [nextPaymentDate, setNextPaymentDate] = useState(new Date());
   const [linkedAccountId, setLinkedAccountId] = useState('');
   const [category, setCategory] = useState('Entertainment');
   const [color, setColor] = useState(COLORS[0]);
+  const [logo, setLogo] = useState('repeat');
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -60,13 +83,13 @@ export default function AddSubscriptionScreen() {
   useEffect(() => {
     if (editingSubscription) {
       setName(editingSubscription.name);
-      setProvider(editingSubscription.provider);
       setAmount(editingSubscription.amount.toString());
       setBillingCycle(editingSubscription.billingCycle);
       setNextPaymentDate(new Date(editingSubscription.nextPaymentDate));
       setLinkedAccountId(editingSubscription.linkedAccountId || '');
       setCategory(editingSubscription.category);
       setColor(editingSubscription.color || COLORS[0]);
+      setLogo(editingSubscription.logo || 'repeat');
     } else {
       const activeAccounts = accounts.filter(a => !a.isArchived);
       if (activeAccounts.length > 0) {
@@ -81,8 +104,8 @@ export default function AddSubscriptionScreen() {
 
   const handleSave = () => {
     handleHaptic();
-    if (!name.trim() || !provider.trim()) {
-      Alert.alert('Required Fields', 'Please enter a subscription name and provider.');
+    if (!name.trim()) {
+      Alert.alert('Required Fields', 'Please enter a subscription name.');
       return;
     }
 
@@ -95,7 +118,7 @@ export default function AddSubscriptionScreen() {
     const subData: Subscription = {
       id: editingSubscription ? editingSubscription.id : Math.random().toString(36).substring(2, 9),
       name: name.trim(),
-      provider: provider.trim(),
+      provider: name.trim(),
       amount: amountVal,
       billingCycle,
       nextPaymentDate: nextPaymentDate.toISOString(),
@@ -105,6 +128,7 @@ export default function AddSubscriptionScreen() {
       createdAt: editingSubscription ? editingSubscription.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       color,
+      logo,
     };
 
     if (editingSubscription) {
@@ -160,7 +184,33 @@ export default function AddSubscriptionScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
+          {/* Brand Presets */}
+          <View style={styles.inputGroup}>
+            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>POPULAR BRANDS (TAP TO AUTO-FILL)</ThemedText>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.presetsContainer} bounces={false}>
+              {BRAND_PRESETS.map((brand) => (
+                <TouchableOpacity
+                  key={brand.id}
+                  style={[
+                    styles.brandChip,
+                    { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }
+                  ]}
+                  onPress={() => {
+                    handleHaptic();
+                    setName(brand.name);
+                    setColor(brand.color);
+                    setCategory(brand.category);
+                    setLogo(brand.iconName);
+                  }}
+                >
+                  <brand.icon size={16} color={brand.color} style={{ marginRight: 6 }} />
+                  <ThemedText style={[styles.brandChipText, { color: currColors.text }]}>{brand.name}</ThemedText>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
           {/* Subscription Name */}
           <View style={styles.inputGroup}>
             <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>SUBSCRIPTION NAME</ThemedText>
@@ -173,60 +223,82 @@ export default function AddSubscriptionScreen() {
             />
           </View>
 
-          {/* Provider */}
+          {/* Icon Selector (Choose Logo) */}
           <View style={styles.inputGroup}>
-            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>PROVIDER</ThemedText>
+            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>CHOOSE SUBSCRIPTION ICON</ThemedText>
+            <View style={styles.iconSelectorGrid}>
+              {AVAILABLE_ICONS.map((item) => {
+                const isSelected = logo === item.name;
+                const IconComponent = item.icon;
+                return (
+                  <TouchableOpacity
+                    key={item.name}
+                    style={[
+                      styles.iconOption,
+                      { backgroundColor: currColors.card, borderColor: currColors.border },
+                      isSelected && { borderColor: color || '#00C9A7', backgroundColor: `${color || '#00C9A7'}1A` }
+                    ]}
+                    onPress={() => {
+                      handleHaptic();
+                      setLogo(item.name);
+                    }}
+                  >
+                    <IconComponent size={20} color={isSelected ? (color || '#00C9A7') : currColors.textSecondary} />
+                    <ThemedText style={[styles.iconLabel, { color: isSelected ? currColors.text : currColors.textSecondary }]}>
+                      {item.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+
+          {/* Amount input */}
+          <View style={styles.inputGroup}>
+            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>AMOUNT (₹)</ThemedText>
             <TextInput
               style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
-              placeholder="e.g. Netflix, Spotify AB"
+              placeholder="0.00"
               placeholderTextColor={currColors.textSecondary}
-              value={provider}
-              onChangeText={setProvider}
+              keyboardType="numeric"
+              value={amount}
+              onChangeText={setAmount}
             />
           </View>
 
-          {/* Amount & Billing Cycle */}
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>AMOUNT (₹)</ThemedText>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
-                placeholder="0.00"
-                placeholderTextColor={currColors.textSecondary}
-                keyboardType="numeric"
-                value={amount}
-                onChangeText={setAmount}
-              />
-            </View>
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>BILLING CYCLE</ThemedText>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cycleScroll}>
-                <View style={styles.cycleSelector}>
-                  {CYCLES.map((c) => (
-                    <TouchableOpacity
-                      key={c.cycle}
+          {/* Billing Cycle Selector */}
+          <View style={styles.inputGroup}>
+            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>BILLING CYCLE</ThemedText>
+            <View style={[styles.segmentContainer, { backgroundColor: currColors.cardSecondary }]}>
+              {CYCLES.map((c) => {
+                const isSelected = billingCycle === c.cycle;
+                return (
+                  <TouchableOpacity
+                    key={c.cycle}
+                    style={[
+                      styles.segmentTab,
+                      isSelected && { backgroundColor: '#00C9A7' },
+                    ]}
+                    onPress={() => {
+                      handleHaptic();
+                      setBillingCycle(c.cycle);
+                    }}
+                  >
+                    <ThemedText
                       style={[
-                        styles.cycleOption,
-                        { backgroundColor: currColors.card, borderColor: currColors.border },
-                        billingCycle === c.cycle && { borderColor: '#00C9A7', backgroundColor: '#00C9A715' },
+                        styles.segmentLabel,
+                        {
+                          color: isSelected ? '#FFFFFF' : currColors.textSecondary,
+                          fontFamily: isSelected ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                        },
                       ]}
-                      onPress={() => {
-                        handleHaptic();
-                        setBillingCycle(c.cycle);
-                      }}
                     >
-                      <ThemedText
-                        style={[
-                          styles.cycleLabel,
-                          { color: billingCycle === c.cycle ? '#00C9A7' : currColors.textSecondary },
-                        ]}
-                      >
-                        {c.label}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
+                      {c.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
@@ -333,6 +405,7 @@ export default function AddSubscriptionScreen() {
             <FlatList
               data={activeAccounts}
               keyExtractor={(item) => item.id}
+              bounces={false}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.modalItem, { borderBottomColor: currColors.border }]}
@@ -366,6 +439,7 @@ export default function AddSubscriptionScreen() {
             <FlatList
               data={suggestedCategories}
               keyExtractor={(item) => item}
+              bounces={false}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.modalItem, { borderBottomColor: currColors.border }]}
@@ -453,22 +527,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
-  cycleScroll: {
-    marginVertical: 4,
-  },
-  cycleSelector: {
+  segmentContainer: {
     flexDirection: 'row',
-    gap: 8,
+    height: 46,
+    borderRadius: 14,
+    padding: 3,
+    marginTop: 4,
   },
-  cycleOption: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
+  segmentTab: {
+    flex: 1,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
   },
-  cycleLabel: {
+  segmentLabel: {
     fontSize: 12,
-    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: 0.3,
   },
   iosDatePickerContainer: {
     alignItems: 'flex-start',
@@ -514,7 +589,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
     borderBottomWidth: 1,
+  },
+  presetsContainer: {
+    paddingRight: 10,
+    gap: 8,
+  },
+  brandChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  brandChipText: {
+    fontSize: 13,
+    fontFamily: 'Outfit_500Medium',
+  },
+  iconSelectorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 4,
+  },
+  iconOption: {
+    width: '31%',
+    height: 72,
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 6,
+  },
+  iconLabel: {
+    fontSize: 10,
+    fontFamily: 'Outfit_500Medium',
+    marginTop: 4,
   },
 });

@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   FlatList,
+  Keyboard,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -78,31 +79,144 @@ export default function AddMoneyTransactionScreen() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showToAccountModal, setShowToAccountModal] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(!editingTx);
 
-  // Sort categories by usage frequency (most used first)
+  // Calculator Keyboard Helpers
+  const evaluateExpression = (expr: string): string => {
+    try {
+      let evalExpr = expr.replace(/÷/g, '/').replace(/×/g, '*');
+      evalExpr = evalExpr.replace(/[^0-9+\-*/.]/g, '');
+      if (!evalExpr) return '';
+      
+      // eslint-disable-next-line no-new-func
+      const result = new Function(`return (${evalExpr})`)();
+      if (result === undefined || isNaN(result) || !isFinite(result)) {
+        return '';
+      }
+      return Number(result.toFixed(2)).toString();
+    } catch (e) {
+      return '';
+    }
+  };
+
+  const handleCalcKeyPress = (key: string) => {
+    handleHaptic();
+    if (key === 'C') {
+      setAmount('');
+    } else if (key === '⌫') {
+      setAmount((prev) => prev.slice(0, -1));
+    } else if (key === '=') {
+      const sanitized = amount.replace(/[+−×÷\-*/]+$/, '');
+      if (sanitized) {
+        const result = evaluateExpression(sanitized);
+        if (result) {
+          setAmount(result);
+        }
+      }
+    } else if (key === 'Done') {
+      const sanitized = amount.replace(/[+−×÷\-*/]+$/, '');
+      if (sanitized) {
+        const result = evaluateExpression(sanitized);
+        if (result) {
+          setAmount(result);
+        }
+      }
+      setShowCalculator(false);
+    } else {
+      const operators = ['+', '-', '×', '÷'];
+      const isKeyOperator = operators.includes(key);
+      
+      setAmount((prev) => {
+        if (prev === '' && isKeyOperator) {
+          return key === '-' ? '-' : '';
+        }
+        
+        const lastChar = prev.slice(-1);
+        const isLastCharOperator = operators.includes(lastChar);
+        
+        if (isKeyOperator && isLastCharOperator) {
+          return prev.slice(0, -1) + key;
+        }
+        
+        if (key === '.') {
+          const parts = prev.split(/[+−×÷\-*/]/);
+          const currentPart = parts[parts.length - 1];
+          if (currentPart.includes('.')) {
+            return prev;
+          }
+        }
+
+        return prev + key;
+      });
+    }
+  };
+
+  const calcKeys = [
+    ['C', '⌫', '÷', '×'],
+    ['7', '8', '9', '-'],
+    ['4', '5', '6', '+'],
+    ['1', '2', '3', '='],
+    ['0', '.', 'Done'],
+  ];
+
+  // Sort categories by historical proximity to typed amount, falling back to usage frequency
   const sortedCategoriesByUsage = useMemo(() => {
     const list = type === 'income' ? storeCategories.income : storeCategories.expense;
     if (!list) return [];
-    
-    // Count occurrences of each category in moneyTransactions of the current type
+
+    // 1. Calculate overall usage counts for fallback sorting
     const counts: { [key: string]: number } = {};
     list.forEach(cat => {
       counts[cat] = 0;
     });
-    
     moneyTransactions.forEach(tx => {
       if (tx.type === type && counts[tx.category] !== undefined) {
         counts[tx.category]++;
       }
     });
-    
-    // Sort by count (descending), then alphabetically
+
+    // 2. Parse/evaluate the currently typed amount value
+    let typedValue = 0;
+    if (amount) {
+      const sanitized = amount.replace(/[+−×÷\-*/]+$/, '');
+      const evaluated = evaluateExpression(sanitized);
+      const parsed = parseFloat(evaluated || sanitized);
+      if (!isNaN(parsed) && parsed > 0) {
+        typedValue = parsed;
+      }
+    }
+
+    // 3. Compute amount similarity scores if we have a typed value
+    const similarityScores: { [key: string]: number } = {};
+    list.forEach(cat => {
+      similarityScores[cat] = 0;
+    });
+
+    if (typedValue > 0) {
+      const tolerance = typedValue * 0.2; // 20% tolerance range
+      moneyTransactions.forEach(tx => {
+        if (tx.type === type && similarityScores[tx.category] !== undefined) {
+          const diff = Math.abs(tx.amount - typedValue);
+          if (diff <= tolerance && tolerance > 0) {
+            // Similarity ranges from 0 (at boundary) to 1 (exact match)
+            const similarity = 1 - (diff / tolerance);
+            similarityScores[tx.category] += similarity;
+          }
+        }
+      });
+    }
+
+    // 4. Sort categories: similarity score first, then overall usage count, then alphabetically
     return [...list].sort((a, b) => {
-      const diff = counts[b] - counts[a];
-      if (diff !== 0) return diff;
+      const scoreDiff = similarityScores[b] - similarityScores[a];
+      if (scoreDiff !== 0) return scoreDiff;
+
+      const countDiff = counts[b] - counts[a];
+      if (countDiff !== 0) return countDiff;
+
       return a.localeCompare(b);
     });
-  }, [type, storeCategories, moneyTransactions]);
+  }, [type, storeCategories, moneyTransactions, amount]);
 
   // Distribute categories + See All into exactly 3 rows
   const tagRows = useMemo(() => {
@@ -200,7 +314,17 @@ export default function AddMoneyTransactionScreen() {
 
   const handleSave = () => {
     handleHaptic();
-    const parsedAmount = parseFloat(amount);
+    let finalAmountStr = amount;
+    if (amount.includes('+') || amount.includes('-') || amount.includes('×') || amount.includes('÷')) {
+      const sanitized = amount.replace(/[+−×÷\-*/]+$/, '');
+      const evaluated = evaluateExpression(sanitized);
+      if (evaluated) {
+        finalAmountStr = evaluated;
+        setAmount(evaluated); // Sync back to input
+      }
+    }
+
+    const parsedAmount = parseFloat(finalAmountStr);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       Alert.alert('Required Field', 'Please enter a valid amount.');
       return;
@@ -312,7 +436,7 @@ export default function AddMoneyTransactionScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
           {/* Transaction Type Segmented Controller */}
           <View style={[styles.segmentContainer, { backgroundColor: currColors.cardSecondary }]}>
             {(['expense', 'income', 'transfer'] as const).map((t) => (
@@ -351,8 +475,11 @@ export default function AddMoneyTransactionScreen() {
                 style={[styles.amountInput, { color: getAmountColor() }]}
                 placeholder="0"
                 placeholderTextColor={currColors.textSecondary}
-                keyboardType="numeric"
-                autoFocus={!editingTx}
+                showSoftInputOnFocus={false}
+                onFocus={() => {
+                  setShowCalculator(true);
+                  Keyboard.dismiss();
+                }}
                 value={amount}
                 onChangeText={setAmount}
               />
@@ -375,6 +502,7 @@ export default function AddMoneyTransactionScreen() {
                             onPress={() => {
                               handleHaptic();
                               setShowCategoryModal(true);
+                              setShowCalculator(false);
                             }}
                           >
                             <ThemedText style={[styles.tagText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
@@ -400,6 +528,7 @@ export default function AddMoneyTransactionScreen() {
                           onPress={() => {
                             handleHaptic();
                             setCategory(item);
+                            setShowCalculator(false);
                           }}
                         >
                           <ThemedText 
@@ -433,6 +562,7 @@ export default function AddMoneyTransactionScreen() {
               onPress={() => {
                 handleHaptic();
                 setShowAccountModal(true);
+                setShowCalculator(false);
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
@@ -456,6 +586,7 @@ export default function AddMoneyTransactionScreen() {
                 onPress={() => {
                   handleHaptic();
                   setShowToAccountModal(true);
+                  setShowCalculator(false);
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
@@ -487,7 +618,11 @@ export default function AddMoneyTransactionScreen() {
             ) : (
               <TouchableOpacity
                 style={[styles.selectBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-                onPress={() => setShowDatePicker(true)}
+                onPress={() => {
+                  handleHaptic();
+                  setShowDatePicker(true);
+                  setShowCalculator(false);
+                }}
               >
                 <ThemedText style={{ color: currColors.text, fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
                   {date.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -513,9 +648,57 @@ export default function AddMoneyTransactionScreen() {
               placeholderTextColor={currColors.textSecondary}
               value={note}
               onChangeText={setNote}
+              onFocus={() => setShowCalculator(false)}
             />
           </View>
         </ScrollView>
+
+        {/* Calculator Keyboard */}
+        {showCalculator && (
+          <View style={[styles.calcContainer, { backgroundColor: currColors.card, borderTopColor: currColors.border }]}>
+            {calcKeys.map((row, rowIndex) => (
+              <View key={rowIndex} style={styles.calcRow}>
+                {row.map((key) => {
+                  const isDone = key === 'Done';
+                  const isOperator = ['÷', '×', '-', '+', '=', 'Done'].includes(key);
+                  const isClearOrBack = ['C', '⌫'].includes(key);
+                  
+                  let btnBg = currColors.cardSecondary;
+                  let textCol = currColors.text;
+                  
+                  if (isOperator) {
+                    btnBg = '#00C9A71A';
+                    textCol = '#00C9A7';
+                  }
+                  if (key === 'Done') {
+                    btnBg = '#00C9A7';
+                    textCol = '#FFFFFF';
+                  }
+                  if (isClearOrBack) {
+                    btnBg = colorScheme === 'dark' ? '#2C2C2E' : '#E5E5EA';
+                    textCol = '#FF3B30';
+                  }
+
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[
+                        styles.calcButton,
+                        isDone && { flex: 2 },
+                        { backgroundColor: btnBg }
+                      ]}
+                      onPress={() => handleCalcKeyPress(key)}
+                    >
+                      <ThemedText style={[styles.calcButtonText, { color: textCol }]}>
+                        {key}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        )}
       </KeyboardAvoidingView>
 
       {/* Account Selection Modal Bottom Sheet */}
@@ -533,6 +716,8 @@ export default function AddMoneyTransactionScreen() {
             <FlatList
               data={activeAccounts}
               keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
               contentContainerStyle={{ paddingBottom: 24 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -574,6 +759,8 @@ export default function AddMoneyTransactionScreen() {
             <FlatList
               data={activeAccounts.filter((a) => a.id !== accountId)}
               keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
               contentContainerStyle={{ paddingBottom: 24 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -615,6 +802,8 @@ export default function AddMoneyTransactionScreen() {
             <FlatList
               data={categoriesList}
               keyExtractor={(item) => item}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
               contentContainerStyle={{ paddingBottom: 24 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -802,7 +991,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
+  },
+  calcContainer: {
+    padding: 8,
+    borderTopWidth: 1,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+  },
+  calcRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  calcButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calcButtonText: {
+    fontSize: 18,
+    fontFamily: 'Outfit_600SemiBold',
   },
 });

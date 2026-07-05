@@ -245,7 +245,7 @@ export default function AccountsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         {/* Aggregate Overview Card (flat, matching net worth hero) */}
         <View
           style={[
@@ -291,12 +291,25 @@ export default function AccountsScreen() {
           const list = groupedAccounts[type];
           if (list.length === 0) return null;
           const config = TYPE_CONFIG[type];
+          const totalBalance = list.reduce((sum, acc) => sum + acc.balance, 0);
           
           return (
             <View key={type} style={styles.groupContainer}>
-              <ThemedText type="medium" style={[styles.groupTitle, { color: currColors.textSecondary }]}>
-                {config.label.toUpperCase()} ({list.length})
-              </ThemedText>
+              <View style={styles.groupHeaderRow}>
+                <ThemedText type="medium" style={[styles.groupTitle, { color: currColors.textSecondary }]}>
+                  {config.label.toUpperCase()} ({list.length})
+                </ThemedText>
+                <ThemedText 
+                  style={[
+                    styles.groupTotalText, 
+                    { 
+                      color: totalBalance < 0 ? '#FF3B30' : currColors.text,
+                    }
+                  ]}
+                >
+                  {formatAmount(totalBalance)}
+                </ThemedText>
+              </View>
               <View style={[styles.groupWrapperCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
                 {list.map((item, index) => renderAccountItem(item, index === list.length - 1))}
               </View>
@@ -398,8 +411,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_500Medium',
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  groupHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginHorizontal: 20,
     marginBottom: 10,
+  },
+  groupTotalText: {
+    fontSize: 12,
+    fontFamily: 'Outfit_600SemiBold',
   },
   groupWrapperCard: {
     marginHorizontal: 16,

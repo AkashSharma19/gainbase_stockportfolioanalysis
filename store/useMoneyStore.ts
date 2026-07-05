@@ -167,7 +167,7 @@ export const useMoneyStore = create<MoneyState>()(
           if (!oldTx) return state;
 
           // Revert old transaction balances first
-          let tempAccounts = state.accounts.map((acc) => {
+          const tempAccounts = state.accounts.map((acc) => {
             let bal = acc.balance;
             if (acc.id === oldTx.accountId) {
               if (oldTx.type === 'income') bal -= oldTx.amount;

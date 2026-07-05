@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { X, Check, ChevronDown } from 'lucide-react-native';
+import { X, Check, ChevronDown, Home, Car, User, GraduationCap, Landmark } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
@@ -23,15 +23,13 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { Loan } from '@/types/money';
 
-const COLORS = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#8E8E93'];
-
-const TYPES: { type: Loan['type']; label: string; emoji: string }[] = [
-  { type: 'home', label: 'Home Loan', emoji: '🏠' },
-  { type: 'car', label: 'Car Loan', emoji: '🚗' },
-  { type: 'personal', label: 'Personal Loan', emoji: '💰' },
-  { type: 'education', label: 'Education Loan', emoji: '🎓' },
-  { type: 'other', label: 'Other Loan', emoji: '🏦' },
-];
+const TYPES = [
+  { type: 'home', label: 'Home Loan', icon: Home, color: '#007AFF' },
+  { type: 'car', label: 'Car Loan', icon: Car, color: '#34C759' },
+  { type: 'personal', label: 'Personal Loan', icon: User, color: '#FF9500' },
+  { type: 'education', label: 'Education Loan', icon: GraduationCap, color: '#AF52DE' },
+  { type: 'other', label: 'Other Loan', icon: Landmark, color: '#8E8E93' },
+] as const;
 
 export default function AddLoanScreen() {
   const router = useRouter();
@@ -200,7 +198,7 @@ export default function AddLoanScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
           {/* Loan Name */}
           <View style={styles.inputGroup}>
             <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>LOAN NAME</ThemedText>
@@ -229,30 +227,37 @@ export default function AddLoanScreen() {
           <View style={styles.inputGroup}>
             <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>LOAN TYPE</ThemedText>
             <View style={styles.typeSelector}>
-              {TYPES.map((t) => (
-                <TouchableOpacity
-                  key={t.type}
-                  style={[
-                    styles.typeOption,
-                    { backgroundColor: currColors.card, borderColor: currColors.border },
-                    type === t.type && { borderColor: COLORS[0], backgroundColor: `${COLORS[0]}1A` },
-                  ]}
-                  onPress={() => {
-                    handleHaptic();
-                    setType(t.type);
-                  }}
-                >
-                  <ThemedText style={{ fontSize: 18, marginBottom: 4 }}>{t.emoji}</ThemedText>
-                  <ThemedText
+              {TYPES.map((t) => {
+                const isSelected = type === t.type;
+                const activeColor = t.color;
+                
+                return (
+                  <TouchableOpacity
+                    key={t.type}
                     style={[
-                      styles.typeLabel,
-                      { color: type === t.type ? COLORS[0] : currColors.textSecondary },
+                      styles.typeOption,
+                      { backgroundColor: currColors.card, borderColor: currColors.border },
+                      isSelected && { borderColor: activeColor, backgroundColor: `${activeColor}1A` },
                     ]}
+                    onPress={() => {
+                      handleHaptic();
+                      setType(t.type);
+                    }}
                   >
-                    {t.label}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
+                    <View style={{ marginBottom: 6 }}>
+                      <t.icon size={20} color={isSelected ? activeColor : currColors.textSecondary} />
+                    </View>
+                    <ThemedText
+                      style={[
+                        styles.typeLabel,
+                        { color: isSelected ? activeColor : currColors.textSecondary },
+                      ]}
+                    >
+                      {t.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
@@ -398,6 +403,7 @@ export default function AddLoanScreen() {
             <FlatList
               data={activeAccounts}
               keyExtractor={(item) => item.id}
+              bounces={false}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.modalItem, { borderBottomColor: currColors.border }]}

@@ -54,6 +54,7 @@ export default function LoanDetailsScreen() {
     removeLoan,
     addEMIPayment,
     addMoneyTransaction,
+    categories,
   } = useMoneyStore();
 
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
@@ -76,7 +77,9 @@ export default function LoanDetailsScreen() {
   const [showLogPaymentModal, setShowLogPaymentModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('EMI Payments');
   const [showAccountSelector, setShowAccountSelector] = useState(false);
+  const [showCategorySelector, setShowCategorySelector] = useState(false);
 
   // Amortization Schedule Calculation (Generates the next 12 installments)
   const amortizationSchedule = useMemo(() => {
@@ -222,7 +225,10 @@ export default function LoanDetailsScreen() {
 
     setPaymentAmount(loan.emiAmount.toString());
     setSelectedAccountId(loan.linkedAccountId || accounts[0]?.id || '');
+    setSelectedCategory('EMI Payments');
     setShowLogPaymentModal(true);
+    setShowAccountSelector(false);
+    setShowCategorySelector(false);
   };
 
   const handleConfirmLogPayment = () => {
@@ -262,7 +268,7 @@ export default function LoanDetailsScreen() {
       id: Math.random().toString(36).substring(2, 9),
       type: 'expense',
       amount: finalAmount,
-      category: 'EMI Payments',
+      category: selectedCategory,
       accountId: selectedAccountId,
       date: new Date().toISOString(),
       note: `EMI payment for ${loan.name}` + (finalAmount > loan.emiAmount ? ' (includes prepayment)' : ''),
@@ -375,7 +381,7 @@ export default function LoanDetailsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         {/* Outstanding Card */}
         <View style={[styles.outstandingCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
           <View style={[styles.indicatorPill, { backgroundColor: `${config.color}15` }]}>
@@ -645,6 +651,7 @@ export default function LoanDetailsScreen() {
                   <FlatList
                     data={accounts.filter(a => !a.isArchived)}
                     keyExtractor={(item) => item.id}
+                    bounces={false}
                     style={{ maxHeight: 350 }}
                     renderItem={({ item }) => (
                       <TouchableOpacity
@@ -659,6 +666,36 @@ export default function LoanDetailsScreen() {
                         <ThemedText style={{ color: currColors.textSecondary, fontSize: 12 }}>
                           {formatAmount(item.balance)}
                         </ThemedText>
+                      </TouchableOpacity>
+                    )}
+                  />
+                </View>
+              ) : showCategorySelector ? (
+                // RENDER CATEGORY SELECTOR LIST DIRECTLY IN MODAL SHEET
+                <View style={{ width: '100%', minHeight: 300, maxHeight: 450 }}>
+                  <View style={[styles.modalHeader, { borderBottomColor: currColors.border, marginBottom: 12 }]}>
+                    <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
+                      Select Category
+                    </ThemedText>
+                    <TouchableOpacity onPress={() => setShowCategorySelector(false)}>
+                      <X size={22} color={currColors.text} />
+                    </TouchableOpacity>
+                  </View>
+                  <FlatList
+                    data={categories.expense}
+                    keyExtractor={(item) => item}
+                    bounces={false}
+                    style={{ maxHeight: 350 }}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[styles.modalItem, { borderBottomColor: currColors.border }]}
+                        onPress={() => {
+                          handleHaptic();
+                          setSelectedCategory(item);
+                          setShowCategorySelector(false);
+                        }}
+                      >
+                        <ThemedText style={{ color: currColors.text, fontSize: 16 }}>{item}</ThemedText>
                       </TouchableOpacity>
                     )}
                   />
@@ -701,6 +738,23 @@ export default function LoanDetailsScreen() {
                     >
                       <ThemedText style={{ color: selectedAccountId ? currColors.text : currColors.textSecondary, fontSize: 16 }}>
                         {accounts.find(a => a.id === selectedAccountId)?.name || 'Select Account'}
+                      </ThemedText>
+                      <ChevronDown size={18} color={currColors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Category Selector */}
+                  <View style={styles.modalInputGroup}>
+                    <ThemedText style={[styles.modalLabel, { color: currColors.textSecondary }]}>EXPENSE CATEGORY</ThemedText>
+                    <TouchableOpacity
+                      style={[styles.modalSelectBox, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}
+                      onPress={() => {
+                        handleHaptic();
+                        setShowCategorySelector(true);
+                      }}
+                    >
+                      <ThemedText style={{ color: selectedCategory ? currColors.text : currColors.textSecondary, fontSize: 16 }}>
+                        {selectedCategory || 'Select Category'}
                       </ThemedText>
                       <ChevronDown size={18} color={currColors.textSecondary} />
                     </TouchableOpacity>

@@ -20,6 +20,14 @@ import {
   ChevronRight,
   Info,
   Repeat,
+  Tv,
+  Music,
+  Youtube,
+  ShoppingBag,
+  Cloud,
+  Gamepad2,
+  Sparkles,
+  Layers,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -28,6 +36,29 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Loan, Subscription } from '@/types/money';
+
+const getSubscriptionIcon = (logoName: string | undefined) => {
+  switch (logoName) {
+    case 'tv':
+      return Tv;
+    case 'music':
+      return Music;
+    case 'youtube':
+      return Youtube;
+    case 'shopping-bag':
+      return ShoppingBag;
+    case 'sparkles':
+      return Sparkles;
+    case 'cloud':
+      return Cloud;
+    case 'gamepad-2':
+      return Gamepad2;
+    case 'layers':
+      return Layers;
+    default:
+      return Repeat;
+  }
+};
 
 const TYPE_CONFIG = {
   home: { label: 'Home Loan', emoji: '🏠', icon: Home, color: '#007AFF' },
@@ -162,15 +193,20 @@ export default function LoansScreen() {
       >
         <View style={styles.cardMainRow}>
           <View style={styles.cardLeft}>
-            <View style={[styles.iconWrapper, { backgroundColor: `${item.color}15` }]}>
-              <Repeat size={18} color={item.color || '#00C9A7'} />
-            </View>
+            {(() => {
+              const IconComponent = getSubscriptionIcon(item.logo);
+              return (
+                <View style={[styles.iconWrapper, { backgroundColor: `${item.color}15` }]}>
+                  <IconComponent size={18} color={item.color || '#00C9A7'} />
+                </View>
+              );
+            })()}
             <View style={styles.accountInfo}>
               <ThemedText type="semiBold" style={[styles.accountName, { color: currColors.text }]} numberOfLines={1}>
                 {item.name}
               </ThemedText>
               <ThemedText style={[styles.accountSub, { color: currColors.textSecondary }]} numberOfLines={1}>
-                {item.provider} • {item.billingCycle.charAt(0).toUpperCase() + item.billingCycle.slice(1)}
+                {item.category} • {item.billingCycle.charAt(0).toUpperCase() + item.billingCycle.slice(1)}
               </ThemedText>
             </View>
           </View>
@@ -230,7 +266,7 @@ export default function LoansScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         {isLoansView ? (
           <>
             {/* Total EMI Burden Card */}

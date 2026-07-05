@@ -108,6 +108,7 @@ export default function AllTransactionsScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          bounces={false}
           contentContainerStyle={styles.filterChipsScroll}
         >
           {([
@@ -155,7 +156,7 @@ export default function AllTransactionsScreen() {
         </ScrollView>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         {filteredTxs.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
             <Info size={36} color={currColors.textSecondary} style={{ marginBottom: 12 }} />

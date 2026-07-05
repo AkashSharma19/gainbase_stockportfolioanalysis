@@ -23,6 +23,14 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   ChevronRight,
+  Repeat,
+  Tv,
+  Music,
+  Youtube,
+  ShoppingBag,
+  Cloud,
+  Gamepad2,
+  Sparkles,
 } from 'lucide-react-native';
 
 import { ThemedText } from './ThemedText';
@@ -35,6 +43,29 @@ import { MoneyTransaction } from '../types/money';
 import { MoneyActivityCalendar } from './MoneyActivityCalendar';
 import { FinancialInsights } from './FinancialInsights';
 
+const getSubscriptionIcon = (logoName: string | undefined) => {
+  switch (logoName) {
+    case 'tv':
+      return Tv;
+    case 'music':
+      return Music;
+    case 'youtube':
+      return Youtube;
+    case 'shopping-bag':
+      return ShoppingBag;
+    case 'sparkles':
+      return Sparkles;
+    case 'cloud':
+      return Cloud;
+    case 'gamepad-2':
+      return Gamepad2;
+    case 'layers':
+      return Layers;
+    default:
+      return Repeat;
+  }
+};
+
 export function MoneyDashboard() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'dark';
@@ -45,8 +76,11 @@ export function MoneyDashboard() {
     accounts,
     moneyTransactions,
     loans,
+    subscriptions,
+    emiPayments,
     getNetWorth,
     getMonthlyEMIBurden,
+    getMonthlySubscriptionBurden,
   } = useMoneyStore();
 
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
@@ -59,25 +93,98 @@ export function MoneyDashboard() {
   // Computations
   const netWorth = getNetWorth();
   const monthlyEMIs = getMonthlyEMIBurden();
+  const monthlySubscriptions = getMonthlySubscriptionBurden();
 
-  const accountTotals = useMemo(() => {
-    const totals = {
-      wallet: 0,
-      savings: 0,
-      investment: 0,
-      credit_card: 0,
-      emergency_fund: 0,
-      receivable: 0,
-      payable: 0,
-    };
-    accounts.forEach((acc) => {
-      if (!acc.isArchived && acc.includeInAssets !== false) {
-        // @ts-ignore
-        totals[acc.type] = (totals[acc.type] || 0) + acc.balance;
+  // Upcoming Payments calculation (within next 14 days, and past 30 days overdue)
+  const upcomingPayments = useMemo(() => {
+    const today = new Date();
+    const fourteenDaysLater = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    fourteenDaysLater.setHours(23, 59, 59, 999);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+
+    const list: Array<{
+      id: string;
+      targetId: string;
+      name: string;
+      amount: number;
+      date: Date;
+      type: 'emi' | 'subscription';
+      color: string;
+      logo?: string;
+    }> = [];
+
+    // 1. Process active loans for EMIs
+    loans.forEach((loan) => {
+      if (loan.isActive && loan.emiAmount > 0) {
+        const start = new Date(loan.startDate);
+        const day = start.getDate();
+
+        // Check if an EMI payment has already been logged in the current calendar month
+        const hasPaidThisMonth = emiPayments.some(
+          (p) =>
+            p.loanId === loan.id &&
+            new Date(p.date).getMonth() === today.getMonth() &&
+            new Date(p.date).getFullYear() === today.getFullYear()
+        );
+
+        let nextDue = new Date(today.getFullYear(), today.getMonth(), day);
+        if (nextDue.getMonth() !== today.getMonth()) {
+          nextDue = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        }
+
+        // If paid this month, the next installment is next month
+        if (hasPaidThisMonth) {
+          nextDue = new Date(today.getFullYear(), today.getMonth() + 1, day);
+          if (nextDue.getMonth() !== (today.getMonth() + 1) % 12) {
+            nextDue = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+          }
+        }
+
+        // Ensure next due date is not before the loan starts
+        if (nextDue < start) {
+          nextDue = new Date(start);
+        }
+
+        const endLimit = new Date(loan.endDate);
+        if (nextDue <= endLimit && nextDue >= thirtyDaysAgo && nextDue <= fourteenDaysLater) {
+          list.push({
+            id: `emi-${loan.id}`,
+            targetId: loan.id,
+            name: `${loan.name} EMI`,
+            amount: loan.emiAmount,
+            date: nextDue,
+            type: 'emi',
+            color: loan.type === 'home' ? '#FF9500' : loan.type === 'car' ? '#007AFF' : '#AF52DE',
+          });
+        }
       }
     });
-    return totals;
-  }, [accounts]);
+
+    // 2. Process active subscriptions
+    subscriptions.forEach((sub) => {
+      if (sub.isActive && sub.amount > 0 && sub.nextPaymentDate) {
+        const nextDue = new Date(sub.nextPaymentDate);
+        if (nextDue >= thirtyDaysAgo && nextDue <= fourteenDaysLater) {
+          list.push({
+            id: `sub-${sub.id}`,
+            targetId: sub.id,
+            name: sub.name,
+            amount: sub.amount,
+            date: nextDue,
+            type: 'subscription',
+            color: sub.color || '#00C9A7',
+            logo: sub.logo,
+          });
+        }
+      }
+    });
+
+    // Sort chronologically
+    return list.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [loans, subscriptions, emiPayments]);
 
   // Monthly income/expense computations
   const monthlyStats = useMemo(() => {
@@ -101,13 +208,19 @@ export function MoneyDashboard() {
     return { income, expense, savingsRate };
   }, [moneyTransactions]);
 
-  // Filter and limit recent transactions
+  // Filter and limit recent transactions to show only the last transaction date's data, capped at 3
   const filteredRecentTxs = useMemo(() => {
     let list = moneyTransactions;
     if (activeFilter !== 'all') {
       list = list.filter((tx) => tx.type === activeFilter);
     }
-    return list.slice(0, 5);
+
+    if (list.length === 0) return [];
+
+    const lastTxDateStr = new Date(list[0].date).toDateString();
+    const sameDayTxs = list.filter((tx) => new Date(tx.date).toDateString() === lastTxDateStr);
+
+    return sameDayTxs.slice(0, 3);
   }, [moneyTransactions, activeFilter]);
 
   // Chronologically group the filtered recent transactions
@@ -155,21 +268,12 @@ export function MoneyDashboard() {
 
   const activeFilterBg = '#00C9A7';
 
-  const accountTypes = [
-    { key: 'wallet', label: 'Cash / Wallets', icon: Wallet, color: '#00C9A7', balance: accountTotals.wallet },
-    { key: 'savings', label: 'Savings', icon: Landmark, color: '#007AFF', balance: accountTotals.savings },
-    { key: 'investment', label: 'Investments', icon: Activity, color: '#AF52DE', balance: accountTotals.investment },
-    { key: 'credit_card', label: 'Credit Cards', icon: CreditCard, color: '#FF9500', balance: accountTotals.credit_card },
-    { key: 'emergency_fund', label: 'Emergency Fund', icon: PiggyBank, color: '#FF2D55', balance: accountTotals.emergency_fund },
-    { key: 'receivable', label: 'Accounts Receivable', icon: ArrowDownLeft, color: '#34C759', balance: accountTotals.receivable },
-    { key: 'payable', label: 'Accounts Payable', icon: ArrowUpRight, color: '#FF3B30', balance: accountTotals.payable },
-  ];
-
   return (
     <View style={[styles.container, { backgroundColor: currColors.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        bounces={false}
       >
         {/* ─── Hero Card (flat, matching investments) ─── */}
         <View
@@ -261,6 +365,15 @@ export function MoneyDashboard() {
             </ThemedText>
           </View>
 
+          <View style={styles.heroRow}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+              Monthly Subscriptions
+            </ThemedText>
+            <ThemedText style={[styles.heroRowValue, { color: currColors.text }]}>
+              {formatAmount(monthlySubscriptions)}
+            </ThemedText>
+          </View>
+
           <View style={[styles.heroRow, { marginBottom: 0 }]}>
             <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
               Savings rate
@@ -287,7 +400,7 @@ export function MoneyDashboard() {
         {/* ─── Smart Insights ─── */}
         <FinancialInsights />
 
-        {/* ─── Accounts Overview (inline rows inside a card) ─── */}
+        {/* ─── Upcoming Payments (EMI + Subscriptions) ─── */}
         <View
           style={[
             styles.accordionContainer,
@@ -304,12 +417,12 @@ export function MoneyDashboard() {
                 { color: currColors.textSecondary },
               ]}
             >
-              ACCOUNTS OVERVIEW
+              UPCOMING PAYMENTS (14 DAYS)
             </ThemedText>
             <TouchableOpacity
               onPress={() => {
                 handleHaptic();
-                router.push('/(tabs)/money-accounts');
+                router.push('/(tabs)/money-loans');
               }}
               style={styles.viewMoreButton}
             >
@@ -324,44 +437,79 @@ export function MoneyDashboard() {
             </TouchableOpacity>
           </View>
 
-          {accountTypes
-            .filter((item) => {
-              if (item.key === 'receivable' || item.key === 'payable') {
-                return accounts.some((a) => !a.isArchived && a.type === item.key);
+          {/* ─── Upcoming Payments (EMI + Subscriptions) ─── */}
+          {upcomingPayments.length === 0 ? (
+            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+              <ThemedText style={{ color: currColors.textSecondary, fontSize: 13, fontFamily: 'Outfit_400Regular' }}>
+                No payments due in the next 14 days.
+              </ThemedText>
+            </View>
+          ) : (
+            upcomingPayments.map((payment, index, arr) => {
+              const isLast = index === arr.length - 1;
+              const d1 = new Date(payment.date);
+              d1.setHours(0, 0, 0, 0);
+              const d2 = new Date();
+              d2.setHours(0, 0, 0, 0);
+              const diffDays = Math.round((d1.getTime() - d2.getTime()) / (24 * 60 * 60 * 1000));
+              
+              let dueLabel = `Due in ${diffDays} days`;
+              let dueColor = currColors.textSecondary;
+
+              if (diffDays === 0) {
+                dueLabel = 'Due today';
+                dueColor = '#FF9500';
+              } else if (diffDays === 1) {
+                dueLabel = 'Due tomorrow';
+                dueColor = '#FF9500';
+              } else if (diffDays < 0) {
+                dueLabel = `Overdue by ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? 'day' : 'days'}`;
+                dueColor = '#FF3B30';
               }
-              return true;
-            })
-            .map((item, index, arr) => {
-              const IconComp = item.icon;
+
+              const IconComponent = payment.type === 'emi' ? Landmark : getSubscriptionIcon(payment.logo);
+
               return (
                 <TouchableOpacity
-                  key={item.key}
+                  key={payment.id}
                   style={[
                     styles.accountRow,
                     { borderBottomColor: currColors.border },
-                    index === arr.length - 1 && { borderBottomWidth: 0 },
+                    isLast && { borderBottomWidth: 0 },
                   ]}
-                activeOpacity={0.7}
-                onPress={() => {
-                  handleHaptic();
-                  router.push('/(tabs)/money-accounts');
-                }}
-              >
-                <View style={styles.accountRowLeft}>
-                  <View style={[styles.accountIconBox, { backgroundColor: `${item.color}15` }]}>
-                    <IconComp size={16} color={item.color} />
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    handleHaptic();
+                    if (payment.type === 'emi') {
+                      router.push(`/loan-details/${payment.targetId}`);
+                    } else {
+                      router.push(`/subscription-details/${payment.targetId}`);
+                    }
+                  }}
+                >
+                  <View style={[styles.accountRowLeft, { flex: 1, marginRight: 16 }]}>
+                    <View style={[styles.accountIconBox, { backgroundColor: `${payment.color}15` }]}>
+                      <IconComponent size={16} color={payment.color} />
+                    </View>
+                    <View style={{ flex: 1, gap: 2, marginLeft: 12 }}>
+                      <ThemedText style={{ color: currColors.text, fontSize: 14, fontFamily: 'Outfit_500Medium' }} numberOfLines={1}>
+                        {payment.name}
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 11, color: dueColor, fontFamily: 'Outfit_400Regular' }} numberOfLines={1}>
+                        {dueLabel} • {payment.date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      </ThemedText>
+                    </View>
                   </View>
-                  <ThemedText style={[styles.accountRowLabel, { color: currColors.text }]}>
-                    {item.label}
+                  <ThemedText style={[styles.accountRowValue, { color: currColors.text, fontFamily: 'Outfit_600SemiBold', flexShrink: 0 }]}>
+                    {formatAmount(payment.amount)}
                   </ThemedText>
-                </View>
-                <ThemedText style={[styles.accountRowValue, { color: currColors.text }]}>
-                  {formatAmount(item.balance)}
-                </ThemedText>
-              </TouchableOpacity>
-            );
-          })}
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
+
+
 
         {/* ─── Recent Transactions ─── */}
         <View style={styles.sectionHeaderRow}>
@@ -472,49 +620,7 @@ export function MoneyDashboard() {
           </View>
         )}
 
-        {/* ─── Monthly EMI Liabilities ─── */}
-        {loans.filter(l => l.isActive).length > 0 ? (
-          <View style={styles.sectionContainer}>
-            <View style={styles.sectionHeaderRow}>
-              <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
-                MONTHLY EMI LIABILITIES
-              </ThemedText>
-              <TouchableOpacity
-                onPress={() => {
-                  handleHaptic();
-                  router.push('/(tabs)/money-loans');
-                }}
-              >
-                <ThemedText style={styles.viewAllLink}>
-                  View Loans
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
 
-            <TouchableOpacity
-              activeOpacity={0.85}
-              style={[styles.emiCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-              onPress={() => router.push('/(tabs)/money-loans')}
-            >
-              <View style={styles.emiRow}>
-                <View style={[styles.accountIconBox, { backgroundColor: '#FF950015', width: 40, height: 40 }]}>
-                  <Calendar size={20} color="#FF9500" />
-                </View>
-                <View style={styles.emiInfo}>
-                  <ThemedText style={[styles.emiTitleText, { color: currColors.text }]}>
-                    Total Monthly EMIs
-                  </ThemedText>
-                  <ThemedText style={[styles.emiSubText, { color: currColors.textSecondary }]}>
-                    {loans.filter(l => l.isActive).length} active loans outstanding
-                  </ThemedText>
-                </View>
-                <ThemedText style={[styles.emiAmountText, { color: currColors.text }]}>
-                  {formatAmount(monthlyEMIs)}
-                </ThemedText>
-              </View>
-            </TouchableOpacity>
-          </View>
-        ) : null}
 
         {/* ─── Activity Calendar ─── */}
         <MoneyActivityCalendar transactions={moneyTransactions} />

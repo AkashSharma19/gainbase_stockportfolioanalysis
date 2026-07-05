@@ -189,7 +189,7 @@ export default function SubscriptionDetailsScreen() {
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             const today = new Date();
-            let nextDate = new Date(today);
+            const nextDate = new Date(today);
             if (subscription.billingCycle === 'weekly') nextDate.setDate(today.getDate() + 7);
             else if (subscription.billingCycle === 'monthly') nextDate.setMonth(today.getMonth() + 1);
             else if (subscription.billingCycle === 'quarterly') nextDate.setMonth(today.getMonth() + 3);
@@ -247,7 +247,7 @@ export default function SubscriptionDetailsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         {/* Subscription Info Card */}
         <View style={[styles.infoCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
           <View style={[styles.indicatorPill, { backgroundColor: `${subscription.color || '#00C9A7'}15` }]}>
@@ -383,6 +383,7 @@ export default function SubscriptionDetailsScreen() {
                   <FlatList
                     data={accounts.filter(a => !a.isArchived)}
                     keyExtractor={(item) => item.id}
+                    bounces={false}
                     style={{ maxHeight: 350 }}
                     renderItem={({ item }) => (
                       <TouchableOpacity
