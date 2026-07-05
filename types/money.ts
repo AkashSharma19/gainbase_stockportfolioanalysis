@@ -78,3 +78,29 @@ export interface Budget {
   categories: BudgetCategory[];
   isActive: boolean;
 }
+
+export type BillingCycle = 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+
+export interface Subscription {
+  id: string;
+  name: string;              // e.g. "Netflix Premium", "Spotify"
+  provider: string;          // e.g. "Netflix", "Spotify AB"
+  amount: number;            // Billing amount per cycle
+  billingCycle: BillingCycle;
+  nextPaymentDate: string;   // ISO Date String
+  linkedAccountId?: string;  // Account ID from which payment is debited
+  category: string;          // e.g. "Entertainment", "Utilities", "Software"
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  logo?: string;
+  color: string;
+}
+
+export interface SubscriptionPayment {
+  id: string;
+  subscriptionId: string;
+  amount: number;
+  date: string;              // ISO Date String
+  status: 'paid' | 'upcoming' | 'missed';
+}

@@ -179,6 +179,14 @@ function RootLayoutNav() {
             options={{ presentation: 'modal', headerShown: false }}
           />
           <Stack.Screen
+            name="add-subscription"
+            options={{ presentation: 'modal', headerShown: false }}
+          />
+          <Stack.Screen
+            name="subscription-details/[id]"
+            options={{ animation: 'slide_from_right', headerShown: false }}
+          />
+          <Stack.Screen
             name="add-budget"
             options={{ presentation: 'modal', headerShown: false }}
           />

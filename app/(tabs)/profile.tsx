@@ -813,6 +813,8 @@ export default function ProfileScreen() {
           emiPayments: newEmiPayments,
           budgets: newBudgets,
           categories: newCategories,
+          subscriptions: [],
+          subscriptionPayments: [],
         });
 
         Alert.alert(

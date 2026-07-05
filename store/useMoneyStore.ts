@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { Account, MoneyTransaction, Loan, EMIPayment, Budget, AccountType } from '../types/money';
+import { Account, MoneyTransaction, Loan, EMIPayment, Budget, AccountType, Subscription, SubscriptionPayment } from '../types/money';
 
 interface MoneyState {
   accounts: Account[];
@@ -9,6 +9,8 @@ interface MoneyState {
   loans: Loan[];
   emiPayments: EMIPayment[];
   budgets: Budget[];
+  subscriptions: Subscription[];
+  subscriptionPayments: SubscriptionPayment[];
   
   // Account Actions
   addAccount: (account: Account) => void;
@@ -25,6 +27,12 @@ interface MoneyState {
   updateLoan: (id: string, updates: Partial<Loan>) => void;
   removeLoan: (id: string) => void;
   addEMIPayment: (payment: EMIPayment) => void;
+  
+  // Subscription Actions
+  addSubscription: (subscription: Subscription) => void;
+  updateSubscription: (id: string, updates: Partial<Subscription>) => void;
+  removeSubscription: (id: string) => void;
+  addSubscriptionPayment: (payment: SubscriptionPayment) => void;
   
   // Budget Actions
   addBudget: (budget: Budget) => void;
@@ -49,6 +57,8 @@ interface MoneyState {
     emiPayments: EMIPayment[];
     budgets: Budget[];
     categories: { income: string[]; expense: string[] };
+    subscriptions: Subscription[];
+    subscriptionPayments: SubscriptionPayment[];
   }) => void;
 
   // Reset Data
@@ -58,6 +68,7 @@ interface MoneyState {
   // Computed Selectors (Invoked as store functions)
   getNetWorth: () => number;
   getMonthlyEMIBurden: () => number;
+  getMonthlySubscriptionBurden: () => number;
   getActiveBudget: () => Budget | null;
   getCategorySpending: (budgetId: string, year: number, month: number) => { [category: string]: number };
 }
@@ -70,6 +81,8 @@ export const useMoneyStore = create<MoneyState>()(
       loans: [],
       emiPayments: [],
       budgets: [],
+      subscriptions: [],
+      subscriptionPayments: [],
       categories: {
         income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
         expense: [
@@ -261,6 +274,44 @@ export const useMoneyStore = create<MoneyState>()(
           budgets: state.budgets.filter((b) => b.id !== id),
         })),
 
+      addSubscription: (subscription) =>
+        set((state) => ({
+          subscriptions: [...state.subscriptions, subscription],
+        })),
+      updateSubscription: (id, updates) =>
+        set((state) => ({
+          subscriptions: state.subscriptions.map((s) => (s.id === id ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s)),
+        })),
+      removeSubscription: (id) =>
+        set((state) => ({
+          subscriptions: state.subscriptions.filter((s) => s.id !== id),
+          subscriptionPayments: state.subscriptionPayments.filter((p) => p.subscriptionId !== id),
+        })),
+      addSubscriptionPayment: (payment) => {
+        set((state) => {
+          const updatedSubs = state.subscriptions.map((sub) => {
+            if (sub.id === payment.subscriptionId) {
+              const paymentDate = new Date(payment.date);
+              const nextDate = new Date(sub.nextPaymentDate);
+              if (paymentDate >= nextDate) {
+                const newNext = new Date(nextDate);
+                if (sub.billingCycle === 'weekly') newNext.setDate(newNext.getDate() + 7);
+                else if (sub.billingCycle === 'monthly') newNext.setMonth(newNext.getMonth() + 1);
+                else if (sub.billingCycle === 'quarterly') newNext.setMonth(newNext.getMonth() + 3);
+                else if (sub.billingCycle === 'yearly') newNext.setFullYear(newNext.getFullYear() + 1);
+                return { ...sub, nextPaymentDate: newNext.toISOString() };
+              }
+              return sub;
+            }
+            return sub;
+          });
+          return {
+            subscriptionPayments: [...state.subscriptionPayments, payment],
+            subscriptions: updatedSubs,
+          };
+        });
+      },
+
       addCategory: (type, name) =>
         set((state) => {
           const current = state.categories?.[type] || [];
@@ -333,6 +384,8 @@ export const useMoneyStore = create<MoneyState>()(
           emiPayments: data.emiPayments,
           budgets: data.budgets,
           categories: data.categories,
+          subscriptions: data.subscriptions || [],
+          subscriptionPayments: data.subscriptionPayments || [],
         })),
 
       clearAllMoneyData: () =>
@@ -342,6 +395,8 @@ export const useMoneyStore = create<MoneyState>()(
           loans: [],
           emiPayments: [],
           budgets: [],
+          subscriptions: [],
+          subscriptionPayments: [],
           categories: {
             income: [],
             expense: []
@@ -366,6 +421,19 @@ export const useMoneyStore = create<MoneyState>()(
         return loans
           .filter((l) => l.isActive)
           .reduce((acc, current) => acc + current.emiAmount, 0);
+      },
+
+      getMonthlySubscriptionBurden: () => {
+        const { subscriptions } = get();
+        return subscriptions
+          .filter((s) => s.isActive)
+          .reduce((acc, current) => {
+            if (current.billingCycle === 'weekly') return acc + (current.amount * 52) / 12;
+            if (current.billingCycle === 'monthly') return acc + current.amount;
+            if (current.billingCycle === 'quarterly') return acc + current.amount / 3;
+            if (current.billingCycle === 'yearly') return acc + current.amount / 12;
+            return acc + current.amount;
+          }, 0);
       },
 
       getActiveBudget: () => {

@@ -137,3 +137,12 @@ export function formatIndianNumber(num: number | string | undefined | null): str
   }
   return val.toFixed(2);
 }
+
+export function advanceDateByCycle(dateStr: string, cycle: 'weekly' | 'monthly' | 'quarterly' | 'yearly'): string {
+  const d = new Date(dateStr);
+  if (cycle === 'weekly') d.setDate(d.getDate() + 7);
+  else if (cycle === 'monthly') d.setMonth(d.getMonth() + 1);
+  else if (cycle === 'quarterly') d.setMonth(d.getMonth() + 3);
+  else if (cycle === 'yearly') d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString();
+}
