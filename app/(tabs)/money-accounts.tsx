@@ -175,26 +175,12 @@ export default function AccountsScreen() {
                   styles.accountBalance,
                   {
                     fontFamily: 'Outfit_600SemiBold',
-                    color: isCreditCard 
-                      ? (item.balance < 0 ? '#FF3B30' : currColors.text)
-                      : (item.balance < 0 ? '#FF3B30' : currColors.text)
+                    color: item.balance < 0 ? '#FF3B30' : currColors.text
                   }
                 ]}
               >
                 {formatAmount(item.balance)}
               </ThemedText>
-              {isCreditCard && item.creditLimit ? (
-                <View style={{ alignItems: 'flex-end', marginTop: 3 }}>
-                  <ThemedText style={{ fontSize: 10, color: currColors.textSecondary, fontFamily: 'Outfit_400Regular' }}>
-                    Limit: {formatAmount(item.creditLimit)}
-                  </ThemedText>
-                  {blockedAmount > 0 && (
-                    <ThemedText type="medium" style={{ fontSize: 9, color: '#FF9500', marginTop: 1, fontFamily: 'Outfit_500Medium' }}>
-                      Blocked: {formatAmount(blockedAmount)}
-                    </ThemedText>
-                  )}
-                </View>
-              ) : null}
             </View>
             <ChevronRight size={16} color={currColors.textSecondary} />
           </View>
@@ -213,11 +199,23 @@ export default function AccountsScreen() {
                 ]} 
               />
             </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-              <ThemedText style={{ fontSize: 9, color: currColors.textSecondary }}>Utilization</ThemedText>
-              <ThemedText style={{ fontSize: 9, color: utilization > 80 ? '#FF3B30' : currColors.textSecondary }}>
-                {utilization.toFixed(0)}%
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 }}>
+              <ThemedText style={{ fontSize: 10, color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }}>
+                {utilization.toFixed(0)}% Utilized
               </ThemedText>
+              <ThemedText style={{ fontSize: 10, color: currColors.textSecondary, fontFamily: 'Outfit_400Regular' }}>
+                Limit: {formatAmount(item.creditLimit)}
+              </ThemedText>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 3 }}>
+              <ThemedText style={{ fontSize: 10, color: currColors.textSecondary, fontFamily: 'Outfit_400Regular' }}>
+                Available: {formatAmount(item.creditLimit - totalUtilized)}
+              </ThemedText>
+              {blockedAmount > 0 && (
+                <ThemedText style={{ fontSize: 10, color: '#FF9500', fontFamily: 'Outfit_500Medium' }}>
+                  Blocked: {formatAmount(blockedAmount)}
+                </ThemedText>
+              )}
             </View>
           </View>
         ) : null}

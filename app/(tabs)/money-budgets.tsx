@@ -173,6 +173,10 @@ export default function BudgetsScreen() {
     setSelectedDate(new Date(selectedDate.setMonth(selectedDate.getMonth() + 1)));
   };
 
+  const activeCategories = useMemo(() => {
+    return spendingDetails.categories.filter((cat) => cat.limit > 0);
+  }, [spendingDetails.categories]);
+
   const overallPercentage = useMemo(() => {
     if (!activeBudget || activeBudget.totalLimit === 0) return 0;
     return (spendingDetails.totalSpent / activeBudget.totalLimit) * 100;
@@ -232,72 +236,78 @@ export default function BudgetsScreen() {
                 </ThemedText>
               </View>
 
-              {spendingDetails.categories.filter((cat) => cat.limit > 0).map((cat) => {
-                const percentage = cat.limit > 0 ? (cat.spent / cat.limit) * 100 : 0;
-                const isOverspent = cat.spent > cat.limit;
-                const catProgressColor = getProgressColor(percentage);
-                const catColor = cat.color || '#8E8E93';
-                
-                return (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[styles.categoryCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-                    activeOpacity={0.75}
-                    onPress={() => {
-                      handleHaptic();
-                      router.push({
-                        pathname: '/budget-details/[id]',
-                        params: {
-                          id: activeBudget.id,
-                          year: selectedDate.getFullYear(),
-                          month: selectedDate.getMonth(),
-                        }
-                      });
-                    }}
-                  >
-                    <View style={styles.catHeader}>
-                      <View style={styles.catHeaderLeft}>
-                        <View style={[styles.catIconWrapper, { backgroundColor: `${catColor}15` }]}>
-                          <CategoryIcon name={cat.icon || cat.name} color={catColor} size={16} />
-                        </View>
-                        <ThemedText type="semiBold" style={[styles.catNameText, { color: currColors.text }]} numberOfLines={1}>
-                          {cat.name}
-                        </ThemedText>
-                      </View>
-                      <View style={styles.catHeaderRight}>
-                        <ThemedText style={[styles.catSpentVal, { color: isOverspent ? '#FF3B30' : currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
-                          {formatAmount(cat.spent)}
-                        </ThemedText>
-                        <ThemedText style={[styles.catLimitVal, { color: currColors.textSecondary }]}>
-                          / {formatAmount(cat.limit)}
-                        </ThemedText>
-                      </View>
-                    </View>
-
-                    {/* Progress Bar */}
-                    <View style={[styles.progressBackground, { backgroundColor: currColors.cardSecondary }]}>
-                      <View
+              {activeCategories.length === 0 ? (
+                <View style={[styles.emptyCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+                  <Info size={44} color={currColors.textSecondary} style={{ marginBottom: 12 }} />
+                  <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', lineHeight: 22, paddingHorizontal: 16 }}>
+                    No budgets allocated. Tap the sliders icon in the header to set limits.
+                  </ThemedText>
+                </View>
+              ) : (
+                <View style={[styles.groupWrapperCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+                  {activeCategories.map((cat, index) => {
+                    const percentage = cat.limit > 0 ? (cat.spent / cat.limit) * 100 : 0;
+                    const isOverspent = cat.spent > cat.limit;
+                    const catProgressColor = getProgressColor(percentage);
+                    const catColor = cat.color || '#8E8E93';
+                    const isLast = index === activeCategories.length - 1;
+                    
+                    return (
+                      <TouchableOpacity
+                        key={cat.id}
                         style={[
-                          styles.progressFill,
-                          {
-                            width: `${Math.min(100, percentage)}%`,
-                            backgroundColor: catProgressColor,
-                          },
+                          styles.categoryRow,
+                          !isLast && { borderBottomWidth: 1, borderBottomColor: currColors.border }
                         ]}
-                      />
-                    </View>
+                        activeOpacity={0.75}
+                        onPress={() => {
+                          handleHaptic();
+                          router.push({
+                            pathname: '/budget-details/[id]',
+                            params: {
+                              id: activeBudget.id,
+                              year: selectedDate.getFullYear(),
+                              month: selectedDate.getMonth(),
+                            }
+                          });
+                        }}
+                      >
+                        <View style={styles.catHeader}>
+                          <View style={styles.catHeaderLeft}>
+                            <View style={[styles.catIconWrapper, { backgroundColor: `${catColor}15` }]}>
+                              <CategoryIcon name={cat.icon || cat.name} color={catColor} size={16} />
+                            </View>
+                            <ThemedText type="semiBold" style={[styles.catNameText, { color: currColors.text }]} numberOfLines={1}>
+                              {cat.name}
+                            </ThemedText>
+                          </View>
+                          <View style={styles.catHeaderRight}>
+                            <ThemedText style={[styles.catSpentVal, { color: isOverspent ? '#FF3B30' : currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
+                              {formatAmount(cat.spent)}
+                            </ThemedText>
+                            <ThemedText style={[styles.catLimitVal, { color: currColors.textSecondary }]}>
+                              / {formatAmount(cat.limit)}
+                            </ThemedText>
+                          </View>
+                        </View>
 
-                    <View style={styles.catFooter}>
-                      <ThemedText style={{ fontSize: 11, color: isOverspent ? '#FF3B30' : currColors.textSecondary, fontFamily: 'Outfit_400Regular' }}>
-                        {isOverspent 
-                          ? `Overspent by ${formatAmount(cat.spent - cat.limit)}` 
-                          : `${formatAmount(cat.limit - cat.spent)} remaining`}
-                      </ThemedText>
-                      {isOverspent && <AlertTriangle size={14} color="#FF3B30" />}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+                        {/* Progress Bar */}
+                        <View style={[styles.progressBackground, { backgroundColor: currColors.cardSecondary }]}>
+                          <View
+                            style={[
+                              styles.progressFill,
+                              {
+                                width: `${Math.min(100, percentage)}%`,
+                                backgroundColor: catProgressColor,
+                              },
+                            ]}
+                          />
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           )}
         </ScrollView>
@@ -408,17 +418,28 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
-  categoryCard: {
+  groupWrapperCard: {
     marginHorizontal: 16,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.03,
     shadowRadius: 6,
     elevation: 1,
+  },
+  categoryRow: {
+    flexDirection: 'column',
+    padding: 16,
+  },
+  emptyCard: {
+    marginHorizontal: 16,
+    borderRadius: 22,
+    borderWidth: 1,
+    padding: 28,
+    alignItems: 'center',
+    borderStyle: 'dashed',
   },
   catHeader: {
     flexDirection: 'row',

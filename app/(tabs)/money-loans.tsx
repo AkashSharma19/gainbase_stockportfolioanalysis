@@ -70,10 +70,11 @@ export default function LoansScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const renderLoanCard = (item: Loan) => {
+  const renderLoanCard = (item: Loan, index: number, array: Loan[]) => {
     const config = TYPE_CONFIG[item.type] || TYPE_CONFIG.other;
     const IconComponent = config.icon;
-    
+    const isLast = index === array.length - 1;
+
     // Calculate progress
     const paidAmount = Math.max(0, item.principalAmount - item.outstandingAmount);
     const paidPercentage = item.principalAmount > 0 
@@ -83,70 +84,64 @@ export default function LoansScreen() {
     return (
       <TouchableOpacity
         key={item.id}
-        style={[styles.loanCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+        style={[
+          styles.loanRow,
+          !isLast && { borderBottomWidth: 1, borderBottomColor: currColors.border }
+        ]}
         activeOpacity={0.75}
         onPress={() => {
           handleHaptic();
           router.push(`/loan-details/${item.id}`);
         }}
       >
-        <View style={styles.loanHeader}>
-          <View style={styles.headerLeft}>
-            <View style={[styles.iconBox, { backgroundColor: `${config.color}15` }]}>
+        <View style={styles.cardMainRow}>
+          <View style={styles.cardLeft}>
+            <View style={[styles.iconWrapper, { backgroundColor: `${config.color}15` }]}>
               <IconComponent size={18} color={config.color} />
             </View>
-            <View style={styles.loanTitleInfo}>
-              <ThemedText type="semiBold" style={[styles.loanName, { color: currColors.text }]} numberOfLines={1}>
+            <View style={styles.accountInfo}>
+              <ThemedText type="semiBold" style={[styles.accountName, { color: currColors.text }]} numberOfLines={1}>
                 {item.name}
               </ThemedText>
-              <ThemedText style={[styles.loanLender, { color: currColors.textSecondary }]} numberOfLines={1}>
+              <ThemedText style={[styles.accountSub, { color: currColors.textSecondary }]} numberOfLines={1}>
                 {item.lenderName} • {item.interestRate}% Interest
               </ThemedText>
             </View>
           </View>
-          <ChevronRight size={16} color={currColors.textSecondary} />
-        </View>
 
-        <View style={styles.loanAmountsRow}>
-          <View style={styles.amountCol}>
-            <ThemedText style={[styles.amountLabel, { color: currColors.textSecondary }]}>Outstanding</ThemedText>
-            <ThemedText style={[styles.amountValue, { color: currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
-              {formatAmount(item.outstandingAmount)}
-            </ThemedText>
-          </View>
-          <View style={styles.amountCol}>
-            <ThemedText style={[styles.amountLabel, { color: currColors.textSecondary }]}>Principal</ThemedText>
-            <ThemedText style={[styles.amountValueSecondary, { color: currColors.textSecondary, fontFamily: 'Outfit_400Regular' }]}>
-              {formatAmount(item.principalAmount)}
-            </ThemedText>
-          </View>
-          <View style={styles.amountColEnd}>
-            <ThemedText style={[styles.amountLabel, { color: currColors.textSecondary }]}>Monthly EMI</ThemedText>
-            <ThemedText style={[styles.emiValText, { color: config.color, fontFamily: 'Outfit_600SemiBold' }]}>
-              {formatAmount(item.emiAmount)}
-            </ThemedText>
+          <View style={styles.cardRight}>
+            <View style={{ alignItems: 'flex-end', marginRight: 10 }}>
+              <ThemedText
+                style={[
+                  styles.accountBalance,
+                  {
+                    fontFamily: 'Outfit_600SemiBold',
+                    color: currColors.text,
+                  }
+                ]}
+              >
+                {formatAmount(item.outstandingAmount)}
+              </ThemedText>
+              <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontFamily: 'Outfit_400Regular', marginTop: 2 }}>
+                EMI: {formatAmount(item.emiAmount)}
+              </ThemedText>
+            </View>
+            <ChevronRight size={16} color={currColors.textSecondary} />
           </View>
         </View>
 
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBarBG, { backgroundColor: currColors.cardSecondary }]}>
-            <View 
-              style={[
-                styles.progressBarFill, 
-                { width: `${Math.min(100, paidPercentage)}%`, backgroundColor: config.color }
-              ]} 
-            />
+        {item.principalAmount > 0 && (
+          <View style={{ marginTop: 8 }}>
+            <View style={[styles.progressBarBG, { backgroundColor: currColors.cardSecondary }]}>
+              <View 
+                style={[
+                  styles.progressBarFill, 
+                  { width: `${Math.min(100, paidPercentage)}%`, backgroundColor: config.color }
+                ]} 
+              />
+            </View>
           </View>
-          <View style={styles.progressLabels}>
-            <ThemedText style={[styles.progressText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
-              {paidPercentage.toFixed(0)}% Paid
-            </ThemedText>
-            <ThemedText style={[styles.progressText, { color: currColors.textSecondary, fontFamily: 'Outfit_400Regular' }]}>
-              {formatAmount(item.outstandingAmount)} remaining
-            </ThemedText>
-          </View>
-        </View>
+        )}
       </TouchableOpacity>
     );
   };
@@ -225,7 +220,9 @@ export default function LoansScreen() {
             </ThemedText>
           </View>
         ) : (
-          activeLoans.map(renderLoanCard)
+          <View style={[styles.groupWrapperCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            {activeLoans.map((item, index) => renderLoanCard(item, index, activeLoans))}
+          </View>
         )}
 
         {/* Completed Loans */}
@@ -236,7 +233,9 @@ export default function LoansScreen() {
                 PAID OFF / COMPLETED LOANS ({completedLoans.length})
               </ThemedText>
             </View>
-            {completedLoans.map(renderLoanCard)}
+            <View style={[styles.groupWrapperCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+              {completedLoans.map((item, index) => renderLoanCard(item, index, completedLoans))}
+            </View>
           </View>
         ) : null}
       </ScrollView>
@@ -338,100 +337,73 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderStyle: 'dashed',
   },
-  loanCard: {
+  groupWrapperCard: {
     marginHorizontal: 16,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.03,
     shadowRadius: 6,
     elevation: 1,
   },
-  loanHeader: {
+  loanRow: {
+    flexDirection: 'column',
+    padding: 16,
+  },
+  cardMainRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    width: '100%',
   },
-  headerLeft: {
+  cardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    marginRight: 12,
+    flex: 1.2,
   },
-  iconBox: {
-    width: 40,
-    height: 40,
+  iconWrapper: {
+    width: 38,
+    height: 38,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
   },
-  loanTitleInfo: {
+  accountInfo: {
     flex: 1,
   },
-  loanName: {
+  accountName: {
     fontSize: 14,
     fontFamily: 'Outfit_600SemiBold',
     marginBottom: 2,
   },
-  loanLender: {
+  accountSub: {
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
   },
-  loanAmountsRow: {
+  cardRight: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    gap: 8,
-  },
-  amountCol: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
     flex: 1,
   },
-  amountColEnd: {
-    flex: 1.2,
-    alignItems: 'flex-end',
-  },
-  amountLabel: {
-    fontSize: 10,
-    fontFamily: 'Outfit_400Regular',
-    marginBottom: 4,
-  },
-  amountValue: {
-    fontSize: 15,
-  },
-  amountValueSecondary: {
+  accountBalance: {
     fontSize: 14,
-  },
-  emiValText: {
-    fontSize: 15,
-  },
-  progressContainer: {
-    width: '100%',
-  },
-  progressBarBG: {
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  progressLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  progressText: {
-    fontSize: 10,
   },
   iconRoundBox: {
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  progressBarBG: {
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 2,
   },
 });
