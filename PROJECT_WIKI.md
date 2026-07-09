@@ -57,13 +57,13 @@ Here is the functional map of the directory tree and key files:
 
 | Directory/File | Description | Key Contents / Files |
 | :--- | :--- | :--- |
-| `app/` | File-based navigation routes & screens. | `_layout.tsx` (Root Stack Config, registers background sync). |
+| `app/` | File-based navigation routes & screens. | `_layout.tsx` (Root Stack Config, registers background sync), `money-insights.tsx` (Dedicated Smart Insights for Money Manager). |
 | `app/(tabs)/` | Tabs layout and index page wrapper. | `_layout.tsx` (Dynamic tab visibilities based on mode), `index.tsx` (Slide animated home screen), `profile.tsx`. |
 | `app/add-*.tsx` | Modals to add various assets/transactions. | `add-transaction.tsx`, `add-money-transaction.tsx`, `add-loan.tsx`, `add-budget.tsx`, `add-account.tsx`, `add-subscription.tsx`. |
 | `app/*-details/` | Detailed analytical screens. | `stock-details/[symbol]`, `account-details`, `loan-details`, `budget-details`, `subscription-details`, `sector-details`. |
 | `components/` | Reusable presentation UI elements. | `MoneyDashboard.tsx`, `PortfolioHealthCard.tsx`, `ActivityCalendar.tsx`, `ShareableCard.tsx`, `AppSwitcher.tsx`, `HealthGauge.tsx`. |
 | `constants/` | Constant configurations (colors, APIs, dimensions). | `Colors.ts` (light/dark themes), `Api.ts` (API configuration endpoints). |
-| `hooks/` | Business-logic custom hooks. | `usePortfolioHealth.ts` (health grading algorithm), `useInsights.ts` (investment flags: buy, sell/hold, observe). |
+| `hooks/` | Business-logic custom hooks. | `usePortfolioHealth.ts` (health grading algorithm), `useInsights.ts` (investment flags: buy, sell/hold, observe), `useMoneyInsights.ts` (unified budgeting/cashflow insights). |
 | `lib/` | Core mathematical/computational logic. | `finance.ts` (XIRR calculation, future projection models, Indian number formatter). |
 | `store/` | Zustand state management with storage persistence. | `usePortfolioStore.ts`, `useMoneyStore.ts`, `useAppModeStore.ts`. |
 | `tasks/` | Background automation tasks. | `backgroundFetch.ts` (registers background sync jobs). |
@@ -93,6 +93,7 @@ Gainbase has two distinct user modes configured in `useAppModeStore` and switche
 *   **Loan & EMI Tracker**: List of active loans, outstanding balances, monthly EMI burden calculation, tracking next payment dates.
 *   **Budgeting Suite**: Setting monthly budget caps, displaying category-wise spending meters (e.g., food, bills, shopping).
 *   **Subscription Manager**: Tracking active SaaS subscriptions, recurring cycles, monthly cost burdens, auto-advancing billing cycles.
+*   **Smart Insights Screen**: Dedicated page (`money-insights`) to view dynamic, categorized warnings, tips, and success notifications with contextual shortcuts to resolve them.
 
 ---
 
@@ -167,6 +168,13 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     *   **Buy / Add**: Concentration $< 2\%$ (Sub-scale Holding), Large-cap buffer tracking.
     *   **Observe**: Extreme volatility, sync freshness.
 
+### 💡 Money Insights Trigger Rules
+*   **Location**: [useMoneyInsights.ts](file:///Users/akashsharma/Documents/Gainbase/hooks/useMoneyInsights.ts)
+*   **Triggers**:
+    *   **Success**: Monthly savings rate $\ge 20\%$, healthy Debt-to-Income (DTI) ratio $\le 15\%$.
+    *   **Warning**: Spending deficit (savings rate $\le 0\%$), budget overspent ($\ge 100\%$), credit card utilization $> 50\%$, cash cover below 1.5x of monthly EMIs, low emergency fund savings (covers $< 3$ months of average expenses), high DTI ratio $> 35\%$, high credit card outstanding debt relative to savings ($> 50\%$).
+    *   **Tip**: Low savings rate ($< 10\%$), budget nearing limit ($\ge 85\%$), unbudgeted category spend (spent $\ge ₹2000$ without category limit configured), high idle cash (savings cover $\ge 6$ months of average expenses), high subscription cost burden ($> 8\%$ of income) or active subscription count $\ge 5$, upcoming subscription renewals (within 3 days).
+
 ---
 
 ## 6. Background Fetch & Offline Sync
@@ -188,4 +196,4 @@ Whenever you make updates to the Gainbase codebase:
 3.  **Commit Document**: Keep the wiki updated in the same pull request or tool execution stream as your implementation.
 
 ---
-*Wiki last updated: July 2026*
+*Wiki last updated: July 9, 2026*

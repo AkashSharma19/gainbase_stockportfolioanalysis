@@ -511,114 +511,148 @@ export function MoneyDashboard() {
 
 
 
-        {/* ─── Recent Transactions ─── */}
-        <View style={styles.sectionHeaderRow}>
-          <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
-            RECENT TRANSACTIONS
-          </ThemedText>
-          <TouchableOpacity onPress={() => { handleHaptic(); router.push('/all-money-transactions'); }}>
-            <ThemedText style={styles.viewAllLink}>
-              View All
+        {/* ─── Recent Transactions Card ─── */}
+        <View
+          style={[
+            styles.accordionContainer,
+            {
+              backgroundColor: currColors.card,
+              borderColor: currColors.border,
+            },
+          ]}
+        >
+          <View style={styles.headerWithAction}>
+            <ThemedText
+              style={[
+                styles.innerSectionTitle,
+                { color: currColors.textSecondary },
+              ]}
+            >
+              RECENT TRANSACTIONS
             </ThemedText>
-          </TouchableOpacity>
-        </View>
-
-
-
-        {filteredRecentTxs.length === 0 ? (
-          <View style={[styles.emptyTxsCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            <Info size={32} color={currColors.textSecondary} style={{ marginBottom: 12 }} />
-            <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', fontSize: 14, lineHeight: 20, paddingHorizontal: 12 }}>
-              No transactions matching the selected filter found. Tap the '+' button below to log one.
-            </ThemedText>
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                router.push('/all-money-transactions');
+              }}
+              style={styles.viewMoreButton}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.iconCircle,
+                  { backgroundColor: currColors.cardSecondary },
+                ]}
+              >
+                <ChevronRight size={14} color={currColors.tint} />
+              </View>
+            </TouchableOpacity>
           </View>
-        ) : (
-          <View style={styles.txsGroupsContainer}>
-            {groupedTxs.map((group) => (
-              <View key={group.title} style={styles.txGroup}>
-                <ThemedText style={[styles.txGroupHeader, { color: currColors.textSecondary }]}>
-                  {group.title.toUpperCase()}
-                </ThemedText>
-                <View style={[styles.txsListContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                  {group.data.map((tx, index) => {
-                    const account = accounts.find((a) => a.id === tx.accountId);
-                    const toAccount = tx.toAccountId ? accounts.find((a) => a.id === tx.toAccountId) : null;
-                    
-                    return (
-                      <TouchableOpacity
-                        key={tx.id}
+
+          {filteredRecentTxs.length === 0 ? (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', fontSize: 13, lineHeight: 18, paddingHorizontal: 12 }}>
+                No transactions logged yet.
+              </ThemedText>
+            </View>
+          ) : (
+            <View style={{ paddingBottom: 8 }}>
+              {filteredRecentTxs.map((tx, index) => {
+                const account = accounts.find((a) => a.id === tx.accountId);
+                const toAccount = tx.toAccountId ? accounts.find((a) => a.id === tx.toAccountId) : null;
+                const isLast = index === filteredRecentTxs.length - 1;
+
+                const getRelativeDateLabel = (dateStr: string) => {
+                  const d = new Date(dateStr);
+                  d.setHours(0, 0, 0, 0);
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const yesterday = new Date();
+                  yesterday.setDate(yesterday.getDate() - 1);
+                  yesterday.setHours(0, 0, 0, 0);
+
+                  if (d.getTime() === today.getTime()) {
+                    return 'Today';
+                  } else if (d.getTime() === yesterday.getTime()) {
+                    return 'Yesterday';
+                  } else {
+                    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                  }
+                };
+
+                return (
+                  <TouchableOpacity
+                    key={tx.id}
+                    style={[
+                      styles.txItem,
+                      {
+                        borderBottomColor: currColors.border,
+                        borderBottomWidth: isLast ? 0 : 1,
+                      },
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      handleHaptic();
+                      router.push({ pathname: '/add-money-transaction', params: { id: tx.id } });
+                    }}
+                  >
+                    <View style={styles.txLeft}>
+                      <View
                         style={[
-                          styles.txItem,
+                          styles.txIconBox,
                           {
-                            borderBottomColor: currColors.border,
-                            borderBottomWidth: index === group.data.length - 1 ? 0 : 1,
+                            backgroundColor:
+                              tx.type === 'income'
+                                ? 'rgba(52, 199, 89, 0.1)'
+                                : tx.type === 'expense'
+                                ? 'rgba(255, 59, 48, 0.1)'
+                                : 'rgba(142, 142, 147, 0.1)',
                           },
                         ]}
-                        activeOpacity={0.7}
-                        onPress={() => {
-                          handleHaptic();
-                          router.push({ pathname: '/add-money-transaction', params: { id: tx.id } });
-                        }}
                       >
-                        <View style={styles.txLeft}>
-                          <View
-                            style={[
-                              styles.txIconBox,
-                              {
-                                backgroundColor:
-                                  tx.type === 'income'
-                                    ? 'rgba(52, 199, 89, 0.1)'
-                                    : tx.type === 'expense'
-                                    ? 'rgba(255, 59, 48, 0.1)'
-                                    : 'rgba(142, 142, 147, 0.1)',
-                              },
-                            ]}
-                          >
-                            {tx.type === 'transfer' ? (
-                              <ArrowRightLeft size={18} color="#8E8E93" />
-                            ) : (
-                              <CategoryIcon
-                                name={tx.category}
-                                size={18}
-                                color={tx.type === 'income' ? '#34C759' : '#FF3B30'}
-                              />
-                            )}
-                          </View>
-                          <View style={styles.txInfo}>
-                            <ThemedText style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
-                              {tx.type === 'transfer' ? `Transfer: ${account?.name} → ${toAccount?.name}` : tx.category}
-                            </ThemedText>
-                            <ThemedText style={[styles.txDate, { color: currColors.textSecondary }]} numberOfLines={1}>
-                              {account?.name || 'Unknown Account'}
-                              {tx.note ? ` • ${tx.note}` : ''}
-                            </ThemedText>
-                          </View>
-                        </View>
-
-                        <ThemedText
-                          style={[
-                            styles.txAmount,
-                            {
-                              color:
-                                tx.type === 'income'
-                                  ? '#34C759'
-                                  : tx.type === 'expense'
-                                  ? '#FF3B30'
-                                  : currColors.text,
-                            },
-                          ]}
-                        >
-                          {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
-                          {formatAmount(tx.amount)}
+                        {tx.type === 'transfer' ? (
+                          <ArrowRightLeft size={18} color="#8E8E93" />
+                        ) : (
+                          <CategoryIcon
+                            name={tx.category}
+                            size={18}
+                            color={tx.type === 'income' ? '#34C759' : '#FF3B30'}
+                          />
+                        )}
+                      </View>
+                      <View style={styles.txInfo}>
+                        <ThemedText style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
+                          {tx.type === 'transfer' ? `Transfer: ${account?.name} → ${toAccount?.name}` : tx.category}
                         </ThemedText>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
+                        <ThemedText style={[styles.txDate, { color: currColors.textSecondary }]} numberOfLines={1}>
+                          {getRelativeDateLabel(tx.date)} • {account?.name || 'Unknown Account'}
+                          {tx.note ? ` • ${tx.note}` : ''}
+                        </ThemedText>
+                      </View>
+                    </View>
+
+                    <ThemedText
+                      style={[
+                        styles.txAmount,
+                        {
+                          color:
+                            tx.type === 'income'
+                              ? '#34C759'
+                              : tx.type === 'expense'
+                              ? '#FF3B30'
+                              : currColors.text,
+                        },
+                      ]}
+                    >
+                      {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
+                      {formatAmount(tx.amount)}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </View>
 
 
 

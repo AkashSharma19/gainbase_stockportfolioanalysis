@@ -153,10 +153,10 @@ export default function AddMoneyTransactionScreen() {
 
   const calcKeys = [
     ['C', '⌫', '÷', '×'],
-    ['7', '8', '9', '-'],
+    ['1', '2', '3', '-'],
     ['4', '5', '6', '+'],
-    ['1', '2', '3', '='],
-    ['0', '.', 'Done'],
+    ['7', '8', '9', '='],
+    ['.', '0', 'Done'],
   ];
 
   // Sort categories by historical proximity to typed amount, falling back to usage frequency

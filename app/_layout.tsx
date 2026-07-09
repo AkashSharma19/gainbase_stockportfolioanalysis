@@ -191,6 +191,10 @@ function RootLayoutNav() {
             name="budget-details/[id]"
             options={{ animation: 'slide_from_right', headerShown: false }}
           />
+          <Stack.Screen
+            name="money-insights"
+            options={{ animation: 'slide_from_right', headerShown: false }}
+          />
         </Stack>
       </ThemeProvider>
     </GestureHandlerRootView>
