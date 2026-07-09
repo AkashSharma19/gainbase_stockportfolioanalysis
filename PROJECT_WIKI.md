@@ -89,8 +89,8 @@ Gainbase has two distinct user modes configured in `useAppModeStore` and switche
 ### B. Money Manager Mode
 *   **Default View**: Displays net worth, monthly income/expense/EMIs/subscriptions summaries on the top card, an **Upcoming Payments (14 days)** list summarizing soon-to-be-due EMIs and Subscriptions, **Recent Transactions** (restricting to the single most recent transaction date and capped at 3 items), and active budget meters.
 *   **Accounts Tab**: Lists all monetary accounts grouped by type with a premium card at the top summarizing Net Worth, Assets, Liabilities, and a dynamic **Asset Distribution** category breakdown.
-*   **Cash Flow Tracker**: Income & expense categorization, transaction additions with an interactive **arithmetic calculator keyboard** for inline calculations/bill splits, activity heat maps.
-*   **Loan & EMI Tracker**: List of active loans, outstanding balances, monthly EMI burden calculation, tracking next payment dates.
+*   **Cash Flow Tracker**: Income & expense categorization, transaction additions with an interactive **arithmetic calculator keyboard** for inline calculations/bill splits, activity heat maps, and a clean all-transactions viewer supporting a premium collapsible Bottom Sheet Filter (date ranges, category tags, transaction types), active filter summary chips, and dynamic income, expense, and net cash flow summaries.
+*   **Loan & EMI Tracker**: List of active loans, outstanding balances, remaining EMI count tracking, monthly EMI burden calculation, tracking next payment dates.
 *   **Budgeting Suite**: Setting monthly budget caps, displaying category-wise spending meters (e.g., food, bills, shopping).
 *   **Subscription Manager**: Tracking active SaaS subscriptions, recurring cycles, monthly cost burdens, auto-advancing billing cycles.
 *   **Smart Insights Screen**: Dedicated page (`money-insights`) to view dynamic, categorized warnings, tips, and success notifications with contextual shortcuts to resolve them.

@@ -37,6 +37,31 @@ const TYPE_CONFIG = {
   other: { label: 'Other Loan', emoji: ' Landmark', icon: Landmark, color: '#8E8E93' },
 };
 
+const getRemainingEMIsCount = (loan: Loan) => {
+  if (loan.outstandingAmount <= 0 || loan.emiAmount <= 0) return 0;
+  
+  const r = (loan.interestRate / 12) / 100;
+  const emi = loan.emiAmount;
+  
+  if (r > 0 && emi <= loan.outstandingAmount * r) {
+    return Math.round(loan.outstandingAmount / emi);
+  }
+
+  let balance = loan.outstandingAmount;
+  let monthsRemaining = 0;
+  
+  while (balance > 0 && monthsRemaining < 480) {
+    const interest = balance * r;
+    const principal = emi - interest;
+    if (principal <= 0) break;
+    
+    balance -= Math.min(balance, principal);
+    monthsRemaining++;
+  }
+  
+  return monthsRemaining;
+};
+
 export default function LoansScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'dark';
@@ -80,6 +105,7 @@ export default function LoansScreen() {
     const paidPercentage = item.principalAmount > 0 
       ? (paidAmount / item.principalAmount) * 100 
       : 0;
+    const remainingEMIs = getRemainingEMIsCount(item);
 
     return (
       <TouchableOpacity
@@ -141,7 +167,7 @@ export default function LoansScreen() {
           </View>
           <View style={styles.progressLabels}>
             <ThemedText style={[styles.progressText, { color: currColors.textSecondary }]}>
-              {paidPercentage.toFixed(0)}% Paid
+              {paidPercentage.toFixed(0)}% Paid • {remainingEMIs} left
             </ThemedText>
             <ThemedText style={[styles.progressText, { color: currColors.textSecondary }]}>
               {formatAmount(item.outstandingAmount)} remaining

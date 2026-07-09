@@ -3,8 +3,7 @@ import { StyleSheet, TouchableOpacity, View, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withTiming,
-  Easing,
+  withSpring,
   interpolateColor,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -29,9 +28,10 @@ export function AppSwitcher() {
   const transitionVal = useSharedValue(activeMode === 'investments' ? 0 : 1);
 
   useEffect(() => {
-    transitionVal.value = withTiming(activeMode === 'investments' ? 0 : 1, {
-      duration: 280,
-      easing: Easing.bezier(0.25, 1, 0.5, 1),
+    transitionVal.value = withSpring(activeMode === 'investments' ? 0 : 1, {
+      damping: 15,
+      stiffness: 120,
+      mass: 0.8,
     });
   }, [activeMode]);
 
@@ -64,9 +64,9 @@ export function AppSwitcher() {
     };
   });
 
-  // Animated styles for tab text and icons to scale and fade smoothly
-  const investmentsTabStyle = useAnimatedStyle(() => {
-    const opacity = 1 - (transitionVal.value * 0.4); // 1.0 (active) -> 0.6 (inactive)
+  // Crossfade animations for Active/Inactive Investments tab
+  const investmentsActiveStyle = useAnimatedStyle(() => {
+    const opacity = 1 - transitionVal.value; // 1.0 -> 0.0
     const scale = 1.03 - (transitionVal.value * 0.03); // 1.03 -> 1.0
     return {
       opacity,
@@ -74,9 +74,28 @@ export function AppSwitcher() {
     };
   });
 
-  const moneyTabStyle = useAnimatedStyle(() => {
-    const opacity = 0.6 + (transitionVal.value * 0.4); // 0.6 (inactive) -> 1.0 (active)
+  const investmentsInactiveStyle = useAnimatedStyle(() => {
+    const opacity = transitionVal.value; // 0.0 -> 1.0
     const scale = 1.0 + (transitionVal.value * 0.03); // 1.0 -> 1.03
+    return {
+      opacity,
+      transform: [{ scale }],
+    };
+  });
+
+  // Crossfade animations for Active/Inactive Money tab
+  const moneyActiveStyle = useAnimatedStyle(() => {
+    const opacity = transitionVal.value; // 0.0 -> 1.0
+    const scale = 1.0 + (transitionVal.value * 0.03); // 1.0 -> 1.03
+    return {
+      opacity,
+      transform: [{ scale }],
+    };
+  });
+
+  const moneyInactiveStyle = useAnimatedStyle(() => {
+    const opacity = 1 - transitionVal.value; // 1.0 -> 0.0
+    const scale = 1.03 - (transitionVal.value * 0.03); // 1.03 -> 1.0
     return {
       opacity,
       transform: [{ scale }],
@@ -110,14 +129,31 @@ export function AppSwitcher() {
         activeOpacity={0.9}
         onPress={() => handleSwitch('investments')}
       >
-        <Animated.View style={[styles.tabContent, investmentsTabStyle]}>
+        {/* Active Content (White) */}
+        <Animated.View style={[styles.tabContentAbsolute, investmentsActiveStyle]}>
           <TrendingUp size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
           <ThemedText
             style={[
               styles.tabText,
               {
                 color: '#FFFFFF',
-                fontFamily: activeMode === 'investments' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                fontFamily: 'Outfit_600SemiBold',
+              },
+            ]}
+          >
+            Investments
+          </ThemedText>
+        </Animated.View>
+
+        {/* Inactive Content (Secondary) */}
+        <Animated.View style={[styles.tabContentAbsolute, investmentsInactiveStyle]}>
+          <TrendingUp size={16} color={currColors.textSecondary} style={{ marginRight: 6 }} />
+          <ThemedText
+            style={[
+              styles.tabText,
+              {
+                color: currColors.textSecondary,
+                fontFamily: 'Outfit_500Medium',
               },
             ]}
           >
@@ -132,14 +168,31 @@ export function AppSwitcher() {
         activeOpacity={0.9}
         onPress={() => handleSwitch('money')}
       >
-        <Animated.View style={[styles.tabContent, moneyTabStyle]}>
+        {/* Active Content (White) */}
+        <Animated.View style={[styles.tabContentAbsolute, moneyActiveStyle]}>
           <Wallet size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
           <ThemedText
             style={[
               styles.tabText,
               {
                 color: '#FFFFFF',
-                fontFamily: activeMode === 'money' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                fontFamily: 'Outfit_600SemiBold',
+              },
+            ]}
+          >
+            Money Manager
+          </ThemedText>
+        </Animated.View>
+
+        {/* Inactive Content (Secondary) */}
+        <Animated.View style={[styles.tabContentAbsolute, moneyInactiveStyle]}>
+          <Wallet size={15} color={currColors.textSecondary} style={{ marginRight: 6 }} />
+          <ThemedText
+            style={[
+              styles.tabText,
+              {
+                color: currColors.textSecondary,
+                fontFamily: 'Outfit_500Medium',
               },
             ]}
           >
@@ -158,7 +211,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 12,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 16,
     borderWidth: 1,
     padding: 3,
     position: 'relative',
@@ -173,7 +226,7 @@ const styles = StyleSheet.create({
     left: 4,
     top: 4,
     bottom: 4,
-    borderRadius: 20,
+    borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.16,
@@ -186,8 +239,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,
+    position: 'relative',
   },
-  tabContent: {
+  tabContentAbsolute: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

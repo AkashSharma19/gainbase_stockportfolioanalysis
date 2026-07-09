@@ -68,6 +68,31 @@ const TYPE_CONFIG = {
   other: { label: 'Other Loan', emoji: '🏦', icon: Landmark, color: '#8E8E93' },
 };
 
+const getRemainingEMIsCount = (loan: Loan) => {
+  if (loan.outstandingAmount <= 0 || loan.emiAmount <= 0) return 0;
+  
+  const r = (loan.interestRate / 12) / 100;
+  const emi = loan.emiAmount;
+  
+  if (r > 0 && emi <= loan.outstandingAmount * r) {
+    return Math.round(loan.outstandingAmount / emi);
+  }
+
+  let balance = loan.outstandingAmount;
+  let monthsRemaining = 0;
+  
+  while (balance > 0 && monthsRemaining < 480) {
+    const interest = balance * r;
+    const principal = emi - interest;
+    if (principal <= 0) break;
+    
+    balance -= Math.min(balance, principal);
+    monthsRemaining++;
+  }
+  
+  return monthsRemaining;
+};
+
 type ObligationTab = 'loans' | 'subscriptions';
 
 export default function LoansScreen() {
@@ -122,6 +147,7 @@ export default function LoansScreen() {
     const isLast = index === array.length - 1;
     const paidAmount = Math.max(0, item.principalAmount - item.outstandingAmount);
     const paidPercentage = item.principalAmount > 0 ? (paidAmount / item.principalAmount) * 100 : 0;
+    const remainingEMIs = getRemainingEMIsCount(item);
 
     return (
       <TouchableOpacity
@@ -156,7 +182,7 @@ export default function LoansScreen() {
                 {formatAmount(item.outstandingAmount)}
               </ThemedText>
               <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontFamily: 'Outfit_400Regular', marginTop: 2 }}>
-                EMI: {formatAmount(item.emiAmount)}
+                EMI: {formatAmount(item.emiAmount)} • {remainingEMIs} left
               </ThemedText>
             </View>
             <ChevronRight size={16} color={currColors.textSecondary} />
