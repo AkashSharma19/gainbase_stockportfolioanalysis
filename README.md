@@ -44,6 +44,15 @@ A comprehensive iOS portfolio tracking application built with React Native and E
 - **Export Functionality**: Share portfolio snapshots with others
 - **Custom Currency Display**: Toggle between showing/hiding currency symbols
 
+### Money Manager (Cash Flow & EMIs)
+
+- **Dual-Mode App Switcher**: Seamless, spring-animated switch between Investment Tracking and Money Manager modes
+- **Cash Flow Tracker**: Track income/expense transactions with flexible date presets, category filters, and a collapsible bottom-sheet modal
+- **Loan & EMI Tracker**: Monitor active loans, outstanding principal balances, remaining EMI counts (e.g. 17 left), and monthly EMI burdens
+- **Budgeting Suite**: Set monthly budget caps and visualize category-wise spending progress bars
+- **Subscription Manager**: Track active SaaS subscriptions, recurring billing cycles, and monthly cost burdens
+- **Smart Insights**: Dedicated dashboard highlighting dynamic warning flags, custom financial health tips, and success notifications
+
 ## 🛠 Tech Stack
 
 - **Framework**: React Native with Expo (~54.0.32)
