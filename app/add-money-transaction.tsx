@@ -22,7 +22,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
-import { MoneyTransaction } from '@/types/money';
+import { MoneyTransaction, Account } from '@/types/money';
 import { BankLogo } from '@/components/BankLogo';
 import { AccountType } from '@/types/money';
 
@@ -49,6 +49,58 @@ function AccountIcon({ account, size = 24 }: { account: { logo?: string; type: A
   );
 }
 
+const getPredictedAccount = (
+  type: 'income' | 'expense' | 'transfer',
+  category: string,
+  moneyTransactions: MoneyTransaction[],
+  activeAccounts: Account[]
+): string => {
+  // Filter transactions matching the current type
+  const typeTxs = moneyTransactions.filter((tx) => tx.type === type);
+  if (typeTxs.length === 0) return '';
+
+  // Try to find transactions matching the current type and selected category
+  const catTxs = typeTxs.filter((tx) => tx.category === category);
+
+  // Helper to find the most frequent accountId in a list of transactions
+  const getMostFrequentAccount = (txs: MoneyTransaction[]) => {
+    const counts: Record<string, number> = {};
+    txs.forEach((tx) => {
+      counts[tx.accountId] = (counts[tx.accountId] || 0) + 1;
+    });
+    let maxCount = 0;
+    let bestAccountId = '';
+    Object.entries(counts).forEach(([id, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        bestAccountId = id;
+      }
+    });
+    // Verify the account is still active/exists
+    const exists = activeAccounts.some((a) => a.id === bestAccountId);
+    return exists ? bestAccountId : '';
+  };
+
+  // 1. Try most frequent account for this category
+  if (catTxs.length > 0) {
+    const bestCatAccount = getMostFrequentAccount(catTxs);
+    if (bestCatAccount) return bestCatAccount;
+  }
+
+  // 2. Try most frequent account for this transaction type
+  const bestTypeAccount = getMostFrequentAccount(typeTxs);
+  if (bestTypeAccount) return bestTypeAccount;
+
+  // 3. Fallback: most recently used account overall
+  const lastTx = moneyTransactions[0];
+  if (lastTx) {
+    const exists = activeAccounts.some((a) => a.id === lastTx.accountId);
+    if (exists) return lastTx.accountId;
+  }
+
+  return activeAccounts.length > 0 ? activeAccounts[0].id : '';
+};
+
 export default function AddMoneyTransactionScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -74,6 +126,7 @@ export default function AddMoneyTransactionScreen() {
   const [toAccountId, setToAccountId] = useState('');
   const [date, setDate] = useState(new Date());
   const [note, setNote] = useState('');
+  const [isAccountManuallySelected, setIsAccountManuallySelected] = useState(false);
   
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -277,10 +330,11 @@ export default function AddMoneyTransactionScreen() {
         setCategory(editingTx.category);
       }
     } else {
-      // Default to first active account
+      // Default to first active account or predicted account
       const activeAccounts = accounts.filter((a) => !a.isArchived);
       if (activeAccounts.length > 0) {
-        setAccountId(activeAccounts[0].id);
+        const predicted = getPredictedAccount(type, category, moneyTransactions, activeAccounts);
+        setAccountId(predicted || activeAccounts[0].id);
         if (activeAccounts.length > 1) {
           setToAccountId(activeAccounts[1].id);
         }
@@ -307,6 +361,18 @@ export default function AddMoneyTransactionScreen() {
       }
     }
   }, [type, storeCategories, editingTx]);
+
+  // Auto-fill/update account based on selected type/category usage patterns
+  useEffect(() => {
+    if (editingTx || isAccountManuallySelected) return;
+    const activeAccounts = accounts.filter((a) => !a.isArchived);
+    if (activeAccounts.length > 0) {
+      const predicted = getPredictedAccount(type, category, moneyTransactions, activeAccounts);
+      if (predicted) {
+        setAccountId(predicted);
+      }
+    }
+  }, [type, category, moneyTransactions, accounts, editingTx, isAccountManuallySelected]);
 
   const handleHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -724,6 +790,7 @@ export default function AddMoneyTransactionScreen() {
                   style={[styles.modalItem, { borderBottomColor: currColors.border }, item.includeInAssets === false && { opacity: 0.55 }]}
                   onPress={() => {
                     setAccountId(item.id);
+                    setIsAccountManuallySelected(true);
                     setShowAccountModal(false);
                   }}
                 >
