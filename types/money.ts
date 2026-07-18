@@ -57,6 +57,7 @@ export interface EMIPayment {
   interestPortion: number;
   date: string;              // ISO Date String
   status: 'paid' | 'upcoming' | 'overdue';
+  transactionId?: string;
 }
 
 export interface BudgetCategory {
@@ -103,4 +104,5 @@ export interface SubscriptionPayment {
   amount: number;
   date: string;              // ISO Date String
   status: 'paid' | 'upcoming' | 'missed';
+  transactionId?: string;
 }

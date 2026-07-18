@@ -27,12 +27,14 @@ interface MoneyState {
   updateLoan: (id: string, updates: Partial<Loan>) => void;
   removeLoan: (id: string) => void;
   addEMIPayment: (payment: EMIPayment) => void;
+  removeEMIPayment: (paymentId: string) => void;
   
   // Subscription Actions
   addSubscription: (subscription: Subscription) => void;
   updateSubscription: (id: string, updates: Partial<Subscription>) => void;
   removeSubscription: (id: string) => void;
   addSubscriptionPayment: (payment: SubscriptionPayment) => void;
+  removeSubscriptionPayment: (paymentId: string) => void;
   
   // Budget Actions
   addBudget: (budget: Budget) => void;
@@ -220,9 +222,70 @@ export const useMoneyStore = create<MoneyState>()(
             return { ...acc, balance: bal, updatedAt: new Date().toISOString() };
           });
 
+          // Check if there is an EMI payment associated with this transaction
+          let matchedEmiPayment = state.emiPayments.find((p) => p.transactionId === id);
+          if (!matchedEmiPayment) {
+            // Fallback match: same amount and within 5 seconds of the transaction date
+            const txTime = new Date(oldTx.date).getTime();
+            matchedEmiPayment = state.emiPayments.find((p) => {
+              if (p.transactionId) return false;
+              const pTime = new Date(p.date).getTime();
+              return Math.abs(txTime - pTime) < 5000 && p.amount === oldTx.amount;
+            });
+          }
+
+          let updatedLoans = state.loans;
+          let updatedEmiPayments = state.emiPayments;
+          if (matchedEmiPayment) {
+            updatedEmiPayments = state.emiPayments.filter((p) => p.id !== matchedEmiPayment!.id);
+            updatedLoans = state.loans.map((loan) => {
+              if (loan.id === matchedEmiPayment!.loanId) {
+                return {
+                  ...loan,
+                  outstandingAmount: loan.outstandingAmount + matchedEmiPayment!.principalPortion,
+                };
+              }
+              return loan;
+            });
+          }
+
+          // Check if there is a subscription payment associated with this transaction
+          let matchedSubPayment = state.subscriptionPayments.find((p) => p.transactionId === id);
+          if (!matchedSubPayment) {
+            // Fallback match: same amount and within 5 seconds of the transaction date
+            const txTime = new Date(oldTx.date).getTime();
+            matchedSubPayment = state.subscriptionPayments.find((p) => {
+              if (p.transactionId) return false;
+              const pTime = new Date(p.date).getTime();
+              return Math.abs(txTime - pTime) < 5000 && p.amount === oldTx.amount;
+            });
+          }
+
+          let updatedSubscriptions = state.subscriptions;
+          let updatedSubPayments = state.subscriptionPayments;
+          if (matchedSubPayment) {
+            updatedSubPayments = state.subscriptionPayments.filter((p) => p.id !== matchedSubPayment!.id);
+            updatedSubscriptions = state.subscriptions.map((sub) => {
+              if (sub.id === matchedSubPayment!.subscriptionId) {
+                const nextDate = new Date(sub.nextPaymentDate);
+                const prevDate = new Date(nextDate);
+                if (sub.billingCycle === 'weekly') prevDate.setDate(prevDate.getDate() - 7);
+                else if (sub.billingCycle === 'monthly') prevDate.setMonth(prevDate.getMonth() - 1);
+                else if (sub.billingCycle === 'quarterly') prevDate.setMonth(prevDate.getMonth() - 3);
+                else if (sub.billingCycle === 'yearly') prevDate.setFullYear(prevDate.getFullYear() - 1);
+                return { ...sub, nextPaymentDate: prevDate.toISOString(), updatedAt: new Date().toISOString() };
+              }
+              return sub;
+            });
+          }
+
           return {
             moneyTransactions: state.moneyTransactions.filter((t) => t.id !== id),
             accounts: revertedAccounts,
+            loans: updatedLoans,
+            emiPayments: updatedEmiPayments,
+            subscriptions: updatedSubscriptions,
+            subscriptionPayments: updatedSubPayments,
           };
         });
       },
@@ -255,6 +318,27 @@ export const useMoneyStore = create<MoneyState>()(
 
           return {
             emiPayments: [...state.emiPayments, payment],
+            loans: updatedLoans,
+          };
+        });
+      },
+      removeEMIPayment: (paymentId) => {
+        set((state) => {
+          const payment = state.emiPayments.find((p) => p.id === paymentId);
+          if (!payment) return {};
+
+          const updatedLoans = state.loans.map((loan) => {
+            if (loan.id === payment.loanId) {
+              return {
+                ...loan,
+                outstandingAmount: loan.outstandingAmount + payment.principalPortion,
+              };
+            }
+            return loan;
+          });
+
+          return {
+            emiPayments: state.emiPayments.filter((p) => p.id !== paymentId),
             loans: updatedLoans,
           };
         });
@@ -308,6 +392,30 @@ export const useMoneyStore = create<MoneyState>()(
           return {
             subscriptionPayments: [...state.subscriptionPayments, payment],
             subscriptions: updatedSubs,
+          };
+        });
+      },
+      removeSubscriptionPayment: (paymentId) => {
+        set((state) => {
+          const payment = state.subscriptionPayments.find((p) => p.id === paymentId);
+          if (!payment) return {};
+
+          const updatedSubscriptions = state.subscriptions.map((sub) => {
+            if (sub.id === payment.subscriptionId) {
+              const nextDate = new Date(sub.nextPaymentDate);
+              const prevDate = new Date(nextDate);
+              if (sub.billingCycle === 'weekly') prevDate.setDate(prevDate.getDate() - 7);
+              else if (sub.billingCycle === 'monthly') prevDate.setMonth(prevDate.getMonth() - 1);
+              else if (sub.billingCycle === 'quarterly') prevDate.setMonth(prevDate.getMonth() - 3);
+              else if (sub.billingCycle === 'yearly') prevDate.setFullYear(prevDate.getFullYear() - 1);
+              return { ...sub, nextPaymentDate: prevDate.toISOString(), updatedAt: new Date().toISOString() };
+            }
+            return sub;
+          });
+
+          return {
+            subscriptionPayments: state.subscriptionPayments.filter((p) => p.id !== paymentId),
+            subscriptions: updatedSubscriptions,
           };
         });
       },

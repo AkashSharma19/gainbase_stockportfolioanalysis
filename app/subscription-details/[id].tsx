@@ -49,6 +49,9 @@ export default function SubscriptionDetailsScreen() {
     addSubscriptionPayment,
     addMoneyTransaction,
     updateSubscription,
+    removeMoneyTransaction,
+    moneyTransactions,
+    removeSubscriptionPayment,
   } = useMoneyStore();
 
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
@@ -105,6 +108,43 @@ export default function SubscriptionDetailsScreen() {
     );
   };
 
+  const handleDeletePayment = (payment: SubscriptionPayment) => {
+    handleHaptic();
+    Alert.alert(
+      'Delete Payment Log',
+      'Are you sure you want to delete this payment log? This will revert its impact on your account balance and subscription billing cycle.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            // 1. Find if there is a matching transaction
+            let txId = payment.transactionId;
+            if (!txId) {
+              // Fallback match: same amount and within 5 seconds of the payment date
+              const pTime = new Date(payment.date).getTime();
+              const matchedTx = moneyTransactions.find((t) => {
+                const tTime = new Date(t.date).getTime();
+                return Math.abs(pTime - tTime) < 5000 && t.amount === payment.amount;
+              });
+              if (matchedTx) {
+                txId = matchedTx.id;
+              }
+            }
+
+            if (txId) {
+              removeMoneyTransaction(txId);
+            } else {
+              removeSubscriptionPayment(payment.id);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleLogPayment = () => {
     handleHaptic();
     if (!subscription) return;
@@ -134,17 +174,19 @@ export default function SubscriptionDetailsScreen() {
       return;
     }
 
+    const txId = Math.random().toString(36).substring(2, 9);
     const payment: SubscriptionPayment = {
       id: Math.random().toString(36).substring(2, 9),
       subscriptionId: subscription.id,
       amount: A,
       date: new Date().toISOString(),
       status: 'paid',
+      transactionId: txId,
     };
     addSubscriptionPayment(payment);
 
     addMoneyTransaction({
-      id: Math.random().toString(36).substring(2, 9),
+      id: txId,
       type: 'expense',
       amount: A,
       category: subscription.category,
@@ -350,9 +392,14 @@ export default function SubscriptionDetailsScreen() {
                     <ThemedText style={[styles.timelineTitle, { color: currColors.text }]}>
                       Paid: {formatAmount(p.amount)}
                     </ThemedText>
-                    <ThemedText style={[styles.timelineDate, { color: currColors.textSecondary }]}>
-                      {new Date(p.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                    </ThemedText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <ThemedText style={[styles.timelineDate, { color: currColors.textSecondary }]}>
+                        {new Date(p.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      </ThemedText>
+                      <TouchableOpacity onPress={() => handleDeletePayment(p)} style={{ padding: 4 }}>
+                        <Trash2 size={14} color="#FF3B30" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                   <ThemedText style={[styles.timelineSub, { color: currColors.textSecondary }]}>
                     Status: {p.status === 'paid' ? 'Paid' : p.status === 'upcoming' ? 'Upcoming' : 'Missed'}

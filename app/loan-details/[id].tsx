@@ -55,6 +55,9 @@ export default function LoanDetailsScreen() {
     addEMIPayment,
     addMoneyTransaction,
     categories,
+    removeMoneyTransaction,
+    moneyTransactions,
+    removeEMIPayment,
   } = useMoneyStore();
 
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
@@ -91,14 +94,19 @@ export default function LoanDetailsScreen() {
     const schedule = [];
 
     // Calculate next 12 months or until balance is zero
+    const today = new Date();
     for (let month = 1; month <= 12 && balance > 0; month++) {
       const interestPortion = balance * rate;
       const principalPortion = Math.min(balance, emi - interestPortion);
       const startBalance = balance;
       balance = Math.max(0, balance - principalPortion);
 
+      const labelDate = new Date(today.getFullYear(), today.getMonth() + month, 1);
+      const monthLabel = labelDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+
       schedule.push({
         month,
+        monthLabel,
         startBalance,
         emi: interestPortion + principalPortion,
         principalPortion,
@@ -214,6 +222,43 @@ export default function LoanDetailsScreen() {
     );
   };
 
+  const handleDeletePayment = (payment: EMIPayment) => {
+    handleHaptic();
+    Alert.alert(
+      'Delete Payment Log',
+      'Are you sure you want to delete this payment log? This will revert its impact on your account balance and loan status.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            // 1. Find if there is a matching transaction
+            let txId = payment.transactionId;
+            if (!txId) {
+              // Fallback match: same amount and within 5 seconds of the payment date
+              const pTime = new Date(payment.date).getTime();
+              const matchedTx = moneyTransactions.find((t) => {
+                const tTime = new Date(t.date).getTime();
+                return Math.abs(pTime - tTime) < 5000 && t.amount === payment.amount;
+              });
+              if (matchedTx) {
+                txId = matchedTx.id;
+              }
+            }
+
+            if (txId) {
+              removeMoneyTransaction(txId);
+            } else {
+              removeEMIPayment(payment.id);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleLogPayment = () => {
     handleHaptic();
     if (!loan) return;
@@ -251,6 +296,7 @@ export default function LoanDetailsScreen() {
     const principalPortion = Math.min(loan.outstandingAmount, A - interestPortion);
     const finalAmount = interestPortion + principalPortion;
 
+    const txId = Math.random().toString(36).substring(2, 9);
     // 1. Add payment record
     const payment: EMIPayment = {
       id: Math.random().toString(36).substring(2, 9),
@@ -260,12 +306,13 @@ export default function LoanDetailsScreen() {
       interestPortion,
       date: new Date().toISOString(),
       status: 'paid',
+      transactionId: txId,
     };
     addEMIPayment(payment);
 
     // 2. Add as transaction in Money Manager (expense type)
     addMoneyTransaction({
-      id: Math.random().toString(36).substring(2, 9),
+      id: txId,
       type: 'expense',
       amount: finalAmount,
       category: selectedCategory,
@@ -300,6 +347,7 @@ export default function LoanDetailsScreen() {
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             
+            const txId = Math.random().toString(36).substring(2, 9);
             // 1. Reduce outstanding balance by adding payment
             const payment: EMIPayment = {
               id: Math.random().toString(36).substring(2, 9),
@@ -309,13 +357,14 @@ export default function LoanDetailsScreen() {
               interestPortion: 0,
               date: new Date().toISOString(),
               status: 'paid',
+              transactionId: txId,
             };
             addEMIPayment(payment);
 
             // 2. Add expense transaction
             if (loan.linkedAccountId) {
               addMoneyTransaction({
-                id: Math.random().toString(36).substring(2, 9),
+                id: txId,
                 type: 'expense',
                 amount,
                 category: 'EMI Payments',
@@ -572,7 +621,7 @@ export default function LoanDetailsScreen() {
           {amortizationSchedule.map((row) => (
             <View key={row.month} style={styles.amortRow}>
               <ThemedText style={[styles.amortColText, { color: currColors.textSecondary }]}>
-                Month {row.month}
+                {row.monthLabel}
               </ThemedText>
               <ThemedText style={[styles.amortColText, { color: currColors.text }]}>
                 {formatAmount(row.principalPortion)}
@@ -615,9 +664,14 @@ export default function LoanDetailsScreen() {
                     <ThemedText style={[styles.timelineTitle, { color: currColors.text }]}>
                       EMI Paid: {formatAmount(p.amount)}
                     </ThemedText>
-                    <ThemedText style={[styles.timelineDate, { color: currColors.textSecondary }]}>
-                      {new Date(p.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                    </ThemedText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <ThemedText style={[styles.timelineDate, { color: currColors.textSecondary }]}>
+                        {new Date(p.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      </ThemedText>
+                      <TouchableOpacity onPress={() => handleDeletePayment(p)} style={{ padding: 4 }}>
+                        <Trash2 size={14} color="#FF3B30" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                   <ThemedText style={[styles.timelineSub, { color: currColors.textSecondary }]}>
                     Principal: {formatAmount(p.principalPortion)} • Interest: {formatAmount(p.interestPortion)}

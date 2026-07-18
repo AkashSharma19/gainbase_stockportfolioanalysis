@@ -129,10 +129,15 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     *   `accounts`: List of monetary accounts (e.g., Bank, Credit Card, Cash).
     *   `moneyTransactions`: List of income and expense transactions.
     *   `loans`: Borrowed or lent funds with principal, interest rate, duration, and EMI configuration.
-    *   `emiPayments`: Log of EMI transaction logs.
+    *   `emiPayments`: Log of EMI transaction logs (linked to transactions via `transactionId`).
     *   `budgets`: Set budgets per month/year.
     *   `subscriptions`: Active repeating subscriptions.
+    *   `subscriptionPayments`: Log of subscription payment logs (linked to transactions via `transactionId`).
     *   `categories`: List of tags for income/expense categorization.
+*   **Actions**:
+    *   `removeMoneyTransaction(id)`: Deletes a transaction, adjusts account balances, and automatically removes linked EMI/subscription payments (reverting loan outstanding balance/billing cycles).
+    *   `removeEMIPayment(paymentId)`: Directly removes an EMI payment and reverts the outstanding loan balance.
+    *   `removeSubscriptionPayment(paymentId)`: Directly removes a subscription payment log and reverts the billing cycle.
 *   **Calculations / Selectors**:
     *   `getNetWorth()`: Computes total assets (investment values + bank balances) minus liabilities (loans).
     *   `getMonthlyEMIBurden()`, `getMonthlySubscriptionBurden()`.
@@ -196,4 +201,4 @@ Whenever you make updates to the Gainbase codebase:
 3.  **Commit Document**: Keep the wiki updated in the same pull request or tool execution stream as your implementation.
 
 ---
-*Wiki last updated: July 9, 2026*
+*Wiki last updated: July 18, 2026*
