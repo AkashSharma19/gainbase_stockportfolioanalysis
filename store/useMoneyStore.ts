@@ -375,17 +375,13 @@ export const useMoneyStore = create<MoneyState>()(
         set((state) => {
           const updatedSubs = state.subscriptions.map((sub) => {
             if (sub.id === payment.subscriptionId) {
-              const paymentDate = new Date(payment.date);
               const nextDate = new Date(sub.nextPaymentDate);
-              if (paymentDate >= nextDate) {
-                const newNext = new Date(nextDate);
-                if (sub.billingCycle === 'weekly') newNext.setDate(newNext.getDate() + 7);
-                else if (sub.billingCycle === 'monthly') newNext.setMonth(newNext.getMonth() + 1);
-                else if (sub.billingCycle === 'quarterly') newNext.setMonth(newNext.getMonth() + 3);
-                else if (sub.billingCycle === 'yearly') newNext.setFullYear(newNext.getFullYear() + 1);
-                return { ...sub, nextPaymentDate: newNext.toISOString() };
-              }
-              return sub;
+              const newNext = new Date(nextDate);
+              if (sub.billingCycle === 'weekly') newNext.setDate(newNext.getDate() + 7);
+              else if (sub.billingCycle === 'monthly') newNext.setMonth(newNext.getMonth() + 1);
+              else if (sub.billingCycle === 'quarterly') newNext.setMonth(newNext.getMonth() + 3);
+              else if (sub.billingCycle === 'yearly') newNext.setFullYear(newNext.getFullYear() + 1);
+              return { ...sub, nextPaymentDate: newNext.toISOString() };
             }
             return sub;
           });
