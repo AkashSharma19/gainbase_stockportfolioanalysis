@@ -131,7 +131,6 @@ export function AppSwitcher() {
       >
         {/* Active Content (White) */}
         <Animated.View style={[styles.tabContentAbsolute, investmentsActiveStyle]}>
-          <TrendingUp size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
           <ThemedText
             style={[
               styles.tabText,
@@ -147,7 +146,6 @@ export function AppSwitcher() {
 
         {/* Inactive Content (Secondary) */}
         <Animated.View style={[styles.tabContentAbsolute, investmentsInactiveStyle]}>
-          <TrendingUp size={16} color={currColors.textSecondary} style={{ marginRight: 6 }} />
           <ThemedText
             style={[
               styles.tabText,
@@ -170,7 +168,6 @@ export function AppSwitcher() {
       >
         {/* Active Content (White) */}
         <Animated.View style={[styles.tabContentAbsolute, moneyActiveStyle]}>
-          <Wallet size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
           <ThemedText
             style={[
               styles.tabText,
@@ -186,7 +183,6 @@ export function AppSwitcher() {
 
         {/* Inactive Content (Secondary) */}
         <Animated.View style={[styles.tabContentAbsolute, moneyInactiveStyle]}>
-          <Wallet size={15} color={currColors.textSecondary} style={{ marginRight: 6 }} />
           <ThemedText
             style={[
               styles.tabText,
