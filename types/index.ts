@@ -9,6 +9,7 @@ export interface Transaction {
   type: TransactionType;
   currency: string;
   broker: string;
+  updatedAt?: string;
 }
 
 export interface Ticker {

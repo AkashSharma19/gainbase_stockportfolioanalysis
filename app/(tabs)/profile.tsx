@@ -23,6 +23,7 @@ import {
   Tag,
   Plus,
   Check,
+  Cloud,
 } from 'lucide-react-native';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { AccountType, Account, Loan, EMIPayment, Budget } from '../../types/money';
@@ -1646,6 +1647,45 @@ export default function ProfileScreen() {
                 <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
                   Export
                 </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Cloud Sync Section */}
+          <ThemedText style={[styles.sectionHeading, { color: currColors.textSecondary, marginTop: 12 }]}>
+            CLOUD SERVICES
+          </ThemedText>
+          <View
+            style={[
+              styles.actionGridContainer,
+              {
+                backgroundColor: currColors.card,
+                borderColor: currColors.border,
+                marginTop: 8,
+              },
+            ]}
+          >
+            <View style={styles.gridRow}>
+              <TouchableOpacity
+                style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 4 }}
+                onPress={() => router.push('/cloud-backup')}
+              >
+                <View
+                  style={[
+                    styles.gridIconBox,
+                    { backgroundColor: 'rgba(0, 201, 167, 0.1)', marginRight: 16, marginBottom: 0 },
+                  ]}
+                >
+                  <Cloud size={24} color="#00C9A7" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={[styles.gridLabel, { color: currColors.text, textAlign: 'left', fontSize: 16, fontWeight: '500' }]}>
+                    Cloud Backup & Sync
+                  </ThemedText>
+                  <ThemedText style={{ color: currColors.textSecondary, fontSize: 12, marginTop: 2 }}>
+                    Sync accounts, transactions and portfolios automatically
+                  </ThemedText>
+                </View>
               </TouchableOpacity>
             </View>
           </View>

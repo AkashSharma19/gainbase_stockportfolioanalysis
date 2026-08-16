@@ -32,6 +32,7 @@ export interface MoneyTransaction {
   isRecurring: boolean;
   recurringFrequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
   attachmentUri?: string;    // URI of receipt attachment
+  updatedAt?: string;
 }
 
 export interface Loan {
@@ -48,6 +49,7 @@ export interface Loan {
   linkedAccountId?: string;  // Account ID from which EMIs are debited
   type: 'home' | 'car' | 'personal' | 'education' | 'other';
   isActive: boolean;
+  updatedAt?: string;
 }
 
 export interface EMIPayment {
@@ -59,6 +61,7 @@ export interface EMIPayment {
   date: string;              // ISO Date String
   status: 'paid' | 'upcoming' | 'overdue';
   transactionId?: string;
+  updatedAt?: string;
 }
 
 export interface BudgetCategory {
@@ -68,6 +71,7 @@ export interface BudgetCategory {
   color: string;             // Hex color code
   limit: number;             // Allocated amount limit
   spent: number;             // Dynamically calculated spent amount
+  updatedAt?: string;
 }
 
 export interface Budget {
@@ -79,6 +83,7 @@ export interface Budget {
   totalLimit: number;
   categories: BudgetCategory[];
   isActive: boolean;
+  updatedAt?: string;
 }
 
 export type BillingCycle = 'weekly' | 'monthly' | 'quarterly' | 'yearly';
@@ -106,4 +111,5 @@ export interface SubscriptionPayment {
   date: string;              // ISO Date String
   status: 'paid' | 'upcoming' | 'missed';
   transactionId?: string;
+  updatedAt?: string;
 }

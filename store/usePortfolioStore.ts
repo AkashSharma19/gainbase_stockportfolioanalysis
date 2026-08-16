@@ -59,6 +59,10 @@ interface PortfolioState {
   defaultIndex: string;
   setDefaultIndex: (ticker: string) => void;
   lastSyncedAt: number | null;
+  deletedTransactionIds: string[];
+  deletedWatchlistIds: string[];
+  deviceId: string | null;
+  getDeviceId: () => string;
   clearAllData: () => void;
 }
 
@@ -67,6 +71,17 @@ export const usePortfolioStore = create<PortfolioState>()(
     (set, get) => ({
       transactions: [],
       tickers: [],
+      deletedTransactionIds: [],
+      deletedWatchlistIds: [],
+      deviceId: null,
+      getDeviceId: () => {
+        let id = get().deviceId;
+        if (!id) {
+          id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+          set({ deviceId: id });
+        }
+        return id;
+      },
       addTransaction: (transaction) =>
         set((state) => ({
           transactions: [...state.transactions, transaction],
@@ -74,6 +89,7 @@ export const usePortfolioStore = create<PortfolioState>()(
       removeTransaction: (id) =>
         set((state) => ({
           transactions: state.transactions.filter((t) => t.id !== id),
+          deletedTransactionIds: [...(state.deletedTransactionIds || []), id],
         })),
       updateTransaction: (id, transaction) =>
         set((state) => ({
@@ -669,9 +685,15 @@ export const usePortfolioStore = create<PortfolioState>()(
         set((state) => {
           const exists = state.watchlist.includes(ticker);
           if (exists) {
-            return { watchlist: state.watchlist.filter((t) => t !== ticker) };
+            return {
+              watchlist: state.watchlist.filter((t) => t !== ticker),
+              deletedWatchlistIds: [...(state.deletedWatchlistIds || []), ticker],
+            };
           } else {
-            return { watchlist: [...state.watchlist, ticker] };
+            return {
+              watchlist: [...state.watchlist, ticker],
+              deletedWatchlistIds: (state.deletedWatchlistIds || []).filter((t) => t !== ticker),
+            };
           }
         }),
       forecastYears: 15,

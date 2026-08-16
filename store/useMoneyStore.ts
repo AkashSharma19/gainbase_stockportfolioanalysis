@@ -13,6 +13,16 @@ interface MoneyState {
   subscriptions: Subscription[];
   subscriptionPayments: SubscriptionPayment[];
   
+  // Deleted tracking lists for Sync
+  deletedAccountIds: string[];
+  deletedTransactionIds: string[];
+  deletedLoanIds: string[];
+  deletedEmiPaymentIds: string[];
+  deletedBudgetIds: string[];
+  deletedBudgetCategoryIds: string[];
+  deletedSubscriptionIds: string[];
+  deletedSubscriptionPaymentIds: string[];
+  
   // Account Actions
   addAccount: (account: Account) => void;
   updateAccount: (id: string, updates: Partial<Account>) => void;
@@ -86,6 +96,14 @@ export const useMoneyStore = create<MoneyState>()(
       budgets: [],
       subscriptions: [],
       subscriptionPayments: [],
+      deletedAccountIds: [],
+      deletedTransactionIds: [],
+      deletedLoanIds: [],
+      deletedEmiPaymentIds: [],
+      deletedBudgetIds: [],
+      deletedBudgetCategoryIds: [],
+      deletedSubscriptionIds: [],
+      deletedSubscriptionPaymentIds: [],
       categories: {
         income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
         expense: [
@@ -131,7 +149,7 @@ export const useMoneyStore = create<MoneyState>()(
       removeAccount: (id) =>
         set((state) => ({
           accounts: state.accounts.filter((acc) => acc.id !== id),
-          // Clean up transaction associations if needed, or keep them
+          deletedAccountIds: [...(state.deletedAccountIds || []), id],
         })),
 
       // --- Transaction Actions ---
@@ -282,11 +300,18 @@ export const useMoneyStore = create<MoneyState>()(
 
           return {
             moneyTransactions: state.moneyTransactions.filter((t) => t.id !== id),
+            deletedTransactionIds: [...(state.deletedTransactionIds || []), id],
             accounts: revertedAccounts,
             loans: updatedLoans,
             emiPayments: updatedEmiPayments,
+            deletedEmiPaymentIds: matchedEmiPayment 
+              ? [...(state.deletedEmiPaymentIds || []), matchedEmiPayment.id]
+              : state.deletedEmiPaymentIds || [],
             subscriptions: updatedSubscriptions,
             subscriptionPayments: updatedSubPayments,
+            deletedSubscriptionPaymentIds: matchedSubPayment
+              ? [...(state.deletedSubscriptionPaymentIds || []), matchedSubPayment.id]
+              : state.deletedSubscriptionPaymentIds || [],
           };
         });
       },
@@ -301,10 +326,15 @@ export const useMoneyStore = create<MoneyState>()(
           loans: state.loans.map((loan) => (loan.id === id ? { ...loan, ...updates } : loan)),
         })),
       removeLoan: (id) =>
-        set((state) => ({
-          loans: state.loans.filter((loan) => loan.id !== id),
-          emiPayments: state.emiPayments.filter((p) => p.loanId !== id),
-        })),
+        set((state) => {
+          const relatedEmiIds = state.emiPayments.filter((p) => p.loanId === id).map((p) => p.id);
+          return {
+            loans: state.loans.filter((loan) => loan.id !== id),
+            deletedLoanIds: [...(state.deletedLoanIds || []), id],
+            emiPayments: state.emiPayments.filter((p) => p.loanId !== id),
+            deletedEmiPaymentIds: [...(state.deletedEmiPaymentIds || []), ...relatedEmiIds],
+          };
+        }),
       addEMIPayment: (payment) => {
         set((state) => {
           // Adjust outstanding amount of the loan
@@ -340,6 +370,7 @@ export const useMoneyStore = create<MoneyState>()(
 
           return {
             emiPayments: state.emiPayments.filter((p) => p.id !== paymentId),
+            deletedEmiPaymentIds: [...(state.deletedEmiPaymentIds || []), paymentId],
             loans: updatedLoans,
           };
         });
@@ -355,9 +386,17 @@ export const useMoneyStore = create<MoneyState>()(
           budgets: state.budgets.map((b) => (b.id === id ? { ...b, ...updates } : b)),
         })),
       removeBudget: (id) =>
-        set((state) => ({
-          budgets: state.budgets.filter((b) => b.id !== id),
-        })),
+        set((state) => {
+          const targetBudget = state.budgets.find(b => b.id === id);
+          const relatedCatIds = targetBudget && targetBudget.categories 
+            ? targetBudget.categories.map(c => c.id) 
+            : [];
+          return {
+            budgets: state.budgets.filter((b) => b.id !== id),
+            deletedBudgetIds: [...(state.deletedBudgetIds || []), id],
+            deletedBudgetCategoryIds: [...(state.deletedBudgetCategoryIds || []), ...relatedCatIds],
+          };
+        }),
 
       addSubscription: (subscription) =>
         set((state) => ({
@@ -368,10 +407,15 @@ export const useMoneyStore = create<MoneyState>()(
           subscriptions: state.subscriptions.map((s) => (s.id === id ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s)),
         })),
       removeSubscription: (id) =>
-        set((state) => ({
-          subscriptions: state.subscriptions.filter((s) => s.id !== id),
-          subscriptionPayments: state.subscriptionPayments.filter((p) => p.subscriptionId !== id),
-        })),
+        set((state) => {
+          const relatedPayIds = state.subscriptionPayments.filter((p) => p.subscriptionId === id).map((p) => p.id);
+          return {
+            subscriptions: state.subscriptions.filter((s) => s.id !== id),
+            deletedSubscriptionIds: [...(state.deletedSubscriptionIds || []), id],
+            subscriptionPayments: state.subscriptionPayments.filter((p) => p.subscriptionId !== id),
+            deletedSubscriptionPaymentIds: [...(state.deletedSubscriptionPaymentIds || []), ...relatedPayIds],
+          };
+        }),
       addSubscriptionPayment: (payment) => {
         set((state) => {
           const updatedSubs = state.subscriptions.map((sub) => {
@@ -412,6 +456,7 @@ export const useMoneyStore = create<MoneyState>()(
 
           return {
             subscriptionPayments: state.subscriptionPayments.filter((p) => p.id !== paymentId),
+            deletedSubscriptionPaymentIds: [...(state.deletedSubscriptionPaymentIds || []), paymentId],
             subscriptions: updatedSubscriptions,
           };
         });

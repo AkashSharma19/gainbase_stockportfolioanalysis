@@ -22,6 +22,8 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { registerBackgroundFetchAsync } from '../tasks/backgroundFetch';
+import { useMoneyStore } from '../store/useMoneyStore';
+import { usePortfolioStore } from '../store/usePortfolioStore';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -57,6 +59,25 @@ export default function RootLayout() {
       if (Platform.OS !== 'web') {
         registerBackgroundFetchAsync();
       }
+
+      // Check if both local stores have hydrated before running the sync
+      const checkHydrationAndSync = async () => {
+        const moneyHydrated = useMoneyStore.persist.hasHydrated();
+        const portfolioHydrated = usePortfolioStore.persist.hasHydrated();
+
+        if (moneyHydrated && portfolioHydrated) {
+          try {
+            const { syncAllData } = await import('../utils/syncEngine');
+            syncAllData().catch((err) => console.error('Auto sync error:', err));
+          } catch (e) {
+            console.error('Failed to import syncEngine:', e);
+          }
+        } else {
+          setTimeout(checkHydrationAndSync, 100);
+        }
+      };
+
+      checkHydrationAndSync();
     }
   }, [loaded]);
 

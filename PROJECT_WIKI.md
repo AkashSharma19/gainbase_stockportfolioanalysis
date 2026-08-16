@@ -64,10 +64,11 @@ Here is the functional map of the directory tree and key files:
 | `components/` | Reusable presentation UI elements. | `MoneyDashboard.tsx`, `PortfolioHealthCard.tsx`, `ActivityCalendar.tsx`, `MoneyActivityCalendar.tsx`, `ForecastCard.tsx`, `InsightsSummaryCard.tsx`, `WinLossCard.tsx`, `HealthDetailCard.tsx`, `HealthGauge.tsx`, `TopMovers.tsx`, `ShareableCard.tsx`, `AppSwitcher.tsx`. |
 | `constants/` | Constant configurations (colors, APIs, dimensions). | `Colors.ts` (light/dark themes), `Api.ts` (API configuration endpoints). |
 | `hooks/` | Business-logic custom hooks. | `usePortfolioHealth.ts` (health grading algorithm), `useInsights.ts` (investment flags: buy, sell/hold, observe), `useMoneyInsights.ts` (unified budgeting/cashflow insights). |
-| `lib/` | Core mathematical/computational logic. | `finance.ts` (XIRR calculation, future projection models, Indian number formatter). |
+| `lib/` | Core mathematical/computational logic & API clients. | `finance.ts` (XIRR calculation, future projection models, Indian number formatter), `supabase.ts` (Supabase client client). |
 | `store/` | Zustand state management with storage persistence. | `usePortfolioStore.ts`, `useMoneyStore.ts`, `useAppModeStore.ts`. |
 | `tasks/` | Background automation tasks. | `backgroundFetch.ts` (registers periodic data backup jobs). |
 | `types/` | TypeScript interface definitions. | `index.ts` (portfolio types), `money.ts` (money manager types). |
+| `utils/` | Utility helpers & sync engine. | `syncEngine.ts` (Two-way incremental sync between local store and Supabase). |
 | `services/` | Peripheral external service adapters. | `DataExportService.ts` (exports/imports transactions backup). |
 
 ---
@@ -118,6 +119,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     *   `showCurrencySymbol`: Boolean (shows or hides `₹`).
     *   `theme`: `'system' | 'light' | 'dark'`.
     *   `watchlist`: List of ticker symbols.
+    *   `deletedTransactionIds`, `deletedWatchlistIds`: Lists of deleted records to track offline deletions for Supabase cloud sync.
     *   `forecastYears`, `targetCorpus`, `sipStepUp`, `manualMonthlySIP`, `isInflationAdjusted`.
 *   **Calculations / Selectors**:
     *   `calculateSummary()`: Returns total cost, current value, realized/unrealized gains, XIRR, and 1-day/1-year returns.
@@ -134,6 +136,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     *   `subscriptions`: Active repeating subscriptions.
     *   `subscriptionPayments`: Log of subscription payment logs (linked to transactions via `transactionId`).
     *   `categories`: List of tags for income/expense categorization.
+    *   `deletedAccountIds`, `deletedTransactionIds`, `deletedLoanIds`, `deletedEmiPaymentIds`, `deletedBudgetIds`, `deletedBudgetCategoryIds`, `deletedSubscriptionIds`, `deletedSubscriptionPaymentIds`: Lists of deleted records to track offline deletions for Supabase cloud sync.
 *   **Actions**:
     *   `removeMoneyTransaction(id)`: Deletes a transaction, adjusts account balances, and automatically removes linked EMI/subscription payments (reverting loan outstanding balance/billing cycles).
     *   `removeEMIPayment(paymentId)`: Directly removes an EMI payment and reverts the outstanding loan balance.
@@ -182,16 +185,21 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 
 ---
 
-## 6. Background Automation Tasks
-
-*   **Location**: [backgroundFetch.ts](file:///Users/akashsharma/Documents/Gainbase/tasks/backgroundFetch.ts)
-*   **Implementation**: Utilizes `expo-background-task` and `expo-task-manager`.
-*   **Behavior**:
-    1.  Registers a task named `BACKGROUND_DATA_BACKUP`.
-    2.  Fires periodically in the background (frequency of backup automation is set to every 24 hours).
-    3.  Attempts to trigger `DataExportService.exportData()` to save a JSON serialization of user's transactions/portfolio state into `Gainbase/data.json` under `FileSystem.documentDirectory` for secure local backups.
-
 ---
+
+## 6. Background Automation & Cloud Sync
+
+### A. Background Data Backup
+*   **Location**: [backgroundFetch.ts](file:///Users/akashsharma/Documents/Gainbase/tasks/backgroundFetch.ts)
+*   **Behavior**: Fires periodically (every 24 hours) in the background. Attempts to serialize user transactions/portfolio data to `Gainbase/data.json` under `FileSystem.documentDirectory` for secure local backup.
+
+### B. Supabase Cloud Sync
+*   **Location**: [syncEngine.ts](file:///Users/akashsharma/Documents/Gainbase/utils/syncEngine.ts)
+*   **Behavior**: 
+    1.  Automatically triggers on app launch (once local Zustand persist hydration from AsyncStorage finishes) and manual trigger on the Cloud Sync screen.
+    2.  Compares local and remote database rows by unique `id` and `updatedAt` timestamps.
+    3.  Upserts new/edited items in batch to Supabase.
+    4.  Processes deletions (marked `is_deleted = true` in Supabase) to synchronize removals without data loss.
 
 ## 7. Maintenance Protocol for AI Agents
 
