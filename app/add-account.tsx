@@ -21,6 +21,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
+import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Account, AccountType } from '@/types/money';
 import { BANK_BRANDS } from '@/components/BankLogo';
 
@@ -69,10 +70,20 @@ export default function AddAccountScreen() {
   const [isLogoManuallySelected, setIsLogoManuallySelected] = useState(false);
   const [includeInAssets, setIncludeInAssets] = useState(true);
   const [showTypeModal, setShowTypeModal] = useState(false);
+  const [linkedBroker, setLinkedBroker] = useState('');
+  const [showBrokerModal, setShowBrokerModal] = useState(false);
 
   const selectedTypeObj = useMemo(() => {
     return TYPES.find((t) => t.type === type);
   }, [type]);
+
+  const portfolioTransactions = usePortfolioStore((state) => state.transactions);
+  const availableBrokers = useMemo(() => {
+    const portfolioBrokers = portfolioTransactions.map((t) => t.broker).filter(Boolean);
+    const defaults = ['Groww', 'Upstox', 'Zerodha', 'IND Money', 'Angel One', 'HDFC Securities', 'ICICI Direct'];
+    const merged = new Set([...portfolioBrokers, ...defaults]);
+    return Array.from(merged);
+  }, [portfolioTransactions]);
 
   useEffect(() => {
     if (editingAccount) {
@@ -85,6 +96,7 @@ export default function AddAccountScreen() {
       setAccountNumber(editingAccount.accountNumber || '');
       setColor(editingAccount.color);
       setIncludeInAssets(editingAccount.includeInAssets !== false);
+      setLinkedBroker(editingAccount.linkedBroker || '');
     }
   }, [editingAccount]);
 
@@ -140,6 +152,7 @@ export default function AddAccountScreen() {
         accountNumber: accountNumber.trim() || undefined,
         color,
         includeInAssets,
+        linkedBroker: type === 'investment' ? (linkedBroker || undefined) : undefined,
       });
     } else {
       const newAccount: Account = {
@@ -154,6 +167,7 @@ export default function AddAccountScreen() {
         accountNumber: accountNumber.trim() || undefined,
         color,
         includeInAssets,
+        linkedBroker: type === 'investment' ? (linkedBroker || undefined) : undefined,
         isArchived: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -224,6 +238,25 @@ export default function AddAccountScreen() {
               <ChevronDown size={18} color={currColors.textSecondary} />
             </TouchableOpacity>
           </View>
+
+          {/* Linked Broker Selection (Investment type only) */}
+          {type === 'investment' && (
+            <View style={styles.inputGroup}>
+              <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>LINKED BROKER ACCOUNT (OPTIONAL)</ThemedText>
+              <TouchableOpacity
+                style={[styles.selectBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+                onPress={() => {
+                  handleHaptic();
+                  setShowBrokerModal(true);
+                }}
+              >
+                <ThemedText style={{ color: linkedBroker ? currColors.text : currColors.textSecondary, fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
+                  {linkedBroker || 'Select Broker (e.g. Groww, Zerodha)'}
+                </ThemedText>
+                <ChevronDown size={18} color={currColors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Include in Assets Toggle Switch */}
           <View style={[styles.inputGroup, styles.toggleContainer, { backgroundColor: currColors.card, borderColor: currColors.border, borderWidth: 1, borderRadius: 12, padding: 16 }]}>
@@ -413,6 +446,43 @@ export default function AddAccountScreen() {
                     <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 15 }}>{item.label}</ThemedText>
                   </View>
                   {type === item.type && <Check size={18} color="#00C9A7" />}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Broker Selection Modal Bottom Sheet */}
+      <Modal visible={showBrokerModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowBrokerModal(false)} />
+          <View style={[styles.modalContent, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            <View style={styles.modalDragHandle} />
+            <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
+              <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Select Broker Account</ThemedText>
+              <TouchableOpacity onPress={() => setShowBrokerModal(false)} style={styles.modalCloseIcon}>
+                <X size={20} color={currColors.text} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={['None', ...availableBrokers]}
+              keyExtractor={(item) => item}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 24 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalItem, { borderBottomColor: currColors.border }]}
+                  onPress={() => {
+                    handleHaptic();
+                    setLinkedBroker(item === 'None' ? '' : item);
+                    setShowBrokerModal(false);
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 15 }}>{item}</ThemedText>
+                  </View>
+                  {((item === 'None' && !linkedBroker) || (linkedBroker === item)) && <Check size={18} color="#00C9A7" />}
                 </TouchableOpacity>
               )}
             />

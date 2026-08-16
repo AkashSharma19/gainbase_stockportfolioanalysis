@@ -48,6 +48,14 @@ export default function AccountsScreen() {
   const { accounts, loans } = useMoneyStore();
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
+  
+  const transactions = usePortfolioStore((state) => state.transactions);
+  const tickers = usePortfolioStore((state) => state.tickers);
+  const getAllocationData = usePortfolioStore((state) => state.getAllocationData);
+
+  const brokerAllocations = useMemo(() => {
+    return getAllocationData('Broker');
+  }, [getAllocationData, transactions, tickers]);
 
   // Group accounts by type
   const groupedAccounts = useMemo(() => {
@@ -77,17 +85,21 @@ export default function AccountsScreen() {
     
     accounts.forEach((acc) => {
       if (!acc.isArchived && acc.includeInAssets !== false) {
+        const balance = acc.type === 'investment' && acc.linkedBroker
+          ? (brokerAllocations.find(b => b.name.toLowerCase().trim() === acc.linkedBroker!.toLowerCase().trim())?.value ?? 0)
+          : acc.balance;
+
         if (acc.type === 'credit_card' || acc.type === 'payable') {
-          if (acc.balance < 0) {
-            totalLiabilities += Math.abs(acc.balance);
+          if (balance < 0) {
+            totalLiabilities += Math.abs(balance);
           } else {
-            totalAssets += acc.balance;
+            totalAssets += balance;
           }
         } else {
-          if (acc.balance >= 0) {
-            totalAssets += acc.balance;
+          if (balance >= 0) {
+            totalAssets += balance;
           } else {
-            totalLiabilities += Math.abs(acc.balance);
+            totalLiabilities += Math.abs(balance);
           }
         }
       }
@@ -98,7 +110,7 @@ export default function AccountsScreen() {
       totalLiabilities,
       netWorth: totalAssets - totalLiabilities,
     };
-  }, [accounts]);
+  }, [accounts, brokerAllocations]);
 
   const formatAmount = (val: number) => {
     if (isPrivacyMode) return '••••••';
@@ -130,6 +142,11 @@ export default function AccountsScreen() {
     const utilization = isCreditCard && item.creditLimit && item.creditLimit > 0
       ? (totalUtilized / item.creditLimit) * 100
       : 0;
+
+    const isInvestment = item.type === 'investment' && item.linkedBroker;
+    const currentVal = isInvestment
+      ? (brokerAllocations.find(b => b.name.toLowerCase().trim() === item.linkedBroker!.toLowerCase().trim())?.value ?? 0)
+      : item.balance;
 
     return (
       <TouchableOpacity
@@ -175,12 +192,17 @@ export default function AccountsScreen() {
                   styles.accountBalance,
                   {
                     fontFamily: 'Outfit_600SemiBold',
-                    color: item.balance < 0 ? '#FF3B30' : currColors.text
+                    color: currentVal < 0 ? '#FF3B30' : currColors.text
                   }
                 ]}
               >
-                {formatAmount(item.balance)}
+                {formatAmount(currentVal)}
               </ThemedText>
+              {isInvestment && (
+                <ThemedText style={{ fontSize: 10, color: currColors.textSecondary, marginTop: 2, fontFamily: 'Outfit_400Regular' }}>
+                  Invested: {formatAmount(item.balance)}
+                </ThemedText>
+              )}
             </View>
             <ChevronRight size={16} color={currColors.textSecondary} />
           </View>
@@ -291,7 +313,12 @@ export default function AccountsScreen() {
           const list = groupedAccounts[type];
           if (list.length === 0) return null;
           const config = TYPE_CONFIG[type];
-          const totalBalance = list.reduce((sum, acc) => sum + acc.balance, 0);
+          const totalBalance = list.reduce((sum, acc) => {
+            const balance = acc.type === 'investment' && acc.linkedBroker
+              ? (brokerAllocations.find(b => b.name.toLowerCase().trim() === acc.linkedBroker!.toLowerCase().trim())?.value ?? 0)
+              : acc.balance;
+            return sum + balance;
+          }, 0);
           
           return (
             <View key={type} style={styles.groupContainer}>

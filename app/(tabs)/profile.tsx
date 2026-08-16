@@ -25,7 +25,8 @@ import {
   Check,
 } from 'lucide-react-native';
 import { useMoneyStore } from '@/store/useMoneyStore';
-import { AccountType, Account, Loan, EMIPayment, Budget } from '@/types/money';
+import { AccountType, Account, Loan, EMIPayment, Budget } from '../../types/money';
+import { Subscription, SubscriptionPayment } from '../../types/money';
 
 
 import React, { useMemo, useState } from 'react';
@@ -99,6 +100,8 @@ export default function ProfileScreen() {
   const moneyLoans = useMoneyStore((state) => state.loans);
   const moneyBudgets = useMoneyStore((state) => state.budgets);
   const moneyEmiPayments = useMoneyStore((state) => state.emiPayments);
+  const subscriptions: Subscription[] = useMoneyStore((state) => state.subscriptions) || [];
+  const subscriptionPayments: SubscriptionPayment[] = useMoneyStore((state) => state.subscriptionPayments) || [];
   const importMoneyData = useMoneyStore((state) => state.importMoneyData);
   const restoreMoneyData = useMoneyStore((state) => state.restoreMoneyData);
   const clearAllMoneyData = useMoneyStore((state) => state.clearAllMoneyData);
@@ -329,6 +332,12 @@ export default function ProfileScreen() {
         Balance: a.balance,
         Icon: a.icon || 'wallet',
         Color: a.color || '#007AFF',
+        Institution: a.institution || '',
+        'Account Number': a.accountNumber || '',
+        'Credit Limit': a.creditLimit || 0,
+        'Interest Rate': a.interestRate || 0,
+        'Include In Assets': a.includeInAssets !== false ? 'YES' : 'NO',
+        'Linked Broker': a.linkedBroker || '',
       }));
       const worksheetAccs = XLSX.utils.json_to_sheet(accsSheetData);
 
@@ -339,6 +348,7 @@ export default function ProfileScreen() {
         Principal: l.principalAmount,
         Outstanding: l.outstandingAmount,
         'Interest Rate': l.interestRate,
+        'EMI Amount': l.emiAmount,
         'Tenure Months': l.tenureMonths,
         'Start Date': l.startDate.split('T')[0],
         'End Date': l.endDate.split('T')[0],
@@ -407,6 +417,31 @@ export default function ProfileScreen() {
       }));
       const worksheetEmi = XLSX.utils.json_to_sheet(emiSheetData);
 
+      // 7. Subscriptions
+      const subscriptionsSheetData = subscriptions.map((s: Subscription) => ({
+        Name: s.name,
+        Amount: s.amount,
+        'Billing Cycle': s.billingCycle,
+        'Next Payment Date': s.nextPaymentDate ? s.nextPaymentDate.split('T')[0] : '',
+        Color: s.color || '#00C9A7',
+        Logo: s.logo || '',
+        'Linked Account': s.linkedAccountId ? accountMap.get(s.linkedAccountId) || '' : '',
+        'Is Active': s.isActive ? 'YES' : 'NO',
+        Provider: s.provider || '',
+        Category: s.category || '',
+      }));
+      const worksheetSubscriptions = XLSX.utils.json_to_sheet(subscriptionsSheetData);
+
+      // 8. Subscription Payments
+      const subMap = new Map(subscriptions.map((s: Subscription) => [s.id, s.name]));
+      const subPaymentsSheetData = subscriptionPayments.map((p: SubscriptionPayment) => ({
+        'Subscription Name': subMap.get(p.subscriptionId) || 'Unknown Subscription',
+        Amount: p.amount,
+        Date: p.date.split('T')[0],
+        Status: p.status.toUpperCase(),
+      }));
+      const worksheetSubPayments = XLSX.utils.json_to_sheet(subPaymentsSheetData);
+
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheetTxs, 'Transactions');
       XLSX.utils.book_append_sheet(workbook, worksheetAccs, 'Accounts');
@@ -414,6 +449,8 @@ export default function ProfileScreen() {
       XLSX.utils.book_append_sheet(workbook, worksheetBudgets, 'Budgets');
       XLSX.utils.book_append_sheet(workbook, worksheetCategories, 'Categories');
       XLSX.utils.book_append_sheet(workbook, worksheetEmi, 'EMIPayments');
+      XLSX.utils.book_append_sheet(workbook, worksheetSubscriptions, 'Subscriptions');
+      XLSX.utils.book_append_sheet(workbook, worksheetSubPayments, 'SubscriptionPayments');
 
       const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
       const filename = `Gainbase_Money_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -463,6 +500,8 @@ export default function ProfileScreen() {
       let budgetsDataList: any[] = [];
       let categoriesDataList: any[] = [];
       let emiDataList: any[] = [];
+      let subscriptionsDataList: any[] = [];
+      let subPaymentsDataList: any[] = [];
 
       if (!isCsv) {
         const fileContent = await FileSystem.readAsStringAsync(fileUri, {
@@ -486,6 +525,8 @@ export default function ProfileScreen() {
         budgetsDataList = getSheetData('budget');
         categoriesDataList = getSheetData('categor');
         emiDataList = getSheetData('emi');
+        subscriptionsDataList = getSheetData('subscription');
+        subPaymentsDataList = getSheetData('subscriptionpayment');
       } else {
         const fileContent = await FileSystem.readAsStringAsync(fileUri, {
           encoding: FileSystem.EncodingType.UTF8,
@@ -545,11 +586,31 @@ export default function ProfileScreen() {
           const balance = Number(row.Balance || row.balance || 0);
           const icon = String(row.Icon || row.icon || 'wallet').trim();
           const color = String(row.Color || row.color || '#007AFF').trim();
+          const institution = row.Institution || row.institution || undefined;
+          const accountNumber = row['Account Number'] || row.accountNumber || undefined;
+          const creditLimit = row['Credit Limit'] !== undefined ? Number(row['Credit Limit']) : undefined;
+          const interestRate = row['Interest Rate'] !== undefined ? Number(row['Interest Rate']) : undefined;
+          const includeInAssets = row['Include In Assets'] !== undefined
+            ? String(row['Include In Assets']).trim().toUpperCase() === 'YES'
+            : true;
+          const linkedBroker = row['Linked Broker'] || row.linkedBroker || undefined;
 
           if (!name) return;
 
           let type: AccountType = 'wallet';
-          if (['wallet', 'savings', 'investment', 'credit_card', 'emergency_fund'].includes(rawType)) {
+          if (rawType.includes('saving')) {
+            type = 'savings';
+          } else if (rawType.includes('invest')) {
+            type = 'investment';
+          } else if (rawType.includes('credit') || rawType.includes('card')) {
+            type = 'credit_card';
+          } else if (rawType.includes('emergency')) {
+            type = 'emergency_fund';
+          } else if (rawType.includes('receivable')) {
+            type = 'receivable';
+          } else if (rawType.includes('payable')) {
+            type = 'payable';
+          } else if (['wallet', 'savings', 'investment', 'credit_card', 'emergency_fund', 'receivable', 'payable'].includes(rawType)) {
             type = rawType as AccountType;
           }
 
@@ -561,6 +622,12 @@ export default function ProfileScreen() {
             balance,
             icon,
             color,
+            institution,
+            accountNumber,
+            creditLimit: type === 'credit_card' ? (creditLimit || 0) : undefined,
+            interestRate: type === 'savings' ? (interestRate || 0) : undefined,
+            includeInAssets,
+            linkedBroker: type === 'investment' ? linkedBroker : undefined,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             isArchived: false,
@@ -577,6 +644,14 @@ export default function ProfileScreen() {
       const newLoans: Loan[] = [];
       const loanNameToIdMap = new Map<string, string>();
 
+      const calculateLoanEMI = (principal: number, annualRate: number, tenure: number) => {
+        if (principal <= 0 || tenure <= 0) return 0;
+        if (annualRate === 0) return principal / tenure;
+        const r = (annualRate / 12) / 100;
+        const emi = (principal * r * Math.pow(1 + r, tenure)) / (Math.pow(1 + r, tenure) - 1);
+        return isFinite(emi) ? emi : 0;
+      };
+
       if (loansDataList.length > 0) {
         loansDataList.forEach((row: any) => {
           const name = String(row['Loan Name'] || row.name || '').trim();
@@ -585,6 +660,8 @@ export default function ProfileScreen() {
           const outstanding = Number(row.Outstanding || row.outstandingAmount || 0);
           const rate = Number(row['Interest Rate'] || row.interestRate || 0);
           const tenure = Number(row['Tenure Months'] || row.tenureMonths || 0);
+          const emiFromRow = Number(row['EMI Amount'] || row.emiAmount || 0);
+          const emiAmount = emiFromRow > 0 ? emiFromRow : calculateLoanEMI(principal, rate, tenure);
           const start = ensureISOString(row['Start Date'] || row.startDate);
           const end = ensureISOString(row['End Date'] || row.endDate);
           const linkedAccName = String(row['Linked Account'] || row.linkedAccount || '').trim();
@@ -608,7 +685,7 @@ export default function ProfileScreen() {
             principalAmount: principal,
             outstandingAmount: outstanding,
             interestRate: rate,
-            emiAmount: 0,
+            emiAmount: emiAmount,
             tenureMonths: tenure,
             startDate: start,
             endDate: end,
@@ -805,7 +882,75 @@ export default function ProfileScreen() {
         });
       }
 
-      if (newTransactions.length > 0 || accountsDataList.length > 0 || loansDataList.length > 0 || budgetsDataList.length > 0) {
+      const newSubscriptions: Subscription[] = [];
+      const subNameToIdMap = new Map<string, string>();
+
+      if (subscriptionsDataList.length > 0) {
+        subscriptionsDataList.forEach((row: any) => {
+          const name = String(row.Name || row.name || '').trim();
+          const amount = Number(row.Amount || row.amount || 0);
+          const cycle = String(row['Billing Cycle'] || row.billingCycle || 'monthly').trim().toLowerCase();
+          const nextDate = ensureISOString(row['Next Payment Date'] || row.nextPaymentDate);
+          const color = String(row.Color || row.color || '#00C9A7').trim();
+          const logo = String(row.Logo || row.logo || '').trim();
+          const linkedAccName = String(row['Linked Account'] || row.linkedAccount || '').trim();
+          const isActive = String(row['Is Active'] || row.isActive || 'YES').trim().toUpperCase() === 'YES';
+
+          if (!name) return;
+
+          const linkedAccountId = linkedAccName ? accountNameToIdMap.get(linkedAccName.toLowerCase()) : undefined;
+          const id = Math.random().toString(36).substring(2, 9);
+
+          newSubscriptions.push({
+            id,
+            name,
+            provider: row.Provider || row.provider || name,
+            amount,
+            billingCycle: ['weekly', 'monthly', 'quarterly', 'yearly'].includes(cycle) ? cycle as any : 'monthly',
+            nextPaymentDate: nextDate,
+            color,
+            logo: logo || undefined,
+            linkedAccountId,
+            category: row.Category || row.category || 'Utilities',
+            isActive,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+          subNameToIdMap.set(name.toLowerCase(), id);
+        });
+      } else {
+        subscriptions.forEach((sub: Subscription) => {
+          newSubscriptions.push({ ...sub });
+          subNameToIdMap.set(sub.name.toLowerCase(), sub.id);
+        });
+      }
+
+      const newSubscriptionPayments: SubscriptionPayment[] = [];
+      if (subPaymentsDataList.length > 0) {
+        subPaymentsDataList.forEach((row: any) => {
+          const subName = String(row['Subscription Name'] || row.subscriptionName || '').trim();
+          const amount = Number(row.Amount || row.amount || 0);
+          const date = ensureISOString(row.Date || row.date);
+          const statusRaw = String(row.Status || row.status || 'paid').trim().toLowerCase();
+
+          const subscriptionId = subName ? subNameToIdMap.get(subName.toLowerCase()) : undefined;
+          if (!subscriptionId) return;
+
+          newSubscriptionPayments.push({
+            id: Math.random().toString(36).substring(2, 9),
+            subscriptionId,
+            amount,
+            date,
+            status: ['paid', 'upcoming', 'missed'].includes(statusRaw) ? statusRaw as any : 'paid',
+          });
+        });
+      } else {
+        subscriptionPayments.forEach((p: SubscriptionPayment) => {
+          newSubscriptionPayments.push({ ...p });
+        });
+      }
+
+      if (newTransactions.length > 0 || accountsDataList.length > 0 || loansDataList.length > 0 || budgetsDataList.length > 0 || subscriptionsDataList.length > 0) {
         restoreMoneyData({
           accounts: newAccounts,
           transactions: newTransactions,
@@ -813,13 +958,13 @@ export default function ProfileScreen() {
           emiPayments: newEmiPayments,
           budgets: newBudgets,
           categories: newCategories,
-          subscriptions: [],
-          subscriptionPayments: [],
+          subscriptions: newSubscriptions,
+          subscriptionPayments: newSubscriptionPayments,
         });
 
         Alert.alert(
           'Success',
-          `Successfully restored all Money Manager accounts, transactions, loans, EMIs, budgets, and categories.`,
+          `Successfully restored all Money Manager accounts, transactions, loans, EMIs, budgets, categories, subscriptions, and subscription payments.`,
         );
       } else {
         Alert.alert(

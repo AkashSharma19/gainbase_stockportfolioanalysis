@@ -13,6 +13,7 @@ export interface Account {
   creditLimit?: number;      // For credit cards only
   interestRate?: number;     // For savings accounts
   includeInAssets?: boolean; // If false, exclude from calculations
+  linkedBroker?: string;     // Name of the broker account linked to this investment account
   isArchived: boolean;
   createdAt: string;
   updatedAt: string;

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { X, Check, ChevronDown, Home, Car, User, GraduationCap, Landmark } from 'lucide-react-native';
+import { X, Check, ChevronDown, Home, Car, User, GraduationCap, Landmark, Wallet, Activity, CreditCard, PiggyBank, ArrowDownLeft, ArrowUpRight } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
@@ -21,7 +21,31 @@ import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
-import { Loan } from '@/types/money';
+import { Loan, AccountType } from '@/types/money';
+import { BankLogo } from '@/components/BankLogo';
+
+const ACCOUNT_TYPE_ICONS: Record<AccountType, { icon: any; color: string }> = {
+  wallet: { icon: Wallet, color: '#00C9A7' },
+  savings: { icon: Landmark, color: '#007AFF' },
+  investment: { icon: Activity, color: '#AF52DE' },
+  credit_card: { icon: CreditCard, color: '#FF9500' },
+  emergency_fund: { icon: PiggyBank, color: '#FF2D55' },
+  receivable: { icon: ArrowDownLeft, color: '#34C759' },
+  payable: { icon: ArrowUpRight, color: '#FF3B30' },
+};
+
+function AccountIcon({ account, size = 24 }: { account: { logo?: string; type: AccountType }; size?: number }) {
+  if (account.logo) {
+    return <BankLogo logo={account.logo} size={size} style={{ marginRight: 12 }} />;
+  }
+  const config = ACCOUNT_TYPE_ICONS[account.type] || ACCOUNT_TYPE_ICONS.wallet;
+  const IconComp = config.icon;
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: `${config.color}15`, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+      <IconComp size={size * 0.6} color={config.color} />
+    </View>
+  );
+}
 
 const TYPES = [
   { type: 'home', label: 'Home Loan', icon: Home, color: '#007AFF' },
@@ -381,9 +405,14 @@ export default function AddLoanScreen() {
                 setShowAccountModal(true);
               }}
             >
-              <ThemedText style={{ color: selectedAccount ? currColors.text : currColors.textSecondary, fontSize: 16 }}>
-                {selectedAccount ? selectedAccount.name : 'Select Linked Account'}
-              </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                {selectedAccount ? (
+                  <AccountIcon account={selectedAccount} size={24} />
+                ) : null}
+                <ThemedText style={{ color: selectedAccount ? currColors.text : currColors.textSecondary, fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
+                  {selectedAccount ? selectedAccount.name : 'Select Linked Account'}
+                </ThemedText>
+              </View>
               <ChevronDown size={18} color={currColors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -393,29 +422,40 @@ export default function AddLoanScreen() {
       {/* Account Selection Modal */}
       <Modal visible={showAccountModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: currColors.card }]}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowAccountModal(false)} />
+          <View style={[styles.modalContent, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            <View style={styles.modalDragHandle} />
             <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
               <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Select Account</ThemedText>
-              <TouchableOpacity onPress={() => setShowAccountModal(false)}>
-                <X size={22} color={currColors.text} />
+              <TouchableOpacity onPress={() => setShowAccountModal(false)} style={styles.modalCloseIcon}>
+                <X size={20} color={currColors.text} />
               </TouchableOpacity>
             </View>
             <FlatList
               data={activeAccounts}
               keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
               bounces={false}
+              contentContainerStyle={{ paddingBottom: 24 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.modalItem, { borderBottomColor: currColors.border }]}
+                  style={[styles.modalItem, { borderBottomColor: currColors.border }, item.includeInAssets === false && { opacity: 0.55 }]}
                   onPress={() => {
+                    handleHaptic();
                     setLinkedAccountId(item.id);
                     setShowAccountModal(false);
                   }}
                 >
-                  <ThemedText style={{ color: currColors.text, fontSize: 16 }}>{item.name}</ThemedText>
-                  <ThemedText style={{ color: currColors.textSecondary, fontSize: 12 }}>
-                    {item.balance.toLocaleString('en-IN')}
-                  </ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <AccountIcon account={item} size={26} />
+                    <View style={{ flex: 1 }}>
+                      <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 15 }}>{item.name}</ThemedText>
+                      <ThemedText style={{ color: currColors.textSecondary, fontSize: 11, marginTop: 2, fontFamily: 'Outfit_400Regular' }}>
+                        Balance: {item.balance.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  {linkedAccountId === item.id && <Check size={18} color="#00C9A7" />}
                 </TouchableOpacity>
               )}
             />
@@ -531,14 +571,26 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    height: '50%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
+    maxHeight: '65%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  modalDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(142, 142, 147, 0.3)',
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 16,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -549,14 +601,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: 'Outfit_600SemiBold',
+  },
+  modalCloseIcon: {
+    padding: 4,
   },
   modalItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
   },
 });

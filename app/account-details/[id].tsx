@@ -43,6 +43,14 @@ export default function AccountDetailsScreen() {
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
 
+  const transactions = usePortfolioStore((state) => state.transactions);
+  const tickers = usePortfolioStore((state) => state.tickers);
+  const getAllocationData = usePortfolioStore((state) => state.getAllocationData);
+
+  const brokerAllocations = useMemo(() => {
+    return getAllocationData('Broker');
+  }, [getAllocationData, transactions, tickers]);
+
   const account = useMemo(() => {
     return accounts.find((acc) => acc.id === id);
   }, [id, accounts]);
@@ -176,11 +184,27 @@ export default function AccountDetailsScreen() {
             ) : null}
           </View>
           <ThemedText style={[styles.balanceLabel, { color: currColors.textSecondary }]}>
-            {isCreditCard ? 'CURRENT OUTSTANDING' : 'AVAILABLE BALANCE'}
+            {account.type === 'investment' && account.linkedBroker 
+              ? `CURRENT VALUE (LINKED: ${account.linkedBroker.toUpperCase()})` 
+              : isCreditCard 
+              ? 'CURRENT OUTSTANDING' 
+              : 'AVAILABLE BALANCE'}
           </ThemedText>
           <ThemedText style={[styles.balanceText, { color: currColors.text }]}>
-            {formatAmount(account.balance)}
+            {formatAmount(
+              account.type === 'investment' && account.linkedBroker
+                ? (brokerAllocations.find(b => b.name.toLowerCase().trim() === account.linkedBroker!.toLowerCase().trim())?.value ?? 0)
+                : account.balance
+            )}
           </ThemedText>
+
+          {account.type === 'investment' && account.linkedBroker && (
+            <View style={{ marginTop: 8 }}>
+              <ThemedText style={{ fontSize: 13, color: currColors.textSecondary }}>
+                Invested Capital: <ThemedText style={{ color: currColors.text, fontFamily: 'Outfit_600SemiBold' }}>{formatAmount(account.balance)}</ThemedText>
+              </ThemedText>
+            </View>
+          )}
 
           {isCreditCard && account.creditLimit ? (
             <View style={styles.limitRow}>

@@ -87,6 +87,10 @@ export function MoneyDashboard() {
   const togglePrivacyMode = usePortfolioStore((state) => state.togglePrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
 
+  // Subscribe to portfolio transactions and tickers so net worth updates live
+  const portfolioTransactions = usePortfolioStore((state) => state.transactions);
+  const portfolioTickers = usePortfolioStore((state) => state.tickers);
+
   // Filter state for transactions list
   const [activeFilter, setActiveFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
 
@@ -352,7 +356,7 @@ export function MoneyDashboard() {
               This month expenses
             </ThemedText>
             <ThemedText style={[styles.heroRowValue, { color: '#FF3B30' }]}>
-              {isPrivacyMode ? '••••••' : `-${formatAmount(monthlyStats.expense)}`}
+              {isPrivacyMode ? '••••••' : `-${formatAmount(monthlyStats.expense)} (${(monthlyStats.income > 0 ? (monthlyStats.expense / monthlyStats.income) * 100 : 0).toFixed(0)}%)`}
             </ThemedText>
           </View>
 
@@ -361,7 +365,7 @@ export function MoneyDashboard() {
               Monthly EMIs
             </ThemedText>
             <ThemedText style={[styles.heroRowValue, { color: currColors.text }]}>
-              {formatAmount(monthlyEMIs)}
+              {isPrivacyMode ? '••••••' : `${formatAmount(monthlyEMIs)} (${(monthlyStats.income > 0 ? (monthlyEMIs / monthlyStats.income) * 100 : 0).toFixed(0)}%)`}
             </ThemedText>
           </View>
 
@@ -370,7 +374,7 @@ export function MoneyDashboard() {
               Monthly Subscriptions
             </ThemedText>
             <ThemedText style={[styles.heroRowValue, { color: currColors.text }]}>
-              {formatAmount(monthlySubscriptions)}
+              {isPrivacyMode ? '••••••' : `${formatAmount(monthlySubscriptions)} (${(monthlyStats.income > 0 ? (monthlySubscriptions / monthlyStats.income) * 100 : 0).toFixed(0)}%)`}
             </ThemedText>
           </View>
 
@@ -392,7 +396,7 @@ export function MoneyDashboard() {
                 },
               ]}
             >
-              {isPrivacyMode ? '••••••' : `${monthlyStats.savingsRate.toFixed(0)}%`}
+              {isPrivacyMode ? '••••••' : `${formatAmount(monthlyStats.income - monthlyStats.expense)} (${monthlyStats.savingsRate.toFixed(0)}%)`}
             </ThemedText>
           </View>
         </View>

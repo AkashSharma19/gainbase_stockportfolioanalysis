@@ -24,6 +24,7 @@ import {
   ChevronDown,
   Info,
   X,
+  Check,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -84,17 +85,48 @@ export default function LoanDetailsScreen() {
   const [showAccountSelector, setShowAccountSelector] = useState(false);
   const [showCategorySelector, setShowCategorySelector] = useState(false);
 
-  // Amortization Schedule Calculation (Generates the next 12 installments)
+  // Amortization Schedule Calculation (Generates the next 12 installments + past payments)
   const amortizationSchedule = useMemo(() => {
     if (!loan) return [];
+
+    const schedule = [];
     
+    // 1. Process past paid payments (oldest first)
+    const pastPaymentsAsc = [...loanPayments].reverse();
+    let bal = loan.outstandingAmount;
+    
+    // Calculate start balances and end balances backwards for past payments
+    const pastScheduleRows = [];
+    for (let i = pastPaymentsAsc.length - 1; i >= 0; i--) {
+      const p = pastPaymentsAsc[i];
+      const startBalance = bal + p.principalPortion;
+      const endBalance = bal;
+      bal = startBalance; // update bal backwards
+
+      const labelDate = new Date(p.date);
+      const monthLabel = labelDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+
+      pastScheduleRows.unshift({
+        id: p.id,
+        isPaid: true,
+        monthLabel,
+        startBalance,
+        emi: p.amount,
+        principalPortion: p.principalPortion,
+        interestPortion: p.interestPortion,
+        endBalance,
+      });
+    }
+    
+    // Push past payments in chronological order (oldest first)
+    schedule.push(...pastScheduleRows);
+
+    // 2. Generate future projections (next 12 months or until balance is zero)
     let balance = loan.outstandingAmount;
     const rate = (loan.interestRate / 12) / 100;
     const emi = loan.emiAmount;
-    const schedule = [];
-
-    // Calculate next 12 months or until balance is zero
     const today = new Date();
+
     for (let month = 1; month <= 12 && balance > 0; month++) {
       const interestPortion = balance * rate;
       const principalPortion = Math.min(balance, emi - interestPortion);
@@ -105,7 +137,8 @@ export default function LoanDetailsScreen() {
       const monthLabel = labelDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 
       schedule.push({
-        month,
+        id: `projected-${month}`,
+        isPaid: false,
         monthLabel,
         startBalance,
         emi: interestPortion + principalPortion,
@@ -116,7 +149,7 @@ export default function LoanDetailsScreen() {
     }
 
     return schedule;
-  }, [loan]);
+  }, [loan, loanPayments]);
 
   // Prepayment projection calculations
   const prepaymentSavings = useMemo(() => {
@@ -606,7 +639,7 @@ export default function LoanDetailsScreen() {
         {/* Amortization Schedule Preview */}
         <View style={styles.sectionHeader}>
           <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
-            ESTIMATED NEXT 12 MONTH BREAKDOWN
+            LOAN AMORTIZATION SCHEDULE
           </ThemedText>
         </View>
 
@@ -619,17 +652,20 @@ export default function LoanDetailsScreen() {
           </View>
           
           {amortizationSchedule.map((row) => (
-            <View key={row.month} style={styles.amortRow}>
-              <ThemedText style={[styles.amortColText, { color: currColors.textSecondary }]}>
-                {row.monthLabel}
-              </ThemedText>
-              <ThemedText style={[styles.amortColText, { color: currColors.text }]}>
+            <View key={row.id || row.monthLabel} style={styles.amortRow}>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                {row.isPaid && <Check size={12} color="#34C759" strokeWidth={3.5} />}
+                <ThemedText style={{ fontSize: 12, fontFamily: 'Outfit_500Medium', color: row.isPaid ? '#34C759' : currColors.textSecondary }}>
+                  {row.monthLabel}
+                </ThemedText>
+              </View>
+              <ThemedText style={[styles.amortColText, { color: row.isPaid ? currColors.textSecondary : currColors.text }]}>
                 {formatAmount(row.principalPortion)}
               </ThemedText>
-              <ThemedText style={[styles.amortColText, { color: '#FF3B30' }]}>
+              <ThemedText style={[styles.amortColText, { color: row.isPaid ? '#FF3B30' + '99' : '#FF3B30' }]}>
                 {formatAmount(row.interestPortion)}
               </ThemedText>
-              <ThemedText style={[styles.amortColTextRight, { color: currColors.text }]}>
+              <ThemedText style={[styles.amortColTextRight, { color: row.isPaid ? currColors.textSecondary : currColors.text }]}>
                 {formatAmount(row.endBalance)}
               </ThemedText>
             </View>

@@ -57,18 +57,18 @@ Here is the functional map of the directory tree and key files:
 
 | Directory/File | Description | Key Contents / Files |
 | :--- | :--- | :--- |
-| `app/` | File-based navigation routes & screens. | `_layout.tsx` (Root Stack Config, registers background sync), `money-insights.tsx` (Dedicated Smart Insights for Money Manager). |
-| `app/(tabs)/` | Tabs layout and index page wrapper. | `_layout.tsx` (Dynamic tab visibilities based on mode), `index.tsx` (Slide animated home screen), `profile.tsx`. |
-| `app/add-*.tsx` | Modals to add various assets/transactions. | `add-transaction.tsx`, `add-money-transaction.tsx`, `add-loan.tsx`, `add-budget.tsx`, `add-account.tsx`, `add-subscription.tsx`. |
-| `app/*-details/` | Detailed analytical screens. | `stock-details/[symbol]`, `account-details`, `loan-details`, `budget-details`, `subscription-details`, `sector-details`. |
-| `components/` | Reusable presentation UI elements. | `MoneyDashboard.tsx`, `PortfolioHealthCard.tsx`, `ActivityCalendar.tsx`, `ShareableCard.tsx`, `AppSwitcher.tsx`, `HealthGauge.tsx`. |
+| `app/` | File-based navigation routes & screens. | `_layout.tsx` (Root Stack Config, registers background task), `analytics.tsx` (Investments analytics dashboard), `money-analytics.tsx` (Cash flow analytics), `money-insights.tsx` (Dedicated Smart Insights for Money Manager), `win-loss-details.tsx` (Win/loss stock positions details), `index-comparison.tsx` (Benchmark returns), `portfolio-health.tsx` & `portfolio-health-formula.tsx` (Grades/criteria), `monthly-analysis.tsx` & `yearly-analysis.tsx` (Month/year performance breakdowns), `sectors.tsx` (Industry sectors listing). |
+| `app/(tabs)/` | Tabs layout and navigation index page wrapper. | `_layout.tsx` (Dynamic tab visibilities based on mode), `index.tsx` (Home screen displaying `MoneyDashboard` or `PortfolioSummary`), `explore.tsx` (Stock search & watchlist), `insights.tsx` (Investments insights), `money-accounts.tsx` (Net worth details & accounts list), `money-budgets.tsx` (Budget progress meters), `money-loans.tsx` (Loans & EMIs), `profile.tsx` (User profile & customizations), `add.tsx` (Add navigation wrapper), `two.tsx` (Placeholder). |
+| `app/add-*.tsx` | Modals to add various assets/transactions. | `add-transaction.tsx` (BUY/SELL stock), `add-money-transaction.tsx` (Income/expense/transfer with arithmetic calculator), `add-loan.tsx` (Borrowed/lent loan configuration), `add-budget.tsx` (Category budget limit), `add-account.tsx` (Monetary accounts configuration), `add-subscription.tsx` (SaaS subscription). |
+| `app/*-details/` | Detailed analytical screens. | `stock-details/[symbol].tsx` (Stock-level holdings & transactions), `account-details/[id].tsx` (Monetary account transaction log), `loan-details/[id].tsx` (Amortization & EMI payments history), `budget-details/[id].tsx` (Category spend limits tracking), `subscription-details/[id].tsx` (Billing logs), `sector-details/[sector].tsx` (Industry sector allocation details), `analytics-details/[type]/[value].tsx` (Multi-dimensional queries). |
+| `components/` | Reusable presentation UI elements. | `MoneyDashboard.tsx`, `PortfolioHealthCard.tsx`, `ActivityCalendar.tsx`, `MoneyActivityCalendar.tsx`, `ForecastCard.tsx`, `InsightsSummaryCard.tsx`, `WinLossCard.tsx`, `HealthDetailCard.tsx`, `HealthGauge.tsx`, `TopMovers.tsx`, `ShareableCard.tsx`, `AppSwitcher.tsx`. |
 | `constants/` | Constant configurations (colors, APIs, dimensions). | `Colors.ts` (light/dark themes), `Api.ts` (API configuration endpoints). |
 | `hooks/` | Business-logic custom hooks. | `usePortfolioHealth.ts` (health grading algorithm), `useInsights.ts` (investment flags: buy, sell/hold, observe), `useMoneyInsights.ts` (unified budgeting/cashflow insights). |
 | `lib/` | Core mathematical/computational logic. | `finance.ts` (XIRR calculation, future projection models, Indian number formatter). |
 | `store/` | Zustand state management with storage persistence. | `usePortfolioStore.ts`, `useMoneyStore.ts`, `useAppModeStore.ts`. |
-| `tasks/` | Background automation tasks. | `backgroundFetch.ts` (registers background sync jobs). |
+| `tasks/` | Background automation tasks. | `backgroundFetch.ts` (registers periodic data backup jobs). |
 | `types/` | TypeScript interface definitions. | `index.ts` (portfolio types), `money.ts` (money manager types). |
-| `services/` | Peripheral external service adapters. | `DataExportService.ts` (exports/imports transactions). |
+| `services/` | Peripheral external service adapters. | `DataExportService.ts` (exports/imports transactions backup). |
 
 ---
 
@@ -88,7 +88,7 @@ Gainbase has two distinct user modes configured in `useAppModeStore` and switche
 
 ### B. Money Manager Mode
 *   **Default View**: Displays net worth, monthly income/expense/EMIs/subscriptions summaries on the top card, an **Upcoming Payments (14 days)** list summarizing soon-to-be-due EMIs and Subscriptions, **Recent Transactions** (restricting to the single most recent transaction date and capped at 3 items), and active budget meters.
-*   **Accounts Tab**: Lists all monetary accounts grouped by type with a premium card at the top summarizing Net Worth, Assets, Liabilities, and a dynamic **Asset Distribution** category breakdown.
+*   **Accounts Tab**: Lists all monetary accounts grouped by type with a premium card at the top summarizing Net Worth, Assets, Liabilities, and a dynamic **Asset Distribution** category breakdown. Investment accounts display their live investment current value (linked to portfolio brokers) alongside manual invested amounts.
 *   **Cash Flow Tracker**: Income & expense categorization, transaction additions with an interactive **arithmetic calculator keyboard** for inline calculations/bill splits, activity heat maps, and a clean all-transactions viewer supporting a premium collapsible Bottom Sheet Filter (date ranges, category tags, transaction types), active filter summary chips, and dynamic income, expense, and net cash flow summaries.
 *   **Loan & EMI Tracker**: List of active loans, outstanding balances, remaining EMI count tracking, monthly EMI burden calculation, tracking next payment dates.
 *   **Budgeting Suite**: Setting monthly budget caps, displaying category-wise spending meters (e.g., food, bills, shopping).
@@ -126,7 +126,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 
 ### 3. `useMoneyStore` (`money-manager-storage`)
 *   **State**:
-    *   `accounts`: List of monetary accounts (e.g., Bank, Credit Card, Cash).
+    *   `accounts`: List of monetary accounts (e.g., Bank, Credit Card, Cash, or Investments). Investment accounts can be linked to a portfolio broker via `linkedBroker`.
     *   `moneyTransactions`: List of income and expense transactions.
     *   `loans`: Borrowed or lent funds with principal, interest rate, duration, and EMI configuration.
     *   `emiPayments`: Log of EMI transaction logs (linked to transactions via `transactionId`).
@@ -139,7 +139,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     *   `removeEMIPayment(paymentId)`: Directly removes an EMI payment and reverts the outstanding loan balance.
     *   `removeSubscriptionPayment(paymentId)`: Directly removes a subscription payment log and reverts the billing cycle.
 *   **Calculations / Selectors**:
-    *   `getNetWorth()`: Computes total assets (investment values + bank balances) minus liabilities (loans).
+    *   `getNetWorth()`: Computes total assets (investment values + bank balances) minus liabilities (loans). Accounts linked to a broker dynamically evaluate active portfolio investment values instead of static manual balances.
     *   `getMonthlyEMIBurden()`, `getMonthlySubscriptionBurden()`.
     *   `getCategorySpending(budgetId, year, month)`.
 
@@ -182,14 +182,14 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 
 ---
 
-## 6. Background Fetch & Offline Sync
+## 6. Background Automation Tasks
 
 *   **Location**: [backgroundFetch.ts](file:///Users/akashsharma/Documents/Gainbase/tasks/backgroundFetch.ts)
-*   **Implementation**: Utilizes `expo-background-fetch` and `expo-task-manager`.
+*   **Implementation**: Utilizes `expo-background-task` and `expo-task-manager`.
 *   **Behavior**:
-    1.  Registers a task named `background-portfolio-sync`.
-    2.  Fires periodically in the background (frequency managed by iOS scheduler, standard 15-30 minute window).
-    3.  Attempts to trigger `fetchTickers()` inside `usePortfolioStore` to fetch live prices and update local ticker prices silently.
+    1.  Registers a task named `BACKGROUND_DATA_BACKUP`.
+    2.  Fires periodically in the background (frequency of backup automation is set to every 24 hours).
+    3.  Attempts to trigger `DataExportService.exportData()` to save a JSON serialization of user's transactions/portfolio state into `Gainbase/data.json` under `FileSystem.documentDirectory` for secure local backups.
 
 ---
 
@@ -201,4 +201,4 @@ Whenever you make updates to the Gainbase codebase:
 3.  **Commit Document**: Keep the wiki updated in the same pull request or tool execution stream as your implementation.
 
 ---
-*Wiki last updated: July 18, 2026*
+*Wiki last updated: August 16, 2026*

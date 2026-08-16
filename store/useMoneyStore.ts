@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { Account, MoneyTransaction, Loan, EMIPayment, Budget, AccountType, Subscription, SubscriptionPayment } from '../types/money';
+import { usePortfolioStore } from './usePortfolioStore';
 
 interface MoneyState {
   accounts: Account[];
@@ -511,12 +512,30 @@ export const useMoneyStore = create<MoneyState>()(
       // --- Computed Values ---
       getNetWorth: () => {
         const { accounts, loans } = get();
+
+        let brokerAllocations: any[] = [];
+        try {
+          brokerAllocations = usePortfolioStore.getState().getAllocationData('Broker');
+        } catch (e) {
+          console.error('Failed to get broker allocations in getNetWorth:', e);
+        }
+
         const assetBalance = accounts
           .filter((a) => a.includeInAssets !== false)
-          .reduce((acc, current) => acc + current.balance, 0);
+          .reduce((acc, current) => {
+            if (current.type === 'investment' && current.linkedBroker) {
+              const allocation = brokerAllocations.find(
+                (b) => b.name.toLowerCase().trim() === current.linkedBroker!.toLowerCase().trim()
+              );
+              return acc + (allocation ? allocation.value : 0);
+            }
+            return acc + current.balance;
+          }, 0);
+
         const activeLoansOutstanding = loans
           .filter((l) => l.isActive)
           .reduce((acc, current) => acc + current.outstandingAmount, 0);
+
         return assetBalance - activeLoansOutstanding;
       },
 
