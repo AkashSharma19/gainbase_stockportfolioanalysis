@@ -84,7 +84,7 @@ export const usePortfolioStore = create<PortfolioState>()(
       },
       addTransaction: (transaction) =>
         set((state) => ({
-          transactions: [...state.transactions, transaction],
+          transactions: [...state.transactions, { ...transaction, updatedAt: new Date().toISOString() }],
         })),
       removeTransaction: (id) =>
         set((state) => ({
@@ -94,7 +94,7 @@ export const usePortfolioStore = create<PortfolioState>()(
       updateTransaction: (id, transaction) =>
         set((state) => ({
           transactions: state.transactions.map((t) =>
-            t.id === id ? transaction : t,
+            t.id === id ? { ...transaction, updatedAt: new Date().toISOString() } : t,
           ),
         })),
       fetchTickers: async () => {

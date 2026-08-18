@@ -175,8 +175,9 @@ export const useMoneyStore = create<MoneyState>()(
             return acc;
           });
 
+          const txWithTime = { ...tx, updatedAt: new Date().toISOString() };
           return {
-            moneyTransactions: [tx, ...state.moneyTransactions],
+            moneyTransactions: [txWithTime, ...state.moneyTransactions],
             accounts: updatedAccounts,
           };
         });
@@ -215,8 +216,9 @@ export const useMoneyStore = create<MoneyState>()(
             return { ...acc, balance: bal, updatedAt: new Date().toISOString() };
           });
 
+          const updatedTxWithTime = { ...updatedTx, updatedAt: new Date().toISOString() };
           return {
-            moneyTransactions: state.moneyTransactions.map((t) => (t.id === id ? updatedTx : t)),
+            moneyTransactions: state.moneyTransactions.map((t) => (t.id === id ? updatedTxWithTime : t)),
             accounts: finalAccounts,
           };
         });
@@ -323,7 +325,7 @@ export const useMoneyStore = create<MoneyState>()(
         })),
       updateLoan: (id, updates) =>
         set((state) => ({
-          loans: state.loans.map((loan) => (loan.id === id ? { ...loan, ...updates } : loan)),
+          loans: state.loans.map((loan) => (loan.id === id ? { ...loan, ...updates, updatedAt: new Date().toISOString() } : loan)),
         })),
       removeLoan: (id) =>
         set((state) => {
@@ -383,7 +385,7 @@ export const useMoneyStore = create<MoneyState>()(
         })),
       updateBudget: (id, updates) =>
         set((state) => ({
-          budgets: state.budgets.map((b) => (b.id === id ? { ...b, ...updates } : b)),
+          budgets: state.budgets.map((b) => (b.id === id ? { ...b, ...updates, updatedAt: new Date().toISOString() } : b)),
         })),
       removeBudget: (id) =>
         set((state) => {
@@ -482,7 +484,7 @@ export const useMoneyStore = create<MoneyState>()(
           const updatedCategories = current.map((c) => (c === oldName ? newName : c));
           const updatedTransactions = state.moneyTransactions.map((tx) => {
             if (tx.type === type && tx.category === oldName) {
-              return { ...tx, category: newName };
+              return { ...tx, category: newName, updatedAt: new Date().toISOString() };
             }
             return tx;
           });
@@ -503,7 +505,7 @@ export const useMoneyStore = create<MoneyState>()(
           const updatedCategories = current.filter((c) => c !== name);
           const updatedTransactions = state.moneyTransactions.map((tx) => {
             if (tx.type === type && tx.category === name) {
-              return { ...tx, category: 'Other' };
+              return { ...tx, category: 'Other', updatedAt: new Date().toISOString() };
             }
             return tx;
           });

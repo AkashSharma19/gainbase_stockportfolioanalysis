@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS public.accounts (
     icon TEXT NOT NULL,
     color TEXT NOT NULL,
     institution TEXT,
+    logo TEXT,
     account_number TEXT,
     credit_limit NUMERIC,
     interest_rate NUMERIC,

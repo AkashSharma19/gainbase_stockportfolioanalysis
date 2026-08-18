@@ -200,6 +200,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     2.  Compares local and remote database rows by unique `id` and `updatedAt` timestamps.
     3.  Upserts new/edited items in batch to Supabase.
     4.  Processes deletions (marked `is_deleted = true` in Supabase) to synchronize removals without data loss.
+    5.  Syncs the `logo` column for accounts (added to local store and remote Supabase db table `accounts`).
 
 ## 7. Maintenance Protocol for AI Agents
 
@@ -209,4 +210,4 @@ Whenever you make updates to the Gainbase codebase:
 3.  **Commit Document**: Keep the wiki updated in the same pull request or tool execution stream as your implementation.
 
 ---
-*Wiki last updated: August 16, 2026*
+*Wiki last updated: August 18, 2026*
