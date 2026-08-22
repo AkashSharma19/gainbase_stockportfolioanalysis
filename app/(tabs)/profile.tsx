@@ -6,6 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
+import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
 import {
   Database,
@@ -24,6 +25,7 @@ import {
   Plus,
   Check,
   Cloud,
+  Sparkles,
 } from 'lucide-react-native';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { AccountType, Account, Loan, EMIPayment, Budget } from '../../types/money';
@@ -1776,6 +1778,32 @@ export default function ProfileScreen() {
                   Delete Data
                 </ThemedText>
               </TouchableOpacity>
+            </View>
+
+            <View style={[styles.gridRow, { marginTop: 20 }]}>
+              <TouchableOpacity
+                style={styles.gridButton}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push('/ai-chat');
+                }}
+              >
+                <View
+                  style={[
+                    styles.gridIconBox,
+                    { backgroundColor: 'rgba(10, 132, 255, 0.1)' },
+                  ]}
+                >
+                  <Sparkles size={24} color="#0A84FF" />
+                </View>
+                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
+                  AI Chat
+                </ThemedText>
+              </TouchableOpacity>
+
+              <View style={styles.gridButton} />
+              <View style={styles.gridButton} />
+              <View style={styles.gridButton} />
             </View>
           </View>
 

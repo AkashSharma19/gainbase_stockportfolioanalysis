@@ -1,5 +1,3 @@
-// import { Ionicons } from '@expo/vector-icons';
-import { useInsights } from '@/hooks/useInsights';
 import * as Haptics from 'expo-haptics';
 import { Tabs, useRouter } from 'expo-router';
 import {
@@ -14,6 +12,7 @@ import {
   LayoutDashboard,
   Landmark,
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect } from 'react';
 import {
   Platform,
@@ -40,21 +39,9 @@ function InsightsTabIcon({
   color: string;
   focused: boolean;
 }) {
-  const { count } = useInsights();
-  const badgeCount = Math.min(count, 9);
-  const showBadge = count > 0;
-
   return (
     <View style={tabStyles.iconWrapper}>
       <Sparkles size={24} color={color} strokeWidth={focused ? 2.5 : 2} />
-      {showBadge && (
-        <View style={tabStyles.badge}>
-          <ThemedText style={tabStyles.badgeText}>
-            {badgeCount}
-            {count > 9 ? '+' : ''}
-          </ThemedText>
-        </View>
-      )}
     </View>
   );
 }
@@ -261,6 +248,43 @@ export default function TabLayout() {
             }}
           />
         </Tabs>
+
+      {/* AI Chat Floating Action Button */}
+      <TouchableOpacity
+        onPress={() => {
+          handleHaptic();
+          router.push('/ai-chat');
+        }}
+        activeOpacity={0.8}
+        style={{
+          position: 'absolute',
+          right: 16,
+          bottom: Platform.OS === 'ios' ? 170 : 155,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          overflow: 'hidden',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 4.65,
+          elevation: 8,
+        }}
+      >
+        <LinearGradient
+          colors={isInvestMode ? ['#007AFF', '#5856D6'] : ['#00C9A7', '#059669']}
+          style={{
+            width: '100%',
+            height: '100%',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Sparkles size={24} color="#FFF" />
+        </LinearGradient>
+      </TouchableOpacity>
 
       {/* Floating Action Button */}
       <TouchableOpacity

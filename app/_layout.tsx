@@ -220,6 +220,10 @@ function RootLayoutNav() {
             name="money-health"
             options={{ animation: 'slide_from_right', headerShown: false }}
           />
+          <Stack.Screen
+            name="ai-chat"
+            options={{ animation: 'slide_from_right', headerShown: false }}
+          />
         </Stack>
       </ThemeProvider>
     </GestureHandlerRootView>
