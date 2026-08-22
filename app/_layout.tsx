@@ -216,6 +216,10 @@ function RootLayoutNav() {
             name="money-insights"
             options={{ animation: 'slide_from_right', headerShown: false }}
           />
+          <Stack.Screen
+            name="money-health"
+            options={{ animation: 'slide_from_right', headerShown: false }}
+          />
         </Stack>
       </ThemeProvider>
     </GestureHandlerRootView>

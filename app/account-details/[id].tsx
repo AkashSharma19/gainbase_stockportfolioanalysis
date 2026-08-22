@@ -80,6 +80,19 @@ export default function AccountDetailsScreen() {
       .reduce((sum, l) => sum + l.outstandingAmount, 0);
   }, [account, loans]);
 
+  const utilization = useMemo(() => {
+    if (!account || account.type !== 'credit_card' || !account.creditLimit || account.creditLimit <= 0) return 0;
+    const totalUtilized = Math.abs(account.balance) + blockedAmount;
+    return (totalUtilized / account.creditLimit) * 100;
+  }, [account, blockedAmount]);
+
+  const brokerAlloc = useMemo(() => {
+    if (!account || account.type !== 'investment' || !account.linkedBroker) return null;
+    return brokerAllocations.find(
+      (b) => b.name.toLowerCase().trim() === account.linkedBroker!.toLowerCase().trim()
+    );
+  }, [account, brokerAllocations]);
+
   const handleHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
@@ -199,10 +212,31 @@ export default function AccountDetailsScreen() {
           </ThemedText>
 
           {account.type === 'investment' && account.linkedBroker && (
-            <View style={{ marginTop: 8 }}>
+            <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
               <ThemedText style={{ fontSize: 13, color: currColors.textSecondary }}>
                 Invested Capital: <ThemedText style={{ color: currColors.text, fontFamily: 'Outfit_600SemiBold' }}>{formatAmount(account.balance)}</ThemedText>
               </ThemedText>
+              {brokerAlloc && (
+                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                  <ThemedText style={{ fontSize: 13, color: currColors.textSecondary }}>
+                    Returns:
+                  </ThemedText>
+                  <View style={{
+                    backgroundColor: brokerAlloc.pnl >= 0 ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)',
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 8,
+                  }}>
+                    <ThemedText style={{
+                      fontSize: 13,
+                      fontFamily: 'Outfit_600SemiBold',
+                      color: brokerAlloc.pnl >= 0 ? '#34C759' : '#FF3B30'
+                    }}>
+                      {brokerAlloc.pnl >= 0 ? '+' : ''}{formatAmount(brokerAlloc.pnl)} ({brokerAlloc.pnl >= 0 ? '+' : ''}{brokerAlloc.pnlPercentage.toFixed(2)}%)
+                    </ThemedText>
+                  </View>
+                </View>
+              )}
             </View>
           )}
 
@@ -226,6 +260,25 @@ export default function AccountDetailsScreen() {
               </View>
             </View>
           ) : null}
+
+          {isCreditCard && utilization > 30 && (
+            <View style={[
+              styles.warningBanner,
+              {
+                backgroundColor: utilization > 70 ? 'rgba(255, 59, 48, 0.08)' : 'rgba(255, 149, 0, 0.08)',
+                borderColor: utilization > 70 ? 'rgba(255, 59, 48, 0.15)' : 'rgba(255, 149, 0, 0.15)',
+              }
+            ]}>
+              <ThemedText style={{
+                fontSize: 12,
+                color: utilization > 70 ? '#FF3B30' : '#FF9500',
+                fontFamily: 'Outfit_500Medium',
+                lineHeight: 16
+              }}>
+                ⚠️ {utilization > 70 ? 'High' : 'Moderate'} credit utilization ({utilization.toFixed(0)}%) can impact your credit score. Consider paying off your balance before statement generation.
+              </ThemedText>
+            </View>
+          )}
 
           {(account.institution || account.accountNumber || account.includeInAssets === false) ? (
             <View style={[styles.detailsRow, { borderTopColor: currColors.border, flexWrap: 'wrap', gap: 12 }]}>
@@ -531,5 +584,11 @@ const styles = StyleSheet.create({
   },
   deleteTxBtn: {
     padding: 4,
+  },
+  warningBanner: {
+    marginTop: 20,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
   },
 });

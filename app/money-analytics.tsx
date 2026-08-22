@@ -422,11 +422,11 @@ export default function MoneyAnalyticsScreen() {
                     >
                       <View style={styles.holdingRow}>
                         <View style={styles.holdingMain}>
-                          <View style={[styles.categoryIconCircle, { backgroundColor: `${item.color}15` }]}>
-                            <CategoryIcon name={item.icon} color={item.color} size={16} />
+                          <View style={[styles.categoryIconCircle, { backgroundColor: `${item.color}22` }]}>
+                            <CategoryIcon name={item.icon} color={item.color} size={20} />
                           </View>
                           <View style={{ flex: 1, paddingRight: 10 }}>
-                            <ThemedText type="semiBold" style={[styles.holdingName, { color: currColors.text }]}>
+                            <ThemedText style={[styles.holdingName, { color: currColors.text }]} numberOfLines={2}>
                               {item.name}
                             </ThemedText>
                             <View style={styles.rowProgressBarBG}>
@@ -501,10 +501,10 @@ export default function MoneyAnalyticsScreen() {
                     ]}
                   >
                     <View style={styles.holdingRow}>
-                      <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 13 }}>
+                      <ThemedText style={{ color: currColors.text, fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
                         {getFullMonthLabel(item.monthKey)}
                       </ThemedText>
-                      <ThemedText style={{ color: '#FF3B30', fontSize: 13, fontFamily: 'Outfit_400Regular' }}>
+                      <ThemedText style={{ color: '#FF3B30', fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
                         {formatAmount(item.expense)}
                       </ThemedText>
                     </View>
@@ -565,14 +565,14 @@ export default function MoneyAnalyticsScreen() {
                     ]}
                   >
                     <View style={styles.holdingRow}>
-                      <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 13 }}>
+                      <ThemedText style={{ color: currColors.text, fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
                         {getFullMonthLabel(item.monthKey)}
                       </ThemedText>
                       <View style={{ alignItems: 'flex-end' }}>
-                        <ThemedText style={{ color: isPositive ? '#34C759' : '#FF3B30', fontSize: 13, fontFamily: 'Outfit_400Regular' }}>
+                        <ThemedText style={{ color: isPositive ? '#34C759' : '#FF3B30', fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
                           {isPositive ? '+' : '-'}{formatAmount(item.surplus)}
                         </ThemedText>
-                        <ThemedText style={{ color: currColors.textSecondary, fontSize: 10, marginTop: 2 }}>
+                        <ThemedText style={{ color: currColors.textSecondary, fontSize: 12, marginTop: 2 }}>
                           In: {formatAmount(item.income)} | Out: {formatAmount(item.expense)}
                         </ThemedText>
                       </View>
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
   actionIconButton: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: 18,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -682,71 +682,77 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: 36,
-    borderRadius: 12,
+    borderRadius: 18,
     borderWidth: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     gap: 6,
   },
   viewModeText: {
     fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
   },
   holdingsList: {
-    borderRadius: 24,
+    borderRadius: 20,
     borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginBottom: 20,
   },
   holdingItem: {
-    paddingVertical: 12,
+    paddingVertical: 18,
+    alignSelf: 'stretch',
   },
   holdingItemBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1,
   },
   holdingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    width: '100%',
   },
   holdingMain: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1.3,
+    flex: 1,
     gap: 12,
+    marginRight: 10,
   },
   categoryIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   holdingName: {
-    fontSize: 13,
-    marginBottom: 4,
+    fontSize: 15,
+    fontFamily: 'Outfit_400Regular',
+    flexShrink: 1,
   },
   rowProgressBarBG: {
-    height: 4,
+    height: 3,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 2,
+    borderRadius: 1.5,
+    marginTop: 8,
     width: '80%',
     overflow: 'hidden',
   },
   rowProgressBarFill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 1.5,
   },
   holdingValues: {
     alignItems: 'flex-end',
-    flex: 1,
+    flexShrink: 0,
   },
   holdingValueText: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'Outfit_400Regular',
-    marginBottom: 2,
   },
   holdingPercentageText: {
-    fontSize: 10,
+    fontSize: 12,
+    marginTop: 2,
   },
   trendChartContainer: {
     borderRadius: 24,

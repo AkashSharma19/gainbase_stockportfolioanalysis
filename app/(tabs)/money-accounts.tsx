@@ -144,8 +144,11 @@ export default function AccountsScreen() {
       : 0;
 
     const isInvestment = item.type === 'investment' && item.linkedBroker;
-    const currentVal = isInvestment
-      ? (brokerAllocations.find(b => b.name.toLowerCase().trim() === item.linkedBroker!.toLowerCase().trim())?.value ?? 0)
+    const brokerAlloc = isInvestment
+      ? brokerAllocations.find(b => b.name.toLowerCase().trim() === item.linkedBroker!.toLowerCase().trim())
+      : null;
+    const currentVal = isInvestment && brokerAlloc
+      ? brokerAlloc.value
       : item.balance;
 
     return (
@@ -199,9 +202,22 @@ export default function AccountsScreen() {
                 {formatAmount(currentVal)}
               </ThemedText>
               {isInvestment && (
-                <ThemedText style={{ fontSize: 10, color: currColors.textSecondary, marginTop: 2, fontFamily: 'Outfit_400Regular' }}>
-                  Invested: {formatAmount(item.balance)}
-                </ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 4 }}>
+                  <ThemedText style={{ fontSize: 10, color: currColors.textSecondary, fontFamily: 'Outfit_400Regular' }}>
+                    Invested: {formatAmount(item.balance)}
+                  </ThemedText>
+                  {brokerAlloc && (
+                    <ThemedText
+                      style={{
+                        fontSize: 10,
+                        color: brokerAlloc.pnl >= 0 ? '#34C759' : '#FF3B30',
+                        fontFamily: 'Outfit_600SemiBold'
+                      }}
+                    >
+                      ({brokerAlloc.pnl >= 0 ? '+' : ''}{brokerAlloc.pnlPercentage.toFixed(1)}%)
+                    </ThemedText>
+                  )}
+                </View>
               )}
             </View>
             <ChevronRight size={16} color={currColors.textSecondary} />
@@ -216,7 +232,7 @@ export default function AccountsScreen() {
                   styles.progressBarFill, 
                   { 
                     width: `${Math.min(100, utilization)}%`,
-                    backgroundColor: utilization > 80 ? '#FF3B30' : utilization > 50 ? '#FF9500' : '#34C759'
+                    backgroundColor: utilization > 70 ? '#FF3B30' : utilization > 30 ? '#FF9500' : '#34C759'
                   }
                 ]} 
               />
@@ -490,7 +506,13 @@ const styles = StyleSheet.create({
   accountName: {
     fontSize: 14,
     fontFamily: 'Outfit_600SemiBold',
-    marginBottom: 2,
+  },
+  warningBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   accountSub: {
     fontSize: 11,

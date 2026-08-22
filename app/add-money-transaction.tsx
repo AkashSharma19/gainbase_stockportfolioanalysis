@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -133,6 +133,7 @@ export default function AddMoneyTransactionScreen() {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showToAccountModal, setShowToAccountModal] = useState(false);
   const [showCalculator, setShowCalculator] = useState(!editingTx);
+  const amountInputRef = useRef<TextInput>(null);
 
   // Calculator Keyboard Helpers
   const evaluateExpression = (expr: string): string => {
@@ -535,9 +536,18 @@ export default function AddMoneyTransactionScreen() {
           {/* Amount input */}
           <View style={styles.inputGroup}>
             <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>AMOUNT</ThemedText>
-            <View style={[styles.amountInputContainer, { borderBottomColor: currColors.border }]}>
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => {
+                amountInputRef.current?.focus();
+                setShowCalculator(true);
+                Keyboard.dismiss();
+              }}
+              style={[styles.amountInputContainer, { borderBottomColor: currColors.border }]}
+            >
               <ThemedText style={[styles.currencyPrefix, { color: getAmountColor() }]}>₹</ThemedText>
               <TextInput
+                ref={amountInputRef}
                 style={[styles.amountInput, { color: getAmountColor() }]}
                 placeholder="0"
                 placeholderTextColor={currColors.textSecondary}
@@ -549,7 +559,7 @@ export default function AddMoneyTransactionScreen() {
                 value={amount}
                 onChangeText={setAmount}
               />
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Category Tags Selection Grid (Income/Expense only) */}

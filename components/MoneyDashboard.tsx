@@ -31,6 +31,7 @@ import {
   Cloud,
   Gamepad2,
   Sparkles,
+  TrendingUp,
 } from 'lucide-react-native';
 
 import { ThemedText } from './ThemedText';
@@ -211,6 +212,162 @@ export function MoneyDashboard() {
 
     return { income, expense, savingsRate };
   }, [moneyTransactions]);
+
+  // Calculate Financial Health Score & Grade for the dashboard button
+  const healthSummary = useMemo(() => {
+    // 1. Calculate Average Monthly Income & Expense (Based on last 90 Days / 3 Months)
+    const now = new Date();
+    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).getTime();
+
+    let totalIncome90d = 0;
+    let totalExpense90d = 0;
+    let daysDiff = 90;
+
+    const txTimes = moneyTransactions.map((t) => new Date(t.date).getTime());
+    if (txTimes.length > 0) {
+      const oldestTx = Math.min(...txTimes);
+      const computedDays = Math.max(1, (now.getTime() - oldestTx) / (24 * 60 * 60 * 1000));
+      daysDiff = Math.min(90, Math.round(computedDays));
+    }
+
+    moneyTransactions.forEach((tx) => {
+      const txTime = new Date(tx.date).getTime();
+      if (txTime >= now.getTime() - daysDiff * 24 * 60 * 60 * 1000) {
+        if (tx.type === 'income') totalIncome90d += tx.amount;
+        else if (tx.type === 'expense') totalExpense90d += tx.amount;
+      }
+    });
+
+    const incomeAvgMonthly = daysDiff > 0 ? (totalIncome90d / daysDiff) * 30 : 0;
+    const expenseAvgMonthly = daysDiff > 0 ? (totalExpense90d / daysDiff) * 30 : 0;
+
+    const savings = incomeAvgMonthly - expenseAvgMonthly;
+    const savingsRate = incomeAvgMonthly > 0 ? (savings / incomeAvgMonthly) * 100 : 0;
+
+    let liquidCash = 0;
+    let ccDebt = 0;
+    let ccLimit = 0;
+    let receivables = 0;
+    let payables = 0;
+    let investmentsVal = 0;
+
+    let brokerAllocations: any[] = [];
+    try {
+      brokerAllocations = usePortfolioStore.getState().getAllocationData('Broker');
+    } catch (e) {
+      console.error('Failed to get broker allocations in dashboard health score:', e);
+    }
+
+    accounts.forEach((acc) => {
+      if (!acc.isArchived) {
+        if (acc.type === 'wallet' || acc.type === 'savings' || acc.type === 'emergency_fund') {
+          liquidCash += Math.max(0, acc.balance);
+        } else if (acc.type === 'credit_card') {
+          ccDebt += Math.abs(acc.balance);
+          ccLimit += acc.creditLimit || 0;
+        } else if (acc.type === 'receivable') {
+          receivables += Math.max(0, acc.balance);
+        } else if (acc.type === 'payable') {
+          payables += Math.abs(acc.balance);
+        } else if (acc.type === 'investment') {
+          if (acc.linkedBroker) {
+            const allocation = brokerAllocations.find(
+              (b) => b.name.toLowerCase().trim() === acc.linkedBroker!.toLowerCase().trim()
+            );
+            investmentsVal += allocation ? allocation.value : 0;
+          } else {
+            investmentsVal += Math.max(0, acc.balance);
+          }
+        }
+      }
+    });
+
+    const emiBurden = getMonthlyEMIBurden();
+    const dtiRatio = incomeAvgMonthly > 0 ? (emiBurden / incomeAvgMonthly) * 100 : 0;
+
+    let blockedEmiAmount = 0;
+    loans.forEach((loan) => {
+      if (loan.isActive && loan.linkedAccountId) {
+        const acc = accounts.find((a) => a.id === loan.linkedAccountId);
+        if (acc && acc.type === 'credit_card') {
+          blockedEmiAmount += loan.outstandingAmount;
+        }
+      }
+    });
+
+    const totalCCSpent = ccDebt + blockedEmiAmount;
+    const creditUtilization = ccLimit > 0 ? (totalCCSpent / ccLimit) * 100 : 0;
+
+    const totalAssets = liquidCash + receivables + investmentsVal;
+    const shortTermLiabilities = ccDebt + payables;
+    const quickRatio = shortTermLiabilities > 0 ? (liquidCash + receivables - payables) / shortTermLiabilities : (liquidCash + receivables - payables) > 0 ? 9.9 : 0;
+
+    // --- Scoring Algorithm (Max 100) ---
+    // 1. Savings Rate Score (Max 20 points)
+    let savingsScore = 0;
+    if (savingsRate >= 20) savingsScore = 20;
+    else if (savingsRate > 0) savingsScore = (savingsRate / 20) * 20;
+
+    const monthlyExpense = expenseAvgMonthly || 10000;
+    const netShortTermLiquidity = liquidCash + receivables - payables;
+    const emergencyCoverMonths = Math.max(0, netShortTermLiquidity / monthlyExpense);
+
+    // 2. Emergency Fund Score (Max 20 points)
+    let emergencyScore = 0;
+    if (emergencyCoverMonths >= 3) emergencyScore = 20;
+    else emergencyScore = (emergencyCoverMonths / 3) * 20;
+
+    // 3. DTI Score (Max 20 points)
+    let dtiScore = 0;
+    if (dtiRatio <= 15) dtiScore = 20;
+    else if (dtiRatio >= 45) dtiScore = 0;
+    else dtiScore = 20 * (1 - (dtiRatio - 15) / 30);
+
+    // 4. Credit Utilization Score (Max 15 points)
+    let utilizationScore = 15; // Default full marks if no credit limits
+    if (ccLimit > 0) {
+      if (creditUtilization <= 30) utilizationScore = 15;
+      else if (creditUtilization >= 80) utilizationScore = 0;
+      else utilizationScore = 15 * (1 - (creditUtilization - 30) / 50);
+    }
+
+    // 5. Asset Allocation Score (Max 15 points)
+    let allocationScore = 15;
+    if (totalAssets > 0) {
+      const ratio = investmentsVal / totalAssets;
+      if (ratio >= 0.30 && ratio <= 0.70) allocationScore = 15;
+      else if ((ratio >= 0.10 && ratio < 0.30) || (ratio > 0.70 && ratio <= 0.85)) allocationScore = 10;
+      else allocationScore = 5;
+    }
+
+    // 6. Quick Ratio Score (Max 10 points)
+    let quickRatioScore = 10;
+    if (shortTermLiabilities > 0) {
+      if (quickRatio >= 1.5) quickRatioScore = 10;
+      else if (quickRatio >= 1.0) quickRatioScore = 7;
+      else quickRatioScore = 2;
+    }
+
+    const totalScore = Math.round(savingsScore + emergencyScore + dtiScore + utilizationScore + allocationScore + quickRatioScore);
+
+    let grade = 'D';
+    let gradeColor = '#FF3B30';
+    if (totalScore >= 90) {
+      grade = 'A+';
+      gradeColor = '#34C759';
+    } else if (totalScore >= 80) {
+      grade = 'A';
+      gradeColor = '#34C759';
+    } else if (totalScore >= 70) {
+      grade = 'B';
+      gradeColor = '#00C9A7';
+    } else if (totalScore >= 55) {
+      grade = 'C';
+      gradeColor = '#FF9500';
+    }
+
+    return { totalScore, grade, gradeColor };
+  }, [moneyTransactions, accounts, loans, getMonthlyEMIBurden]);
 
   // Filter and limit recent transactions to show only the last transaction date's data, capped at 3
   const filteredRecentTxs = useMemo(() => {
@@ -400,6 +557,36 @@ export function MoneyDashboard() {
             </ThemedText>
           </View>
         </View>
+
+        {/* ─── Financial Health Banner ─── */}
+        <TouchableOpacity
+          style={[
+            styles.healthBannerCard,
+            {
+              backgroundColor: currColors.card,
+              borderColor: currColors.border,
+            },
+          ]}
+          activeOpacity={0.75}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push('/money-health');
+          }}
+        >
+          <View style={[styles.toolIconWrapper, { backgroundColor: 'rgba(52, 199, 89, 0.1)' }]}>
+            <Activity size={18} color="#34C759" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12, marginRight: 8 }}>
+            <ThemedText type="semiBold" style={{ fontSize: 14, color: currColors.text }}>Financial Health Score</ThemedText>
+            <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, marginTop: 2 }}>Check savings, DTI, cushion & credit stats</ThemedText>
+          </View>
+          <View style={[styles.healthBadge, { backgroundColor: `${healthSummary.gradeColor}15`, borderColor: `${healthSummary.gradeColor}30` }]}>
+            <ThemedText style={[styles.healthBadgeText, { color: healthSummary.gradeColor }]}>
+              {healthSummary.grade} • {healthSummary.totalScore}
+            </ThemedText>
+          </View>
+          <ChevronRight size={16} color={currColors.textSecondary} style={{ marginRight: 4 }} />
+        </TouchableOpacity>
 
         {/* ─── Smart Insights ─── */}
         <FinancialInsights />
@@ -934,5 +1121,37 @@ const styles = StyleSheet.create({
   emiAmountText: {
     fontSize: 14,
     fontFamily: 'Outfit_500Medium',
+  },
+
+  // ─── Health Banner ───
+  healthBannerCard: {
+    marginHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  toolIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  healthBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginRight: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  healthBadgeText: {
+    fontSize: 12,
+    fontFamily: 'Outfit_600SemiBold',
   },
 });
