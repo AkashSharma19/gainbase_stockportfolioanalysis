@@ -1,10 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Modal,
+  Pressable,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -43,6 +46,7 @@ export default function MoneyHealthScreen() {
 
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
+  const [activeModal, setActiveModal] = useState<string | null>(null);
 
   // Subscribe to portfolio transactions and tickers so net worth updates live
   const portfolioTransactions = usePortfolioStore((state) => state.transactions);
@@ -57,6 +61,95 @@ export default function MoneyHealthScreen() {
     const prefix = val < 0 ? '-' : '';
     const symbol = showCurrencySymbol ? '₹' : '';
     return `${prefix}${symbol}${formatted}`;
+  };
+
+  const renderAccountCategoryDetails = (types: string[]) => {
+    const matchingAccounts = accounts.filter(
+      (acc) => !acc.isArchived && types.includes(acc.type)
+    );
+
+    if (matchingAccounts.length === 0) {
+      return (
+        <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, marginLeft: 12, fontStyle: 'italic', marginVertical: 2 }}>
+          No accounts added
+        </ThemedText>
+      );
+    }
+
+    return matchingAccounts.map((acc) => (
+      <View key={acc.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingLeft: 16, marginVertical: 2 }}>
+        <ThemedText style={{ fontSize: 11, color: currColors.textSecondary }}>• {acc.name}</ThemedText>
+        <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }}>
+          {formatAmount(acc.balance)}
+        </ThemedText>
+      </View>
+    ));
+  };
+
+  const renderCreditCardDetails = () => {
+    const matchingAccounts = accounts.filter(
+      (acc) => !acc.isArchived && acc.type === 'credit_card'
+    );
+
+    if (matchingAccounts.length === 0) {
+      return (
+        <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, marginLeft: 12, fontStyle: 'italic', marginVertical: 2 }}>
+          No credit cards added
+        </ThemedText>
+      );
+    }
+
+    return matchingAccounts.map((acc) => (
+      <View key={acc.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingLeft: 16, marginVertical: 2 }}>
+        <ThemedText style={{ fontSize: 11, color: currColors.textSecondary }}>
+          • {acc.name} (Limit: {formatAmount(acc.creditLimit || 0)})
+        </ThemedText>
+        <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }}>
+          {formatAmount(Math.abs(acc.balance))} spent
+        </ThemedText>
+      </View>
+    ));
+  };
+
+  const renderInvestmentDetails = () => {
+    let brokerAllocations: any[] = [];
+    try {
+      brokerAllocations = usePortfolioStore.getState().getAllocationData('Broker');
+    } catch (e) {
+      console.error('Failed to get broker allocations in health screen helper:', e);
+    }
+
+    const matchingAccounts = accounts.filter(
+      (acc) => !acc.isArchived && acc.type === 'investment'
+    );
+
+    if (matchingAccounts.length === 0) {
+      return (
+        <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, marginLeft: 12, fontStyle: 'italic', marginVertical: 2 }}>
+          No investment accounts added
+        </ThemedText>
+      );
+    }
+
+    return matchingAccounts.map((acc) => {
+      let balance = acc.balance;
+      if (acc.linkedBroker) {
+        const alloc = brokerAllocations.find(
+          (b) => b.name.toLowerCase().trim() === acc.linkedBroker!.toLowerCase().trim()
+        );
+        balance = alloc ? alloc.value : 0;
+      }
+      return (
+        <View key={acc.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingLeft: 16, marginVertical: 2 }}>
+          <ThemedText style={{ fontSize: 11, color: currColors.textSecondary }}>
+            • {acc.name} {acc.linkedBroker ? `(Linked ${acc.linkedBroker})` : ''}
+          </ThemedText>
+          <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }}>
+            {formatAmount(balance)}
+          </ThemedText>
+        </View>
+      );
+    });
   };
 
   const handleHaptic = () => {
@@ -91,9 +184,15 @@ export default function MoneyHealthScreen() {
     const incomeAvgMonthly = daysDiff > 0 ? (totalIncome90d / daysDiff) * 30 : 0;
     const expenseAvgMonthly = daysDiff > 0 ? (totalExpense90d / daysDiff) * 30 : 0;
 
-    // A. Savings Rate (Target >= 20%)
-    const savings = incomeAvgMonthly - expenseAvgMonthly;
-    const savingsRate = incomeAvgMonthly > 0 ? (savings / incomeAvgMonthly) * 100 : 0;
+    // A. Savings Rate (All-time cumulative savings rate)
+    let allTimeIncome = 0;
+    let allTimeExpense = 0;
+    moneyTransactions.forEach((tx) => {
+      if (tx.type === 'income') allTimeIncome += tx.amount;
+      else if (tx.type === 'expense') allTimeExpense += tx.amount;
+    });
+    const allTimeSavings = allTimeIncome - allTimeExpense;
+    const savingsRate = allTimeIncome > 0 ? (allTimeSavings / allTimeIncome) * 100 : 0;
 
     // B. Emergency Fund Cover (Liquid net assets / avg monthly expense)
     // Liquid cash = wallet + savings + emergency_fund
@@ -138,7 +237,7 @@ export default function MoneyHealthScreen() {
     const monthlyExpense = expenseAvgMonthly || 10000; // default fallback to prevent NaN
     // Net short term liquidity = liquid cash + receivables - payables (excluding long term investments)
     const netShortTermLiquidity = liquidCash + receivables - payables;
-    const emergencyCoverMonths = Math.max(0, netShortTermLiquidity / monthlyExpense);
+    const emergencyCoverMonths = Math.max(0, liquidCash / monthlyExpense);
 
     // C. Debt-to-Income (DTI) Ratio (EMI / Income)
     const emiBurden = getMonthlyEMIBurden();
@@ -233,6 +332,7 @@ export default function MoneyHealthScreen() {
       expense30d: expenseAvgMonthly,
       savingsRate,
       liquidCash,
+      netShortTermLiquidity,
       emergencyCoverMonths,
       emiBurden,
       dtiRatio,
@@ -242,6 +342,13 @@ export default function MoneyHealthScreen() {
       investmentRatio,
       shortTermLiabilities,
       quickRatio,
+      allTimeIncome,
+      allTimeExpense,
+      ccDebt,
+      blockedEmiAmount,
+      investmentsVal,
+      receivables,
+      payables,
       totalScore,
       grade,
       gradeColor,
@@ -311,7 +418,14 @@ export default function MoneyHealthScreen() {
 
         <View style={styles.metricsContainer}>
           {/* 1. Savings Rate */}
-          <View style={[styles.metricCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <TouchableOpacity
+            style={[styles.metricCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+            activeOpacity={0.75}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setActiveModal('savings');
+            }}
+          >
             <View style={styles.metricHeader}>
               <View style={styles.metricHeaderLeft}>
                 <View style={[styles.iconBox, { backgroundColor: 'rgba(52, 199, 89, 0.1)' }]}>
@@ -344,10 +458,22 @@ export default function MoneyHealthScreen() {
                 ? 'Excellent saving habits! You are retaining a healthy portion of your monthly income.'
                 : 'Consider identifying and pausing non-essential subscriptions or spending to bump up your savings rate.'}
             </ThemedText>
-          </View>
+            <View style={[styles.formulaBox, { backgroundColor: currColors.cardSecondary }]}>
+              <ThemedText style={[styles.formulaText, { color: currColors.textSecondary }]}>
+                Formula: (All-Time Income - All-Time Expense) / All-Time Income
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
 
           {/* 2. Emergency Cushion */}
-          <View style={[styles.metricCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <TouchableOpacity
+            style={[styles.metricCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+            activeOpacity={0.75}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setActiveModal('emergency');
+            }}
+          >
             <View style={styles.metricHeader}>
               <View style={styles.metricHeaderLeft}>
                 <View style={[styles.iconBox, { backgroundColor: 'rgba(0, 122, 255, 0.1)' }]}>
@@ -378,12 +504,54 @@ export default function MoneyHealthScreen() {
             <ThemedText style={[styles.metricAdvice, { color: currColors.textSecondary }]}>
               {healthData.emergencyCoverMonths >= 3
                 ? 'Great security cushion. Your reserves can support you through unexpected financial shocks.'
-                : `Your current emergency buffer is low (${formatAmount(healthData.liquidCash)}). Try storing away 3 months of expenses.`}
+                : `Your current emergency buffer is low (${formatAmount(healthData.liquidCash)}). Try storing away at least 3 months of expenses.`}
             </ThemedText>
-          </View>
+
+            <View style={{ marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: currColors.border, gap: 6 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <ThemedText style={{ fontSize: 12, color: currColors.textSecondary }}>6-Month Safety Target:</ThemedText>
+                <ThemedText style={{ fontSize: 12, color: currColors.text, fontFamily: 'Outfit_600SemiBold' }}>
+                  {formatAmount(healthData.expense30d * 6)}
+                </ThemedText>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <ThemedText style={{ fontSize: 12, color: currColors.textSecondary }}>Current Liquid Cash:</ThemedText>
+                <ThemedText style={{ fontSize: 12, color: currColors.text, fontFamily: 'Outfit_600SemiBold' }}>
+                  {formatAmount(healthData.liquidCash)}
+                </ThemedText>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+                <ThemedText style={{ fontSize: 12, color: currColors.textSecondary }}>
+                  {healthData.liquidCash >= (healthData.expense30d * 6) ? 'Surplus Amount:' : 'Shortfall Amount:'}
+                </ThemedText>
+                <ThemedText style={{
+                  fontSize: 12,
+                  fontFamily: 'Outfit_600SemiBold',
+                  color: healthData.liquidCash >= (healthData.expense30d * 6) ? '#34C759' : '#FF3B30'
+                }}>
+                  {healthData.liquidCash >= (healthData.expense30d * 6)
+                    ? `+${formatAmount(healthData.liquidCash - (healthData.expense30d * 6))}`
+                    : `-${formatAmount((healthData.expense30d * 6) - healthData.liquidCash)}`
+                  }
+                </ThemedText>
+              </View>
+            </View>
+            <View style={[styles.formulaBox, { backgroundColor: currColors.cardSecondary }]}>
+              <ThemedText style={[styles.formulaText, { color: currColors.textSecondary }]}>
+                Formula: (Savings + Wallet + Emergency Fund) / Avg. Monthly Expense
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
 
           {/* 3. Debt-to-Income (DTI) */}
-          <View style={[styles.metricCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <TouchableOpacity
+            style={[styles.metricCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+            activeOpacity={0.75}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setActiveModal('dti');
+            }}
+          >
             <View style={styles.metricHeader}>
               <View style={styles.metricHeaderLeft}>
                 <View style={[styles.iconBox, { backgroundColor: 'rgba(175, 82, 222, 0.1)' }]}>
@@ -416,10 +584,22 @@ export default function MoneyHealthScreen() {
                 ? 'Your monthly EMI repayment burden is in a healthy, manageable range.'
                 : 'A high DTI limits financial flexibility. Focus on clearing outstanding loan principals early.'}
             </ThemedText>
-          </View>
+            <View style={[styles.formulaBox, { backgroundColor: currColors.cardSecondary }]}>
+              <ThemedText style={[styles.formulaText, { color: currColors.textSecondary }]}>
+                Formula: Total Monthly EMI Obligations / Avg. Monthly Income
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
 
           {/* 4. Credit Utilization */}
-          <View style={[styles.metricCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <TouchableOpacity
+            style={[styles.metricCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+            activeOpacity={0.75}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setActiveModal('utilization');
+            }}
+          >
             <View style={styles.metricHeader}>
               <View style={styles.metricHeaderLeft}>
                 <View style={[styles.iconBox, { backgroundColor: 'rgba(255, 149, 0, 0.1)' }]}>
@@ -454,10 +634,22 @@ export default function MoneyHealthScreen() {
                 ? 'Excellent credit discipline. Your usage keeps your credit score in prime condition.'
                 : 'Consider paying credit card bills twice a month to reduce reporting utilization percentages.'}
             </ThemedText>
-          </View>
+            <View style={[styles.formulaBox, { backgroundColor: currColors.cardSecondary }]}>
+              <ThemedText style={[styles.formulaText, { color: currColors.textSecondary }]}>
+                Formula: (Credit Card Balance + Blocked EMIs) / Total Credit Limits
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
 
           {/* 5. Asset Allocation (Compounding Yield) */}
-          <View style={[styles.metricCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <TouchableOpacity
+            style={[styles.metricCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+            activeOpacity={0.75}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setActiveModal('allocation');
+            }}
+          >
             <View style={styles.metricHeader}>
               <View style={styles.metricHeaderLeft}>
                 <View style={[styles.iconBox, { backgroundColor: 'rgba(90, 200, 250, 0.1)' }]}>
@@ -494,10 +686,22 @@ export default function MoneyHealthScreen() {
                 ? 'You are holding too much low-yield cash. Consider investing surplus funds in stocks or index mutual funds.'
                 : 'Over-allocated in investments with low emergency cash reserves. Liquidate some assets to form cash reserves.'}
             </ThemedText>
-          </View>
+            <View style={[styles.formulaBox, { backgroundColor: currColors.cardSecondary }]}>
+              <ThemedText style={[styles.formulaText, { color: currColors.textSecondary }]}>
+                Formula: Long-Term Investments / (Liquid Cash + Receivables + Investments)
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
 
           {/* 6. Short-Term Liquidity (Quick Ratio) */}
-          <View style={[styles.metricCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <TouchableOpacity
+            style={[styles.metricCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
+            activeOpacity={0.75}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setActiveModal('quickRatio');
+            }}
+          >
             <View style={styles.metricHeader}>
               <View style={styles.metricHeaderLeft}>
                 <View style={[styles.iconBox, { backgroundColor: 'rgba(52, 199, 89, 0.1)' }]}>
@@ -532,9 +736,309 @@ export default function MoneyHealthScreen() {
                 ? 'Excellent coverage. Short term liquid assets easily cover your immediate liabilities.'
                 : 'Caution: Short term debts are high compared to liquid cash. Pay off card bills to avoid high interest charges.'}
             </ThemedText>
-          </View>
+            <View style={[styles.formulaBox, { backgroundColor: currColors.cardSecondary }]}>
+              <ThemedText style={[styles.formulaText, { color: currColors.textSecondary }]}>
+                Formula (Quick Ratio): (Liquid Cash + Receivables - Payables) / (Credit Card Balances + Payables)
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Dynamic Calculation Details Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={activeModal !== null}
+        onRequestClose={() => setActiveModal(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setActiveModal(null)} />
+          <View style={[styles.modalContent, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+              {/* Drag Indicator / Bar */}
+              <View style={[styles.dragHandle, { backgroundColor: currColors.border }]} />
+
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <ThemedText type="bold" style={[styles.modalTitle, { color: currColors.text }]}>
+                  {activeModal === 'savings' && 'Savings Rate Calculation'}
+                  {activeModal === 'emergency' && 'Emergency Cushion Calculation'}
+                  {activeModal === 'dti' && 'Debt-to-Income Calculation'}
+                  {activeModal === 'utilization' && 'Credit Utilization Calculation'}
+                  {activeModal === 'allocation' && 'Asset Allocation Calculation'}
+                  {activeModal === 'quickRatio' && 'Short-Term Liquidity (Quick Ratio)'}
+                </ThemedText>
+                <TouchableOpacity
+                  style={[styles.modalCloseBtn, { backgroundColor: currColors.cardSecondary }]}
+                  onPress={() => setActiveModal(null)}
+                >
+                  <ThemedText style={{ fontSize: 13, color: currColors.text }}>✕</ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              {/* Data Table */}
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+                {activeModal === 'savings' && (
+                  <>
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>All-Time Income</ThemedText>
+                      <ThemedText style={{ color: currColors.text, fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.allTimeIncome)}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>All-Time Expenses</ThemedText>
+                      <ThemedText style={{ color: '#FF3B30', fontFamily: 'Outfit_600SemiBold' }}>
+                        -{formatAmount(healthData.allTimeExpense)}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.dividerLight} />
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>All-Time Net Savings</ThemedText>
+                      <ThemedText style={{ color: '#34C759', fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.allTimeIncome - healthData.allTimeExpense)}
+                      </ThemedText>
+                    </View>
+                    <View style={[styles.formulaBox, { backgroundColor: currColors.cardSecondary, marginTop: 16 }]}>
+                      <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontFamily: 'Outfit_700Bold', marginBottom: 4 }}>FORMULA USED:</ThemedText>
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_500Medium' }}>
+                        (Savings / Income) × 100 = {healthData.savingsRate.toFixed(1)}%
+                      </ThemedText>
+                    </View>
+                  </>
+                )}
+
+                {activeModal === 'emergency' && (
+                  <>
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary, fontFamily: 'Outfit_600SemiBold' }}>Total Liquid Cash</ThemedText>
+                      <ThemedText style={{ color: currColors.text, fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.liquidCash)}
+                      </ThemedText>
+                    </View>
+                    {/* Category breakdowns */}
+                    <View style={{ marginVertical: 4 }}>
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_600SemiBold', marginTop: 4 }}>Savings Accounts:</ThemedText>
+                      {renderAccountCategoryDetails(['savings'])}
+                      
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_600SemiBold', marginTop: 4 }}>Cash & Wallets:</ThemedText>
+                      {renderAccountCategoryDetails(['wallet'])}
+
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_600SemiBold', marginTop: 4 }}>Emergency Funds:</ThemedText>
+                      {renderAccountCategoryDetails(['emergency_fund'])}
+                    </View>
+                    <View style={styles.dividerLight} />
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>Avg. Monthly Expense (3M)</ThemedText>
+                      <ThemedText style={{ color: '#FF3B30', fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.expense30d)}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.dividerLight} />
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>Cushion Runway</ThemedText>
+                      <ThemedText style={{ color: '#007AFF', fontFamily: 'Outfit_600SemiBold' }}>
+                        {healthData.emergencyCoverMonths.toFixed(1)} Months
+                      </ThemedText>
+                    </View>
+                    <View style={[styles.formulaBox, { backgroundColor: currColors.cardSecondary, marginTop: 16 }]}>
+                      <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontFamily: 'Outfit_700Bold', marginBottom: 4 }}>FORMULA USED:</ThemedText>
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_500Medium' }}>
+                        (Savings + Wallet + Emergency Fund) / Avg. Monthly Expense = {healthData.emergencyCoverMonths.toFixed(1)} Months
+                      </ThemedText>
+                    </View>
+                  </>
+                )}
+
+                {activeModal === 'dti' && (
+                  <>
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary, fontFamily: 'Outfit_600SemiBold' }}>Total Monthly EMIs</ThemedText>
+                      <ThemedText style={{ color: '#FF9500', fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.emiBurden)}
+                      </ThemedText>
+                    </View>
+                    {/* Active Loans */}
+                    <View style={{ marginVertical: 4 }}>
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_600SemiBold', marginTop: 4 }}>Active Loans (EMI contributions):</ThemedText>
+                      {loans.filter(l => l.isActive).length === 0 ? (
+                        <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, marginLeft: 12, fontStyle: 'italic', marginVertical: 2 }}>No active loans</ThemedText>
+                      ) : (
+                        loans.filter(l => l.isActive).map(l => (
+                          <View key={l.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingLeft: 16, marginVertical: 2 }}>
+                            <ThemedText style={{ fontSize: 11, color: currColors.textSecondary }}>• {l.name}</ThemedText>
+                            <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }}>
+                              {formatAmount(l.emiAmount)}/mo
+                            </ThemedText>
+                          </View>
+                        ))
+                      )}
+                    </View>
+                    <View style={styles.dividerLight} />
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>Avg. Monthly Income (3M)</ThemedText>
+                      <ThemedText style={{ color: currColors.text, fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.income30d)}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.dividerLight} />
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>Debt-to-Income Ratio</ThemedText>
+                      <ThemedText style={{ color: healthData.dtiRatio <= 30 ? '#34C759' : '#FF3B30', fontFamily: 'Outfit_600SemiBold' }}>
+                        {healthData.dtiRatio.toFixed(1)}%
+                      </ThemedText>
+                    </View>
+                    <View style={[styles.formulaBox, { backgroundColor: currColors.cardSecondary, marginTop: 16 }]}>
+                      <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontFamily: 'Outfit_700Bold', marginBottom: 4 }}>FORMULA USED:</ThemedText>
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_500Medium' }}>
+                        (EMI / Income) × 100 = {healthData.dtiRatio.toFixed(1)}%
+                      </ThemedText>
+                    </View>
+                  </>
+                )}
+
+                {activeModal === 'utilization' && (
+                  <>
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary, fontFamily: 'Outfit_600SemiBold' }}>Credit Card Accounts details:</ThemedText>
+                    </View>
+                    <View style={{ marginVertical: 4 }}>
+                      {renderCreditCardDetails()}
+                    </View>
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>Blocked EMI Balances</ThemedText>
+                      <ThemedText style={{ color: currColors.text, fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.blockedEmiAmount)}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>Total CC Spent (A)</ThemedText>
+                      <ThemedText style={{ color: '#FF9500', fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.ccDebt + healthData.blockedEmiAmount)}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>Total Limits (B)</ThemedText>
+                      <ThemedText style={{ color: currColors.text, fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.ccLimit)}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.dividerLight} />
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>Utilization Ratio</ThemedText>
+                      <ThemedText style={{ color: healthData.creditUtilization <= 30 ? '#34C759' : '#FF3B30', fontFamily: 'Outfit_600SemiBold' }}>
+                        {healthData.ccLimit > 0 ? `${healthData.creditUtilization.toFixed(1)}%` : '0.0%'}
+                      </ThemedText>
+                    </View>
+                    <View style={[styles.formulaBox, { backgroundColor: currColors.cardSecondary, marginTop: 16 }]}>
+                      <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontFamily: 'Outfit_700Bold', marginBottom: 4 }}>FORMULA USED:</ThemedText>
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_500Medium' }}>
+                        (Spent / Limits) × 100 = {healthData.creditUtilization.toFixed(1)}%
+                      </ThemedText>
+                    </View>
+                  </>
+                )}
+
+                {activeModal === 'allocation' && (
+                  <>
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary, fontFamily: 'Outfit_600SemiBold' }}>Investments Val (A)</ThemedText>
+                      <ThemedText style={{ color: '#5AC8FA', fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.investmentsVal)}
+                      </ThemedText>
+                    </View>
+                    <View style={{ marginVertical: 4 }}>
+                      {renderInvestmentDetails()}
+                    </View>
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary, fontFamily: 'Outfit_600SemiBold' }}>Liquid Cash</ThemedText>
+                      <ThemedText style={{ color: currColors.text, fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.liquidCash)}
+                      </ThemedText>
+                    </View>
+                    <View style={{ marginVertical: 4 }}>
+                      {renderAccountCategoryDetails(['savings', 'wallet', 'emergency_fund'])}
+                    </View>
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary, fontFamily: 'Outfit_600SemiBold' }}>Receivables</ThemedText>
+                      <ThemedText style={{ color: currColors.text, fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.receivables)}
+                      </ThemedText>
+                    </View>
+                    <View style={{ marginVertical: 4 }}>
+                      {renderAccountCategoryDetails(['receivable'])}
+                    </View>
+                    <View style={styles.dividerLight} />
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>Total Assets (B)</ThemedText>
+                      <ThemedText style={{ color: currColors.text, fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.totalAssets)}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.dividerLight} />
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>Investment Ratio</ThemedText>
+                      <ThemedText style={{ color: healthData.investmentRatio >= 30 && healthData.investmentRatio <= 70 ? '#34C759' : '#FF9500', fontFamily: 'Outfit_600SemiBold' }}>
+                        {healthData.investmentRatio.toFixed(1)}%
+                      </ThemedText>
+                    </View>
+                    <View style={[styles.formulaBox, { backgroundColor: currColors.cardSecondary, marginTop: 16 }]}>
+                      <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontFamily: 'Outfit_700Bold', marginBottom: 4 }}>FORMULA USED:</ThemedText>
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_500Medium' }}>
+                        (Investments / Total Assets) × 100 = {healthData.investmentRatio.toFixed(1)}%
+                      </ThemedText>
+                    </View>
+                  </>
+                )}
+
+                {activeModal === 'quickRatio' && (
+                  <>
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary, fontFamily: 'Outfit_600SemiBold' }}>Short-Term Assets (A)</ThemedText>
+                      <ThemedText style={{ color: '#34C759', fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.liquidCash + healthData.receivables - healthData.payables)}
+                      </ThemedText>
+                    </View>
+                    <View style={{ marginVertical: 4 }}>
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_600SemiBold', marginTop: 4 }}>Savings, Cash & Emergency:</ThemedText>
+                      {renderAccountCategoryDetails(['savings', 'wallet', 'emergency_fund'])}
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_600SemiBold', marginTop: 4 }}>Receivables:</ThemedText>
+                      {renderAccountCategoryDetails(['receivable'])}
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_600SemiBold', marginTop: 4 }}>Payables:</ThemedText>
+                      {renderAccountCategoryDetails(['payable'])}
+                    </View>
+                    <View style={styles.dividerLight} />
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary, fontFamily: 'Outfit_600SemiBold' }}>Short-Term Liabilities (B)</ThemedText>
+                      <ThemedText style={{ color: '#FF3B30', fontFamily: 'Outfit_600SemiBold' }}>
+                        {formatAmount(healthData.shortTermLiabilities)}
+                      </ThemedText>
+                    </View>
+                    <View style={{ marginVertical: 4 }}>
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_600SemiBold', marginTop: 4 }}>Credit Cards:</ThemedText>
+                      {renderCreditCardDetails()}
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_600SemiBold', marginTop: 4 }}>Payables:</ThemedText>
+                      {renderAccountCategoryDetails(['payable'])}
+                    </View>
+                    <View style={styles.dividerLight} />
+                    <View style={styles.modalRow}>
+                      <ThemedText style={{ color: currColors.textSecondary }}>Quick Ratio</ThemedText>
+                      <ThemedText style={{ color: healthData.quickRatio >= 1.5 ? '#34C759' : '#FF9500', fontFamily: 'Outfit_600SemiBold' }}>
+                        {healthData.shortTermLiabilities > 0 ? `${healthData.quickRatio.toFixed(1)}x` : 'Infinite'}
+                      </ThemedText>
+                    </View>
+                    <View style={[styles.formulaBox, { backgroundColor: currColors.cardSecondary, marginTop: 16 }]}>
+                      <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontFamily: 'Outfit_700Bold', marginBottom: 4 }}>FORMULA USED:</ThemedText>
+                      <ThemedText style={{ fontSize: 11, color: currColors.text, fontFamily: 'Outfit_500Medium' }}>
+                        Short-Term Assets / Short-Term Liabilities = {healthData.shortTermLiabilities > 0 ? `${healthData.quickRatio.toFixed(1)}x` : 'Perfect'}
+                      </ThemedText>
+                    </View>
+                  </>
+                )}
+              </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -655,5 +1159,76 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
     lineHeight: 16,
+  },
+  formulaBox: {
+    marginTop: 12,
+    padding: 8,
+    borderRadius: 8,
+  },
+  formulaText: {
+    fontSize: 9.5,
+    fontFamily: 'Outfit_500Medium',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    width: '100%',
+    maxHeight: '75%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+  },
+  dragHandle: {
+    width: 36,
+    height: 5,
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontFamily: 'Outfit_600SemiBold',
+    flex: 1,
+    marginRight: 10,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalScroll: {
+    paddingBottom: 20,
+    gap: 12,
+  },
+  modalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  dividerLight: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginVertical: 6,
   },
 });

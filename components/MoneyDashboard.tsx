@@ -241,8 +241,15 @@ export function MoneyDashboard() {
     const incomeAvgMonthly = daysDiff > 0 ? (totalIncome90d / daysDiff) * 30 : 0;
     const expenseAvgMonthly = daysDiff > 0 ? (totalExpense90d / daysDiff) * 30 : 0;
 
-    const savings = incomeAvgMonthly - expenseAvgMonthly;
-    const savingsRate = incomeAvgMonthly > 0 ? (savings / incomeAvgMonthly) * 100 : 0;
+    // A. Savings Rate (All-time cumulative savings rate)
+    let allTimeIncome = 0;
+    let allTimeExpense = 0;
+    moneyTransactions.forEach((tx) => {
+      if (tx.type === 'income') allTimeIncome += tx.amount;
+      else if (tx.type === 'expense') allTimeExpense += tx.amount;
+    });
+    const allTimeSavings = allTimeIncome - allTimeExpense;
+    const savingsRate = allTimeIncome > 0 ? (allTimeSavings / allTimeIncome) * 100 : 0;
 
     let liquidCash = 0;
     let ccDebt = 0;
@@ -309,8 +316,7 @@ export function MoneyDashboard() {
     else if (savingsRate > 0) savingsScore = (savingsRate / 20) * 20;
 
     const monthlyExpense = expenseAvgMonthly || 10000;
-    const netShortTermLiquidity = liquidCash + receivables - payables;
-    const emergencyCoverMonths = Math.max(0, netShortTermLiquidity / monthlyExpense);
+    const emergencyCoverMonths = Math.max(0, liquidCash / monthlyExpense);
 
     // 2. Emergency Fund Score (Max 20 points)
     let emergencyScore = 0;
