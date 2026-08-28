@@ -115,7 +115,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 ### 2. `usePortfolioStore` (`portfolio-storage`)
 *   **State**:
     *   `transactions`: Complete list of stock/ETF transactions (`id`, `symbol`, `type` [BUY/SELL], `quantity`, `price`, `date`, `broker`).
-    *   `tickers`: Array of ticker metadata (yesterday close, current price, company name, asset type, sector, etc.) fetched from Google sheet sync endpoints.
+    *   `tickers`: Array of ticker metadata (yesterday close, current price, company name, asset type, sector, etc.) fetched from the `public.tickers` table in Supabase (which is populated via a Google Apps Script push trigger from the Google Sheet).
     *   `isPrivacyMode`: Boolean.
     *   `showCurrencySymbol`: Boolean (shows or hides `₹`).
     *   `theme`: `'system' | 'light' | 'dark'`.
@@ -194,14 +194,21 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 *   **Location**: [backgroundFetch.ts](file:///Users/akashsharma/Documents/Gainbase/tasks/backgroundFetch.ts)
 *   **Behavior**: Fires periodically (every 24 hours) in the background. Attempts to serialize user transactions/portfolio data to `Gainbase/data.json` under `FileSystem.documentDirectory` for secure local backup.
 
-### B. Supabase Cloud Sync
-*   **Location**: [syncEngine.ts](file:///Users/akashsharma/Documents/Gainbase/utils/syncEngine.ts)
-*   **Behavior**: 
+### B. Supabase Cloud Sync & Authentication
+*   **Location**: [syncEngine.ts](file:///Users/akashsharma/Documents/Gainbase/utils/syncEngine.ts) & [cloud-backup.tsx](file:///Users/akashsharma/Documents/Gainbase/app/cloud-backup.tsx)
+*   **Authentication Methods**: Supports standard Email/Password authentication and Native Google Sign-In (`@react-native-google-signin/google-signin`). Supabase is configured to link accounts with the same email, allowing seamless login method migration.
+*   **Sync Behavior**: 
     1.  Automatically triggers on app launch (once local Zustand persist hydration from AsyncStorage finishes) and manual trigger on the Cloud Sync screen.
     2.  Compares local and remote database rows by unique `id` and `updatedAt` timestamps.
     3.  Upserts new/edited items in batch to Supabase.
     4.  Processes deletions (marked `is_deleted = true` in Supabase) to synchronize removals without data loss.
     5.  Syncs the `logo` column for accounts (added to local store and remote Supabase db table `accounts`).
+
+### C. Ticker Price Synchronization
+*   **Behavior**:
+    1. A time-driven trigger in Google Apps Script executes periodically (e.g. every 5 minutes).
+    2. The script extracts active tickers, prices, and header branding configurations from the Google Sheet and performs a bulk upsert to the Supabase database tables `public.tickers` and `public.global_configs` (using the service_role key to bypass RLS).
+    3. The React Native application queries Supabase directly in `store/usePortfolioStore.ts` via `fetchTickers()`, transforming the database rows back into the local `tickers` state representation.
 
 ## 7. Maintenance Protocol for AI Agents
 

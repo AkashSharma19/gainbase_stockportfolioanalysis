@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { API_CONFIG } from '../constants/Api';
 import { calculateXIRR } from '../lib/finance';
 import { PortfolioSummary, Ticker, Transaction } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface PortfolioState {
   transactions: Transaction[];
@@ -98,24 +98,64 @@ export const usePortfolioStore = create<PortfolioState>()(
           ),
         })),
       fetchTickers: async () => {
-        if (!API_CONFIG.WEB_APP_URL) return;
         try {
-          const response = await fetch(
-            `${API_CONFIG.WEB_APP_URL}?action=get_tickers`,
-          );
-          const result = await response.json();
-          if (result.ok) {
-            const logo = result.config?.headerLogo || result.headerLogo || null;
-            const link = result.config?.headerLink || result.headerLink || null;
+          // 1. Fetch Tickers from Supabase
+          const { data: tickersData, error: tickersError } = await supabase
+            .from('tickers')
+            .select('*');
+
+          if (tickersError) throw tickersError;
+
+          // 2. Fetch Global Configs from Supabase
+          const { data: configsData, error: configsError } = await supabase
+            .from('global_configs')
+            .select('*');
+
+          if (configsError) {
+            console.warn('Failed to fetch global configs:', configsError);
+          }
+
+          let logo: string | null = null;
+          let link: string | null = null;
+
+          if (configsData) {
+            const logoConfig = configsData.find((c: any) => c.key === 'header_logo');
+            const linkConfig = configsData.find((c: any) => c.key === 'header_link');
+            logo = logoConfig?.value?.url || null;
+            link = linkConfig?.value?.url || null;
+          }
+
+          if (tickersData) {
+            // Map the database snake_case fields back to the format the UI expects
+            const mappedTickers: Ticker[] = tickersData.map((t: any) => {
+              const historicalData = t.historical_data || {};
+              return {
+                Tickers: t.ticker,
+                'Current Value': Number(t.current_value),
+                'Company Name': t.company_name,
+                'Asset Type': t.asset_type,
+                Sector: t.sector,
+                'Yesterday Close': t.yesterday_close !== null ? Number(t.yesterday_close) : undefined,
+                High52: t.high_52 !== null ? Number(t.high_52) : undefined,
+                Low52: t.low_52 !== null ? Number(t.low_52) : undefined,
+                Logo: t.logo,
+                'Market Cap': t.market_cap,
+                PE: t.pe !== null ? Number(t.pe) : null,
+                DividendYield: t.dividend_yield !== null ? Number(t.dividend_yield) : null,
+                DebtToEquity: t.debt_to_equity !== null ? Number(t.debt_to_equity) : null,
+                ...historicalData,
+              };
+            });
+
             set({
-              tickers: result.data,
+              tickers: mappedTickers,
               headerLogo: logo,
               headerLink: link,
               lastSyncedAt: Date.now(),
             });
           }
         } catch (error) {
-          console.error('Failed to fetch tickers:', error);
+          console.error('Failed to fetch tickers from Supabase:', error);
         }
       },
       calculateSummary: () => {

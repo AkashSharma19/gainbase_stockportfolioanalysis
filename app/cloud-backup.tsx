@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   useColorScheme,
+  NativeModules,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
@@ -27,7 +28,8 @@ import {
   Activity,
   Smartphone,
   Layers,
-  Trash2
+  Trash2,
+  Chrome
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
@@ -36,6 +38,10 @@ import { syncAllData, wipeCloudData } from '../utils/syncEngine';
 import { useMoneyStore } from '../store/useMoneyStore';
 import { usePortfolioStore } from '../store/usePortfolioStore';
 import Colors from '../constants/Colors';
+
+// Replace these with your actual OAuth Client IDs from Google Cloud Console
+const GOOGLE_WEB_CLIENT_ID: string = '764532668669-scdjerdm89tamds3q2cf1ll5g1budmdl.apps.googleusercontent.com';
+const GOOGLE_IOS_CLIENT_ID: string = '764532668669-npu54g1tpop5cc1nhloua5fbmh144sb5.apps.googleusercontent.com';
 
 export default function CloudBackupScreen() {
   const router = useRouter();
@@ -63,6 +69,26 @@ export default function CloudBackupScreen() {
   const lastSyncedAt = usePortfolioStore((state) => state.lastSyncedAt);
 
   useEffect(() => {
+    // Configure Google Sign-In dynamically only if the native module is available
+    if (NativeModules.RNGoogleSignin) {
+      try {
+        const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+        GoogleSignin.configure({
+          webClientId: GOOGLE_WEB_CLIENT_ID.endsWith('YOUR_GOOGLE_WEB_CLIENT_ID') 
+            ? undefined 
+            : GOOGLE_WEB_CLIENT_ID,
+          iosClientId: GOOGLE_IOS_CLIENT_ID.endsWith('YOUR_GOOGLE_IOS_CLIENT_ID') 
+            ? undefined 
+            : GOOGLE_IOS_CLIENT_ID,
+          offlineAccess: true,
+        });
+      } catch (e) {
+        console.warn('Failed to configure Google Sign-In:', e);
+      }
+    } else {
+      console.warn('Google Sign-In native module is not registered in this binary. Ensure you run custom native builds to test Google login.');
+    }
+
     // Check initial session
     checkSession();
   }, []);
@@ -92,6 +118,60 @@ export default function CloudBackupScreen() {
 
   const handleHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleGoogleSignIn = async () => {
+    handleHaptic();
+    
+    if (
+      GOOGLE_WEB_CLIENT_ID === 'YOUR_GOOGLE_WEB_CLIENT_ID' ||
+      GOOGLE_IOS_CLIENT_ID === 'YOUR_GOOGLE_IOS_CLIENT_ID'
+    ) {
+      Alert.alert(
+        'Setup Required',
+        'Please configure your Google Client IDs in app/cloud-backup.tsx before testing Google Sign-In.'
+      );
+      return;
+    }
+
+    if (!NativeModules.RNGoogleSignin) {
+      Alert.alert(
+        'Google Sign-In Unavailable',
+        'Google Sign-In native module was not found in this binary. Please compile your project using npx expo run:ios (or run:android) instead of Expo Go.'
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+      await GoogleSignin.hasPlayServices();
+      const userInfo = (await GoogleSignin.signIn()) as any;
+      const idToken = userInfo.data?.idToken || userInfo.idToken;
+
+      if (!idToken) {
+        throw new Error('Google Sign-In failed to return an ID Token.');
+      }
+
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+
+      if (error) throw error;
+
+      setIsLoggedIn(true);
+      setUserEmail(data.user?.email || '');
+      Alert.alert('Logged In', 'Successfully signed in with Google!');
+
+      // Trigger initial sync after login
+      triggerSync();
+    } catch (error: any) {
+      console.error('Google Auth Error:', error);
+      Alert.alert('Google Sign-In Failed', error.message || 'An error occurred during Google Sign-In.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAuth = async () => {
@@ -435,6 +515,23 @@ export default function CloudBackupScreen() {
                     </Text>
                   )}
                 </TouchableOpacity>
+
+                <View style={styles.dividerRow}>
+                  <View style={[styles.dividerLine, { backgroundColor: currColors.border }]} />
+                  <Text style={[styles.dividerText, { color: currColors.textSecondary }]}>or</Text>
+                  <View style={[styles.dividerLine, { backgroundColor: currColors.border }]} />
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.googleButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}
+                  onPress={handleGoogleSignIn}
+                  disabled={loading}
+                >
+                  <Chrome size={20} color={currColors.text} style={styles.googleIcon} />
+                  <Text style={[styles.googleButtonText, { color: currColors.text }]}>
+                    Continue with Google
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}
@@ -674,6 +771,36 @@ const styles = StyleSheet.create({
   },
   authButtonText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 14,
+    fontFamily: 'Outfit_400Regular',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 54,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  googleIcon: {
+    marginRight: 10,
+  },
+  googleButtonText: {
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Outfit_600SemiBold',
