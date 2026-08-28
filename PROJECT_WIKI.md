@@ -196,7 +196,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 
 ### B. Supabase Cloud Sync & Authentication
 *   **Location**: [syncEngine.ts](file:///Users/akashsharma/Documents/Gainbase/utils/syncEngine.ts) & [cloud-backup.tsx](file:///Users/akashsharma/Documents/Gainbase/app/cloud-backup.tsx)
-*   **Authentication Methods**: Supports standard Email/Password authentication and Native Google Sign-In (`@react-native-google-signin/google-signin`). Supabase is configured to link accounts with the same email, allowing seamless login method migration.
+*   **Authentication Methods**: Supports Native Google Sign-In (`@react-native-google-signin/google-signin`).
 *   **Sync Behavior**: 
     1.  Automatically triggers on app launch (once local Zustand persist hydration from AsyncStorage finishes) and manual trigger on the Cloud Sync screen.
     2.  Compares local and remote database rows by unique `id` and `updatedAt` timestamps.
@@ -218,4 +218,4 @@ Whenever you make updates to the Gainbase codebase:
 3.  **Commit Document**: Keep the wiki updated in the same pull request or tool execution stream as your implementation.
 
 ---
-*Wiki last updated: August 22, 2026*
+*Wiki last updated: August 28, 2026*

@@ -3,13 +3,10 @@ import {
   StyleSheet,
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
   useColorScheme,
   NativeModules,
 } from 'react-native';
@@ -18,13 +15,9 @@ import { useRouter, Stack } from 'expo-router';
 import { 
   Cloud, 
   CloudOff, 
-  Lock, 
-  Mail, 
   ArrowLeft, 
-  CheckCircle2, 
   LogOut, 
   RefreshCw, 
-  User, 
   Activity,
   Smartphone,
   Layers,
@@ -51,9 +44,6 @@ export default function CloudBackupScreen() {
   // Auth states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState('');
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Sync states
@@ -174,49 +164,7 @@ export default function CloudBackupScreen() {
     }
   };
 
-  const handleAuth = async () => {
-    handleHaptic();
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Required Fields', 'Please fill in both email and password.');
-      return;
-    }
 
-    setLoading(true);
-    try {
-      if (authMode === 'signin') {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password,
-        });
-        if (error) throw error;
-        
-        setIsLoggedIn(true);
-        setUserEmail(data.user?.email || '');
-        Alert.alert('Logged In', 'Successfully signed in to Cloud Sync!');
-        
-        // Trigger initial sync after login
-        triggerSync();
-      } else {
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password: password,
-        });
-        if (error) throw error;
-        
-        Alert.alert(
-          'Account Created',
-          'Please check your email inbox to verify your account registration, then sign in.'
-        );
-        setAuthMode('signin');
-      }
-      setPassword('');
-    } catch (error: any) {
-      console.error('Auth Error:', error);
-      Alert.alert('Authentication Failed', error.message || 'An error occurred.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLogout = async () => {
     handleHaptic();
@@ -316,11 +264,7 @@ export default function CloudBackupScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: currColors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <View style={styles.header}>
+      <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <ArrowLeft size={24} color={currColors.text} />
           </TouchableOpacity>
@@ -420,123 +364,35 @@ export default function CloudBackupScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            // LOG IN / SIGN UP FORM
+            // GOOGLE SIGN IN ONLY
             <View style={styles.authContainer}>
               <View style={styles.iconContainer}>
                 <CloudOff size={60} color={currColors.textSecondary} />
               </View>
               <Text style={[styles.authTitle, { color: currColors.text }]}>Cloud Sync Offline</Text>
               <Text style={[styles.authSubtitle, { color: currColors.textSecondary }]}>
-                Sign in to save your portfolio, accounts, and budgets safely in the cloud and sync them across devices.
+                Sign in with Google to save your portfolio, accounts, and budgets safely in the cloud and sync them across devices.
               </Text>
 
-              {/* Segmented control tabs */}
-              <View style={[styles.segmentContainer, { backgroundColor: currColors.cardSecondary }]}>
-                <TouchableOpacity
-                  style={[
-                    styles.segmentTab,
-                    authMode === 'signin' && [styles.activeTab, { backgroundColor: currColors.card }],
-                  ]}
-                  onPress={() => {
-                    handleHaptic();
-                    setAuthMode('signin');
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.segmentLabel,
-                      { color: authMode === 'signin' ? currColors.text : currColors.textSecondary },
-                    ]}
-                  >
-                    Sign In
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.segmentTab,
-                    authMode === 'signup' && [styles.activeTab, { backgroundColor: currColors.card }],
-                  ]}
-                  onPress={() => {
-                    handleHaptic();
-                    setAuthMode('signup');
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.segmentLabel,
-                      { color: authMode === 'signup' ? currColors.text : currColors.textSecondary },
-                    ]}
-                  >
-                    Create Account
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Form Input fields */}
-              <View style={styles.formGroup}>
-                <View style={[styles.inputWrapper, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                  <Mail size={20} color={currColors.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.input, { color: currColors.text }]}
-                    placeholder="Enter email address"
-                    placeholderTextColor={currColors.textSecondary}
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-
-                <View style={[styles.inputWrapper, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                  <Lock size={20} color={currColors.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={[styles.input, { color: currColors.text }]}
-                    placeholder="Enter password"
-                    placeholderTextColor={currColors.textSecondary}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.authButton, { backgroundColor: '#00C9A7' }]}
-                  onPress={handleAuth}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  ) : (
-                    <Text style={styles.authButtonText}>
-                      {authMode === 'signin' ? 'Sign In' : 'Create Account'}
+              <TouchableOpacity
+                style={[styles.googleButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border, width: '100%', marginTop: 10 }]}
+                onPress={handleGoogleSignIn}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color={currColors.text} size="small" />
+                ) : (
+                  <>
+                    <Chrome size={20} color={currColors.text} style={styles.googleIcon} />
+                    <Text style={[styles.googleButtonText, { color: currColors.text }]}>
+                      Continue with Google
                     </Text>
-                  )}
-                </TouchableOpacity>
-
-                <View style={styles.dividerRow}>
-                  <View style={[styles.dividerLine, { backgroundColor: currColors.border }]} />
-                  <Text style={[styles.dividerText, { color: currColors.textSecondary }]}>or</Text>
-                  <View style={[styles.dividerLine, { backgroundColor: currColors.border }]} />
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.googleButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}
-                  onPress={handleGoogleSignIn}
-                  disabled={loading}
-                >
-                  <Chrome size={20} color={currColors.text} style={styles.googleIcon} />
-                  <Text style={[styles.googleButtonText, { color: currColors.text }]}>
-                    Continue with Google
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -714,81 +570,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginBottom: 30,
   },
-  segmentContainer: {
-    flexDirection: 'row',
-    height: 48,
-    borderRadius: 14,
-    padding: 4,
-    width: '100%',
-    marginBottom: 24,
-  },
-  segmentTab: {
-    flex: 1,
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-  },
-  activeTab: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  segmentLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'Outfit_600SemiBold',
-  },
-  formGroup: {
-    width: '100%',
-    gap: 16,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 16,
-    borderWidth: 1,
-    height: 54,
-    paddingHorizontal: 16,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: 'Outfit_400Regular',
-    height: '100%',
-  },
-  authButton: {
-    borderRadius: 16,
-    height: 54,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  authButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Outfit_600SemiBold',
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
-  },
+
   googleButton: {
     flexDirection: 'row',
     borderRadius: 16,
