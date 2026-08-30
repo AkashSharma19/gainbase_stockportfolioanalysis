@@ -94,7 +94,7 @@ Gainbase has two distinct user modes configured in `useAppModeStore` and switche
 *   **Loan & EMI Tracker**: List of active loans, outstanding balances, remaining EMI count tracking, monthly EMI burden calculation, tracking next payment dates.
 *   **Budgeting Suite**: Setting monthly budget caps, displaying category-wise spending meters (e.g., food, bills, shopping).
 *   **Subscription Manager**: Tracking active SaaS subscriptions, recurring cycles, monthly cost burdens, auto-advancing billing cycles.
-*   **Smart Insights Screen**: Dedicated page (`money-insights`) to view dynamic, categorized warnings, tips, and success notifications with contextual shortcuts to resolve them.
+*   **Smart Insights Screen**: Dedicated AI-only page (`money-insights`) matching the design system of the Investments Insights page. Features an initial AI Hero generation state, search filter, category tabs (`All`, `Alerts`, `Tips`, `Achievements`), and a header **[ ✨ REFRESH ]** button to execute on-demand Gemini AI analysis across live accounts, cashflow, debts, and budgets with direct resolution shortcuts. Static rule-based insights have been removed.
 *   **Financial Health Dashboard**: Dedicated page (`money-health`) evaluating Savings rate, Emergency fund cushions, DTI ratios, and credit card utilization ratios into a unified health score out of 100 with actionable feedback.
 
 ---

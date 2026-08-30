@@ -83,8 +83,12 @@ export default function YearlyAnalysisScreen() {
           <ThemedText
             style={{
               color: currColors.textSecondary,
-              fontSize: 8,
+              fontSize: 9,
+              fontFamily: 'Outfit_500Medium',
               marginBottom: 4,
+              textAlign: 'center',
+              width: 32,
+              marginLeft: -3,
             }}
           >
             {isPrivacyMode
@@ -191,30 +195,32 @@ export default function YearlyAnalysisScreen() {
                   <BarChart
                     data={barData}
                     scrollRef={chartScrollRef}
-                    barWidth={32}
+                    barWidth={26}
                     noOfSections={3}
                     barBorderRadius={6}
-                    spacing={20}
+                    spacing={16}
+                    initialSpacing={12}
+                    endSpacing={16}
+                    yAxisLabelWidth={32}
                     disableScroll
                     hideRules
                     xAxisThickness={0}
                     yAxisThickness={0}
                     yAxisTextStyle={{
                       color: currColors.textSecondary,
-                      fontSize: 10,
+                      fontSize: 9,
                       fontFamily: 'Outfit_400Regular',
                     }}
                     xAxisLabelTextStyle={{
                       color: currColors.textSecondary,
-                      fontSize: 10,
-                      fontFamily: 'Outfit_400Regular',
+                      fontSize: 9,
+                      fontFamily: 'Outfit_500Medium',
                     }}
                     formatYLabel={formatYAxisLabel}
                     maxValue={maximumValue}
                     isAnimated
                     animationDuration={500}
-                    initialSpacing={15}
-                    width={SCREEN_WIDTH - 110}
+                    width={SCREEN_WIDTH - 80}
                     renderTooltip={(item: any) => (
                       <View
                         style={[

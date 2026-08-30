@@ -156,8 +156,8 @@ Instructions:
    - "reason" is 1-2 sentences of professional reasoning.
    - "color" must be: Buy is "#34C759", Sell is "#FF3B30", Hold is "#FF9500", Not Sure is "#007AFF".
    - "icon" must be: Buy/positive is "TrendingUp", Sell/negative is "TrendingDown" or "TriangleAlert", Hold is "TrendingUp", Not Sure/neutral is "Compass" or "Zap" or "Eye".
-   - "symbol" must match the stock ticker symbol (e.g. "INFY", "RELIANCE") so clicking on it redirects details.
-3. Be highly realistic, critical, and objective. You MUST generate separate, individual insights for EVERY SINGLE HOLDING listed in the stock positions above. Do not skip any ticker symbol; make sure every single stock has at least one corresponding actionable insight in the returned JSON array so the user receives a comprehensive analysis of their entire portfolio.`;
+   - "symbol" (optional) stock ticker symbol if holding-specific (e.g. "INFY", "RELIANCE") so tapping opens details.
+3. Be highly realistic, critical, and objective. You MUST generate AT LEAST 10 (10 to 15) actionable insights. Provide dedicated insights for individual holdings, and supplement with sector allocation, market risk, diversification, and cash drag insights so the user receives a comprehensive breakdown of at least 10 insights across Buy, Sell, Hold, and Not Sure.`;
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${geminiApiKey}`,
