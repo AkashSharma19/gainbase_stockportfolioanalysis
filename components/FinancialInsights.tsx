@@ -27,6 +27,44 @@ export function FinancialInsights() {
     border: colorScheme === 'dark' ? 'rgba(0, 201, 167, 0.2)' : 'rgba(0, 201, 167, 0.1)',
   };
 
+  // When no insights have been generated yet, render an inviting AI generation CTA
+  if (count === 0) {
+    return (
+      <TouchableOpacity
+        onPress={handlePress}
+        activeOpacity={0.8}
+        style={[
+          styles.container,
+          {
+            backgroundColor: themeStyles.bg,
+            borderColor: themeStyles.border,
+          },
+        ]}
+      >
+        <View style={styles.topRow}>
+          <View style={styles.titleRow}>
+            <View style={[styles.iconContainer, { backgroundColor: '#00C9A7' }]}>
+              <Sparkles size={14} color="#FFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText style={[styles.title, { color: currColors.text }]}>
+                Smart Financial Insights
+              </ThemedText>
+              <ThemedText style={[styles.subtitle, { color: currColors.textSecondary }]}>
+                Tap to analyze budgets, debts & cash flow with AI
+              </ThemedText>
+            </View>
+          </View>
+          <View style={styles.generateBadge}>
+            <Sparkles size={10} color="#00C9A7" />
+            <ThemedText style={styles.generateBadgeText}>Analyze</ThemedText>
+            <ChevronRight size={12} color="#00C9A7" />
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <TouchableOpacity
       onPress={handlePress}
@@ -119,6 +157,27 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontFamily: 'Outfit_600SemiBold',
+  },
+  subtitle: {
+    fontSize: 11,
+    fontFamily: 'Outfit_400Regular',
+    marginTop: 2,
+  },
+  generateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 201, 167, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 201, 167, 0.3)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 4,
+  },
+  generateBadgeText: {
+    fontSize: 11,
+    fontFamily: 'Outfit_600SemiBold',
+    color: '#00C9A7',
   },
   categoryRow: {
     flexDirection: 'row',

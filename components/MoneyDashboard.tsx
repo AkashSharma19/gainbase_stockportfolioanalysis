@@ -70,6 +70,7 @@ const getSubscriptionIcon = (logoName: string | undefined) => {
 export function MoneyDashboard() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'dark';
+  const isDark = colorScheme === 'dark';
   const currColors = Colors[colorScheme];
 
   // Stores
@@ -465,6 +466,22 @@ export function MoneyDashboard() {
               <TouchableOpacity
                 onPress={() => {
                   handleHaptic();
+                  router.push('/money-insights');
+                }}
+                style={[
+                  styles.iconButton,
+                  {
+                    backgroundColor: isDark ? 'rgba(0, 201, 167, 0.15)' : 'rgba(0, 201, 167, 0.1)',
+                    borderColor: 'rgba(0, 201, 167, 0.3)',
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Sparkles size={16} color="#00C9A7" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
                   togglePrivacyMode();
                 }}
                 style={[
@@ -564,6 +581,9 @@ export function MoneyDashboard() {
           </View>
         </View>
 
+        {/* ─── Smart Insights (Placed right below Hero Card for top discoverability) ─── */}
+        <FinancialInsights />
+
         {/* ─── Financial Health Banner ─── */}
         <TouchableOpacity
           style={[
@@ -593,9 +613,6 @@ export function MoneyDashboard() {
           </View>
           <ChevronRight size={16} color={currColors.textSecondary} style={{ marginRight: 4 }} />
         </TouchableOpacity>
-
-        {/* ─── Smart Insights ─── */}
-        <FinancialInsights />
 
         {/* ─── Upcoming Payments (EMI + Subscriptions) ─── */}
         <View

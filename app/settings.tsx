@@ -18,6 +18,9 @@ import {
 
 import { ThemedText } from '@/components/ThemedText';
 
+import { WidgetPreviewCard } from '@/components/WidgetPreviewCard';
+import { ScrollView } from 'react-native';
+
 export default function SettingsScreen() {
   const router = useRouter();
   const theme = usePortfolioStore((state) => state.theme);
@@ -48,7 +51,11 @@ export default function SettingsScreen() {
           <View style={{ width: 40 }} />
         </View>
 
-        <View style={styles.content}>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={{ paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+        >
           <View
             style={[
               styles.section,
@@ -224,7 +231,10 @@ export default function SettingsScreen() {
               />
             </View>
           </View>
-        </View>
+
+          {/* ─── iOS Home & Lock Screen Widgets Preview ─── */}
+          <WidgetPreviewCard />
+        </ScrollView>
       </View>
     </SafeAreaView>
   );

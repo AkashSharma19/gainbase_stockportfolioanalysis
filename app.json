@@ -17,6 +17,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.akashsharma.gainbase",
       "buildNumber": "1",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.akashsharma.gainbase"
+        ]
+      },
       "infoPlist": {
         "UIFileSharingEnabled": true,
         "LSSupportsOpeningDocumentsInPlace": true,
@@ -41,6 +46,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "@bacons/apple-targets",
       "expo-router",
       "@react-native-community/datetimepicker",
       "expo-background-task",
