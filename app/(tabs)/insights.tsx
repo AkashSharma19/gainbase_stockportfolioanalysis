@@ -52,19 +52,26 @@ const CATEGORY_CONFIG: Record<
     emptyMessage:
       'No significant buy opportunities detected. Your portfolio looks well-positioned.',
   },
-  'Sell/Hold': {
+  Sell: {
     color: '#FF3B30',
     emptyIcon: CheckCircle,
     emptyTitle: 'No Sell Signals',
     emptyMessage:
       "No positions flagged for selling. You're holding strong on all fronts.",
   },
-  Observe: {
+  Hold: {
+    color: '#FF9500',
+    emptyIcon: CheckCircle,
+    emptyTitle: 'No Hold Signals',
+    emptyMessage:
+      'No positions flagged to hold at the moment. Keep an eye on your winners.',
+  },
+  'Not Sure': {
     color: '#007AFF',
     emptyIcon: Eye,
-    emptyTitle: 'Nothing to Watch',
+    emptyTitle: 'Nothing Uncertain',
     emptyMessage:
-      'No notable market events detected for your holdings right now.',
+      'No ambiguous signals detected for your holdings right now.',
   },
 };
 
@@ -82,8 +89,9 @@ export default function InsightsScreen() {
   const countByCategory = useMemo(() => {
     return {
       Buy: aiStockInsights.filter((i) => i.category === 'Buy').length,
-      'Sell/Hold': aiStockInsights.filter((i) => i.category === 'Sell/Hold').length,
-      Observe: aiStockInsights.filter((i) => i.category === 'Observe').length,
+      Sell: aiStockInsights.filter((i) => i.category === 'Sell').length,
+      Hold: aiStockInsights.filter((i) => i.category === 'Hold').length,
+      'Not Sure': aiStockInsights.filter((i) => i.category === 'Not Sure').length,
     };
   }, [aiStockInsights]);
 
@@ -141,13 +149,13 @@ ${serializedHoldings}
 Instructions:
 1. Return a JSON array representing investment insights.
 2. For each insight:
-   - "category" must be exactly one of: "Buy" (for fresh buys or accumulation), "Sell/Hold" (for stop-loss alerts, profit taking, or hold signals), or "Observe" (for key events to watch like earnings, volatility, or benchmark trends).
+   - "category" must be exactly one of: "Buy" (fresh accumulation or averaging down), "Sell" (stop-loss, tax-loss harvesting, or high-concentration trim), "Hold" (strong position worth holding, partial profit booking), or "Not Sure" (ambiguous signals, key events to watch, streaks, sector risk).
    - "title" must be the full company name (e.g. "Tata Consultancy Services Ltd", "Reliance Industries") matching the holdings list.
    - "badge" is a short 2-3 word highlight tag.
    - "value" is a quick reference stat.
    - "reason" is 1-2 sentences of professional reasoning.
-   - "color" must be: Buy is "#34C759", Sell/Hold is "#FF3B30", Observe is "#007AFF".
-   - "icon" must be: Buy/positive is "TrendingUp", Sell/negative is "TrendingDown" or "TriangleAlert", Observe/neutral is "Compass" or "Zap" or "Eye".
+   - "color" must be: Buy is "#34C759", Sell is "#FF3B30", Hold is "#FF9500", Not Sure is "#007AFF".
+   - "icon" must be: Buy/positive is "TrendingUp", Sell/negative is "TrendingDown" or "TriangleAlert", Hold is "TrendingUp", Not Sure/neutral is "Compass" or "Zap" or "Eye".
    - "symbol" must match the stock ticker symbol (e.g. "INFY", "RELIANCE") so clicking on it redirects details.
 3. Be highly realistic, critical, and objective. You MUST generate separate, individual insights for EVERY SINGLE HOLDING listed in the stock positions above. Do not skip any ticker symbol; make sure every single stock has at least one corresponding actionable insight in the returned JSON array so the user receives a comprehensive analysis of their entire portfolio.`;
 
@@ -172,7 +180,7 @@ Instructions:
                   type: 'OBJECT',
                   properties: {
                     id: { type: 'STRING' },
-                    category: { type: 'STRING', enum: ['Buy', 'Sell/Hold', 'Observe'] },
+                    category: { type: 'STRING', enum: ['Buy', 'Sell', 'Hold', 'Not Sure'] },
                     title: { type: 'STRING' },
                     badge: { type: 'STRING' },
                     value: { type: 'STRING' },
@@ -423,7 +431,7 @@ Instructions:
 
           {/* Category Tabs with Count Badges */}
           <View style={styles.tabContainer}>
-            {(['Buy', 'Sell/Hold', 'Observe'] as InsightCategory[]).map((tab) => {
+            {(['Buy', 'Sell', 'Hold', 'Not Sure'] as InsightCategory[]).map((tab) => {
               const isActive = activeTab === tab;
               const tabColor = CATEGORY_CONFIG[tab].color;
               const tabCount = countByCategory[tab];

@@ -67,7 +67,7 @@ export const InsightsSummaryCard = () => {
             </ThemedText>
           </View>
         )}
-        {countByCategory['Sell/Hold'] > 0 && (
+        {countByCategory['Sell'] > 0 && (
           <View style={styles.categoryChip}>
             <View
               style={[styles.categoryDot, { backgroundColor: '#FF3B30' }]}
@@ -76,13 +76,28 @@ export const InsightsSummaryCard = () => {
               style={[styles.categoryText, { color: currColors.textSecondary }]}
             >
               <ThemedText style={{ color: '#FF3B30', fontWeight: '700' }}>
-                {countByCategory['Sell/Hold']}
+                {countByCategory['Sell']}
               </ThemedText>{' '}
-              Sell/Hold
+              Sell
             </ThemedText>
           </View>
         )}
-        {countByCategory['Observe'] > 0 && (
+        {countByCategory['Hold'] > 0 && (
+          <View style={styles.categoryChip}>
+            <View
+              style={[styles.categoryDot, { backgroundColor: '#FF9500' }]}
+            />
+            <ThemedText
+              style={[styles.categoryText, { color: currColors.textSecondary }]}
+            >
+              <ThemedText style={{ color: '#FF9500', fontWeight: '700' }}>
+                {countByCategory['Hold']}
+              </ThemedText>{' '}
+              Hold
+            </ThemedText>
+          </View>
+        )}
+        {countByCategory['Not Sure'] > 0 && (
           <View style={styles.categoryChip}>
             <View
               style={[styles.categoryDot, { backgroundColor: '#007AFF' }]}
@@ -91,9 +106,9 @@ export const InsightsSummaryCard = () => {
               style={[styles.categoryText, { color: currColors.textSecondary }]}
             >
               <ThemedText style={{ color: '#007AFF', fontWeight: '700' }}>
-                {countByCategory['Observe']}
+                {countByCategory['Not Sure']}
               </ThemedText>{' '}
-              Observe
+              Not Sure
             </ThemedText>
           </View>
         )}

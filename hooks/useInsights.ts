@@ -1,7 +1,7 @@
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { useMemo } from 'react';
 
-export type InsightCategory = 'Buy' | 'Sell/Hold' | 'Observe';
+export type InsightCategory = 'Buy' | 'Sell' | 'Hold' | 'Not Sure';
 
 export interface Insight {
   id: string;
@@ -60,14 +60,14 @@ export const useInsights = () => {
 
     if (holdings.length === 0) return list;
 
-    // ─── SELL/HOLD ────────────────────────────────────────────────────────────
+    // ─── SELL ─────────────────────────────────────────────────────────────────
 
-    // Sell/Hold: High Concentration (>25% of portfolio)
+    // Sell: High Concentration (>25% of portfolio)
     holdings.forEach((h) => {
       if ((h.contributionPercentage ?? 0) > 25) {
         list.push({
           id: `concentration-${h.symbol}`,
-          category: 'Sell/Hold',
+          category: 'Sell',
           title: h.companyName || h.symbol,
           subtitle: `Invested: ${formatCurrency(h.investedValue)}`,
           reason: `This stock makes up ${(h.contributionPercentage ?? 0).toFixed(1)}% of your portfolio. Consider trimming to reduce concentration risk.`,
@@ -80,19 +80,19 @@ export const useInsights = () => {
           pnlPercentage: h.pnlPercentage,
           severity: h.contributionPercentage ?? 0,
         });
-        markAdded('Sell/Hold', h.symbol);
+        markAdded('Sell', h.symbol);
       }
     });
 
-    // Sell/Hold: Profit Taking (PnL > 30%)
+    // Hold: Profit Taking (PnL > 30%)
     holdings.forEach((h) => {
-      if (h.pnlPercentage > 30 && canAdd('Sell/Hold', h.symbol)) {
+      if (h.pnlPercentage > 30 && canAdd('Hold', h.symbol)) {
         list.push({
           id: `profit-${h.symbol}`,
-          category: 'Sell/Hold',
+          category: 'Hold',
           title: h.companyName || h.symbol,
           subtitle: `Current Value: ${formatCurrency(h.currentValue)}`,
-          reason: `Up ${h.pnlPercentage.toFixed(1)}% from your average buy price. Consider booking partial profits.`,
+          reason: `Up ${h.pnlPercentage.toFixed(1)}% from your average buy price. Consider booking partial profits or holding for further upside.`,
           badge: 'Profit Taking',
           symbol: h.symbol,
           logo: h.logo,
@@ -102,20 +102,20 @@ export const useInsights = () => {
           pnlPercentage: h.pnlPercentage,
           severity: h.pnlPercentage,
         });
-        markAdded('Sell/Hold', h.symbol);
+        markAdded('Hold', h.symbol);
       }
     });
 
-    // Sell/Hold: Tax-Loss Harvesting (PnL < -15%)
+    // Sell: Tax-Loss Harvesting (PnL < -15%)
     // Only add if NOT already a Buy/DCA candidate (i.e., we skip this if the stock
     // will also appear in Buy — avoid the same stock firing conflicting signals)
     holdings.forEach((h) => {
       if (h.pnlPercentage < -15 && (h.contributionPercentage ?? 0) < 15) {
         // Only suggest Tax-Loss if we don't also strongly want to DCA
-        if (canAdd('Sell/Hold', h.symbol)) {
+        if (canAdd('Sell', h.symbol)) {
           list.push({
             id: `tax-loss-${h.symbol}`,
-            category: 'Sell/Hold',
+            category: 'Sell',
             title: h.companyName || h.symbol,
             subtitle: `Invested: ${formatCurrency(h.investedValue)}`,
             reason: `Down ${Math.abs(h.pnlPercentage).toFixed(1)}% overall. Selling may let you harvest a tax loss to offset gains elsewhere.`,
@@ -128,7 +128,7 @@ export const useInsights = () => {
             pnlPercentage: h.pnlPercentage,
             severity: Math.abs(h.pnlPercentage),
           });
-          markAdded('Sell/Hold', h.symbol);
+          markAdded('Sell', h.symbol);
         }
       }
     });
@@ -185,15 +185,15 @@ export const useInsights = () => {
       }
     });
 
-    // ─── OBSERVE ─────────────────────────────────────────────────────────────
+    // ─── NOT SURE ─────────────────────────────────────────────────────────────
 
-    // Observe: Near 52W High (within 2% of high)
+    // Not Sure: Near 52W High (within 2% of high)
     holdings.forEach((h) => {
       if (h.high52 && h.currentPrice >= h.high52 * 0.98) {
         const pctBelowHigh = ((h.high52 - h.currentPrice) / h.high52) * 100;
         list.push({
           id: `high52-${h.symbol}`,
-          category: 'Observe',
+          category: 'Not Sure',
           title: h.companyName || h.symbol,
           subtitle: `52W High: ${formatCurrency(h.high52)}`,
           reason: `Just ${pctBelowHigh.toFixed(1)}% below its 52-week high. Watch for a breakout or potential pullback.`,
@@ -209,7 +209,7 @@ export const useInsights = () => {
       }
     });
 
-    // Observe: Winning/Losing Streaks (3 consecutive days)
+    // Not Sure: Winning/Losing Streaks (3 consecutive days)
     holdings.forEach((h) => {
       const ticker = tickers.find(
         (t) => t.Tickers.trim().toUpperCase() === h.symbol.trim().toUpperCase(),
@@ -238,7 +238,7 @@ export const useInsights = () => {
             prices[0] > 0 ? ((prices[0] - prices[3]) / prices[3]) * 100 : 0;
           list.push({
             id: `winning-streak-${h.symbol}`,
-            category: 'Observe',
+            category: 'Not Sure',
             title: h.companyName || h.symbol,
             subtitle: '3-Day Winning Streak',
             reason: `Has risen for 3 consecutive days (+${streakGain.toFixed(1)}% over 3 days). Monitor for momentum continuation or a reversal.`,
@@ -256,7 +256,7 @@ export const useInsights = () => {
             prices[0] > 0 ? ((prices[0] - prices[3]) / prices[3]) * 100 : 0;
           list.push({
             id: `losing-streak-${h.symbol}`,
-            category: 'Observe',
+            category: 'Not Sure',
             title: h.companyName || h.symbol,
             subtitle: '3-Day Losing Streak',
             reason: `Has fallen for 3 consecutive days (${streakLoss.toFixed(1)}% over 3 days). Watch for further weakness or a bounce opportunity.`,
@@ -273,7 +273,7 @@ export const useInsights = () => {
       }
     });
 
-    // Observe: Sector Concentration (>30% of portfolio in one sector)
+    // Not Sure: Sector Concentration (>30% of portfolio in one sector)
     const sectorTotals: Record<string, number> = {};
     holdings.forEach((h) => {
       const sector = h.sector || 'Other';
@@ -285,7 +285,7 @@ export const useInsights = () => {
       if (percentage > 30) {
         list.push({
           id: `sector-concentration-${sector}`,
-          category: 'Observe',
+          category: 'Not Sure',
           title: `${sector} Sector`,
           subtitle: 'Sector Concentration',
           reason: `${percentage.toFixed(1)}% of your portfolio is in ${sector}. Consider diversifying to reduce sector-specific risk.`,
@@ -307,8 +307,9 @@ export const useInsights = () => {
   const countByCategory = useMemo(
     () => ({
       Buy: insights.filter((i) => i.category === 'Buy').length,
-      'Sell/Hold': insights.filter((i) => i.category === 'Sell/Hold').length,
-      Observe: insights.filter((i) => i.category === 'Observe').length,
+      Sell: insights.filter((i) => i.category === 'Sell').length,
+      Hold: insights.filter((i) => i.category === 'Hold').length,
+      'Not Sure': insights.filter((i) => i.category === 'Not Sure').length,
     }),
     [insights],
   );

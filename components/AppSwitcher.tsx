@@ -1,13 +1,14 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { StyleSheet, TouchableOpacity, View, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  interpolateColor,
+  interpolate,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { TrendingUp, Wallet } from 'lucide-react-native';
+import { TrendingUp, Wallet, Sparkles } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useAppModeStore, AppMode } from '../store/useAppModeStore';
 import { ThemedText } from './ThemedText';
@@ -15,240 +16,177 @@ import { useColorScheme } from './useColorScheme';
 import Colors from '../constants/Colors';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const CONTAINER_WIDTH = SCREEN_WIDTH - 32; // 16px padding on each side
-const TOGGLE_WIDTH = CONTAINER_WIDTH;
-const TAB_WIDTH = TOGGLE_WIDTH / 2;
 
 export function AppSwitcher() {
   const { activeMode, setActiveMode, setIsTransitioning } = useAppModeStore();
   const colorScheme = useColorScheme() ?? 'dark';
+  const isDark = colorScheme === 'dark';
   const currColors = Colors[colorScheme];
 
-  // Shared value going from 0 (investments) to 1 (money)
-  const transitionVal = useSharedValue(activeMode === 'investments' ? 0 : 1);
-
-  useEffect(() => {
-    transitionVal.value = withSpring(activeMode === 'investments' ? 0 : 1, {
-      damping: 15,
-      stiffness: 120,
-      mass: 0.8,
-    });
-  }, [activeMode]);
+  const isInvestments = activeMode === 'investments';
 
   const handleSwitch = (mode: AppMode) => {
     if (mode === activeMode) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsTransitioning(true);
-    
     setActiveMode(mode);
-    
     setTimeout(() => {
       setIsTransitioning(false);
-    }, 350);
+    }, 320);
   };
 
-  // Slider style with smooth horizontal translation and background color interpolation
-  const sliderStyle = useAnimatedStyle(() => {
-    const backgroundColor = interpolateColor(
-      transitionVal.value,
-      [0, 1],
-      ['#007AFF', '#00C9A7'] // Investments = Blue, Money = Teal
-    );
-    return {
-      transform: [
-        {
-          translateX: transitionVal.value * (TAB_WIDTH - 4),
-        },
-      ],
-      backgroundColor,
-    };
-  });
-
-  // Crossfade animations for Active/Inactive Investments tab
-  const investmentsActiveStyle = useAnimatedStyle(() => {
-    const opacity = 1 - transitionVal.value; // 1.0 -> 0.0
-    const scale = 1.03 - (transitionVal.value * 0.03); // 1.03 -> 1.0
-    return {
-      opacity,
-      transform: [{ scale }],
-    };
-  });
-
-  const investmentsInactiveStyle = useAnimatedStyle(() => {
-    const opacity = transitionVal.value; // 0.0 -> 1.0
-    const scale = 1.0 + (transitionVal.value * 0.03); // 1.0 -> 1.03
-    return {
-      opacity,
-      transform: [{ scale }],
-    };
-  });
-
-  // Crossfade animations for Active/Inactive Money tab
-  const moneyActiveStyle = useAnimatedStyle(() => {
-    const opacity = transitionVal.value; // 0.0 -> 1.0
-    const scale = 1.0 + (transitionVal.value * 0.03); // 1.0 -> 1.03
-    return {
-      opacity,
-      transform: [{ scale }],
-    };
-  });
-
-  const moneyInactiveStyle = useAnimatedStyle(() => {
-    const opacity = 1 - transitionVal.value; // 1.0 -> 0.0
-    const scale = 1.03 - (transitionVal.value * 0.03); // 1.03 -> 1.0
-    return {
-      opacity,
-      transform: [{ scale }],
-    };
-  });
-
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: currColors.cardSecondary,
-          borderColor: currColors.border,
-        },
-      ]}
-    >
-      {/* Sliding Active Background Pill */}
-      <Animated.View
-        style={[
-          styles.slider,
-          {
-            width: TAB_WIDTH - 4,
-          },
-          sliderStyle,
-        ]}
-      />
+    <View style={styles.headerContainer}>
+      <View style={styles.chipsRow}>
+        {/* --- Investments Chip --- */}
+        <TouchableOpacity
+          style={[
+            styles.chip,
+            !isInvestments && {
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+            },
+          ]}
+          activeOpacity={0.8}
+          onPress={() => handleSwitch('investments')}
+        >
+          {isInvestments && (
+            <LinearGradient
+              colors={['#0A84FF', '#005AC1']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[StyleSheet.absoluteFill, styles.gradientFill]}
+            />
+          )}
 
-      {/* Investments Tab */}
-      <TouchableOpacity
-        style={styles.tab}
-        activeOpacity={0.9}
-        onPress={() => handleSwitch('investments')}
-      >
-        {/* Active Content (White) */}
-        <Animated.View style={[styles.tabContentAbsolute, investmentsActiveStyle]}>
-          <ThemedText
-            style={[
-              styles.tabText,
-              {
-                color: '#FFFFFF',
-                fontFamily: 'Outfit_600SemiBold',
-              },
-            ]}
-          >
-            Investments
-          </ThemedText>
-        </Animated.View>
+          <View style={styles.chipContent}>
+            <View
+              style={[
+                styles.iconBadge,
+                isInvestments
+                  ? { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
+                  : { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)' },
+              ]}
+            >
+              <TrendingUp
+                size={14}
+                color={isInvestments ? '#FFFFFF' : currColors.textSecondary}
+                strokeWidth={isInvestments ? 2.5 : 2}
+              />
+            </View>
+            <ThemedText
+              style={[
+                styles.chipLabel,
+                isInvestments
+                  ? { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold' }
+                  : { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' },
+              ]}
+            >
+              Investments
+            </ThemedText>
+          </View>
+        </TouchableOpacity>
 
-        {/* Inactive Content (Secondary) */}
-        <Animated.View style={[styles.tabContentAbsolute, investmentsInactiveStyle]}>
-          <ThemedText
-            style={[
-              styles.tabText,
-              {
-                color: currColors.textSecondary,
-                fontFamily: 'Outfit_500Medium',
-              },
-            ]}
-          >
-            Investments
-          </ThemedText>
-        </Animated.View>
-      </TouchableOpacity>
+        {/* --- Money Manager Chip --- */}
+        <TouchableOpacity
+          style={[
+            styles.chip,
+            isInvestments && {
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+            },
+          ]}
+          activeOpacity={0.8}
+          onPress={() => handleSwitch('money')}
+        >
+          {!isInvestments && (
+            <LinearGradient
+              colors={['#00C9A7', '#028E75']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[StyleSheet.absoluteFill, styles.gradientFill]}
+            />
+          )}
 
-      {/* Money Manager Tab */}
-      <TouchableOpacity
-        style={styles.tab}
-        activeOpacity={0.9}
-        onPress={() => handleSwitch('money')}
-      >
-        {/* Active Content (White) */}
-        <Animated.View style={[styles.tabContentAbsolute, moneyActiveStyle]}>
-          <ThemedText
-            style={[
-              styles.tabText,
-              {
-                color: '#FFFFFF',
-                fontFamily: 'Outfit_600SemiBold',
-              },
-            ]}
-          >
-            Money Manager
-          </ThemedText>
-        </Animated.View>
-
-        {/* Inactive Content (Secondary) */}
-        <Animated.View style={[styles.tabContentAbsolute, moneyInactiveStyle]}>
-          <ThemedText
-            style={[
-              styles.tabText,
-              {
-                color: currColors.textSecondary,
-                fontFamily: 'Outfit_500Medium',
-              },
-            ]}
-          >
-            Money Manager
-          </ThemedText>
-        </Animated.View>
-      </TouchableOpacity>
+          <View style={styles.chipContent}>
+            <View
+              style={[
+                styles.iconBadge,
+                !isInvestments
+                  ? { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
+                  : { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)' },
+              ]}
+            >
+              <Wallet
+                size={14}
+                color={!isInvestments ? '#FFFFFF' : currColors.textSecondary}
+                strokeWidth={!isInvestments ? 2.5 : 2}
+              />
+            </View>
+            <ThemedText
+              style={[
+                styles.chipLabel,
+                !isInvestments
+                  ? { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold' }
+                  : { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' },
+              ]}
+            >
+              Money Manager
+            </ThemedText>
+          </View>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  headerContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 10,
+  },
+  chipsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginVertical: 12,
-    height: 48,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 3,
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    gap: 10,
   },
-  slider: {
-    position: 'absolute',
-    left: 4,
-    top: 4,
-    bottom: 4,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.16,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  tab: {
+  chip: {
     flex: 1,
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 2,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    overflow: 'hidden',
     position: 'relative',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  tabContentAbsolute: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  gradientFill: {
+    borderRadius: 21,
+  },
+  chipContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 12,
+    gap: 8,
   },
-  tabText: {
+  iconBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipLabel: {
     fontSize: 13,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
 });
+
+

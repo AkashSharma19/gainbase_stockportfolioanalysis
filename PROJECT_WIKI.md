@@ -61,11 +61,11 @@ Here is the functional map of the directory tree and key files:
 | `app/(tabs)/` | Tabs layout and navigation index page wrapper. | `_layout.tsx` (Dynamic tab visibilities based on mode), `index.tsx` (Home screen displaying `MoneyDashboard` or `PortfolioSummary`), `explore.tsx` (Stock search & watchlist), `insights.tsx` (Investments insights), `money-accounts.tsx` (Net worth details & accounts list with credit card utilization warning badges and investment return percentages), `money-budgets.tsx` (Budget progress meters), `money-loans.tsx` (Loans & EMIs), `profile.tsx` (User profile & customizations), `add.tsx` (Add navigation wrapper), `two.tsx` (Placeholder). |
 | `app/add-*.tsx` | Modals to add various assets/transactions. | `add-transaction.tsx` (BUY/SELL stock), `add-money-transaction.tsx` (Income/expense/transfer with arithmetic calculator), `add-loan.tsx` (Borrowed/lent loan configuration), `add-budget.tsx` (Category budget limit), `add-account.tsx` (Monetary accounts configuration), `add-subscription.tsx` (SaaS subscription). |
 | `app/*-details/` | Detailed analytical screens. | `stock-details/[symbol].tsx` (Stock-level holdings & transactions), `account-details/[id].tsx` (Monetary account details showing transaction log, credit card utilization warning alerts, and investment absolute/percentage return badges), `loan-details/[id].tsx` (Amortization & EMI payments history), `budget-details/[id].tsx` (Category spend limits tracking), `subscription-details/[id].tsx` (Billing logs), `sector-details/[sector].tsx` (Industry sector allocation details), `analytics-details/[type]/[value].tsx` (Multi-dimensional queries). |
-| `components/` | Reusable presentation UI elements. | `MoneyDashboard.tsx`, `PortfolioHealthCard.tsx`, `ActivityCalendar.tsx`, `MoneyActivityCalendar.tsx`, `ForecastCard.tsx`, `InsightsSummaryCard.tsx`, `WinLossCard.tsx`, `HealthDetailCard.tsx`, `HealthGauge.tsx`, `TopMovers.tsx`, `ShareableCard.tsx`, `AppSwitcher.tsx`. |
+| `components/` | Reusable presentation UI elements. | `MoneyDashboard.tsx`, `PortfolioHealthCard.tsx`, `ActivityCalendar.tsx`, `MoneyActivityCalendar.tsx`, `ForecastCard.tsx`, `InsightsSummaryCard.tsx`, `WinLossCard.tsx`, `HealthDetailCard.tsx`, `HealthGauge.tsx`, `TopMovers.tsx`, `ShareableCard.tsx`, `AppSwitcher.tsx` (Dual Floating Interactive Chips switcher with vibrant gradient active states and micro icon badges). |
 | `constants/` | Constant configurations (colors, APIs, dimensions). | `Colors.ts` (light/dark themes), `Api.ts` (API configuration endpoints). |
 | `hooks/` | Business-logic custom hooks. | `usePortfolioHealth.ts` (health grading algorithm), `useInsights.ts` (investment flags: buy, sell/hold, observe), `useMoneyInsights.ts` (unified budgeting/cashflow insights). |
 | `lib/` | Core mathematical/computational logic & API clients. | `finance.ts` (XIRR calculation, future projection models, Indian number formatter), `supabase.ts` (Supabase client client). |
-| `store/` | Zustand state management with storage persistence. | `usePortfolioStore.ts`, `useMoneyStore.ts`, `useAppModeStore.ts`, `useAiStore.ts`. |
+| `store/` | Zustand state management with storage persistence. | `usePortfolioStore.ts`, `useMoneyStore.ts`, `useAppModeStore.ts`, `useAiStore.ts` (Gemini chat messages with `ChatAction` ledger commands and AI stock insights). |
 | `tasks/` | Background automation tasks. | `backgroundFetch.ts` (registers periodic data backup jobs). |
 | `types/` | TypeScript interface definitions. | `index.ts` (portfolio types), `money.ts` (money manager types). |
 | `utils/` | Utility helpers & sync engine. | `syncEngine.ts` (Two-way incremental sync between local store and Supabase). |
@@ -83,7 +83,7 @@ Gainbase has two distinct user modes configured in `useAppModeStore` and switche
 *   **Detail Screens**: 
     *   `stock-details/[symbol]`: Real-time and historical transactions for a stock ticker, current/yesterday close price, gains.
     *   `portfolio-health`: Visual score gauges (out of 100) based on diversity, performance, risk concentration, and activity consistency.
-    *   `insights`: Actionable suggestions categorized into **Buy**, **Sell/Hold**, and **Observe**.
+    *   `insights`: Actionable suggestions categorized into **Buy**, **Sell**, **Hold**, and **Not Sure**.
     *   `forecast-details`: Custom portfolio forecasting (projections) adjusting years, SIP amount, step-up percentage, and inflation adjustments.
     *   `index-comparison`: Compares portfolio returns against indexes (e.g., Nifty 50, S&P 500).
 
@@ -173,9 +173,10 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 ### 💡 Portfolio Insights Trigger Rules
 *   **Location**: [useInsights.ts](file:///Users/akashsharma/Documents/Gainbase/hooks/useInsights.ts)
 *   **Triggers**:
-    *   **Sell/Hold**: Concentration $> 25\%$ (High Risk), Profit Book $> 30\%$ (Booking Profit), Stop Loss $< -15\%$ (Underperformance).
-    *   **Buy / Add**: Concentration $< 2\%$ (Sub-scale Holding), Large-cap buffer tracking.
-    *   **Observe**: Extreme volatility, sync freshness.
+    *   **Sell**: Concentration $> 25\%$ (High Risk), Stop Loss $< -15\%$ (Tax-Loss Harvesting).
+    *   **Hold**: Profit Book $> 30\%$ (Booking Profit).
+    *   **Buy / Add**: Concentration $< 2\%$ (Sub-scale Holding), Large-cap buffer tracking, DCA Opportunity.
+    *   **Not Sure**: Extreme volatility, 52W high/low proximity, winning/losing streaks, sector concentration, sync freshness.
 
 ### 💡 Money Insights Trigger Rules
 *   **Location**: [useMoneyInsights.ts](file:///Users/akashsharma/Documents/Gainbase/hooks/useMoneyInsights.ts)
@@ -183,6 +184,17 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     *   **Success**: Monthly savings rate $\ge 20\%$, healthy Debt-to-Income (DTI) ratio $\le 15\%$.
     *   **Warning**: Spending deficit (savings rate $\le 0\%$), budget overspent ($\ge 100\%$), credit card utilization $> 50\%$, cash cover below 1.5x of monthly EMIs, low emergency fund savings (covers $< 3$ months of average expenses), high DTI ratio $> 35\%$, high credit card outstanding debt relative to savings ($> 50\%$).
     *   **Tip**: Low savings rate ($< 10\%$), budget nearing limit ($\ge 85\%$), unbudgeted category spend (spent $\ge ₹2000$ without category limit configured), high idle cash (savings cover $\ge 6$ months of average expenses), high subscription cost burden ($> 8\%$ of income) or active subscription count $\ge 5$, upcoming subscription renewals (within 3 days).
+
+### 🤖 AI Co-pilot Chat & Natural Language Action Execution
+*   **Location**: [ai-chat.tsx](file:///Users/akashsharma/Documents/Gainbase/app/ai-chat.tsx) & [useAiStore.ts](file:///Users/akashsharma/Documents/Gainbase/store/useAiStore.ts)
+*   **Capabilities**:
+    *   **Transaction Necessity Guidance ("Was it needed or not?")**: Evaluates every user expense, peer loan, or purchase intent with candid financial feedback (Essential Need vs Discretionary Want vs Receivable / Peer Loan vs Investment).
+    *   **Natural Language Action Detection**: Parses ledger commands directly from conversational chat (e.g. *"I gave 500rs to Rajat"*, *"Spent 450 on food"*, *"Paid 15000 home loan EMI"*, *"Paid Netflix subscription"*).
+    *   **Interactive Approval Card**: Displays a dedicated card UI inline in chat showing account targets, loan/subscription linkages, amounts, necessity badges, and explicit **Approve Action** / **Dismiss** buttons before mutating local stores.
+    *   **Automatic Account & EMI Linkage**:
+        *   Creates `receivable`, `payable`, `wallet`, or `savings` accounts automatically on confirmation if the target account does not yet exist.
+        *   When an EMI payment is approved, automatically links to the loan in `loans`, registers the payment via `addEMIPayment` (reducing outstanding balance and logging into amortization history on the EMI page), and posts the expense transaction.
+        *   When a subscription payment is approved, logs via `addSubscriptionPayment` and automatically advances the subscription renewal cycle.
 
 ---
 
@@ -218,4 +230,4 @@ Whenever you make updates to the Gainbase codebase:
 3.  **Commit Document**: Keep the wiki updated in the same pull request or tool execution stream as your implementation.
 
 ---
-*Wiki last updated: August 28, 2026*
+*Wiki last updated: August 30, 2026*
