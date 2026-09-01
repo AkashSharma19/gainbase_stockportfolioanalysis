@@ -42,7 +42,7 @@ export default function AddTransactionScreen() {
   const currColors = Colors[colorScheme];
 
   const editingTransaction = useMemo(
-    () => (id ? transactions.find((t) => t.id === id) : null),
+    () => (id ? transactions.find((t) => String(t.id) === String(id)) : null),
     [id, transactions],
   );
 
@@ -122,7 +122,7 @@ export default function AddTransactionScreen() {
 
     const transactionData = {
       id: editingTransaction
-        ? editingTransaction.id
+        ? String(editingTransaction.id)
         : Math.random().toString(36).substring(7),
       symbol: symbol.toUpperCase(),
       quantity: parseFloat(quantity),
@@ -134,7 +134,7 @@ export default function AddTransactionScreen() {
     };
 
     if (editingTransaction) {
-      updateTransaction(editingTransaction.id, transactionData);
+      updateTransaction(String(editingTransaction.id), transactionData);
     } else {
       addTransaction(transactionData);
     }

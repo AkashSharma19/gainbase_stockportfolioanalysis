@@ -67,6 +67,11 @@ export const BROKER_ICONS: Record<string, any> = {
   Upstox: ArrowUpRight,
   Groww: ChartNoAxesCombined,
   'IND Money': Landmark,
+  Zerodha: TrendingUp,
+  AngelOne: BarChart3,
+  'Angel One': BarChart3,
+  Dhan: Zap,
+  Unassigned: Briefcase,
 };
 
 export const CHART_COLORS = [

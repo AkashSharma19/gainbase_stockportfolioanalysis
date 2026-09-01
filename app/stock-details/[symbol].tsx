@@ -756,12 +756,22 @@ export default function StockDetailsScreen() {
               ]}
             >
               {stockTransactions.map((item: any) => (
-                <View
-                  key={item.id}
+                <TouchableOpacity
+                  key={item.id ? String(item.id) : `${item.symbol}-${item.date}`}
                   style={[
                     styles.historyItem,
                     { borderBottomColor: currColors.border },
                   ]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    if (item.id) {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push({
+                        pathname: '/add-transaction',
+                        params: { id: String(item.id) },
+                      });
+                    }
+                  }}
                 >
                   <View
                     style={[
@@ -791,8 +801,10 @@ export default function StockDetailsScreen() {
                         styles.historyDate,
                         { color: currColors.textSecondary },
                       ]}
+                      numberOfLines={1}
                     >
                       {format(new Date(item.date), 'MMM dd, yyyy')}
+                      {item.broker?.trim() ? ` • ${item.broker.trim()}` : ''}
                     </ThemedText>
                   </View>
                   <View style={styles.historyAmount}>
@@ -813,7 +825,7 @@ export default function StockDetailsScreen() {
                       {isPrivacyMode ? '****' : item.price.toLocaleString()}
                     </ThemedText>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </>

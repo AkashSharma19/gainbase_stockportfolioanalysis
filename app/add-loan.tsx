@@ -21,7 +21,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
-import { Loan, AccountType } from '@/types/money';
+import { Loan, AccountType, EMIPayment } from '@/types/money';
 import { BankLogo } from '@/components/BankLogo';
 
 const ACCOUNT_TYPE_ICONS: Record<AccountType, { icon: any; color: string }> = {
@@ -74,6 +74,7 @@ export default function AddLoanScreen() {
   const [outstandingAmount, setOutstandingAmount] = useState('');
   const [interestRate, setInterestRate] = useState('');
   const [tenureMonths, setTenureMonths] = useState('');
+  const [paidEmis, setPaidEmis] = useState('0');
   const [startDate, setStartDate] = useState(new Date());
   const [linkedAccountId, setLinkedAccountId] = useState('');
   const [type, setType] = useState<Loan['type']>('home');
@@ -81,6 +82,8 @@ export default function AddLoanScreen() {
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
+
+  const { emiPayments } = useMoneyStore();
 
   useEffect(() => {
     if (editingLoan) {
@@ -94,9 +97,17 @@ export default function AddLoanScreen() {
       setLinkedAccountId(editingLoan.linkedAccountId || '');
       setType(editingLoan.type);
       setCustomEmi(editingLoan.emiAmount.toString());
+
+      // Count existing paid EMIs
+      const existingPaid = emiPayments.filter(
+        (p) => p.loanId === editingLoan.id && p.status === 'paid'
+      ).length;
+      if (existingPaid > 0) {
+        setPaidEmis(existingPaid.toString());
+      }
     } else {
       // Default linked account
-      const activeAccounts = accounts.filter(a => !a.isArchived);
+      const activeAccounts = accounts.filter((a) => !a.isArchived);
       if (activeAccounts.length > 0) {
         setLinkedAccountId(activeAccounts[0].id);
       }
@@ -121,10 +132,69 @@ export default function AddLoanScreen() {
       return P / N;
     }
 
-    const r = (annualRate / 12) / 100; // monthly rate fraction
+    const r = annualRate / 12 / 100; // monthly rate fraction
     const emi = (P * r * Math.pow(1 + r, N)) / (Math.pow(1 + r, N) - 1);
     return isFinite(emi) ? emi : 0;
   }, [principalAmount, interestRate, tenureMonths]);
+
+  // Amortize paid EMIs to calculate remaining balance and summary
+  const paidStats = useMemo(() => {
+    const P = parseFloat(principalAmount);
+    const annualRate = parseFloat(interestRate);
+    const N = parseInt(tenureMonths);
+    const k = parseInt(paidEmis) || 0;
+    const emiVal = customEmi && !isNaN(parseFloat(customEmi)) ? parseFloat(customEmi) : calculatedEMI;
+
+    if (isNaN(P) || P <= 0 || isNaN(N) || N <= 0 || k <= 0 || emiVal <= 0) {
+      return {
+        remainingBalance: P || 0,
+        totalPrincipalPaid: 0,
+        totalInterestPaid: 0,
+        remainingEmis: Math.max(0, (N || 0) - k),
+      };
+    }
+
+    const r = (annualRate || 0) / 12 / 100;
+    let bal = P;
+    let principalPaid = 0;
+    let interestPaid = 0;
+
+    for (let i = 1; i <= k && bal > 0; i++) {
+      const intPortion = bal * r;
+      const prinPortion = Math.min(bal, emiVal - intPortion);
+      bal = Math.max(0, bal - prinPortion);
+      principalPaid += prinPortion;
+      interestPaid += intPortion;
+    }
+
+    return {
+      remainingBalance: bal,
+      totalPrincipalPaid: principalPaid,
+      totalInterestPaid: interestPaid,
+      remainingEmis: Math.max(0, N - k),
+    };
+  }, [principalAmount, interestRate, tenureMonths, paidEmis, customEmi, calculatedEMI]);
+
+  // When paid EMIs changes, auto-update the outstanding amount field
+  const handlePaidEmisChange = (val: string) => {
+    setPaidEmis(val);
+    const k = parseInt(val) || 0;
+    const P = parseFloat(principalAmount);
+    const annualRate = parseFloat(interestRate);
+    const N = parseInt(tenureMonths);
+    const emiVal = customEmi && !isNaN(parseFloat(customEmi)) ? parseFloat(customEmi) : calculatedEMI;
+
+    if (!isNaN(P) && P > 0 && !isNaN(N) && N > 0 && emiVal > 0) {
+      const r = (annualRate || 0) / 12 / 100;
+      let bal = P;
+      for (let i = 1; i <= k && bal > 0; i++) {
+        const intPortion = bal * r;
+        const prinPortion = Math.min(bal, emiVal - intPortion);
+        bal = Math.max(0, bal - prinPortion);
+      }
+      setOutstandingAmount(Math.round(bal).toString());
+    }
+  };
 
   const handleSave = () => {
     handleHaptic();
@@ -136,14 +206,25 @@ export default function AddLoanScreen() {
     const P = parseFloat(principalAmount);
     const R = parseFloat(interestRate);
     const N = parseInt(tenureMonths);
+    const k = parseInt(paidEmis) || 0;
 
     if (isNaN(P) || isNaN(R) || isNaN(N) || P <= 0 || R < 0 || N <= 0) {
-      Alert.alert('Required Fields', 'Please enter valid positive numbers for principal and tenure, and non-negative interest rate.');
+      Alert.alert(
+        'Required Fields',
+        'Please enter valid positive numbers for principal and tenure, and non-negative interest rate.'
+      );
       return;
     }
 
-    const outstanding = parseFloat(outstandingAmount) || P;
-    
+    if (k > N) {
+      Alert.alert('Invalid Input', 'Paid EMIs cannot exceed total tenure months.');
+      return;
+    }
+
+    const outstanding = parseFloat(outstandingAmount) !== undefined && !isNaN(parseFloat(outstandingAmount))
+      ? parseFloat(outstandingAmount)
+      : paidStats.remainingBalance;
+
     // Determine EMI amount (either calculated or custom override)
     const emiOverride = parseFloat(customEmi);
     const finalEMI = isNaN(emiOverride) ? calculatedEMI : emiOverride;
@@ -157,8 +238,10 @@ export default function AddLoanScreen() {
     const end = new Date(startDate);
     end.setMonth(end.getMonth() + N);
 
+    const loanId = editingLoan ? editingLoan.id : Math.random().toString(36).substring(2, 9);
+
     const loanData: Loan = {
-      id: editingLoan ? editingLoan.id : Math.random().toString(36).substring(2, 9),
+      id: loanId,
       name: name.trim(),
       lenderName: lenderName.trim(),
       principalAmount: P,
@@ -173,7 +256,37 @@ export default function AddLoanScreen() {
       isActive: outstanding > 0,
     };
 
-    if (editingLoan) {
+    // If new loan with already paid EMIs, generate historical EMI payment logs
+    if (!editingLoan && k > 0) {
+      const generatedPayments: EMIPayment[] = [];
+      const r = R / 12 / 100;
+      let curBal = P;
+
+      for (let i = 1; i <= k && curBal > 0; i++) {
+        const intPortion = curBal * r;
+        const prinPortion = Math.min(curBal, finalEMI - intPortion);
+        curBal = Math.max(0, curBal - prinPortion);
+
+        const paymentDate = new Date(startDate);
+        paymentDate.setMonth(paymentDate.getMonth() + (i - 1));
+
+        generatedPayments.push({
+          id: `emi-init-${loanId}-${i}-${Date.now()}`,
+          loanId: loanId,
+          amount: Math.round(finalEMI),
+          principalPortion: Math.round(prinPortion),
+          interestPortion: Math.round(intPortion),
+          date: paymentDate.toISOString(),
+          status: 'paid',
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      useMoneyStore.setState((state) => ({
+        loans: [...state.loans, loanData],
+        emiPayments: [...state.emiPayments, ...generatedPayments],
+      }));
+    } else if (editingLoan) {
       updateLoan(editingLoan.id, loanData);
     } else {
       addLoan(loanData);
@@ -285,34 +398,24 @@ export default function AddLoanScreen() {
             </View>
           </View>
 
-          {/* Principal & Outstanding */}
+          {/* Principal & Interest */}
           <View style={styles.row}>
             <View style={[styles.inputGroup, { flex: 1 }]}>
               <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>PRINCIPAL AMOUNT</ThemedText>
               <TextInput
                 style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
-                placeholder="0.00"
+                placeholder="₹10,00,000"
                 placeholderTextColor={currColors.textSecondary}
                 keyboardType="numeric"
                 value={principalAmount}
-                onChangeText={setPrincipalAmount}
+                onChangeText={(val) => {
+                  setPrincipalAmount(val);
+                  if (!paidEmis || paidEmis === '0') {
+                    setOutstandingAmount(val);
+                  }
+                }}
               />
             </View>
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>OUTSTANDING AMOUNT</ThemedText>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
-                placeholder={principalAmount || '0.00'}
-                placeholderTextColor={currColors.textSecondary}
-                keyboardType="numeric"
-                value={outstandingAmount}
-                onChangeText={setOutstandingAmount}
-              />
-            </View>
-          </View>
-
-          {/* Interest & Tenure */}
-          <View style={styles.row}>
             <View style={[styles.inputGroup, { flex: 1 }]}>
               <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>ANNUAL INTEREST (%)</ThemedText>
               <TextInput
@@ -324,17 +427,82 @@ export default function AddLoanScreen() {
                 onChangeText={setInterestRate}
               />
             </View>
+          </View>
+
+          {/* Tenure & EMIs Already Paid */}
+          <View style={styles.row}>
             <View style={[styles.inputGroup, { flex: 1 }]}>
-              <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>TENURE (MONTHS)</ThemedText>
+              <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>TOTAL TENURE (MONTHS)</ThemedText>
               <TextInput
                 style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
-                placeholder="120"
+                placeholder="e.g. 60"
                 placeholderTextColor={currColors.textSecondary}
                 keyboardType="numeric"
                 value={tenureMonths}
                 onChangeText={setTenureMonths}
               />
             </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <ThemedText style={[styles.label, { color: '#00C9A7' }]}>EMIS ALREADY PAID</ThemedText>
+              <TextInput
+                style={[styles.textInput, { backgroundColor: currColors.card, borderColor: '#00C9A7', color: currColors.text, fontWeight: '600' }]}
+                placeholder="0"
+                placeholderTextColor={currColors.textSecondary}
+                keyboardType="numeric"
+                value={paidEmis}
+                onChangeText={handlePaidEmisChange}
+              />
+            </View>
+          </View>
+
+          {/* Repayment Progress Pill (if paid EMIs > 0) */}
+          {parseInt(paidEmis) > 0 && parseInt(tenureMonths) > 0 ? (
+            <View style={[styles.paidSummaryCard, { backgroundColor: `${currColors.cardSecondary}` }]}>
+              <View style={styles.paidSummaryHeader}>
+                <ThemedText style={[styles.paidSummaryTitle, { color: '#00C9A7' }]}>
+                  {paidEmis} of {tenureMonths} EMIs Paid ({Math.min(100, Math.round((parseInt(paidEmis) / parseInt(tenureMonths)) * 100))}%)
+                </ThemedText>
+                <ThemedText style={[styles.paidSummarySubtitle, { color: currColors.textSecondary }]}>
+                  {paidStats.remainingEmis} EMIs Remaining
+                </ThemedText>
+              </View>
+              <View style={styles.paidSummaryRow}>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={{ fontSize: 11, color: currColors.textSecondary }}>Principal Paid</ThemedText>
+                  <ThemedText style={{ fontSize: 14, fontWeight: '600', color: '#00C9A7', marginTop: 2 }}>
+                    ₹{paidStats.totalPrincipalPaid.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </ThemedText>
+                </View>
+                <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                  <ThemedText style={{ fontSize: 11, color: currColors.textSecondary }}>Remaining Principal</ThemedText>
+                  <ThemedText style={{ fontSize: 14, fontWeight: '600', color: currColors.text, marginTop: 2 }}>
+                    ₹{paidStats.remainingBalance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </ThemedText>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
+          {/* Outstanding Amount */}
+          <View style={styles.inputGroup}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <ThemedText style={[styles.label, { color: currColors.textSecondary, marginBottom: 0 }]}>
+                OUTSTANDING PRINCIPAL AMOUNT
+              </ThemedText>
+              {parseInt(paidEmis) > 0 ? (
+                <ThemedText style={{ fontSize: 11, color: '#00C9A7', fontWeight: '500' }}>
+                  Auto-calculated from paid EMIs
+                </ThemedText>
+              ) : null}
+            </View>
+            <TextInput
+              style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
+              placeholder={principalAmount || '0.00'}
+              placeholderTextColor={currColors.textSecondary}
+              keyboardType="numeric"
+              value={outstandingAmount}
+              onChangeText={setOutstandingAmount}
+            />
           </View>
 
           {/* EMI Indicator and Override */}
@@ -606,6 +774,30 @@ const styles = StyleSheet.create({
   },
   modalCloseIcon: {
     padding: 4,
+  },
+  paidSummaryCard: {
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+  },
+  paidSummaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  paidSummaryTitle: {
+    fontSize: 13,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  paidSummarySubtitle: {
+    fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
+  },
+  paidSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   modalItem: {
     flexDirection: 'row',

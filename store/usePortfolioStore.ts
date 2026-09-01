@@ -82,19 +82,27 @@ export const usePortfolioStore = create<PortfolioState>()(
         }
         return id;
       },
-      addTransaction: (transaction) =>
+      addTransaction: (transaction) => {
+        const cleanTx: Transaction = {
+          ...transaction,
+          id: transaction.id ? String(transaction.id) : Math.random().toString(36).substring(7),
+          updatedAt: new Date().toISOString(),
+        };
         set((state) => ({
-          transactions: [...state.transactions, { ...transaction, updatedAt: new Date().toISOString() }],
-        })),
+          transactions: [...state.transactions, cleanTx],
+        }));
+      },
       removeTransaction: (id) =>
         set((state) => ({
-          transactions: state.transactions.filter((t) => t.id !== id),
-          deletedTransactionIds: [...(state.deletedTransactionIds || []), id],
+          transactions: state.transactions.filter((t) => String(t.id) !== String(id)),
+          deletedTransactionIds: [...(state.deletedTransactionIds || []), String(id)],
         })),
       updateTransaction: (id, transaction) =>
         set((state) => ({
           transactions: state.transactions.map((t) =>
-            t.id === id ? { ...transaction, updatedAt: new Date().toISOString() } : t,
+            String(t.id) === String(id)
+              ? { ...transaction, id: String(id), updatedAt: new Date().toISOString() }
+              : t,
           ),
         })),
       fetchTickers: async () => {
@@ -375,8 +383,8 @@ export const usePortfolioStore = create<PortfolioState>()(
           const currentPrice = ticker?.['Current Value'] ?? avgPrice;
 
           let dimensionValue = 'Unknown';
-          if (dimension === 'Broker' && lastTransaction) {
-            dimensionValue = lastTransaction.broker || 'No Broker';
+          if (dimension === 'Broker') {
+            dimensionValue = lastTransaction?.broker?.trim() || 'Unassigned';
           } else if (ticker && ticker[dimension]) {
             dimensionValue = String(ticker[dimension]);
           } else if (dimension === 'Company Name') {
@@ -495,7 +503,7 @@ export const usePortfolioStore = create<PortfolioState>()(
             broker:
               sortedTransactions
                 .filter((t) => t.symbol.trim().toUpperCase() === symbol)
-                .reverse()[0]?.broker || 'Unknown',
+                .reverse()[0]?.broker?.trim() || 'Unassigned',
           });
         });
 
@@ -681,7 +689,14 @@ export const usePortfolioStore = create<PortfolioState>()(
       },
       importTransactions: (newTransactions) =>
         set((state) => ({
-          transactions: [...state.transactions, ...newTransactions],
+          transactions: [
+            ...state.transactions,
+            ...newTransactions.map((t, idx) => ({
+              ...t,
+              id: t.id ? String(t.id) : `tx-${t.symbol || 'stock'}-${Date.now()}-${idx}`,
+              updatedAt: t.updatedAt || new Date().toISOString(),
+            })),
+          ],
         })),
       isPrivacyMode: false,
       togglePrivacyMode: () =>
@@ -729,24 +744,23 @@ export const usePortfolioStore = create<PortfolioState>()(
               watchlist: state.watchlist.filter((t) => t !== ticker),
               deletedWatchlistIds: [...(state.deletedWatchlistIds || []), ticker],
             };
-          } else {
-            return {
-              watchlist: [...state.watchlist, ticker],
-              deletedWatchlistIds: (state.deletedWatchlistIds || []).filter((t) => t !== ticker),
-            };
           }
+          return {
+            watchlist: [...state.watchlist, ticker],
+            deletedWatchlistIds: (state.deletedWatchlistIds || []).filter((id) => id !== ticker),
+          };
         }),
       forecastYears: 15,
       setForecastYears: (years) => set({ forecastYears: years }),
       targetCorpus: 50000000,
-      setTargetCorpus: (targetCorpus) => set({ targetCorpus }),
+      setTargetCorpus: (corpus) => set({ targetCorpus: corpus }),
       sipStepUp: 10,
-      setSipStepUp: (sipStepUp) => set({ sipStepUp }),
+      setSipStepUp: (stepUp) => set({ sipStepUp: stepUp }),
       manualMonthlySIP: null,
-      setManualMonthlySIP: (manualMonthlySIP) => set({ manualMonthlySIP }),
+      setManualMonthlySIP: (sip) => set({ manualMonthlySIP: sip }),
       isInflationAdjusted: false,
-      setIsInflationAdjusted: (isInflationAdjusted) =>
-        set({ isInflationAdjusted }),
+      setIsInflationAdjusted: (isAdjusted) =>
+        set({ isInflationAdjusted: isAdjusted }),
       activeScenarios: ['base', 'bull', 'bear'],
       toggleScenario: (scenario) =>
         set((state) => ({
@@ -757,33 +771,65 @@ export const usePortfolioStore = create<PortfolioState>()(
       defaultIndex: 'INDEXNSE:NIFTY_50',
       setDefaultIndex: (ticker) => set({ defaultIndex: ticker }),
       lastSyncedAt: null,
-      clearAllData: () => set({
-        transactions: [],
-        tickers: [],
-        isPrivacyMode: false,
-        userName: '',
-        userEmail: '',
-        userMobile: '',
-        userImage: null,
-        theme: 'system',
-        showCurrencySymbol: true,
-        recentSearches: [],
-        headerLogo: null,
-        headerLink: null,
-        watchlist: [],
-        forecastYears: 15,
-        targetCorpus: 50000000,
-        sipStepUp: 10,
-        manualMonthlySIP: null,
-        isInflationAdjusted: false,
-        activeScenarios: ['base', 'bull', 'bear'],
-        defaultIndex: 'INDEXNSE:NIFTY_50',
-        lastSyncedAt: null,
-      }),
+      clearAllData: () =>
+        set((state) => ({
+          transactions: [],
+          tickers: state.tickers,
+          deletedTransactionIds: [],
+          deletedWatchlistIds: [],
+          isPrivacyMode: false,
+          userName: '',
+          userEmail: '',
+          userMobile: '',
+          userImage: null,
+          theme: 'system',
+          showCurrencySymbol: true,
+          recentSearches: [],
+          headerLogo: null,
+          headerLink: null,
+          watchlist: [],
+          forecastYears: 15,
+          targetCorpus: 50000000,
+          sipStepUp: 10,
+          manualMonthlySIP: null,
+          isInflationAdjusted: false,
+          activeScenarios: ['base', 'bull', 'bear'],
+          defaultIndex: 'INDEXNSE:NIFTY_50',
+          lastSyncedAt: null,
+          deviceId: state.deviceId,
+        })),
     }),
     {
       name: 'portfolio-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.transactions)) {
+          const seenIds = new Set<string>();
+          const seenFp = new Set<string>();
+          const uniqueTxs: Transaction[] = [];
+
+          for (const t of state.transactions) {
+            if (!t) continue;
+            const id = t.id ? String(t.id) : '';
+            const dateKey = t.date ? (typeof t.date === 'string' ? t.date.slice(0, 10) : new Date(t.date).toISOString().slice(0, 10)) : '';
+            const fp = `${(t.symbol || '').toUpperCase()}|${(t.type || 'BUY').toUpperCase()}|${Number(t.quantity || 0)}|${Number(t.price || 0)}|${dateKey}|${(t.broker || '').trim().toLowerCase()}`;
+
+            if (id && seenIds.has(id)) continue;
+            if (seenFp.has(fp)) continue;
+
+            if (id) seenIds.add(id);
+            seenFp.add(fp);
+            uniqueTxs.push({
+              ...t,
+              id: id || `tx-${(t.symbol || 'stock').toLowerCase()}-${dateKey}-${t.quantity}-${t.price}`,
+            });
+          }
+
+          if (uniqueTxs.length !== state.transactions.length) {
+            state.transactions = uniqueTxs;
+          }
+        }
+      },
     },
   ),
 );

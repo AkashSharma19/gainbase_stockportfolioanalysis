@@ -58,7 +58,7 @@ Here is the functional map of the directory tree and key files:
 | Directory/File | Description | Key Contents / Files |
 | :--- | :--- | :--- |
 | `app/` | File-based navigation routes & screens. | `_layout.tsx` (Root Stack Config, registers background task), `analytics.tsx` (Investments analytics dashboard), `money-analytics.tsx` (Cash flow analytics), `money-insights.tsx` (Dedicated Smart Insights for Money Manager), `money-health.tsx` (Personal financial health grade dashboard), `ai-chat.tsx` (Gemini AI Chat system), `win-loss-details.tsx` (Win/loss stock positions details), `index-comparison.tsx` (Benchmark returns), `portfolio-health.tsx` & `portfolio-health-formula.tsx` (Grades/criteria), `monthly-analysis.tsx` & `yearly-analysis.tsx` (Month/year performance breakdowns), `sectors.tsx` (Industry sectors listing). |
-| `app/(tabs)/` | Tabs layout and navigation index page wrapper. | `_layout.tsx` (Dynamic tab visibilities based on mode: Portfolio, Insights, History, Explore, Profile in Invest mode; Dashboard, Accounts, Budgets, EMIs, Profile in Money mode), `index.tsx` (Home screen displaying `MoneyDashboard` or `PortfolioSummary`), `explore.tsx` (Stock search & watchlist), `insights.tsx` (Investments insights), `money-accounts.tsx` (Net worth details & accounts list with credit card utilization warning badges and investment return percentages), `money-budgets.tsx` (Budget progress meters), `money-loans.tsx` (Loans & EMIs), `profile.tsx` (User profile & customizations), `add.tsx` (Add navigation wrapper), `two.tsx` (Placeholder). |
+| `app/(tabs)/` | Tabs layout and navigation index page wrapper. | `_layout.tsx` (Dynamic tab visibilities based on mode: Portfolio, Insights, History, Explore, Profile in Invest mode; Dashboard, Accounts, Budgets, EMIs, Profile in Money mode), `index.tsx` (Home screen displaying `MoneyDashboard` or `PortfolioSummary`), `explore.tsx` (Stock search & watchlist), `insights.tsx` (Investments insights), `money-accounts.tsx` (Net worth details & accounts list with credit card utilization warning badges and investment return percentages), `money-budgets.tsx` (Budget progress meters), `money-loans.tsx` (Loans & EMIs), `profile.tsx` (User profile & customizations), `add.tsx` (Add navigation wrapper), `two.tsx` (Investments Transaction History screen with category filter tabs, broker details, and swipeable/long-press actions). |
 | `app/add-*.tsx` | Modals to add various assets/transactions. | `add-transaction.tsx` (BUY/SELL stock), `add-money-transaction.tsx` (Income/expense/transfer with arithmetic calculator), `add-loan.tsx` (Borrowed/lent loan configuration), `add-budget.tsx` (Category budget limit), `add-account.tsx` (Monetary accounts configuration), `add-subscription.tsx` (SaaS subscription). |
 | `app/*-details/` | Detailed analytical screens. | `stock-details/[symbol].tsx` (Stock-level holdings & transactions), `account-details/[id].tsx` (Monetary account details showing transaction log, credit card utilization warning alerts, and investment absolute/percentage return badges), `loan-details/[id].tsx` (Amortization & EMI payments history), `budget-details/[id].tsx` (Category spend limits tracking), `subscription-details/[id].tsx` (Billing logs), `sector-details/[sector].tsx` (Industry sector allocation details), `analytics-details/[type]/[value].tsx` (Multi-dimensional queries). |
 | `components/` | Reusable presentation UI elements. | `MoneyDashboard.tsx`, `FinancialInsights.tsx` (Smart insights dashboard summary card with category chips or AI generation CTA when empty), `WidgetPreviewCard.tsx` (Interactive live preview simulator for iOS Home & Lock screen widgets), `PortfolioHealthCard.tsx`, `ActivityCalendar.tsx`, `MoneyActivityCalendar.tsx`, `ForecastCard.tsx`, `InsightsSummaryCard.tsx`, `WinLossCard.tsx`, `HealthDetailCard.tsx`, `HealthGauge.tsx`, `TopMovers.tsx`, `ShareableCard.tsx`, `AppSwitcher.tsx`. |
@@ -80,7 +80,7 @@ Gainbase has two distinct user modes configured in `useAppModeStore` and switche
 
 ### A. Investments Tracker Mode
 *   **Default View**: Displays total portfolio value, invested amount, total return percentage/PnL, day return percentage/PnL, XIRR, and privacy mode visibility toggle.
-*   **Holdings Breakdown**: Horizontal allocation pie charts by sector, company name, asset type, or broker. Sorting features for current value, total returns, or contribution percentage.
+*   **Holdings Breakdown**: Horizontal allocation pie charts by sector, company name, asset type, or broker (grouping unassigned broker holdings under **"Unassigned"**). Sorting features for current value, total returns, or contribution percentage.
 *   **Detail Screens**: 
     *   `stock-details/[symbol]`: Real-time and historical transactions for a stock ticker, current/yesterday close price, gains.
     *   `portfolio-health`: Visual score gauges (out of 100) based on diversity, performance, risk concentration, and activity consistency.
@@ -115,7 +115,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 
 ### 2. `usePortfolioStore` (`portfolio-storage`)
 *   **State**:
-    *   `transactions`: Complete list of stock/ETF transactions (`id`, `symbol`, `type` [BUY/SELL], `quantity`, `price`, `date`, `broker`).
+    *   `transactions`: Complete list of stock/ETF transactions (`id`, `symbol`, `type` [BUY/SELL], `quantity`, `price`, `date`, `broker`). Automatically validates and sanitizes all transaction IDs to unique strings during addition, import, and rehydration.
     *   `tickers`: Array of ticker metadata (yesterday close, current price, company name, asset type, sector, etc.) fetched from the `public.tickers` table in Supabase (which is populated via a Google Apps Script push trigger from the Google Sheet).
     *   `isPrivacyMode`: Boolean.
     *   `showCurrencySymbol`: Boolean (shows or hides `₹`).
@@ -123,6 +123,11 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     *   `watchlist`: List of ticker symbols.
     *   `deletedTransactionIds`, `deletedWatchlistIds`: Lists of deleted records to track offline deletions for Supabase cloud sync.
     *   `forecastYears`, `targetCorpus`, `sipStepUp`, `manualMonthlySIP`, `isInflationAdjusted`.
+*   **Actions**:
+    *   `addTransaction(transaction)`: Inserts new transaction with guaranteed string ID and timestamp.
+    *   `removeTransaction(id)`: Safely removes transaction by string ID comparison and queues ID for Supabase deletion sync.
+    *   `updateTransaction(id, transaction)`: Safely updates transaction by string ID.
+    *   `importTransactions(transactions)`: Sanitizes IDs and appends imported records.
 *   **Calculations / Selectors**:
     *   `calculateSummary()`: Returns total cost, current value, realized/unrealized gains, XIRR, and 1-day/1-year returns.
     *   `getAllocationData(dimension)`: Allocates portfolio weights based on sector, broker, etc.
@@ -132,7 +137,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 *   **State**:
     *   `accounts`: List of monetary accounts (e.g., Bank, Credit Card, Cash, or Investments). Investment accounts can be linked to a portfolio broker via `linkedBroker`.
     *   `moneyTransactions`: List of income and expense transactions.
-    *   `loans`: Borrowed or lent funds with principal, interest rate, duration, and EMI configuration.
+    *   `loans`: Borrowed or lent funds with principal, interest rate, duration, and EMI configuration. Supports "EMIs Already Paid" tracking upon loan creation with automatic amortization schedule computation and historical EMI payment generation.
     *   `emiPayments`: Log of EMI transaction logs (linked to transactions via `transactionId`).
     *   `budgets`: Set budgets per month/year.
     *   `subscriptions`: Active repeating subscriptions.
@@ -214,8 +219,12 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     1.  Automatically triggers on app launch (once local Zustand persist hydration from AsyncStorage finishes) and manual trigger on the Cloud Sync screen.
     2.  Compares local and remote database rows by unique `id` and `updatedAt` timestamps.
     3.  Upserts new/edited items in batch to Supabase.
-    4.  Processes deletions (marked `is_deleted = true` in Supabase) to synchronize removals without data loss.
-    5.  Syncs the `logo` column for accounts (added to local store and remote Supabase db table `accounts`).
+    4.  Processes deletions (hard deletes / synchronization) without losing cloud backups during local device resets.
+    5.  When local data is cleared or empty on the device, cloud sync automatically adopts the device and pulls all cloud data down cleanly without device mismatch blocks.
+    6.  Sanitizes and normalizes all timestamp and date fields to valid ISO-8601 strings (preventing PostgreSQL empty string timestamp syntax errors).
+    7.  Features intelligent content-fingerprint deduplication across all 10 tables, preventing double records and automatically purging duplicate cloud copies on resync.
+    8.  Maintains strict foreign key integrity by dynamically remapping parent IDs (e.g. accounts, loans, budgets, subscriptions) on child entities, pushing parent tables first, and deleting child records before parents.
+    9.  Syncs the `logo` column for accounts (added to local store and remote Supabase db table `accounts`).
 
 ### C. Ticker Price Synchronization
 *   **Behavior**:

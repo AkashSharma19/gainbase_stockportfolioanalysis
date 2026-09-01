@@ -1092,7 +1092,7 @@ export default function ProfileScreen() {
   const handleDeleteData = () => {
     Alert.alert(
       'Delete All Data',
-      'Are you sure you want to delete all your data? This action cannot be undone.',
+      'Are you sure you want to delete all local data on this device? (Your cloud backup will remain safe and can be restored anytime by resyncing).',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -1101,10 +1101,13 @@ export default function ProfileScreen() {
           onPress: () => {
             clearAllData();
             clearAllMoneyData();
-            Alert.alert('Success', 'All data has been deleted.');
+            Alert.alert(
+              'Data Cleared',
+              'All local data has been cleared from this device. You can restore your data from the cloud at any time by triggering Cloud Sync.',
+            );
           },
         },
-      ]
+      ],
     );
   };
 

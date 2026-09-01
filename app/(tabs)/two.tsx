@@ -12,8 +12,9 @@ import {
   Edit2,
   Trash2,
 } from 'lucide-react-native';
-import React, { memo, useMemo, useState } from 'react';
+import React, { memo, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Image,
   ScrollView,
   SectionList,
@@ -24,7 +25,7 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
-import { RectButton, Swipeable } from 'react-native-gesture-handler';
+import { Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // STANDALONE COMPONENTS FOR PERFORMANCE
@@ -99,39 +100,97 @@ const TransactionItem = memo(
     showCurrencySymbol: boolean;
     currColors: any;
   }) => {
+    const swipeableRef = useRef<Swipeable>(null);
     const isBuy = item.type === 'BUY';
     const totalValue = item.quantity * item.price;
     const displayName = ticker?.['Company Name'] || item.symbol;
 
+    const handlePressEdit = () => {
+      swipeableRef.current?.close();
+      onEdit(String(item.id));
+    };
+
+    const handlePressDelete = () => {
+      swipeableRef.current?.close();
+      onDelete(String(item.id));
+    };
+
+    const handleLongPress = () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Alert.alert(
+        `${displayName} (${item.type})`,
+        `Qty: ${item.quantity} @ ${showCurrencySymbol ? '₹' : ''}${item.price.toLocaleString()}\nTotal: ${showCurrencySymbol ? '₹' : ''}${totalValue.toLocaleString()}${item.broker?.trim() ? `\nBroker: ${item.broker.trim()}` : ''}`,
+        [
+          {
+            text: 'View Company Details',
+            onPress: () => onPress(item.symbol),
+          },
+          {
+            text: 'Edit Transaction',
+            onPress: () => onEdit(String(item.id)),
+          },
+          {
+            text: 'Delete Transaction',
+            style: 'destructive',
+            onPress: () => onDelete(String(item.id)),
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ],
+      );
+    };
+
     const renderRightActions = () => (
       <View style={styles.rightActions}>
-        <RectButton
+        <TouchableOpacity
+          activeOpacity={0.8}
           style={[styles.actionButton, styles.editButton]}
-          onPress={() => onEdit(item.id)}
+          onPress={handlePressEdit}
         >
-          <Edit2 size={20} color="#FFF" />
+          <Edit2 size={18} color="#FFF" />
           <ThemedText style={styles.actionText}>Edit</ThemedText>
-        </RectButton>
-        <RectButton
+        </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.8}
           style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => onDelete(item.id)}
+          onPress={handlePressDelete}
         >
-          <Trash2 size={20} color="#FFF" />
+          <Trash2 size={18} color="#FFF" />
           <ThemedText style={styles.actionText}>Delete</ThemedText>
-        </RectButton>
+        </TouchableOpacity>
       </View>
     );
 
+    let formattedDate = '';
+    try {
+      formattedDate = format(
+        parseISO(
+          typeof item.date === 'string'
+            ? item.date
+            : new Date(item.date).toISOString(),
+        ),
+        'MMM dd',
+      );
+    } catch {
+      formattedDate = 'N/A';
+    }
+
     return (
       <Swipeable
+        ref={swipeableRef}
         renderRightActions={renderRightActions}
-        friction={1}
+        friction={2}
         rightThreshold={30}
         overshootRight={false}
+        containerStyle={{ backgroundColor: currColors.background }}
       >
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => onPress(item.symbol)}
+          onLongPress={handleLongPress}
+          delayLongPress={350}
           style={[
             styles.transactionItem,
             {
@@ -157,15 +216,10 @@ const TransactionItem = memo(
             </ThemedText>
             <ThemedText
               style={[styles.dateText, { color: currColors.textSecondary }]}
+              numberOfLines={1}
             >
-              {format(
-                parseISO(
-                  typeof item.date === 'string'
-                    ? item.date
-                    : new Date(item.date).toISOString(),
-                ),
-                'MMM dd',
-              )}
+              {formattedDate}
+              {item.broker?.trim() ? ` • ${item.broker.trim()}` : ''}
             </ThemedText>
           </View>
 
@@ -216,7 +270,11 @@ export default function HistoryScreen() {
   }, [getAllocationData, transactions, tickers]);
 
   const filteredTransactions = useMemo(() => {
-    let result = [...transactions].sort((a, b) => b.date.localeCompare(a.date));
+    let result = [...transactions].sort((a, b) => {
+      const dateA = typeof a.date === 'string' ? a.date : '';
+      const dateB = typeof b.date === 'string' ? b.date : '';
+      return dateB.localeCompare(dateA);
+    });
 
     // Category Filter
     if (activeCategory !== 'All') {
@@ -232,9 +290,11 @@ export default function HistoryScreen() {
       result = result.filter((t) => {
         const ticker = tickerMap.get(t.symbol.toUpperCase());
         const companyName = ticker?.['Company Name'] || t.symbol;
+        const broker = t.broker || '';
         return (
           companyName.toLowerCase().includes(query) ||
-          t.symbol.toLowerCase().includes(query)
+          t.symbol.toLowerCase().includes(query) ||
+          broker.toLowerCase().includes(query)
         );
       });
     }
@@ -246,9 +306,17 @@ export default function HistoryScreen() {
     const groups: { [key: string]: Transaction[] } = {};
 
     filteredTransactions.forEach((t) => {
-      const date = parseISO(
-        typeof t.date === 'string' ? t.date : new Date(t.date).toISOString(),
-      );
+      let date: Date;
+      try {
+        date = parseISO(
+          typeof t.date === 'string' ? t.date : new Date(t.date).toISOString(),
+        );
+        if (isNaN(date.getTime())) {
+          date = new Date();
+        }
+      } catch {
+        date = new Date();
+      }
       const monthYear = format(date, 'MMMM yyyy');
       if (!groups[monthYear]) {
         groups[monthYear] = [];
@@ -268,7 +336,20 @@ export default function HistoryScreen() {
 
   const handleRemove = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    removeTransaction(id);
+    Alert.alert(
+      'Delete Transaction',
+      'Are you sure you want to delete this transaction?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            removeTransaction(id);
+          },
+        },
+      ],
+    );
   };
 
   const handlePressSymbol = (symbol: string) => {
@@ -408,17 +489,19 @@ export default function HistoryScreen() {
         ) : (
           <SectionList
             sections={groupedTransactions}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item, index) =>
+              item.id ? String(item.id) : `tx-${item.symbol}-${index}`
+            }
             renderItem={renderItem}
             renderSectionHeader={renderSectionHeader}
             contentContainerStyle={styles.listContent}
             stickySectionHeadersEnabled={false}
             showsVerticalScrollIndicator={false}
             bounces={false}
-            initialNumToRender={10}
-            maxToRenderPerBatch={10}
-            windowSize={10}
-            removeClippedSubviews={true}
+            initialNumToRender={15}
+            maxToRenderPerBatch={15}
+            windowSize={15}
+            removeClippedSubviews={false}
           />
         )}
       </View>

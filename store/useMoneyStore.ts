@@ -551,8 +551,16 @@ export const useMoneyStore = create<MoneyState>()(
           subscriptionPayments: [],
           categories: {
             income: [],
-            expense: []
+            expense: [],
           },
+          deletedAccountIds: [],
+          deletedTransactionIds: [],
+          deletedLoanIds: [],
+          deletedEmiPaymentIds: [],
+          deletedBudgetIds: [],
+          deletedBudgetCategoryIds: [],
+          deletedSubscriptionIds: [],
+          deletedSubscriptionPaymentIds: [],
         }),
 
 
@@ -636,6 +644,50 @@ export const useMoneyStore = create<MoneyState>()(
     {
       name: 'money-manager-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+
+        // Deduplicate moneyTransactions
+        if (Array.isArray(state.moneyTransactions)) {
+          const seenIds = new Set<string>();
+          const seenFp = new Set<string>();
+          const uniqueTxs: MoneyTransaction[] = [];
+          for (const t of state.moneyTransactions) {
+            if (!t) continue;
+            const id = t.id ? String(t.id) : '';
+            const dateKey = t.date ? (typeof t.date === 'string' ? t.date.slice(0, 10) : new Date(t.date).toISOString().slice(0, 10)) : '';
+            const fp = `${t.type || 'expense'}|${Number(t.amount || 0)}|${(t.category || '').trim().toLowerCase()}|${t.accountId || ''}|${dateKey}|${(t.note || '').trim().toLowerCase()}`;
+            if (id && seenIds.has(id)) continue;
+            if (seenFp.has(fp)) continue;
+            if (id) seenIds.add(id);
+            seenFp.add(fp);
+            uniqueTxs.push(t);
+          }
+          if (uniqueTxs.length !== state.moneyTransactions.length) {
+            state.moneyTransactions = uniqueTxs;
+          }
+        }
+
+        // Deduplicate accounts
+        if (Array.isArray(state.accounts)) {
+          const seenIds = new Set<string>();
+          const seenFp = new Set<string>();
+          const uniqueAccs: Account[] = [];
+          for (const a of state.accounts) {
+            if (!a) continue;
+            const id = a.id ? String(a.id) : '';
+            const fp = `${(a.name || '').trim().toLowerCase()}|${(a.type || '').toLowerCase()}|${(a.institution || '').trim().toLowerCase()}`;
+            if (id && seenIds.has(id)) continue;
+            if (seenFp.has(fp)) continue;
+            if (id) seenIds.add(id);
+            seenFp.add(fp);
+            uniqueAccs.push(a);
+          }
+          if (uniqueAccs.length !== state.accounts.length) {
+            state.accounts = uniqueAccs;
+          }
+        }
+      },
     }
   )
 );
