@@ -18,6 +18,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { Budget, BudgetCategory } from '@/types/money';
+import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 import { CategoryIcon } from '@/components/CategoryIcon';
 
 const DEFAULT_ICONS_COLORS: { [key: string]: { icon: string; color: string } } = {
@@ -139,7 +140,7 @@ export default function AddBudgetScreen() {
           name: cat,
           icon: info.icon,
           color: info.color,
-          limit: existing ? existing.limit.toString() : '0',
+          limit: existing ? (existing.limit > 0 ? formatIndianAmount(existing.limit.toString()) : '') : '',
         };
       });
       setCategories(list);
@@ -152,7 +153,7 @@ export default function AddBudgetScreen() {
           name: cat,
           icon: info.icon,
           color: info.color,
-          limit: '0',
+          limit: '',
         };
       });
       setCategories(list);
@@ -165,14 +166,14 @@ export default function AddBudgetScreen() {
 
   const totalLimit = useMemo(() => {
     return categories.reduce((acc, cat) => {
-      const val = parseFloat(cat.limit);
+      const val = parseIndianAmount(cat.limit);
       return acc + (isNaN(val) ? 0 : val);
     }, 0);
   }, [categories]);
 
   const handleLimitChange = (catId: string, val: string) => {
     setCategories(
-      categories.map((c) => (c.id === catId ? { ...c, limit: val } : c))
+      categories.map((c) => (c.id === catId ? { ...c, limit: formatIndianAmount(val) } : c))
     );
   };
 
@@ -186,9 +187,10 @@ export default function AddBudgetScreen() {
         name: c.name,
         icon: c.icon,
         color: c.color,
-        limit: parseFloat(c.limit) || 0,
+        limit: parseIndianAmount(c.limit) || 0,
         spent: 0,
-      }));
+      }))
+      .filter((c) => c.limit > 0);
 
     const budgetData: Budget = {
       id: editingBudget ? editingBudget.id : 'global-budget',

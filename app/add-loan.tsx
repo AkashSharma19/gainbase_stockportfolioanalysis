@@ -23,6 +23,7 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { Loan, AccountType, EMIPayment } from '@/types/money';
 import { BankLogo } from '@/components/BankLogo';
+import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
 const ACCOUNT_TYPE_ICONS: Record<AccountType, { icon: any; color: string }> = {
   wallet: { icon: Wallet, color: '#00C9A7' },
@@ -89,14 +90,14 @@ export default function AddLoanScreen() {
     if (editingLoan) {
       setName(editingLoan.name);
       setLenderName(editingLoan.lenderName);
-      setPrincipalAmount(editingLoan.principalAmount.toString());
-      setOutstandingAmount(editingLoan.outstandingAmount.toString());
+      setPrincipalAmount(formatIndianAmount(editingLoan.principalAmount.toString()));
+      setOutstandingAmount(formatIndianAmount(editingLoan.outstandingAmount.toString()));
       setInterestRate(editingLoan.interestRate.toString());
       setTenureMonths(editingLoan.tenureMonths.toString());
       setStartDate(new Date(editingLoan.startDate));
       setLinkedAccountId(editingLoan.linkedAccountId || '');
       setType(editingLoan.type);
-      setCustomEmi(editingLoan.emiAmount.toString());
+      setCustomEmi(editingLoan.emiAmount ? formatIndianAmount(editingLoan.emiAmount.toString()) : '');
 
       // Count existing paid EMIs
       const existingPaid = emiPayments.filter(
@@ -120,7 +121,7 @@ export default function AddLoanScreen() {
 
   // Auto calculate EMI using standard formula: P * r * (1+r)^n / ((1+r)^n - 1)
   const calculatedEMI = useMemo(() => {
-    const P = parseFloat(principalAmount);
+    const P = parseIndianAmount(principalAmount);
     const annualRate = parseFloat(interestRate);
     const N = parseInt(tenureMonths);
 
@@ -139,11 +140,11 @@ export default function AddLoanScreen() {
 
   // Amortize paid EMIs to calculate remaining balance and summary
   const paidStats = useMemo(() => {
-    const P = parseFloat(principalAmount);
+    const P = parseIndianAmount(principalAmount);
     const annualRate = parseFloat(interestRate);
     const N = parseInt(tenureMonths);
     const k = parseInt(paidEmis) || 0;
-    const emiVal = customEmi && !isNaN(parseFloat(customEmi)) ? parseFloat(customEmi) : calculatedEMI;
+    const emiVal = customEmi && !isNaN(parseIndianAmount(customEmi)) ? parseIndianAmount(customEmi) : calculatedEMI;
 
     if (isNaN(P) || P <= 0 || isNaN(N) || N <= 0 || k <= 0 || emiVal <= 0) {
       return {
@@ -179,10 +180,10 @@ export default function AddLoanScreen() {
   const handlePaidEmisChange = (val: string) => {
     setPaidEmis(val);
     const k = parseInt(val) || 0;
-    const P = parseFloat(principalAmount);
+    const P = parseIndianAmount(principalAmount);
     const annualRate = parseFloat(interestRate);
     const N = parseInt(tenureMonths);
-    const emiVal = customEmi && !isNaN(parseFloat(customEmi)) ? parseFloat(customEmi) : calculatedEMI;
+    const emiVal = customEmi && !isNaN(parseIndianAmount(customEmi)) ? parseIndianAmount(customEmi) : calculatedEMI;
 
     if (!isNaN(P) && P > 0 && !isNaN(N) && N > 0 && emiVal > 0) {
       const r = (annualRate || 0) / 12 / 100;
@@ -192,7 +193,7 @@ export default function AddLoanScreen() {
         const prinPortion = Math.min(bal, emiVal - intPortion);
         bal = Math.max(0, bal - prinPortion);
       }
-      setOutstandingAmount(Math.round(bal).toString());
+      setOutstandingAmount(formatIndianAmount(Math.round(bal).toString()));
     }
   };
 
@@ -203,7 +204,7 @@ export default function AddLoanScreen() {
       return;
     }
 
-    const P = parseFloat(principalAmount);
+    const P = parseIndianAmount(principalAmount);
     const R = parseFloat(interestRate);
     const N = parseInt(tenureMonths);
     const k = parseInt(paidEmis) || 0;
@@ -222,14 +223,14 @@ export default function AddLoanScreen() {
     }
 
     const outstanding = k > 0 ? paidStats.remainingBalance : (
-      parseFloat(outstandingAmount) !== undefined && !isNaN(parseFloat(outstandingAmount))
-        ? parseFloat(outstandingAmount)
+      parseIndianAmount(outstandingAmount) > 0
+        ? parseIndianAmount(outstandingAmount)
         : P
     );
 
     // Determine EMI amount (either calculated or custom override)
-    const emiOverride = parseFloat(customEmi);
-    const finalEMI = isNaN(emiOverride) ? calculatedEMI : emiOverride;
+    const emiOverride = parseIndianAmount(customEmi);
+    const finalEMI = isNaN(emiOverride) || emiOverride <= 0 ? calculatedEMI : emiOverride;
 
     if (finalEMI <= 0) {
       Alert.alert('Required Field', 'Please enter a valid EMI amount.');
@@ -411,9 +412,10 @@ export default function AddLoanScreen() {
                 keyboardType="numeric"
                 value={principalAmount}
                 onChangeText={(val) => {
-                  setPrincipalAmount(val);
+                  const formatted = formatIndianAmount(val);
+                  setPrincipalAmount(formatted);
                   if (!paidEmis || paidEmis === '0') {
-                    setOutstandingAmount(val);
+                    setOutstandingAmount(formatted);
                   }
                 }}
               />
@@ -499,11 +501,11 @@ export default function AddLoanScreen() {
             </View>
             <TextInput
               style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
-              placeholder={principalAmount || '0.00'}
+              placeholder={principalAmount || '₹10,00,000'}
               placeholderTextColor={currColors.textSecondary}
               keyboardType="numeric"
               value={outstandingAmount}
-              onChangeText={setOutstandingAmount}
+              onChangeText={(val) => setOutstandingAmount(formatIndianAmount(val))}
             />
           </View>
 
@@ -527,7 +529,7 @@ export default function AddLoanScreen() {
                 placeholderTextColor="rgba(255,255,255,0.3)"
                 keyboardType="numeric"
                 value={customEmi}
-                onChangeText={setCustomEmi}
+                onChangeText={(val) => setCustomEmi(formatIndianAmount(val))}
               />
             </View>
           </View>

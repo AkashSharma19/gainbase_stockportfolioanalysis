@@ -69,7 +69,7 @@ Here is the functional map of the directory tree and key files:
 | `store/` | Zustand state management with storage persistence. | `usePortfolioStore.ts`, `useMoneyStore.ts`, `useGoalStore.ts` (Custom formula financial goals and completion state), `useAppModeStore.ts`, `useAiStore.ts` (Gemini chat messages with `ChatAction` ledger commands and AI stock insights). |
 | `tasks/` | Background automation tasks. | `backgroundFetch.ts` (registers periodic data backup jobs). |
 | `types/` | TypeScript interface definitions. | `index.ts` (portfolio types), `money.ts` (money manager types), `goals.ts` (financial goals, variable definitions, and evaluated goals). |
-| `utils/` | Utility helpers & sync engine. | `syncEngine.ts` (Two-way incremental sync between local store and Supabase). |
+| `utils/` | Utility helpers & sync engine. | `formatters.ts` (Universal Indian numbering system `en-IN` amount formatting, live input comma masking, calculator expression parsing, and currency helpers), `syncEngine.ts` (Two-way incremental sync between local store and Supabase). |
 | `services/` | Peripheral external service adapters. | `DataExportService.ts` (exports/imports transactions backup). |
 
 ---

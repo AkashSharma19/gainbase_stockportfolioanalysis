@@ -33,6 +33,7 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { EMIPayment } from '@/types/money';
+import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
 const TYPE_CONFIG = {
   home: { label: 'Home Loan', color: '#007AFF' },
@@ -190,7 +191,7 @@ export default function LoanDetailsScreen() {
 
   // Prepayment projection calculations
   const prepaymentSavings = useMemo(() => {
-    const prepay = parseFloat(prepayAmount);
+    const prepay = parseIndianAmount(prepayAmount);
     if (!loan || isNaN(prepay) || prepay <= 0 || prepay > loan.outstandingAmount) {
       return null;
     }
@@ -338,7 +339,7 @@ export default function LoanDetailsScreen() {
       return;
     }
 
-    setPaymentAmount(loan.emiAmount.toString());
+    setPaymentAmount(formatIndianAmount(loan.emiAmount.toString()));
     setSelectedAccountId(loan.linkedAccountId || accounts[0]?.id || '');
     setSelectedCategory('EMI Payments');
     setShowLogPaymentModal(true);
@@ -350,7 +351,7 @@ export default function LoanDetailsScreen() {
     handleHaptic();
     if (!loan) return;
 
-    const A = parseFloat(paymentAmount);
+    const A = parseIndianAmount(paymentAmount);
     if (isNaN(A) || A <= 0) {
       Alert.alert('Required Field', 'Please enter a valid payment amount.');
       return;
@@ -397,7 +398,7 @@ export default function LoanDetailsScreen() {
 
   const handlePrepay = () => {
     handleHaptic();
-    const amount = parseFloat(prepayAmount);
+    const amount = parseIndianAmount(prepayAmount);
     if (isNaN(amount) || amount <= 0 || !loan) {
       Alert.alert('Error', 'Please enter a valid prepayment amount.');
       return;
@@ -599,11 +600,11 @@ export default function LoanDetailsScreen() {
               <View style={styles.calcInputRow}>
                 <TextInput
                   style={[styles.calcInput, { color: currColors.text, borderColor: currColors.border }]}
-                  placeholder="0"
+                  placeholder="e.g. 50,000"
                   placeholderTextColor={currColors.textSecondary}
                   keyboardType="numeric"
                   value={prepayAmount}
-                  onChangeText={setPrepayAmount}
+                  onChangeText={(val) => setPrepayAmount(formatIndianAmount(val))}
                 />
                 <TouchableOpacity
                   style={[styles.calcBtn, { backgroundColor: '#00C9A7' }]}
@@ -904,11 +905,11 @@ export default function LoanDetailsScreen() {
                     <ThemedText style={[styles.modalLabel, { color: currColors.textSecondary }]}>PAYMENT AMOUNT</ThemedText>
                     <TextInput
                       style={[styles.modalAmountInput, { color: currColors.text, borderBottomColor: currColors.border }]}
-                      placeholder="0"
+                      placeholder="e.g. 25,000"
                       placeholderTextColor={currColors.textSecondary}
                       keyboardType="numeric"
                       value={paymentAmount}
-                      onChangeText={setPaymentAmount}
+                      onChangeText={(val) => setPaymentAmount(formatIndianAmount(val))}
                     />
                   </View>
 

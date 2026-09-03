@@ -25,6 +25,7 @@ import {
 
 import { ThemedText } from '@/components/ThemedText';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
 export default function AddTransactionScreen() {
   const router = useRouter();
@@ -126,7 +127,7 @@ export default function AddTransactionScreen() {
         : Math.random().toString(36).substring(7),
       symbol: symbol.toUpperCase(),
       quantity: parseFloat(quantity),
-      price: parseFloat(price),
+      price: parseIndianAmount(price),
       date: date.toISOString(),
       type: type,
       currency: currency.toUpperCase(),
@@ -392,7 +393,7 @@ export default function AddTransactionScreen() {
                     placeholder={showCurrencySymbol ? '₹ 0.00' : '0.00'}
                     placeholderTextColor={currColors.textSecondary}
                     value={
-                      price ? (showCurrencySymbol ? `₹ ${price}` : price) : ''
+                      price ? (showCurrencySymbol ? `₹ ${formatIndianAmount(price)}` : formatIndianAmount(price)) : ''
                     }
                     onChangeText={(text) =>
                       setPrice(text.replace(/[^0-9.]/g, ''))
@@ -404,7 +405,7 @@ export default function AddTransactionScreen() {
               </View>
 
               {/* LIVE TOTAL VALUE */}
-              {!isNaN(parseFloat(price)) && !isNaN(parseFloat(quantity)) && parseFloat(price) > 0 && parseFloat(quantity) > 0 && (
+              {!isNaN(parseIndianAmount(price)) && !isNaN(parseFloat(quantity)) && parseIndianAmount(price) > 0 && parseFloat(quantity) > 0 && (
                 <View
                   style={[
                     styles.formRow,
@@ -416,7 +417,7 @@ export default function AddTransactionScreen() {
                   </ThemedText>
                   <ThemedText style={[styles.totalValue, { color: currColors.tint, fontWeight: '700' }]}>
                     {showCurrencySymbol ? '₹' : ''}
-                    {(parseFloat(price) * parseFloat(quantity)).toLocaleString(undefined, {
+                    {(parseIndianAmount(price) * parseFloat(quantity)).toLocaleString('en-IN', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}

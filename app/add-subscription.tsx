@@ -22,6 +22,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { Subscription, AccountType } from '@/types/money';
+import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 import { BankLogo } from '@/components/BankLogo';
 
 const ACCOUNT_TYPE_ICONS: Record<AccountType, { icon: any; color: string }> = {
@@ -107,7 +108,7 @@ export default function AddSubscriptionScreen() {
   useEffect(() => {
     if (editingSubscription) {
       setName(editingSubscription.name);
-      setAmount(editingSubscription.amount.toString());
+      setAmount(formatIndianAmount(editingSubscription.amount.toString()));
       setBillingCycle(editingSubscription.billingCycle);
       setNextPaymentDate(new Date(editingSubscription.nextPaymentDate));
       setLinkedAccountId(editingSubscription.linkedAccountId || '');
@@ -133,7 +134,7 @@ export default function AddSubscriptionScreen() {
       return;
     }
 
-    const amountVal = parseFloat(amount);
+    const amountVal = parseIndianAmount(amount);
     if (isNaN(amountVal) || amountVal <= 0) {
       Alert.alert('Required Field', 'Please enter a valid billing amount.');
       return;
@@ -283,11 +284,11 @@ export default function AddSubscriptionScreen() {
             <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>AMOUNT (₹)</ThemedText>
             <TextInput
               style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
-              placeholder="0.00"
+              placeholder="e.g. 1,499"
               placeholderTextColor={currColors.textSecondary}
               keyboardType="numeric"
               value={amount}
-              onChangeText={setAmount}
+              onChangeText={(val) => setAmount(formatIndianAmount(val))}
             />
           </View>
 

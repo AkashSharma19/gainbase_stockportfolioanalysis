@@ -26,6 +26,7 @@ import { MoneyTransaction, Account } from '@/types/money';
 import { BankLogo } from '@/components/BankLogo';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { AccountType } from '@/types/money';
+import { formatExpressionWithIndianCommas, parseIndianAmount } from '@/utils/formatters';
 
 const ACCOUNT_TYPE_ICONS: Record<AccountType, { icon: any; color: string }> = {
   wallet: { icon: Wallet, color: '#00C9A7' },
@@ -392,7 +393,7 @@ export default function AddMoneyTransactionScreen() {
       }
     }
 
-    const parsedAmount = parseFloat(finalAmountStr);
+    const parsedAmount = parseIndianAmount(finalAmountStr);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       Alert.alert('Required Field', 'Please enter a valid amount.');
       return;
@@ -557,8 +558,8 @@ export default function AddMoneyTransactionScreen() {
                   setShowCalculator(true);
                   Keyboard.dismiss();
                 }}
-                value={amount}
-                onChangeText={setAmount}
+                value={formatExpressionWithIndianCommas(amount)}
+                onChangeText={(val) => setAmount(val.replace(/,/g, ''))}
               />
             </TouchableOpacity>
           </View>

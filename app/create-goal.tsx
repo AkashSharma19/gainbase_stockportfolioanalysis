@@ -40,6 +40,7 @@ import { useAiStore } from '../store/useAiStore';
 import { FinancialGoal, GoalCategory, GoalUnit, GoalOperator, EvaluatedGoal } from '../types/goals';
 import { GOAL_VARIABLES, extractLiveVariableValues, evaluateGoal, evaluateFormula } from '../lib/goalEvaluator';
 import { parseGoalPromptWithAI } from '../lib/goalAiParser';
+import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -79,6 +80,18 @@ const QUICK_TRACK_PRESETS = [
   { label: '🚀 Portfolio XIRR', formula: 'PortfolioXIRR', unit: 'percentage' as GoalUnit, operator: '>=' as GoalOperator, icon: 'Activity', color: '#FF9500', category: 'investments' as GoalCategory },
   { label: '💵 Savings Rate', formula: 'MonthlySavingsRate', unit: 'percentage' as GoalUnit, operator: '>=' as GoalOperator, icon: 'Percent', color: '#00C9A7', category: 'savings' as GoalCategory },
 ];
+
+const formatInputAmount = (val: string, goalUnit: GoalUnit): string => {
+  if (!val) return '';
+  if (goalUnit === 'percentage') {
+    return val.replace(/[^0-9.]/g, '');
+  }
+  return formatIndianAmount(val);
+};
+
+const parseInputAmount = (val: string): number => {
+  return parseIndianAmount(val);
+};
 
 export default function CreateGoalScreen() {
   const router = useRouter();
@@ -126,9 +139,9 @@ export default function CreateGoalScreen() {
       setCategory(editingGoal.category);
       setFormula(editingGoal.formula);
       if (editingGoal.targets && editingGoal.targets.length > 0) {
-        setTargetsList(editingGoal.targets.map((t) => t.toString()));
+        setTargetsList(editingGoal.targets.map((t) => formatInputAmount(t.toString(), editingGoal.unit)));
       } else {
-        setTargetsList([editingGoal.targetValue.toString()]);
+        setTargetsList([formatInputAmount(editingGoal.targetValue.toString(), editingGoal.unit)]);
       }
       setUnit(editingGoal.unit);
       setOperator(editingGoal.operator || (editingGoal.targetValue === 0 || editingGoal.category === 'debt' ? '<=' : '>='));
@@ -160,7 +173,7 @@ export default function CreateGoalScreen() {
       setDescription(parsed.description || '');
       setCategory(parsed.category);
       setFormula(parsed.formula);
-      setTargetsList(parsed.targets.map((t) => t.toString()));
+      setTargetsList(parsed.targets.map((t) => formatInputAmount(t.toString(), parsed.unit)));
       setUnit(parsed.unit);
       setOperator(parsed.operator);
       setIcon(parsed.icon);
@@ -198,7 +211,7 @@ export default function CreateGoalScreen() {
   // Live evaluated preview inside formula editor
   const previewEvaluatedGoal: EvaluatedGoal = useMemo(() => {
     const parsed = targetsList
-      .map((t) => parseFloat(t))
+      .map((t) => parseInputAmount(t))
       .filter((t) => !isNaN(t) && (unit !== 'currency' || t >= 0));
 
     const sorted = [...parsed].sort((a, b) => (operator === '<=' ? b - a : a - b));
@@ -240,7 +253,8 @@ export default function CreateGoalScreen() {
   };
 
   const updateTargetMilestone = (idx: number, val: string) => {
-    setTargetsList((prev) => prev.map((t, i) => (i === idx ? val : t)));
+    const formatted = formatInputAmount(val, unit);
+    setTargetsList((prev) => prev.map((t, i) => (i === idx ? formatted : t)));
   };
 
   const removeTargetMilestone = (idx: number) => {
@@ -270,7 +284,7 @@ export default function CreateGoalScreen() {
     }
 
     const parsedTargets = targetsList
-      .map((t) => parseFloat(t))
+      .map((t) => parseInputAmount(t))
       .filter((t) => !isNaN(t) && (unit !== 'currency' || t >= 0));
 
     if (parsedTargets.length === 0) {
@@ -566,6 +580,7 @@ export default function CreateGoalScreen() {
                   onPress={() => {
                     handleHaptic();
                     setUnit('currency');
+                    setTargetsList((prev) => prev.map((t) => formatInputAmount(t, 'currency')));
                   }}
                 >
                   <ThemedText style={[styles.unitBtnText, { fontSize: 10, color: unit === 'currency' ? '#FFFFFF' : currColors.textSecondary }]}>
@@ -580,6 +595,7 @@ export default function CreateGoalScreen() {
                   onPress={() => {
                     handleHaptic();
                     setUnit('percentage');
+                    setTargetsList((prev) => prev.map((t) => formatInputAmount(t, 'percentage')));
                   }}
                 >
                   <ThemedText style={[styles.unitBtnText, { fontSize: 10, color: unit === 'percentage' ? '#FFFFFF' : currColors.textSecondary }]}>
@@ -617,7 +633,13 @@ export default function CreateGoalScreen() {
                       borderColor: currColors.border,
                     },
                   ]}
-                  placeholder={targetsList.length > 1 ? `Milestone ${idx + 1} amount` : 'e.g. 500000'}
+                  placeholder={
+                    targetsList.length > 1
+                      ? `Milestone ${idx + 1} (e.g. ${idx === 0 ? '1,00,000' : idx === 1 ? '5,00,000' : '10,00,000'})`
+                      : unit === 'currency'
+                      ? 'e.g. 1,00,000'
+                      : 'e.g. 20'
+                  }
                   placeholderTextColor={currColors.textSecondary}
                   keyboardType="numeric"
                   value={targetVal}

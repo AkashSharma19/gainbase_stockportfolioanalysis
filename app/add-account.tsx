@@ -33,6 +33,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 import { Account, AccountType } from '@/types/money';
 import { BANK_BRANDS } from '@/components/BankLogo';
 
@@ -100,8 +101,8 @@ export default function AddAccountScreen() {
     if (editingAccount) {
       setName(editingAccount.name);
       setType(editingAccount.type);
-      setBalance(Math.abs(editingAccount.balance).toString());
-      setCreditLimit(editingAccount.creditLimit ? editingAccount.creditLimit.toString() : '');
+      setBalance(formatIndianAmount(Math.abs(editingAccount.balance).toString()));
+      setCreditLimit(editingAccount.creditLimit ? formatIndianAmount(editingAccount.creditLimit.toString()) : '');
       setInstitution(editingAccount.institution || '');
       setLogo(editingAccount.logo || '');
       setAccountNumber(editingAccount.accountNumber || '');
@@ -136,7 +137,7 @@ export default function AddAccountScreen() {
       return;
     }
 
-    const parsedBalance = parseFloat(balance);
+    const parsedBalance = parseIndianAmount(balance);
     if (isNaN(parsedBalance) && !editingAccount) {
       Alert.alert('Invalid Balance', 'Please enter a valid numeric balance.');
       return;
@@ -150,7 +151,7 @@ export default function AddAccountScreen() {
       finalBalance = Math.abs(finalBalance);
     }
 
-    const parsedLimit = parseFloat(creditLimit);
+    const parsedLimit = parseIndianAmount(creditLimit);
 
     if (editingAccount) {
       updateAccount(editingAccount.id, {
@@ -347,11 +348,11 @@ export default function AddAccountScreen() {
             </ThemedText>
             <TextInput
               style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
-              placeholder="0.00"
+              placeholder="e.g. 1,00,000"
               placeholderTextColor={currColors.textSecondary}
               keyboardType="numeric"
               value={balance}
-              onChangeText={setBalance}
+              onChangeText={(val) => setBalance(formatIndianAmount(val))}
             />
           </View>
 
@@ -361,11 +362,11 @@ export default function AddAccountScreen() {
               <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>TOTAL CREDIT LIMIT</ThemedText>
               <TextInput
                 style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
-                placeholder="0.00"
+                placeholder="e.g. 2,50,000"
                 placeholderTextColor={currColors.textSecondary}
                 keyboardType="numeric"
                 value={creditLimit}
-                onChangeText={setCreditLimit}
+                onChangeText={(val) => setCreditLimit(formatIndianAmount(val))}
               />
             </View>
           ) : null}
