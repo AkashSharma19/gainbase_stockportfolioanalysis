@@ -1,9 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
   ScrollView,
   TouchableOpacity,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -20,6 +22,13 @@ import {
   Info,
   ArrowDownLeft,
   ArrowUpRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  X,
+  Check,
+  RotateCcw,
+  SlidersHorizontal,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -30,22 +39,53 @@ import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Account, AccountType } from '@/types/money';
 import { BankLogo } from '@/components/BankLogo';
 
-const TYPE_CONFIG = {
-  wallet: { label: 'Cash & Wallets', color: '#00C9A7', icon: Wallet },
+const TYPE_CONFIG: Record<AccountType, { label: string; color: string; icon: any }> = {
   savings: { label: 'Savings Accounts', color: '#007AFF', icon: Landmark },
-  investment: { label: 'Investment Accounts', color: '#AF52DE', icon: Activity },
   credit_card: { label: 'Credit Cards', color: '#FF9500', icon: CreditCard },
+  wallet: { label: 'Cash & Wallets', color: '#00C9A7', icon: Wallet },
+  investment: { label: 'Investment Accounts', color: '#AF52DE', icon: Activity },
   emergency_fund: { label: 'Emergency Fund', color: '#FF2D55', icon: PiggyBank },
   receivable: { label: 'Accounts Receivable', color: '#34C759', icon: ArrowDownLeft },
   payable: { label: 'Accounts Payable', color: '#FF3B30', icon: ArrowUpRight },
 };
+
+const DEFAULT_ORDER: AccountType[] = [
+  'savings',
+  'credit_card',
+  'wallet',
+  'investment',
+  'emergency_fund',
+  'receivable',
+  'payable',
+];
 
 export default function AccountsScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
 
-  const { accounts, loans } = useMoneyStore();
+  const accounts = useMoneyStore((state) => state.accounts) || [];
+  const loans = useMoneyStore((state) => state.loans) || [];
+  const accountTypesOrder = useMoneyStore((state) => state.accountTypesOrder);
+
+  const setAccountTypesOrder = (order: AccountType[]) => {
+    const fn = useMoneyStore.getState().setAccountTypesOrder;
+    if (typeof fn === 'function') {
+      fn(order);
+    } else {
+      useMoneyStore.setState({ accountTypesOrder: order });
+    }
+  };
+
+  const reorderAccounts = (newAccs: Account[]) => {
+    const fn = useMoneyStore.getState().reorderAccounts;
+    if (typeof fn === 'function') {
+      fn(newAccs);
+    } else {
+      useMoneyStore.setState({ accounts: newAccs });
+    }
+  };
+
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
   
@@ -53,11 +93,23 @@ export default function AccountsScreen() {
   const tickers = usePortfolioStore((state) => state.tickers);
   const getAllocationData = usePortfolioStore((state) => state.getAllocationData);
 
+  const [showReorderModal, setShowReorderModal] = useState(false);
+
   const brokerAllocations = useMemo(() => {
     return getAllocationData('Broker');
   }, [getAllocationData, transactions, tickers]);
 
-  // Group accounts by type
+  // Compute effective account types order
+  const effectiveTypesOrder = useMemo(() => {
+    const base = accountTypesOrder && accountTypesOrder.length > 0
+      ? accountTypesOrder
+      : DEFAULT_ORDER;
+    const allKeys = Object.keys(TYPE_CONFIG) as AccountType[];
+    const missing = allKeys.filter((k) => !base.includes(k));
+    return [...base, ...missing];
+  }, [accountTypesOrder]);
+
+  // Group accounts by type (preserving order within array)
   const groupedAccounts = useMemo(() => {
     const groups: { [key in AccountType]: Account[] } = {
       wallet: [],
@@ -71,7 +123,11 @@ export default function AccountsScreen() {
     
     accounts.forEach((acc) => {
       if (!acc.isArchived) {
-        groups[acc.type].push(acc);
+        if (groups[acc.type]) {
+          groups[acc.type].push(acc);
+        } else {
+          groups.savings.push(acc);
+        }
       }
     });
     
@@ -127,8 +183,43 @@ export default function AccountsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
+  // Move Account Type Up/Down
+  const moveType = (index: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= effectiveTypesOrder.length) return;
+
+    const newOrder = [...effectiveTypesOrder];
+    const temp = newOrder[index];
+    newOrder[index] = newOrder[targetIdx];
+    newOrder[targetIdx] = temp;
+    setAccountTypesOrder(newOrder);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  // Move Account Up/Down within its Account Type category
+  const moveAccountWithinType = (account: Account, type: AccountType, direction: 'up' | 'down') => {
+    const typeList = groupedAccounts[type] || [];
+    const currentIdx = typeList.findIndex((a) => a.id === account.id);
+    if (currentIdx === -1) return;
+    if (direction === 'up' && currentIdx <= 0) return;
+    if (direction === 'down' && currentIdx >= typeList.length - 1) return;
+
+    const swapWith = typeList[direction === 'up' ? currentIdx - 1 : currentIdx + 1];
+    const newAccounts = [...accounts];
+    const posA = newAccounts.findIndex((a) => a.id === account.id);
+    const posB = newAccounts.findIndex((a) => a.id === swapWith.id);
+
+    if (posA !== -1 && posB !== -1) {
+      const temp = newAccounts[posA];
+      newAccounts[posA] = newAccounts[posB];
+      newAccounts[posB] = temp;
+      reorderAccounts(newAccounts);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
   const renderAccountItem = (item: Account, isLast: boolean) => {
-    const config = TYPE_CONFIG[item.type];
+    const config = TYPE_CONFIG[item.type] || TYPE_CONFIG.savings;
     const IconComponent = config.icon;
     const isCreditCard = item.type === 'credit_card';
 
@@ -261,9 +352,7 @@ export default function AccountsScreen() {
     );
   };
 
-  const overviewGradient = colorScheme === 'dark'
-    ? ['#1C1C1E', '#2C2C2E'] as const
-    : ['#FFFFFF', '#F2F2F7'] as const;
+
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
@@ -272,15 +361,26 @@ export default function AccountsScreen() {
         <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
           Accounts
         </ThemedText>
-        <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: currColors.cardSecondary }]}
-          onPress={() => {
-            handleHaptic();
-            router.push('/add-account');
-          }}
-        >
-          <Plus size={20} color="#00C9A7" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <TouchableOpacity
+            style={[styles.actionHeaderBtn, { backgroundColor: currColors.cardSecondary }]}
+            onPress={() => {
+              handleHaptic();
+              setShowReorderModal(true);
+            }}
+          >
+            <ArrowUpDown size={18} color={currColors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.addBtn, { backgroundColor: currColors.cardSecondary }]}
+            onPress={() => {
+              handleHaptic();
+              router.push('/add-account');
+            }}
+          >
+            <Plus size={20} color="#00C9A7" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
@@ -324,11 +424,11 @@ export default function AccountsScreen() {
           </View>
         </View>
 
-        {/* Render accounts grouped by type */}
-        {(Object.keys(TYPE_CONFIG) as AccountType[]).map((type) => {
+        {/* Render accounts grouped by customized type order */}
+        {effectiveTypesOrder.map((type) => {
           const list = groupedAccounts[type];
-          if (list.length === 0) return null;
-          const config = TYPE_CONFIG[type];
+          if (!list || list.length === 0) return null;
+          const config = TYPE_CONFIG[type] || TYPE_CONFIG.savings;
           const totalBalance = list.reduce((sum, acc) => {
             const balance = acc.type === 'investment' && acc.linkedBroker
               ? (brokerAllocations.find(b => b.name.toLowerCase().trim() === acc.linkedBroker!.toLowerCase().trim())?.value ?? 0)
@@ -369,6 +469,187 @@ export default function AccountsScreen() {
           </View>
         ) : null}
       </ScrollView>
+
+      {/* Unified Single Reorder Modal */}
+      <Modal visible={showReorderModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            activeOpacity={1}
+            onPress={() => setShowReorderModal(false)}
+          />
+          <View style={[styles.reorderModalContent, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            <View style={styles.modalDragHandle} />
+
+            {/* Modal Header */}
+            <View style={[styles.reorderModalHeader, { borderBottomColor: currColors.border }]}>
+              <View style={{ flex: 1 }}>
+                <ThemedText style={[styles.reorderModalTitle, { color: currColors.text }]}>
+                  Reorder Accounts & Categories
+                </ThemedText>
+                <ThemedText style={{ fontSize: 12, color: currColors.textSecondary, marginTop: 2, fontFamily: 'Outfit_400Regular' }}>
+                  Move category sections or accounts within them
+                </ThemedText>
+              </View>
+              <TouchableOpacity
+                style={[styles.doneBtn, { backgroundColor: '#00C9A7' }]}
+                onPress={() => {
+                  handleHaptic();
+                  setShowReorderModal(false);
+                }}
+              >
+                <Check size={18} color="#FFFFFF" strokeWidth={2.5} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Unified Scrollable Section & Account Hierarchy */}
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false} style={{ maxHeight: 520 }}>
+              {effectiveTypesOrder.map((typeKey, typeIdx) => {
+                const config = TYPE_CONFIG[typeKey] || TYPE_CONFIG.savings;
+                const IconComp = config.icon;
+                const typeAccounts = groupedAccounts[typeKey] || [];
+                const isFirstType = typeIdx === 0;
+                const isLastType = typeIdx === effectiveTypesOrder.length - 1;
+
+                return (
+                  <View
+                    key={typeKey}
+                    style={[
+                      styles.unifiedSectionCard,
+                      { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }
+                    ]}
+                  >
+                    {/* Section Header Row with Type Reorder Controls */}
+                    <View style={styles.unifiedSectionHeader}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <View style={[styles.reorderIconWrap, { backgroundColor: `${config.color}18` }]}>
+                          <IconComp size={16} color={config.color} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <ThemedText style={[styles.unifiedSectionTitle, { color: currColors.text }]}>
+                            {config.label}
+                          </ThemedText>
+                          <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, marginTop: 1 }}>
+                            {typeAccounts.length} {typeAccounts.length === 1 ? 'account' : 'accounts'}
+                          </ThemedText>
+                        </View>
+                      </View>
+
+                      {/* Section Type Up / Down Buttons */}
+                      <View style={styles.arrowBtnGroup}>
+                        <TouchableOpacity
+                          style={[
+                            styles.arrowBtn,
+                            { backgroundColor: currColors.card },
+                            isFirstType && { opacity: 0.25 }
+                          ]}
+                          disabled={isFirstType}
+                          onPress={() => moveType(typeIdx, 'up')}
+                        >
+                          <ArrowUp size={15} color={currColors.text} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.arrowBtn,
+                            { backgroundColor: currColors.card },
+                            isLastType && { opacity: 0.25 }
+                          ]}
+                          disabled={isLastType}
+                          onPress={() => moveType(typeIdx, 'down')}
+                        >
+                          <ArrowDown size={15} color={currColors.text} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* Nested Accounts inside this section */}
+                    {typeAccounts.length > 0 ? (
+                      <View style={[styles.nestedAccountsBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+                        {typeAccounts.map((acc, accIdx) => {
+                          const isFirstAcc = accIdx === 0;
+                          const isLastAcc = accIdx === typeAccounts.length - 1;
+                          const isLastItemInBox = accIdx === typeAccounts.length - 1;
+
+                          return (
+                            <View
+                              key={acc.id}
+                              style={[
+                                styles.nestedAccountRow,
+                                !isLastItemInBox && { borderBottomWidth: 1, borderBottomColor: currColors.border }
+                              ]}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                {acc.logo ? (
+                                  <BankLogo logo={acc.logo} size={22} style={{ marginRight: 10 }} />
+                                ) : (
+                                  <View style={[styles.nestedAccountDot, { backgroundColor: acc.color || config.color }]} />
+                                )}
+                                <View style={{ flex: 1, marginRight: 8 }}>
+                                  <ThemedText style={[styles.nestedAccountName, { color: currColors.text }]} numberOfLines={1}>
+                                    {acc.name}
+                                  </ThemedText>
+                                  <ThemedText style={{ fontSize: 10, color: currColors.textSecondary, marginTop: 1 }} numberOfLines={1}>
+                                    {acc.institution ? `${acc.institution} • ` : ''}{formatAmount(acc.balance)}
+                                  </ThemedText>
+                                </View>
+                              </View>
+
+                              {/* Account Up / Down Buttons within this section */}
+                              <View style={styles.arrowBtnGroup}>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.smallArrowBtn,
+                                    { backgroundColor: currColors.cardSecondary },
+                                    isFirstAcc && { opacity: 0.25 }
+                                  ]}
+                                  disabled={isFirstAcc}
+                                  onPress={() => moveAccountWithinType(acc, typeKey, 'up')}
+                                >
+                                  <ArrowUp size={13} color={currColors.text} />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={[
+                                    styles.smallArrowBtn,
+                                    { backgroundColor: currColors.cardSecondary },
+                                    isLastAcc && { opacity: 0.25 }
+                                  ]}
+                                  disabled={isLastAcc}
+                                  onPress={() => moveAccountWithinType(acc, typeKey, 'down')}
+                                >
+                                  <ArrowDown size={13} color={currColors.text} />
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    ) : (
+                      <View style={styles.emptyTypeHint}>
+                        <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontStyle: 'italic' }}>
+                          No accounts in this category
+                        </ThemedText>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+
+              <TouchableOpacity
+                style={[styles.resetOrderBtn, { borderColor: currColors.border }]}
+                onPress={() => {
+                  handleHaptic();
+                  setAccountTypesOrder(DEFAULT_ORDER);
+                }}
+              >
+                <RotateCcw size={14} color={currColors.textSecondary} />
+                <ThemedText style={{ fontSize: 12, color: currColors.textSecondary, marginLeft: 6 }}>
+                  Reset Categories to Default Order
+                </ThemedText>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -387,6 +668,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
+  },
+  actionHeaderBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addBtn: {
     width: 42,
@@ -550,5 +838,126 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  reorderModalContent: {
+    maxHeight: '88%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingHorizontal: 18,
+    paddingBottom: 34,
+  },
+  modalDragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(142, 142, 147, 0.3)',
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  reorderModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    marginBottom: 14,
+  },
+  reorderModalTitle: {
+    fontSize: 17,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  doneBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  unifiedSectionCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 12,
+  },
+  unifiedSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  unifiedSectionTitle: {
+    fontSize: 13,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  nestedAccountsBox: {
+    marginTop: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  nestedAccountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  nestedAccountDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  nestedAccountName: {
+    fontSize: 13,
+    fontFamily: 'Outfit_500Medium',
+  },
+  emptyTypeHint: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  reorderIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  arrowBtnGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  arrowBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  smallArrowBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resetOrderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    marginTop: 6,
+    marginBottom: 10,
   },
 });

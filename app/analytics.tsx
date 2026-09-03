@@ -659,6 +659,28 @@ export default function AnalyticsScreen() {
                             Qty: {item.quantity.toLocaleString()}
                           </ThemedText>
                         )}
+                        {selectedDimension === 'Broker' && item.stocksCount !== undefined && (
+                          <ThemedText
+                            style={[
+                              styles.holdingSub,
+                              { color: currColors.textSecondary },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {item.stocksCount} {item.stocksCount === 1 ? 'Holding' : 'Holdings'}
+                          </ThemedText>
+                        )}
+                        {(selectedDimension === 'Sector' || selectedDimension === 'Asset Type') && item.stocksCount !== undefined && (
+                          <ThemedText
+                            style={[
+                              styles.holdingSub,
+                              { color: currColors.textSecondary },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {item.stocksCount} {item.stocksCount === 1 ? 'Stock' : 'Stocks'}
+                          </ThemedText>
+                        )}
                       </View>
                     </View>
 

@@ -23,7 +23,10 @@ interface MoneyState {
   deletedSubscriptionIds: string[];
   deletedSubscriptionPaymentIds: string[];
   
-  // Account Actions
+  // Account Ordering & Actions
+  accountTypesOrder?: AccountType[];
+  setAccountTypesOrder: (order: AccountType[]) => void;
+  reorderAccounts: (accounts: Account[]) => void;
   addAccount: (account: Account) => void;
   updateAccount: (id: string, updates: Partial<Account>) => void;
   removeAccount: (id: string) => void;
@@ -134,6 +137,18 @@ export const useMoneyStore = create<MoneyState>()(
       },
 
 
+
+      accountTypesOrder: [
+        'savings',
+        'credit_card',
+        'wallet',
+        'investment',
+        'emergency_fund',
+        'receivable',
+        'payable',
+      ],
+      setAccountTypesOrder: (order) => set({ accountTypesOrder: order }),
+      reorderAccounts: (accounts) => set({ accounts }),
 
       // --- Account Actions ---
       addAccount: (account) =>

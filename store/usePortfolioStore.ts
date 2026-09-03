@@ -16,7 +16,7 @@ interface PortfolioState {
   getAllocationData: (
     dimension: 'Sector' | 'Company Name' | 'Asset Type' | 'Broker',
   ) => import('../types').AllocationItem[];
-  getHoldingsData: () => import('../types').Holding[];
+  getHoldingsData: (brokerFilter?: string) => import('../types').Holding[];
   getYearlyAnalysis: () => import('../types').YearlyAnalysis[];
   getMonthlyAnalysis: () => import('../types').MonthlyAnalysis[];
   importTransactions: (transactions: Transaction[]) => void;
@@ -345,13 +345,15 @@ export const usePortfolioStore = create<PortfolioState>()(
           return a.type === 'BUY' ? -1 : 1;
         });
 
-        const holdingsMap = new Map<
+        // Compute total global portfolio value for proportional percentages
+        let globalPortfolioValue = 0;
+        const globalHoldingsMap = new Map<
           string,
           { quantity: number; totalCost: number }
         >();
         sortedTransactions.forEach((t) => {
           const sym = t.symbol.trim().toUpperCase();
-          const current = holdingsMap.get(sym) || { quantity: 0, totalCost: 0 };
+          const current = globalHoldingsMap.get(sym) || { quantity: 0, totalCost: 0 };
           if (t.type === 'BUY') {
             current.quantity += t.quantity;
             current.totalCost += t.quantity * t.price;
@@ -364,28 +366,106 @@ export const usePortfolioStore = create<PortfolioState>()(
               current.totalCost - t.quantity * avgPriceBefore,
             );
           }
-          holdingsMap.set(sym, current);
+          globalHoldingsMap.set(sym, current);
         });
 
-        const groups: Record<
-          string,
-          { value: number; cost: number; quantity: number; symbol?: string }
-        > = {};
-        let totalPortfolioValue = 0;
-
-        holdingsMap.forEach((data, symbol) => {
+        globalHoldingsMap.forEach((data, symbol) => {
           if (data.quantity <= 0) return;
           const ticker = tickerMap.get(symbol);
-          const lastTransaction = sortedTransactions
-            .filter((t) => t.symbol.trim().toUpperCase() === symbol)
-            .reverse()[0];
+          const avgPrice = data.totalCost / data.quantity;
+          const currentPrice = ticker?.['Current Value'] ?? avgPrice;
+          globalPortfolioValue += data.quantity * currentPrice;
+        });
+
+        // Handle Broker dimension specifically by (symbol, broker) pair
+        if (dimension === 'Broker') {
+          const brokerHoldingsMap = new Map<
+            string,
+            { quantity: number; totalCost: number; symbol: string; broker: string }
+          >();
+
+          sortedTransactions.forEach((t) => {
+            const sym = t.symbol.trim().toUpperCase();
+            const broker = t.broker?.trim() || 'Unassigned';
+            const key = `${sym}:::${broker}`;
+            const current = brokerHoldingsMap.get(key) || {
+              quantity: 0,
+              totalCost: 0,
+              symbol: t.symbol,
+              broker,
+            };
+            if (t.type === 'BUY') {
+              current.quantity += t.quantity;
+              current.totalCost += t.quantity * t.price;
+            } else {
+              const avgPriceBefore =
+                current.quantity > 0 ? current.totalCost / current.quantity : 0;
+              current.quantity = Math.max(0, current.quantity - t.quantity);
+              current.totalCost = Math.max(
+                0,
+                current.totalCost - t.quantity * avgPriceBefore,
+              );
+            }
+            brokerHoldingsMap.set(key, current);
+          });
+
+          const groups: Record<
+            string,
+            { value: number; cost: number; quantity: number; stocksCount: number; symbol?: string }
+          > = {};
+
+          brokerHoldingsMap.forEach((data) => {
+            if (data.quantity <= 0) return;
+            const symUpper = data.symbol.trim().toUpperCase();
+            const ticker = tickerMap.get(symUpper);
+            const avgPrice = data.totalCost / data.quantity;
+            const currentPrice = ticker?.['Current Value'] ?? avgPrice;
+            const currentValue = data.quantity * currentPrice;
+            const brokerName = data.broker;
+
+            if (!groups[brokerName]) {
+              groups[brokerName] = { value: 0, cost: 0, quantity: 0, stocksCount: 0 };
+            }
+            groups[brokerName].value += currentValue;
+            groups[brokerName].cost += data.totalCost;
+            groups[brokerName].quantity += data.quantity;
+            groups[brokerName].stocksCount += 1;
+          });
+
+          return Object.entries(groups)
+            .map(([name, data]) => ({
+              name,
+              symbol: undefined,
+              value: data.value,
+              totalCost: data.cost,
+              quantity: data.quantity,
+              stocksCount: data.stocksCount,
+              logo: undefined,
+              pnl: data.value - data.cost,
+              pnlPercentage:
+                data.cost > 0 ? ((data.value - data.cost) / data.cost) * 100 : 0,
+              percentage:
+                globalPortfolioValue > 0
+                  ? (data.value / globalPortfolioValue) * 100
+                  : 0,
+            }))
+            .sort((a, b) => b.value - a.value);
+        }
+
+        // Standard dimensions: Sector, Asset Type, Company Name
+        const groups: Record<
+          string,
+          { value: number; cost: number; quantity: number; stocksCount: number; symbol?: string }
+        > = {};
+
+        globalHoldingsMap.forEach((data, symbol) => {
+          if (data.quantity <= 0) return;
+          const ticker = tickerMap.get(symbol);
           const avgPrice = data.totalCost / data.quantity;
           const currentPrice = ticker?.['Current Value'] ?? avgPrice;
 
           let dimensionValue = 'Unknown';
-          if (dimension === 'Broker') {
-            dimensionValue = lastTransaction?.broker?.trim() || 'Unassigned';
-          } else if (ticker && ticker[dimension]) {
+          if (ticker && ticker[dimension]) {
             dimensionValue = String(ticker[dimension]);
           } else if (dimension === 'Company Name') {
             dimensionValue = ticker ? ticker['Company Name'] : symbol;
@@ -393,13 +473,13 @@ export const usePortfolioStore = create<PortfolioState>()(
 
           const currentValue = data.quantity * currentPrice;
           if (!groups[dimensionValue])
-            groups[dimensionValue] = { value: 0, cost: 0, quantity: 0 };
+            groups[dimensionValue] = { value: 0, cost: 0, quantity: 0, stocksCount: 0 };
           groups[dimensionValue].value += currentValue;
           groups[dimensionValue].cost += data.totalCost;
           groups[dimensionValue].quantity += data.quantity;
+          groups[dimensionValue].stocksCount += 1;
           if (!groups[dimensionValue].symbol)
             groups[dimensionValue].symbol = symbol;
-          totalPortfolioValue += currentValue;
         });
 
         return Object.entries(groups)
@@ -409,18 +489,19 @@ export const usePortfolioStore = create<PortfolioState>()(
             value: data.value,
             totalCost: data.cost,
             quantity: data.quantity,
+            stocksCount: data.stocksCount,
             logo: data.symbol ? tickerMap.get(data.symbol)?.Logo : undefined,
             pnl: data.value - data.cost,
             pnlPercentage:
               data.cost > 0 ? ((data.value - data.cost) / data.cost) * 100 : 0,
             percentage:
-              totalPortfolioValue > 0
-                ? (data.value / totalPortfolioValue) * 100
+              globalPortfolioValue > 0
+                ? (data.value / globalPortfolioValue) * 100
                 : 0,
           }))
           .sort((a, b) => b.value - a.value);
       },
-      getHoldingsData: () => {
+      getHoldingsData: (brokerFilter?: string) => {
         const { transactions, tickers } = get();
         if (transactions.length === 0) return [];
 
@@ -435,11 +516,17 @@ export const usePortfolioStore = create<PortfolioState>()(
           return a.type === 'BUY' ? -1 : 1;
         });
 
+        const effectiveTransactions = brokerFilter
+          ? sortedTransactions.filter(
+              (t) => (t.broker?.trim() || 'Unassigned') === brokerFilter,
+            )
+          : sortedTransactions;
+
         const holdingsMap = new Map<
           string,
           { quantity: number; totalCost: number; symbol: string }
         >();
-        sortedTransactions.forEach((t) => {
+        effectiveTransactions.forEach((t) => {
           const sym = t.symbol.trim().toUpperCase();
           const current = holdingsMap.get(sym) || {
             quantity: 0,
@@ -461,7 +548,7 @@ export const usePortfolioStore = create<PortfolioState>()(
           holdingsMap.set(sym, current);
         });
 
-        let totalPortfolioValue = 0;
+        let totalHoldingsValue = 0;
         const preliminaryHoldings: import('../types').Holding[] = [];
         holdingsMap.forEach((data, symbol) => {
           if (data.quantity <= 0) return;
@@ -472,7 +559,21 @@ export const usePortfolioStore = create<PortfolioState>()(
           const currentValue = data.quantity * currentPrice;
           const investedValue = data.totalCost;
           const dayChange = (currentPrice - yesterdayClose) * data.quantity;
-          totalPortfolioValue += currentValue;
+          totalHoldingsValue += currentValue;
+
+          // Find broker representation
+          const stockTxs = sortedTransactions.filter(
+            (t) => t.symbol.trim().toUpperCase() === symbol,
+          );
+          const distinctBrokers = Array.from(
+            new Set(stockTxs.map((t) => t.broker?.trim() || 'Unassigned')),
+          );
+          const brokerLabel = brokerFilter
+            ? brokerFilter
+            : distinctBrokers.length > 1
+              ? distinctBrokers.join(', ')
+              : distinctBrokers[0] || 'Unassigned';
+
           preliminaryHoldings.push({
             symbol: data.symbol,
             companyName: ticker?.['Company Name'] || data.symbol,
@@ -500,10 +601,7 @@ export const usePortfolioStore = create<PortfolioState>()(
             DebtToEquity: ticker?.DebtToEquity || ticker?.['Debt to Equity'],
             logo: ticker?.Logo,
             marketCap: ticker?.['Market Cap'],
-            broker:
-              sortedTransactions
-                .filter((t) => t.symbol.trim().toUpperCase() === symbol)
-                .reverse()[0]?.broker?.trim() || 'Unassigned',
+            broker: brokerLabel,
           });
         });
 
@@ -511,8 +609,8 @@ export const usePortfolioStore = create<PortfolioState>()(
           .map((h) => ({
             ...h,
             contributionPercentage:
-              totalPortfolioValue > 0
-                ? (h.currentValue / totalPortfolioValue) * 100
+              totalHoldingsValue > 0
+                ? (h.currentValue / totalHoldingsValue) * 100
                 : 0,
           }))
           .sort((a, b) => b.currentValue - a.currentValue);

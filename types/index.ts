@@ -93,6 +93,7 @@ export interface AllocationItem {
   pnl: number;
   pnlPercentage: number;
   quantity: number;
+  stocksCount?: number;
   logo?: string;
 }
 

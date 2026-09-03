@@ -109,6 +109,7 @@ export default function LoanDetailsScreen() {
       pastScheduleRows.unshift({
         id: p.id,
         isPaid: true,
+        isUpcoming: false,
         monthLabel,
         startBalance,
         emi: p.amount,
@@ -121,24 +122,33 @@ export default function LoanDetailsScreen() {
     // Push past payments in chronological order (oldest first)
     schedule.push(...pastScheduleRows);
 
-    // 2. Generate future projections (next 12 months or until balance is zero)
+    // 2. Generate future projections starting from the next unpaid month
     let balance = loan.outstandingAmount;
     const rate = (loan.interestRate / 12) / 100;
     const emi = loan.emiAmount;
-    const today = new Date();
+    
+    let nextUnpaidDate: Date;
+    if (pastPaymentsAsc.length > 0) {
+      const latestPaymentDate = new Date(pastPaymentsAsc[pastPaymentsAsc.length - 1].date);
+      nextUnpaidDate = new Date(latestPaymentDate.getFullYear(), latestPaymentDate.getMonth() + 1, 1);
+    } else {
+      const startDate = new Date(loan.startDate);
+      nextUnpaidDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    }
 
-    for (let month = 1; month <= 12 && balance > 0; month++) {
+    for (let i = 0; i < 12 && balance > 0; i++) {
       const interestPortion = balance * rate;
       const principalPortion = Math.min(balance, emi - interestPortion);
       const startBalance = balance;
       balance = Math.max(0, balance - principalPortion);
 
-      const labelDate = new Date(today.getFullYear(), today.getMonth() + month, 1);
+      const labelDate = new Date(nextUnpaidDate.getFullYear(), nextUnpaidDate.getMonth() + i, 1);
       const monthLabel = labelDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
 
       schedule.push({
-        id: `projected-${month}`,
+        id: `projected-${i}`,
         isPaid: false,
+        isUpcoming: i === 0,
         monthLabel,
         startBalance,
         emi: interestPortion + principalPortion,
@@ -652,20 +662,79 @@ export default function LoanDetailsScreen() {
           </View>
           
           {amortizationSchedule.map((row) => (
-            <View key={row.id || row.monthLabel} style={styles.amortRow}>
-              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                {row.isPaid && <Check size={12} color="#34C759" strokeWidth={3.5} />}
-                <ThemedText style={{ fontSize: 12, fontFamily: 'Outfit_500Medium', color: row.isPaid ? '#34C759' : currColors.textSecondary }}>
+            <View
+              key={row.id || row.monthLabel}
+              style={[
+                styles.amortRow,
+                row.isUpcoming && {
+                  backgroundColor: 'rgba(255, 179, 0, 0.1)',
+                  borderColor: 'rgba(255, 179, 0, 0.35)',
+                  borderWidth: 1,
+                  borderRadius: 10,
+                  marginVertical: 3,
+                  paddingHorizontal: 8,
+                },
+              ]}
+            >
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                {row.isPaid ? (
+                  <Check size={12} color="#34C759" strokeWidth={3.5} />
+                ) : row.isUpcoming ? (
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFB300' }} />
+                ) : null}
+                <ThemedText
+                  style={{
+                    fontSize: 12,
+                    fontFamily: row.isUpcoming ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                    color: row.isPaid
+                      ? '#34C759'
+                      : row.isUpcoming
+                        ? '#FFB300'
+                        : currColors.textSecondary,
+                  }}
+                >
                   {row.monthLabel}
                 </ThemedText>
               </View>
-              <ThemedText style={[styles.amortColText, { color: row.isPaid ? currColors.textSecondary : currColors.text }]}>
+              <ThemedText
+                style={[
+                  styles.amortColText,
+                  {
+                    color: row.isPaid
+                      ? currColors.textSecondary
+                      : currColors.text,
+                    fontFamily: row.isUpcoming ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                  },
+                ]}
+              >
                 {formatAmount(row.principalPortion)}
               </ThemedText>
-              <ThemedText style={[styles.amortColText, { color: row.isPaid ? '#FF3B30' + '99' : '#FF3B30' }]}>
+              <ThemedText
+                style={[
+                  styles.amortColText,
+                  {
+                    color: row.isPaid
+                      ? '#FF3B30' + '99'
+                      : row.isUpcoming
+                        ? '#FF9500'
+                        : '#FF3B30',
+                    fontFamily: row.isUpcoming ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                  },
+                ]}
+              >
                 {formatAmount(row.interestPortion)}
               </ThemedText>
-              <ThemedText style={[styles.amortColTextRight, { color: row.isPaid ? currColors.textSecondary : currColors.text }]}>
+              <ThemedText
+                style={[
+                  styles.amortColTextRight,
+                  {
+                    color: row.isPaid
+                      ? currColors.textSecondary
+                      : currColors.text,
+                    fontFamily: 'Outfit_600SemiBold',
+                  },
+                ]}
+              >
                 {formatAmount(row.endBalance)}
               </ThemedText>
             </View>

@@ -39,6 +39,8 @@ export default function AnalyticsDetailsScreen() {
     value: string;
   }>();
   const getHoldingsData = usePortfolioStore((state) => state.getHoldingsData);
+  const transactions = usePortfolioStore((state) => state.transactions);
+  const tickers = usePortfolioStore((state) => state.tickers);
   const showCurrencySymbol = usePortfolioStore(
     (state) => state.showCurrencySymbol,
   );
@@ -53,7 +55,13 @@ export default function AnalyticsDetailsScreen() {
   >('Invested');
   const [sortDirection, setSortDirection] = useState<'DESC' | 'ASC'>('DESC');
 
-  const holdings = useMemo(() => getHoldingsData(), [getHoldingsData]);
+  const holdings = useMemo(() => {
+    const decodedValue = decodeURIComponent(value || '');
+    if (type === 'Broker') {
+      return getHoldingsData(decodedValue);
+    }
+    return getHoldingsData();
+  }, [getHoldingsData, type, value, transactions, tickers]);
 
   const filteredHoldings = useMemo(() => {
     const decodedValue = decodeURIComponent(value || '');
@@ -65,7 +73,10 @@ export default function AnalyticsDetailsScreen() {
 
     const key = typeKeyMap[type as keyof typeof typeKeyMap] || 'sector';
 
-    const result = holdings.filter((h) => String(h[key]) === decodedValue);
+    const result =
+      type === 'Broker'
+        ? holdings
+        : holdings.filter((h) => String(h[key]) === decodedValue);
 
     return [...result].sort((a, b) => {
       let valA: any;
@@ -280,7 +291,7 @@ export default function AnalyticsDetailsScreen() {
                   { color: currColors.textSecondary },
                 ]}
               >
-                {type}
+                {type} • {filteredHoldings.length} {filteredHoldings.length === 1 ? 'Holding' : 'Holdings'}
               </ThemedText>
             </View>
           </SafeAreaView>
