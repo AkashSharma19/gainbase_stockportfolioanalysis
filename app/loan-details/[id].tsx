@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -85,6 +85,33 @@ export default function LoanDetailsScreen() {
   const [showAccountSelector, setShowAccountSelector] = useState(false);
   const [showCategorySelector, setShowCategorySelector] = useState(false);
 
+  // Auto-heal loan record if payments exist but outstanding wasn't updated
+  useEffect(() => {
+    if (loan && loanPayments.length > 0) {
+      const totalPrincipalPaid = loanPayments.reduce((sum, p) => sum + (p.principalPortion || p.amount), 0);
+      const expectedOutstanding = Math.max(0, loan.principalAmount - totalPrincipalPaid);
+      if (loan.outstandingAmount > expectedOutstanding + 0.01) {
+        useMoneyStore.setState((state) => ({
+          loans: state.loans.map((l) =>
+            l.id === loan.id ? { ...l, outstandingAmount: expectedOutstanding } : l
+          ),
+        }));
+      }
+    }
+  }, [loan, loanPayments]);
+
+  const totalPrincipalPaid = useMemo(() => {
+    return loanPayments.reduce((sum, p) => sum + (p.principalPortion || p.amount), 0);
+  }, [loanPayments]);
+
+  const effectiveOutstanding = useMemo(() => {
+    if (!loan) return 0;
+    if (loanPayments.length > 0) {
+      return Math.max(0, Math.min(loan.outstandingAmount, loan.principalAmount - totalPrincipalPaid));
+    }
+    return loan.outstandingAmount;
+  }, [loan, loanPayments, totalPrincipalPaid]);
+
   // Amortization Schedule Calculation (Generates the next 12 installments + past payments)
   const amortizationSchedule = useMemo(() => {
     if (!loan) return [];
@@ -93,7 +120,7 @@ export default function LoanDetailsScreen() {
     
     // 1. Process past paid payments (oldest first)
     const pastPaymentsAsc = [...loanPayments].reverse();
-    let bal = loan.outstandingAmount;
+    let bal = effectiveOutstanding;
     
     // Calculate start balances and end balances backwards for past payments
     const pastScheduleRows = [];
@@ -123,7 +150,7 @@ export default function LoanDetailsScreen() {
     schedule.push(...pastScheduleRows);
 
     // 2. Generate future projections starting from the next unpaid month
-    let balance = loan.outstandingAmount;
+    let balance = effectiveOutstanding;
     const rate = (loan.interestRate / 12) / 100;
     const emi = loan.emiAmount;
     
@@ -159,7 +186,7 @@ export default function LoanDetailsScreen() {
     }
 
     return schedule;
-  }, [loan, loanPayments]);
+  }, [loan, loanPayments, effectiveOutstanding]);
 
   // Prepayment projection calculations
   const prepaymentSavings = useMemo(() => {
@@ -437,7 +464,7 @@ export default function LoanDetailsScreen() {
   }
 
   // Calculate overall paid progress
-  const totalPaid = Math.max(0, loan.principalAmount - loan.outstandingAmount);
+  const totalPaid = Math.max(0, loan.principalAmount - effectiveOutstanding);
   const paidPercentage = loan.principalAmount > 0 ? (totalPaid / loan.principalAmount) * 100 : 0;
   const linkedAccount = accounts.find((a) => a.id === loan.linkedAccountId);
 
@@ -483,7 +510,7 @@ export default function LoanDetailsScreen() {
           </View>
           <ThemedText style={[styles.balanceLabel, { color: currColors.textSecondary }]}>OUTSTANDING DEBT</ThemedText>
           <ThemedText style={[styles.balanceText, { color: currColors.text }]}>
-            {formatAmount(loan.outstandingAmount)}
+            {formatAmount(effectiveOutstanding)}
           </ThemedText>
 
           {/* Progress bar */}

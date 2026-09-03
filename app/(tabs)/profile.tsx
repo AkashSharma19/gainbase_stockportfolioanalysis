@@ -83,20 +83,16 @@ export default function ProfileScreen() {
   const [editEmail, setEditEmail] = useState(userEmail);
   const [editMobile, setEditMobile] = useState(userMobile);
 
-  // Category Management State
-  const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
-  const [categoryType, setCategoryType] = useState<'income' | 'expense'>('expense');
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [editingCategory, setEditingCategory] = useState<string | null>(null);
-  const [editCategoryName, setEditCategoryName] = useState('');
+  const handleHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
 
   const storeCategories = useMoneyStore((state) => state.categories) || {
     income: [],
-    expense: []
+    expense: [],
   };
-  const addCategory = useMoneyStore((state) => state.addCategory);
-  const updateCategory = useMoneyStore((state) => state.updateCategory);
-  const removeCategory = useMoneyStore((state) => state.removeCategory);
+
+
 
   const moneyTransactions = useMoneyStore((state) => state.moneyTransactions);
   const moneyAccounts = useMoneyStore((state) => state.accounts);
@@ -987,59 +983,6 @@ export default function ProfileScreen() {
 
 
 
-  const handleAddCategory = () => {
-    const name = newCategoryName.trim();
-    if (!name) return;
-    const currentList = storeCategories[categoryType];
-    if (currentList.map(c => c.toLowerCase()).includes(name.toLowerCase())) {
-      Alert.alert('Duplicate Category', 'This category already exists.');
-      return;
-    }
-    addCategory(categoryType, name);
-    setNewCategoryName('');
-  };
-
-  const handleStartEdit = (cat: string) => {
-    setEditingCategory(cat);
-    setEditCategoryName(cat);
-  };
-
-  const handleSaveEdit = (oldCat: string) => {
-    const name = editCategoryName.trim();
-    if (!name) return;
-    if (name === oldCat) {
-      setEditingCategory(null);
-      return;
-    }
-    const currentList = storeCategories[categoryType];
-    if (currentList.map(c => c.toLowerCase()).includes(name.toLowerCase())) {
-      Alert.alert('Duplicate Category', 'A category with this name already exists.');
-      return;
-    }
-    updateCategory(categoryType, oldCat, name);
-    setEditingCategory(null);
-  };
-
-  const handleDeleteCategory = (cat: string) => {
-    if (cat === 'Other') {
-      Alert.alert('Restricted Action', 'The "Other" category is required and cannot be deleted.');
-      return;
-    }
-    Alert.alert(
-      'Delete Category',
-      `Are you sure you want to delete "${cat}"? Transactions using it will fall back to "Other".`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            removeCategory(categoryType, cat);
-          },
-        },
-      ]
-    );
-  };
 
 
   const summary = useMemo(
@@ -1729,7 +1672,10 @@ export default function ProfileScreen() {
 
               <TouchableOpacity
                 style={styles.gridButton}
-                onPress={() => setIsCategoryModalVisible(true)}
+                onPress={() => {
+                  handleHaptic();
+                  router.push('/manage-categories');
+                }}
               >
                 <View
                   style={[
@@ -1947,170 +1893,7 @@ export default function ProfileScreen() {
           </KeyboardAvoidingView>
         </Modal>
 
-        {/* Manage Categories Modal */}
-        <Modal
-          visible={isCategoryModalVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setIsCategoryModalVisible(false)}
-        >
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={[
-              styles.modalOverlay,
-              {
-                backgroundColor:
-                  theme === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.4)',
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.modalContent,
-                { backgroundColor: currColors.card, height: '75%', paddingHorizontal: 24 },
-              ]}
-            >
-              <View
-                style={[
-                  styles.modalHeader,
-                  { borderBottomColor: currColors.border, paddingHorizontal: 0 },
-                ]}
-              >
-                <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
-                  Manage Categories
-                </ThemedText>
-                <TouchableOpacity
-                  onPress={() => {
-                    setEditingCategory(null);
-                    setIsCategoryModalVisible(false);
-                  }}
-                  style={styles.closeButton}
-                >
-                  <X size={24} color={currColors.text} />
-                </TouchableOpacity>
-              </View>
 
-              {/* Category Type Switcher (Segmented Control) */}
-              <View style={[styles.modalSegmentContainer, { backgroundColor: currColors.cardSecondary }]}>
-                {(['expense', 'income'] as const).map((t) => (
-                  <TouchableOpacity
-                    key={t}
-                    style={[
-                      styles.modalSegmentTab,
-                      categoryType === t && {
-                        backgroundColor: t === 'income' ? '#34C759' : '#FF3B30',
-                      },
-                    ]}
-                    onPress={() => {
-                      setEditingCategory(null);
-                      setCategoryType(t);
-                    }}
-                  >
-                    <ThemedText
-                      style={[
-                        styles.modalSegmentLabel,
-                        {
-                          color: categoryType === t ? '#FFFFFF' : currColors.textSecondary,
-                          fontFamily: categoryType === t ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
-                        },
-                      ]}
-                    >
-                      {t.toUpperCase()}
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <ScrollView
-                style={{ flex: 1, marginBottom: 16 }}
-                showsVerticalScrollIndicator={false}
-              >
-                {storeCategories[categoryType].map((cat) => {
-                  const isEditing = editingCategory === cat;
-                  return (
-                    <View
-                      key={cat}
-                      style={[styles.categoryRow, { borderBottomColor: currColors.border }]}
-                    >
-                      {isEditing ? (
-                        <View style={styles.editRowContainer}>
-                          <TextInput
-                            style={[styles.inlineInput, { color: currColors.text, borderColor: currColors.tint }]}
-                            value={editCategoryName}
-                            onChangeText={setEditCategoryName}
-                            autoFocus
-                            placeholder="Category Name"
-                            placeholderTextColor={currColors.textSecondary}
-                          />
-                          <View style={styles.inlineActionButtons}>
-                            <TouchableOpacity
-                              onPress={() => handleSaveEdit(cat)}
-                              style={[styles.iconButton, { backgroundColor: '#34C75920' }]}
-                            >
-                              <Check size={18} color="#34C759" />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              onPress={() => setEditingCategory(null)}
-                              style={[styles.iconButton, { backgroundColor: '#FF3B3020' }]}
-                            >
-                              <X size={18} color="#FF3B30" />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      ) : (
-                        <>
-                          <ThemedText style={{ color: currColors.text, fontSize: 16, fontFamily: 'Outfit_500Medium' }}>
-                            {cat}
-                          </ThemedText>
-                          <View style={styles.rowActions}>
-                            <TouchableOpacity
-                              onPress={() => handleStartEdit(cat)}
-                              style={styles.actionIcon}
-                            >
-                              <Edit2 size={16} color={currColors.textSecondary} />
-                            </TouchableOpacity>
-                            {cat !== 'Other' && (
-                              <TouchableOpacity
-                                onPress={() => handleDeleteCategory(cat)}
-                                style={styles.actionIcon}
-                              >
-                                <Trash2 size={16} color="#FF3B30" />
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                        </>
-                      )}
-                    </View>
-                  );
-                })}
-              </ScrollView>
-
-              {/* Add Category Section */}
-              <View style={[styles.addCategoryContainer, { borderTopColor: currColors.border, paddingBottom: Platform.OS === 'ios' ? 20 : 10 }]}>
-                <TextInput
-                  style={[
-                    styles.addCategoryInput,
-                    {
-                      backgroundColor: currColors.cardSecondary,
-                      borderColor: currColors.border,
-                      color: currColors.text,
-                    },
-                  ]}
-                  value={newCategoryName}
-                  onChangeText={setNewCategoryName}
-                  placeholder={`Add custom ${categoryType} category`}
-                  placeholderTextColor={currColors.textSecondary}
-                />
-                <TouchableOpacity
-                  style={[styles.addButton, { backgroundColor: '#00C9A7' }]}
-                  onPress={handleAddCategory}
-                >
-                  <Plus size={20} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </KeyboardAvoidingView>
-        </Modal>
       </View>
     </SafeAreaView>
 

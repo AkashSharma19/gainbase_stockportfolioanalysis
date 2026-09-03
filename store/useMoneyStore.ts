@@ -60,8 +60,10 @@ interface MoneyState {
     income: string[];
     expense: string[];
   };
-  addCategory: (type: 'income' | 'expense', name: string) => void;
-  updateCategory: (type: 'income' | 'expense', oldName: string, newName: string) => void;
+  categoryMetadata?: Record<string, { icon: string; color: string }>;
+  setCategoryMetadata: (name: string, icon: string, color: string) => void;
+  addCategory: (type: 'income' | 'expense', name: string, icon?: string, color?: string) => void;
+  updateCategory: (type: 'income' | 'expense', oldName: string, newName: string, icon?: string, color?: string) => void;
   removeCategory: (type: 'income' | 'expense', name: string) => void;
 
   
@@ -479,21 +481,33 @@ export const useMoneyStore = create<MoneyState>()(
         });
       },
 
-      addCategory: (type, name) =>
+      setCategoryMetadata: (name, icon, color) =>
+        set((state) => ({
+          categoryMetadata: {
+            ...(state.categoryMetadata || {}),
+            [name]: { icon, color },
+          },
+        })),
+      addCategory: (type, name, icon, color) =>
         set((state) => {
           const current = state.categories?.[type] || [];
-          if (current.includes(name)) return state;
+          const updated = current.includes(name) ? current : [...current, name];
+          const newMeta = { ...(state.categoryMetadata || {}) };
+          if (icon && color) {
+            newMeta[name] = { icon, color };
+          }
           return {
             categories: {
               ...(state.categories || {
                 income: [],
                 expense: []
               }),
-              [type]: [...current, name],
+              [type]: updated,
             },
+            categoryMetadata: newMeta,
           };
         }),
-      updateCategory: (type, oldName, newName) =>
+      updateCategory: (type, oldName, newName, icon, color) =>
         set((state) => {
           const current = state.categories?.[type] || [];
           const updatedCategories = current.map((c) => (c === oldName ? newName : c));
@@ -503,6 +517,18 @@ export const useMoneyStore = create<MoneyState>()(
             }
             return tx;
           });
+          const newMeta = { ...(state.categoryMetadata || {}) };
+          if (oldName !== newName) {
+            const existing = newMeta[oldName];
+            delete newMeta[oldName];
+            if (icon && color) {
+              newMeta[newName] = { icon, color };
+            } else if (existing) {
+              newMeta[newName] = existing;
+            }
+          } else if (icon && color) {
+            newMeta[newName] = { icon, color };
+          }
           return {
             categories: {
               ...(state.categories || {
@@ -511,6 +537,7 @@ export const useMoneyStore = create<MoneyState>()(
               }),
               [type]: updatedCategories,
             },
+            categoryMetadata: newMeta,
             moneyTransactions: updatedTransactions,
           };
         }),
@@ -524,6 +551,8 @@ export const useMoneyStore = create<MoneyState>()(
             }
             return tx;
           });
+          const newMeta = { ...(state.categoryMetadata || {}) };
+          delete newMeta[name];
           return {
             categories: {
               ...(state.categories || {
@@ -532,6 +561,7 @@ export const useMoneyStore = create<MoneyState>()(
               }),
               [type]: updatedCategories,
             },
+            categoryMetadata: newMeta,
             moneyTransactions: updatedTransactions,
           };
         }),

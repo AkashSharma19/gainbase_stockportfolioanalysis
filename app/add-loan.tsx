@@ -221,9 +221,11 @@ export default function AddLoanScreen() {
       return;
     }
 
-    const outstanding = parseFloat(outstandingAmount) !== undefined && !isNaN(parseFloat(outstandingAmount))
-      ? parseFloat(outstandingAmount)
-      : paidStats.remainingBalance;
+    const outstanding = k > 0 ? paidStats.remainingBalance : (
+      parseFloat(outstandingAmount) !== undefined && !isNaN(parseFloat(outstandingAmount))
+        ? parseFloat(outstandingAmount)
+        : P
+    );
 
     // Determine EMI amount (either calculated or custom override)
     const emiOverride = parseFloat(customEmi);
@@ -273,9 +275,9 @@ export default function AddLoanScreen() {
         generatedPayments.push({
           id: `emi-init-${loanId}-${i}-${Date.now()}`,
           loanId: loanId,
-          amount: Math.round(finalEMI),
-          principalPortion: Math.round(prinPortion),
-          interestPortion: Math.round(intPortion),
+          amount: Number(finalEMI.toFixed(2)),
+          principalPortion: Number(prinPortion.toFixed(2)),
+          interestPortion: Number(intPortion.toFixed(2)),
           date: paymentDate.toISOString(),
           status: 'paid',
           updatedAt: new Date().toISOString(),

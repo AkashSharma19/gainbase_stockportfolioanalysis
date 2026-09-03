@@ -14,7 +14,18 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { X, Check, ChevronDown } from 'lucide-react-native';
+import {
+  X,
+  Check,
+  ChevronDown,
+  Wallet,
+  Landmark,
+  Activity,
+  CreditCard,
+  PiggyBank,
+  ArrowDownLeft,
+  ArrowUpRight,
+} from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -36,14 +47,14 @@ const COLORS = [
   '#FF2D55', // Pink
 ];
 
-const TYPES: { type: AccountType; label: string; emoji: string }[] = [
-  { type: 'wallet', label: 'Cash / Wallet', emoji: '💵' },
-  { type: 'savings', label: 'Savings / Bank', emoji: '🏦' },
-  { type: 'investment', label: 'Investment', emoji: '📈' },
-  { type: 'credit_card', label: 'Credit Card', emoji: '💳' },
-  { type: 'emergency_fund', label: 'Emergency Fund', emoji: '🛡️' },
-  { type: 'receivable', label: 'Accounts Receivable', emoji: '📥' },
-  { type: 'payable', label: 'Accounts Payable', emoji: '📤' },
+const TYPES: { type: AccountType; label: string; icon: any; color: string }[] = [
+  { type: 'savings', label: 'Savings / Bank', icon: Landmark, color: '#007AFF' },
+  { type: 'credit_card', label: 'Credit Card', icon: CreditCard, color: '#FF9500' },
+  { type: 'wallet', label: 'Cash / Wallet', icon: Wallet, color: '#00C9A7' },
+  { type: 'investment', label: 'Investment Account', icon: Activity, color: '#AF52DE' },
+  { type: 'emergency_fund', label: 'Emergency Fund', icon: PiggyBank, color: '#FF2D55' },
+  { type: 'receivable', label: 'Accounts Receivable', icon: ArrowDownLeft, color: '#34C759' },
+  { type: 'payable', label: 'Accounts Payable', icon: ArrowUpRight, color: '#FF3B30' },
 ];
 
 export default function AddAccountScreen() {
@@ -230,7 +241,11 @@ export default function AddAccountScreen() {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <ThemedText style={{ fontSize: 16, marginRight: 8 }}>{selectedTypeObj?.emoji}</ThemedText>
+                {selectedTypeObj && (
+                  <View style={[styles.selectedTypeIconWrap, { backgroundColor: `${selectedTypeObj.color}18` }]}>
+                    <selectedTypeObj.icon size={16} color={selectedTypeObj.color} />
+                  </View>
+                )}
                 <ThemedText style={{ color: currColors.text, fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
                   {selectedTypeObj?.label || 'Select Account Type'}
                 </ThemedText>
@@ -423,31 +438,50 @@ export default function AddAccountScreen() {
               data={TYPES}
               keyExtractor={(item) => item.type}
               contentContainerStyle={{ paddingBottom: 24 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.modalItem, { borderBottomColor: currColors.border }]}
-                  onPress={() => {
-                    handleHaptic();
-                    setType(item.type);
-                    setShowTypeModal(false);
-                    if (item.type === 'credit_card' && color === COLORS[0]) {
-                      setColor(COLORS[3]);
-                    } else if (item.type === 'emergency_fund' && color === COLORS[0]) {
-                      setColor('#FF2D55');
-                    } else if (item.type === 'receivable' && color === COLORS[0]) {
-                      setColor('#34C759');
-                    } else if (item.type === 'payable' && color === COLORS[0]) {
-                      setColor('#FF3B30');
-                    }
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <ThemedText style={{ fontSize: 18, marginRight: 12 }}>{item.emoji}</ThemedText>
-                    <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 15 }}>{item.label}</ThemedText>
-                  </View>
-                  {type === item.type && <Check size={18} color="#00C9A7" />}
-                </TouchableOpacity>
-              )}
+              renderItem={({ item }) => {
+                const IconComp = item.icon;
+                const isSelected = type === item.type;
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.modalItem,
+                      { borderBottomColor: currColors.border },
+                      isSelected && { backgroundColor: `${item.color}08` },
+                    ]}
+                    onPress={() => {
+                      handleHaptic();
+                      setType(item.type);
+                      setShowTypeModal(false);
+                      if (item.type === 'credit_card' && color === COLORS[0]) {
+                        setColor(COLORS[3]);
+                      } else if (item.type === 'emergency_fund' && color === COLORS[0]) {
+                        setColor('#FF2D55');
+                      } else if (item.type === 'receivable' && color === COLORS[0]) {
+                        setColor('#34C759');
+                      } else if (item.type === 'payable' && color === COLORS[0]) {
+                        setColor('#FF3B30');
+                      }
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      <View style={[styles.typeModalIconWrap, { backgroundColor: `${item.color}15` }]}>
+                        <IconComp size={18} color={item.color} />
+                      </View>
+                      <ThemedText
+                        type="semiBold"
+                        style={{
+                          color: currColors.text,
+                          fontSize: 15,
+                          fontFamily: isSelected ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                        }}
+                      >
+                        {item.label}
+                      </ThemedText>
+                    </View>
+                    {isSelected && <Check size={18} color="#00C9A7" />}
+                  </TouchableOpacity>
+                );
+              }}
             />
           </View>
         </View>
@@ -646,7 +680,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
+    borderRadius: 12,
+  },
+  selectedTypeIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  typeModalIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
 });

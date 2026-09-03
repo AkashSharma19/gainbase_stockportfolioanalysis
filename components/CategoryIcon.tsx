@@ -1,5 +1,6 @@
 import React from 'react';
 import * as LucideIcons from 'lucide-react-native';
+import { useMoneyStore } from '@/store/useMoneyStore';
 
 export const CATEGORY_ICON_MAP: { [key: string]: string } = {
   'Food & Dining': 'Utensils',
@@ -25,14 +26,18 @@ export const CATEGORY_ICON_MAP: { [key: string]: string } = {
   'Family': 'Users',
   'Gifts': 'Gift',
   'EMI Payments': 'CalendarRange',
+  'Salary': 'Banknote',
+  'Investments': 'TrendingUp',
+  'Business': 'Briefcase',
+  'Refund': 'RotateCcw',
   'Others': 'Tag',
   'Other': 'Tag',
 };
 
-export function CategoryIcon({ name, color, size = 16, style }: { name: string; color: string; size?: number; style?: any }) {
-  // If the passed name matches an emoji (e.g. from existing budgets), we can fall back based on key-lookup,
-  // but if it is already the Lucide icon name, we map it directly.
-  const iconName = CATEGORY_ICON_MAP[name] || name;
+export function CategoryIcon({ name, color, size = 16, style }: { name: string; color?: string; size?: number; style?: any }) {
+  const customMeta = useMoneyStore((state) => state.categoryMetadata?.[name]);
+  const iconName = customMeta?.icon || CATEGORY_ICON_MAP[name] || name;
+  const finalColor = customMeta?.color || color || '#00C9A7';
   const IconComponent = (LucideIcons as any)[iconName] || LucideIcons.Tag;
-  return <IconComponent size={size} color={color} style={style} />;
+  return <IconComponent size={size} color={finalColor} style={style} />;
 }

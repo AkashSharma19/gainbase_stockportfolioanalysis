@@ -24,6 +24,7 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { MoneyTransaction, Account } from '@/types/money';
 import { BankLogo } from '@/components/BankLogo';
+import { CategoryIcon } from '@/components/CategoryIcon';
 import { AccountType } from '@/types/money';
 
 const ACCOUNT_TYPE_ICONS: Record<AccountType, { icon: any; color: string }> = {
@@ -881,7 +882,7 @@ export default function AddMoneyTransactionScreen() {
               keyExtractor={(item) => item}
               showsVerticalScrollIndicator={false}
               bounces={false}
-              contentContainerStyle={{ paddingBottom: 24 }}
+              contentContainerStyle={{ paddingBottom: 16 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.modalItem, { borderBottomColor: currColors.border }]}
@@ -890,11 +891,36 @@ export default function AddMoneyTransactionScreen() {
                     setShowCategoryModal(false);
                   }}
                 >
-                  <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 15, flex: 1 }}>{item}</ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: `${currColors.tint}15`, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                      <CategoryIcon name={item} color={currColors.tint} size={16} />
+                    </View>
+                    <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 15 }}>{item}</ThemedText>
+                  </View>
                   {category === item && <Check size={18} color="#00C9A7" />}
                 </TouchableOpacity>
               )}
             />
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 12,
+                marginTop: 4,
+                marginBottom: 8,
+                borderRadius: 12,
+                backgroundColor: currColors.cardSecondary,
+              }}
+              onPress={() => {
+                setShowCategoryModal(false);
+                router.push('/manage-categories');
+              }}
+            >
+              <ThemedText style={{ color: '#00C9A7', fontSize: 14, fontFamily: 'Outfit_600SemiBold' }}>
+                + Manage & Create Categories
+              </ThemedText>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
