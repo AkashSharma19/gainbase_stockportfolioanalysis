@@ -32,6 +32,7 @@ import {
   Gamepad2,
   Sparkles,
   TrendingUp,
+  Target,
 } from 'lucide-react-native';
 
 import { ThemedText } from './ThemedText';
@@ -40,9 +41,10 @@ import { useColorScheme } from './useColorScheme';
 import Colors from '../constants/Colors';
 import { useMoneyStore } from '../store/useMoneyStore';
 import { usePortfolioStore } from '../store/usePortfolioStore';
+import { useGoalStore } from '../store/useGoalStore';
 import { MoneyTransaction } from '../types/money';
 import { MoneyActivityCalendar } from './MoneyActivityCalendar';
-import { FinancialInsights } from './FinancialInsights';
+import { useMoneyInsights } from '../hooks/useMoneyInsights';
 
 const getSubscriptionIcon = (logoName: string | undefined) => {
   switch (logoName) {
@@ -89,6 +91,8 @@ export function MoneyDashboard() {
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const togglePrivacyMode = usePortfolioStore((state) => state.togglePrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
+  const goals = useGoalStore((state) => state.goals);
+  const { count: insightsCount } = useMoneyInsights();
 
   // Subscribe to portfolio transactions and tickers so net worth updates live
   const portfolioTransactions = usePortfolioStore((state) => state.transactions);
@@ -493,22 +497,6 @@ export function MoneyDashboard() {
               <TouchableOpacity
                 onPress={() => {
                   handleHaptic();
-                  router.push('/money-insights');
-                }}
-                style={[
-                  styles.iconButton,
-                  {
-                    backgroundColor: isDark ? 'rgba(0, 201, 167, 0.15)' : 'rgba(0, 201, 167, 0.1)',
-                    borderColor: 'rgba(0, 201, 167, 0.3)',
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <Sparkles size={16} color="#00C9A7" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  handleHaptic();
                   togglePrivacyMode();
                 }}
                 style={[
@@ -635,34 +623,107 @@ export function MoneyDashboard() {
           </View>
         </View>
 
-        {/* ─── Smart Insights (Placed right below Hero Card for top discoverability) ─── */}
-        <FinancialInsights />
+        {/* ─── Smart Insights & Health Score (Same Row) ─── */}
+        <View style={styles.compactRow}>
+          {/* Smart Insights Card */}
+          <TouchableOpacity
+            style={[
+              styles.compactDashboardCard,
+              {
+                backgroundColor: currColors.card,
+                borderColor: currColors.border,
+              },
+            ]}
+            activeOpacity={0.75}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push('/money-insights');
+            }}
+          >
+            <View style={styles.compactCardTop}>
+              <View style={[styles.compactIconBox, { backgroundColor: 'rgba(0, 201, 167, 0.12)' }]}>
+                <Sparkles size={16} color="#00C9A7" />
+              </View>
+              <View style={[styles.compactBadge, { backgroundColor: 'rgba(0, 201, 167, 0.12)', borderColor: 'rgba(0, 201, 167, 0.3)' }]}>
+                <ThemedText style={[styles.compactBadgeText, { color: '#00C9A7' }]}>
+                  {insightsCount > 0 ? `${insightsCount}` : 'AI'}
+                </ThemedText>
+              </View>
+            </View>
+            <ThemedText type="semiBold" style={[styles.compactTitle, { color: currColors.text }]} numberOfLines={1}>
+              Smart Insights
+            </ThemedText>
+            <ThemedText style={[styles.compactSubtitle, { color: currColors.textSecondary }]} numberOfLines={1}>
+              {insightsCount > 0 ? `${insightsCount} tips & alerts` : 'AI spending analysis'}
+            </ThemedText>
+          </TouchableOpacity>
 
-        {/* ─── Financial Health Banner ─── */}
+          {/* Health Score Card */}
+          <TouchableOpacity
+            style={[
+              styles.compactDashboardCard,
+              {
+                backgroundColor: currColors.card,
+                borderColor: currColors.border,
+              },
+            ]}
+            activeOpacity={0.75}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push('/money-health');
+            }}
+          >
+            <View style={styles.compactCardTop}>
+              <View style={[styles.compactIconBox, { backgroundColor: `${healthSummary.gradeColor}18` }]}>
+                <Activity size={16} color={healthSummary.gradeColor} />
+              </View>
+              <View style={[styles.compactBadge, { backgroundColor: `${healthSummary.gradeColor}18`, borderColor: `${healthSummary.gradeColor}30` }]}>
+                <ThemedText style={[styles.compactBadgeText, { color: healthSummary.gradeColor }]}>
+                  {healthSummary.grade} • {healthSummary.totalScore}
+                </ThemedText>
+              </View>
+            </View>
+            <ThemedText type="semiBold" style={[styles.compactTitle, { color: currColors.text }]} numberOfLines={1}>
+              Health Score
+            </ThemedText>
+            <ThemedText style={[styles.compactSubtitle, { color: currColors.textSecondary }]} numberOfLines={1}>
+              Savings & safety stats
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+
+        {/* ─── Financial Goals Milestone Banner ─── */}
         <TouchableOpacity
           style={[
             styles.healthBannerCard,
             {
               backgroundColor: currColors.card,
               borderColor: currColors.border,
+              marginTop: 10,
             },
           ]}
           activeOpacity={0.75}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push('/money-health');
+            router.push('/goals');
           }}
         >
-          <View style={[styles.toolIconWrapper, { backgroundColor: 'rgba(52, 199, 89, 0.1)' }]}>
-            <Activity size={18} color="#34C759" />
+          <View style={[styles.toolIconWrapper, { backgroundColor: 'rgba(0, 201, 167, 0.12)' }]}>
+            <Target size={18} color="#00C9A7" />
           </View>
           <View style={{ flex: 1, marginLeft: 12, marginRight: 8 }}>
-            <ThemedText type="semiBold" style={{ fontSize: 14, color: currColors.text }}>Financial Health Score</ThemedText>
-            <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, marginTop: 2 }}>Check savings, DTI, cushion & credit stats</ThemedText>
+            <ThemedText type="semiBold" style={{ fontSize: 14, color: currColors.text }}>
+              Financial Goals & Milestones
+            </ThemedText>
+            <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, marginTop: 2 }}>
+              {goals.length > 0
+                ? `${goals.length} active formula milestone${goals.length > 1 ? 's' : ''}`
+                : 'Track formulas like Cash + Savings + Emergency'}
+            </ThemedText>
           </View>
-          <View style={[styles.healthBadge, { backgroundColor: `${healthSummary.gradeColor}15`, borderColor: `${healthSummary.gradeColor}30` }]}>
-            <ThemedText style={[styles.healthBadgeText, { color: healthSummary.gradeColor }]}>
-              {healthSummary.grade} • {healthSummary.totalScore}
+          <View style={[styles.healthBadge, { backgroundColor: 'rgba(0, 201, 167, 0.12)', borderColor: 'rgba(0, 201, 167, 0.3)' }]}>
+            <ThemedText style={[styles.healthBadgeText, { color: '#00C9A7' }]}>
+              {goals.length > 0 ? `${goals.length} Goal${goals.length > 1 ? 's' : ''}` : 'Set Goal'}
             </ThemedText>
           </View>
           <ChevronRight size={16} color={currColors.textSecondary} style={{ marginRight: 4 }} />
@@ -1235,5 +1296,52 @@ const styles = StyleSheet.create({
   healthBadgeText: {
     fontSize: 12,
     fontFamily: 'Outfit_600SemiBold',
+  },
+
+  // ─── Compact Side-by-Side Row ───
+  compactRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 4,
+  },
+  compactDashboardCard: {
+    flex: 1,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 13,
+  },
+  compactCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  compactIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  compactBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  compactBadgeText: {
+    fontSize: 11,
+    fontFamily: 'Outfit_700Bold',
+  },
+  compactTitle: {
+    fontSize: 13,
+    fontFamily: 'Outfit_600SemiBold',
+    marginBottom: 2,
+  },
+  compactSubtitle: {
+    fontSize: 11,
+    fontFamily: 'Outfit_400Regular',
   },
 });

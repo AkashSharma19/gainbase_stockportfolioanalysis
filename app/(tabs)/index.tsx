@@ -24,7 +24,9 @@ import {
   PieChart,
   Share2,
   TrendingUp,
+  Target,
 } from 'lucide-react-native';
+import { useGoalStore } from '@/store/useGoalStore';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -88,6 +90,7 @@ export function PortfolioScreen() {
 
   const theme = useColorScheme() ?? 'dark';
   const currColors = Colors[theme];
+  const goals = useGoalStore((state) => state.goals);
 
   // Tracks the formatted "X min ago" string, refreshed every minute
   const [syncLabel, setSyncLabel] = useState<string | null>(null);
@@ -618,6 +621,68 @@ export function PortfolioScreen() {
               router.push('/forecast-details');
             }}
           />
+
+          {/* Financial Goals Milestone Banner */}
+          <View style={[styles.section, { marginBottom: 16 }]}>
+            <TouchableOpacity
+              style={[
+                styles.accordionContainer,
+                {
+                  backgroundColor: currColors.card,
+                  borderColor: currColors.border,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                },
+              ]}
+              activeOpacity={0.75}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push('/goals');
+              }}
+            >
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: 'rgba(0, 201, 167, 0.12)',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginRight: 12,
+                }}
+              >
+                <Target size={18} color="#00C9A7" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <ThemedText type="semiBold" style={{ fontSize: 14, color: currColors.text }}>
+                  Financial Goals & Milestones
+                </ThemedText>
+                <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, marginTop: 2 }}>
+                  {goals.length > 0
+                    ? `${goals.length} active custom formula milestone${goals.length > 1 ? 's' : ''}`
+                    : 'Track milestones like HoldingsValue & PortfolioXIRR'}
+                </ThemedText>
+              </View>
+              <View
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 12,
+                  backgroundColor: 'rgba(0, 201, 167, 0.12)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(0, 201, 167, 0.3)',
+                  marginRight: 6,
+                }}
+              >
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_600SemiBold', color: '#00C9A7' }}>
+                  {goals.length > 0 ? `${goals.length} Goals` : 'Set Goal'}
+                </ThemedText>
+              </View>
+              <ArrowRight size={16} color={currColors.textSecondary} />
+            </TouchableOpacity>
+          </View>
 
           <View style={[styles.section, { marginBottom: 4 }]}>
             <ActivityCalendar transactions={transactions} />

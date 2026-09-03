@@ -13,20 +13,13 @@ import {
   Landmark,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   Platform,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
-
-import { ThemedText } from '@/components/ThemedText';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -53,24 +46,6 @@ const tabStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badge: {
-    position: 'absolute',
-    top: -5,
-    right: -8,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#FF3B30',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 9,
-    fontWeight: '800',
-    lineHeight: 11,
-  },
 });
 
 export default function TabLayout() {
@@ -79,11 +54,9 @@ export default function TabLayout() {
   const router = useRouter();
   const { activeMode } = useAppModeStore();
 
-  const handleHaptic = () => {
+  const handleHaptic = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-
+  }, []);
 
   const isInvestMode = activeMode === 'investments';
   const activeColor = isInvestMode ? '#007AFF' : '#00C9A7';

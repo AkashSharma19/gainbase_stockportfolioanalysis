@@ -26,6 +26,7 @@ import {
   Check,
   Cloud,
   Sparkles,
+  Target,
 } from 'lucide-react-native';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { AccountType, Account, Loan, EMIPayment, Budget } from '../../types/money';
@@ -1750,7 +1751,26 @@ export default function ProfileScreen() {
                 </ThemedText>
               </TouchableOpacity>
 
-              <View style={styles.gridButton} />
+              <TouchableOpacity
+                style={styles.gridButton}
+                onPress={() => {
+                  handleHaptic();
+                  router.push('/goals');
+                }}
+              >
+                <View
+                  style={[
+                    styles.gridIconBox,
+                    { backgroundColor: 'rgba(0, 201, 167, 0.12)' },
+                  ]}
+                >
+                  <Target size={24} color="#00C9A7" />
+                </View>
+                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
+                  Goals
+                </ThemedText>
+              </TouchableOpacity>
+
               <View style={styles.gridButton} />
               <View style={styles.gridButton} />
             </View>
