@@ -383,7 +383,7 @@ Return JSON:
 
     // --- CASE 2: SUBSCRIPTION PAYMENT ---
     if (isSubAction) {
-      let targetSub = moneySubscriptions.find(
+      const targetSub = moneySubscriptions.find(
         (s) =>
           (action.subscriptionName && s.name.trim().toLowerCase().includes(action.subscriptionName.trim().toLowerCase())) ||
           (action.note && (
@@ -535,7 +535,7 @@ Return JSON:
       const data = await response.json();
 
       if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        let rawText = data.candidates[0].content.parts[0].text.trim();
+        const rawText = data.candidates[0].content.parts[0].text.trim();
         let replyText = rawText;
         let actionPayload: ChatAction | undefined = undefined;
 

@@ -78,17 +78,10 @@ const CATEGORY_CONFIG: Record<
 import { useAppModeStore } from '@/store/useAppModeStore';
 import MoneyInsightsScreen from '../money-insights';
 
-export default function InsightsScreen() {
+function PortfolioInsightsScreen() {
   const router = useRouter();
   const theme = useColorScheme() ?? 'dark';
   const currColors = Colors[theme];
-  const { activeMode } = useAppModeStore();
-
-  // If in Money Manager mode, dynamically render Money Smart Insights
-  if (activeMode === 'money') {
-    return <MoneyInsightsScreen />;
-  }
-
   const { geminiApiKey, selectedModel, aiStockInsights, setAiStockInsights } = useAiStore();
   const getHoldingsData = usePortfolioStore((state) => state.getHoldingsData);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -540,6 +533,16 @@ Instructions:
       )}
     </SafeAreaView>
   );
+}
+
+export default function InsightsScreen() {
+  const { activeMode } = useAppModeStore();
+
+  if (activeMode === 'money') {
+    return <MoneyInsightsScreen />;
+  }
+
+  return <PortfolioInsightsScreen />;
 }
 
 const styles = StyleSheet.create({

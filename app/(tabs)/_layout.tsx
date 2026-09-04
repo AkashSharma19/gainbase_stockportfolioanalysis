@@ -64,25 +64,14 @@ export default function TabLayout() {
   return (
     <View style={{ flex: 1, backgroundColor: currColors.background }}>
       <Tabs
-          screenOptions={{
-            tabBarActiveTintColor: activeColor,
-            tabBarInactiveTintColor: currColors.textSecondary,
-            headerShown: false,
-            tabBarShowLabel: true,
-            tabBarButton: (props) => {
-              const { delayLongPress, ...rest } = props as any;
-              return (
-                <TouchableOpacity
-                  {...rest}
-                  delayLongPress={delayLongPress ?? undefined}
-                  activeOpacity={0.7}
-                  onPress={(e) => {
-                    handleHaptic();
-                    props.onPress?.(e);
-                  }}
-                />
-              );
-            },
+        screenListeners={{
+          tabPress: handleHaptic,
+        }}
+        screenOptions={{
+          tabBarActiveTintColor: activeColor,
+          tabBarInactiveTintColor: currColors.textSecondary,
+          headerShown: false,
+          tabBarShowLabel: true,
             tabBarStyle: {
               backgroundColor: currColors.background,
               height: Platform.OS === 'ios' ? 92 : 78,
