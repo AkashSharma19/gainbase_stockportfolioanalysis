@@ -11,7 +11,6 @@ import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { useAppModeStore } from '@/store/useAppModeStore';
 import { MoneyDashboard } from '@/components/MoneyDashboard';
 import { AppSwitcher } from '@/components/AppSwitcher';
-import { syncGainbaseWidgetData } from '@/lib/widgetSync';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -1478,8 +1477,6 @@ export default function AppHomeScreen() {
       duration: 250,
       easing: Easing.bezier(0.25, 1, 0.5, 1), // Snappy and smooth slide ease-out, zero bounce
     });
-    // Sync live financial data to iOS Lock Screen and Home Screen WidgetKit
-    syncGainbaseWidgetData();
   }, [activeMode]);
 
   const animatedStyle = useAnimatedStyle(() => {

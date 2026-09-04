@@ -46,7 +46,6 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "@bacons/apple-targets",
       "expo-router",
       "@react-native-community/datetimepicker",
       "expo-background-task",

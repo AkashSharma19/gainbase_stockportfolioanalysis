@@ -510,7 +510,9 @@ export const useMoneyStore = create<MoneyState>()(
       updateCategory: (type, oldName, newName, icon, color) =>
         set((state) => {
           const current = state.categories?.[type] || [];
-          const updatedCategories = current.map((c) => (c === oldName ? newName : c));
+          const updatedCategories = current.includes(oldName)
+            ? current.map((c) => (c === oldName ? newName : c))
+            : [...current, newName];
           const updatedTransactions = state.moneyTransactions.map((tx) => {
             if (tx.type === type && tx.category === oldName) {
               return { ...tx, category: newName, updatedAt: new Date().toISOString() };
@@ -518,17 +520,14 @@ export const useMoneyStore = create<MoneyState>()(
             return tx;
           });
           const newMeta = { ...(state.categoryMetadata || {}) };
+          const existing = newMeta[oldName];
           if (oldName !== newName) {
-            const existing = newMeta[oldName];
             delete newMeta[oldName];
-            if (icon && color) {
-              newMeta[newName] = { icon, color };
-            } else if (existing) {
-              newMeta[newName] = existing;
-            }
-          } else if (icon && color) {
-            newMeta[newName] = { icon, color };
           }
+          newMeta[newName] = {
+            icon: icon || existing?.icon || 'Tag',
+            color: color || existing?.color || (type === 'income' ? '#34C759' : '#00C9A7'),
+          };
           return {
             categories: {
               ...(state.categories || {

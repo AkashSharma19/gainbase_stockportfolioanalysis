@@ -229,6 +229,10 @@ function RootLayoutNav() {
             options={{ animation: 'slide_from_right', headerShown: false }}
           />
           <Stack.Screen
+            name="manage-categories"
+            options={{ animation: 'slide_from_right', headerShown: false }}
+          />
+          <Stack.Screen
             name="ai-chat"
             options={{ animation: 'slide_from_right', headerShown: false }}
           />

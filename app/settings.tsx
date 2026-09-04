@@ -17,8 +17,6 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
-
-import { WidgetPreviewCard } from '@/components/WidgetPreviewCard';
 import { ScrollView } from 'react-native';
 
 export default function SettingsScreen() {
@@ -231,9 +229,6 @@ export default function SettingsScreen() {
               />
             </View>
           </View>
-
-          {/* ─── iOS Home & Lock Screen Widgets Preview ─── */}
-          <WidgetPreviewCard />
         </ScrollView>
       </View>
     </SafeAreaView>

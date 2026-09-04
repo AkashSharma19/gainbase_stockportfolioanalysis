@@ -323,8 +323,10 @@ export default function ManageCategoriesScreen() {
               const badgeColor = meta?.color || (activeTab === 'income' ? '#34C759' : '#00C9A7');
 
               return (
-                <View
+                <TouchableOpacity
                   key={catName}
+                  activeOpacity={0.7}
+                  onPress={() => openEditModal(catName)}
                   style={[
                     styles.categoryRow,
                     !isLast && [styles.rowBorder, { borderBottomColor: currColors.border }],
@@ -346,19 +348,27 @@ export default function ManageCategoriesScreen() {
 
                   <View style={styles.categoryActions}>
                     <TouchableOpacity
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                       style={[styles.iconActionBtn, { backgroundColor: currColors.cardSecondary }]}
-                      onPress={() => openEditModal(catName)}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        openEditModal(catName);
+                      }}
                     >
                       <Pencil size={15} color={currColors.text} />
                     </TouchableOpacity>
                     <TouchableOpacity
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                       style={[styles.iconActionBtn, { backgroundColor: currColors.cardSecondary }]}
-                      onPress={() => handleDelete(catName)}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleDelete(catName);
+                      }}
                     >
                       <Trash2 size={15} color="#FF3B30" />
                     </TouchableOpacity>
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })
           )}
@@ -366,7 +376,12 @@ export default function ManageCategoriesScreen() {
       </ScrollView>
 
       {/* Dedicated Category Designer & Icon Studio Modal */}
-      <Modal visible={isEditorVisible} animationType="slide" transparent>
+      <Modal
+        visible={isEditorVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsEditorVisible(false)}
+      >
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setIsEditorVisible(false)} />
           <View

@@ -25,8 +25,6 @@ import {
   Plus,
   Check,
   Cloud,
-  Sparkles,
-  Target,
 } from 'lucide-react-native';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { AccountType, Account, Loan, EMIPayment, Budget } from '../../types/money';
@@ -1728,51 +1726,6 @@ export default function ProfileScreen() {
                   Delete Data
                 </ThemedText>
               </TouchableOpacity>
-            </View>
-
-            <View style={[styles.gridRow, { marginTop: 20 }]}>
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push('/ai-chat');
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: 'rgba(10, 132, 255, 0.1)' },
-                  ]}
-                >
-                  <Sparkles size={24} color="#0A84FF" />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  AI Chat
-                </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  handleHaptic();
-                  router.push('/goals');
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: 'rgba(0, 201, 167, 0.12)' },
-                  ]}
-                >
-                  <Target size={24} color="#00C9A7" />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  Goals
-                </ThemedText>
-              </TouchableOpacity>
-
-              <View style={styles.gridButton} />
-              <View style={styles.gridButton} />
             </View>
           </View>
 
