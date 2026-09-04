@@ -167,10 +167,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 16,
     paddingTop: 20,
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 1,
-    marginHorizontal: 16,
-    marginTop: 20,
   },
   dayContainer: {
     width: 36,

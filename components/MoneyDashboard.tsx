@@ -7,11 +7,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { Svg, Circle } from 'react-native-svg';
 import {
   CreditCard,
   Landmark,
   PiggyBank,
   ArrowRightLeft,
+  ArrowRight,
   Wallet,
   Activity,
   Calendar,
@@ -44,6 +46,7 @@ import { usePortfolioStore } from '../store/usePortfolioStore';
 import { useGoalStore } from '../store/useGoalStore';
 import { MoneyTransaction } from '../types/money';
 import { MoneyActivityCalendar } from './MoneyActivityCalendar';
+import { FinancialGoalsCard } from './FinancialGoalsCard';
 import { useMoneyInsights } from '../hooks/useMoneyInsights';
 
 const getSubscriptionIcon = (logoName: string | undefined) => {
@@ -69,11 +72,190 @@ const getSubscriptionIcon = (logoName: string | undefined) => {
   }
 };
 
+interface DonutChartProps {
+  warnings: number;
+  tips: number;
+  success: number;
+  size: number;
+  trackColor: string;
+  textColor: string;
+  isPrivacyMode: boolean;
+}
+
+const MoneyInsightsDonut = ({
+  warnings,
+  tips,
+  success,
+  size,
+  trackColor,
+  textColor,
+  isPrivacyMode,
+}: DonutChartProps) => {
+  const r = size * 0.38;
+  const center = size / 2;
+  const circum = 2 * Math.PI * r;
+  const total = warnings + tips + success;
+
+  if (total === 0) {
+    return (
+      <View style={{ alignItems: 'center', justifyContent: 'center', width: size, height: size }}>
+        <Svg width={size} height={size}>
+          <Circle
+            cx={center}
+            cy={center}
+            r={r}
+            stroke={trackColor}
+            strokeWidth={size * 0.08}
+            strokeDasharray="4 4"
+            fill="none"
+          />
+        </Svg>
+        <View style={styles.chartCenterBox}>
+          <Sparkles size={18} color="#00C9A7" />
+          <ThemedText style={[styles.chartCenterSub, { color: textColor, marginTop: 2 }]}>
+            AI AUDIT
+          </ThemedText>
+        </View>
+      </View>
+    );
+  }
+
+  const warnStroke = (warnings / total) * circum;
+  const tipsStroke = (tips / total) * circum;
+  const successStroke = (success / total) * circum;
+
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: size, height: size }}>
+      <Svg width={size} height={size}>
+        <Circle
+          cx={center}
+          cy={center}
+          r={r}
+          stroke={trackColor}
+          strokeWidth={size * 0.08}
+          fill="none"
+        />
+        {warnings > 0 && (
+          <Circle
+            cx={center}
+            cy={center}
+            r={r}
+            stroke="#FF3B30"
+            strokeWidth={size * 0.08}
+            strokeDasharray={`${warnStroke} ${circum}`}
+            strokeLinecap="round"
+            fill="none"
+            transform={`rotate(-90 ${center} ${center})`}
+          />
+        )}
+        {tips > 0 && (
+          <Circle
+            cx={center}
+            cy={center}
+            r={r}
+            stroke="#00C9A7"
+            strokeWidth={size * 0.08}
+            strokeDasharray={`${tipsStroke} ${circum}`}
+            strokeDashoffset={-warnStroke}
+            strokeLinecap="round"
+            fill="none"
+            transform={`rotate(-90 ${center} ${center})`}
+          />
+        )}
+        {success > 0 && (
+          <Circle
+            cx={center}
+            cy={center}
+            r={r}
+            stroke="#34C759"
+            strokeWidth={size * 0.08}
+            strokeDasharray={`${successStroke} ${circum}`}
+            strokeDashoffset={-(warnStroke + tipsStroke)}
+            strokeLinecap="round"
+            fill="none"
+            transform={`rotate(-90 ${center} ${center})`}
+          />
+        )}
+      </Svg>
+      <View style={styles.chartCenterBox}>
+        <ThemedText style={[styles.chartCenterNum, { color: '#00C9A7' }]}>
+          {isPrivacyMode ? '**' : total}
+        </ThemedText>
+        <ThemedText style={[styles.chartCenterSub, { color: textColor }]}>
+          SIGNALS
+        </ThemedText>
+      </View>
+    </View>
+  );
+};
+
+interface GaugeProps {
+  score: number;
+  size: number;
+  color: string;
+  trackColor: string;
+  textColor: string;
+  isPrivacyMode: boolean;
+}
+
+const HealthScoreGauge = ({
+  score,
+  size,
+  color,
+  trackColor,
+  textColor,
+  isPrivacyMode,
+}: GaugeProps) => {
+  const r = size * 0.38;
+  const center = size / 2;
+  const circum = 2 * Math.PI * r;
+  const clamped = Math.min(100, Math.max(0, score));
+  const offset = circum - (clamped / 100) * circum;
+
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: size, height: size }}>
+      <Svg width={size} height={size}>
+        <Circle
+          cx={center}
+          cy={center}
+          r={r}
+          stroke={trackColor}
+          strokeWidth={size * 0.08}
+          fill="none"
+        />
+        <Circle
+          cx={center}
+          cy={center}
+          r={r}
+          stroke={color}
+          strokeWidth={size * 0.08}
+          strokeDasharray={`${circum} ${circum}`}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          fill="none"
+          transform={`rotate(-90 ${center} ${center})`}
+        />
+      </Svg>
+      <View style={styles.chartCenterBox}>
+        <ThemedText style={[styles.chartCenterNum, { color }]}>
+          {isPrivacyMode ? '**' : score}
+        </ThemedText>
+        <ThemedText style={[styles.chartCenterSub, { color: textColor }]}>
+          HEALTH
+        </ThemedText>
+      </View>
+    </View>
+  );
+};
+
 export function MoneyDashboard() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
   const currColors = Colors[colorScheme];
+
+  const [insightsCardWidth, setInsightsCardWidth] = useState(130);
+  const [healthCardWidth, setHealthCardWidth] = useState(130);
 
   // Stores
   const {
@@ -92,7 +274,7 @@ export function MoneyDashboard() {
   const togglePrivacyMode = usePortfolioStore((state) => state.togglePrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
   const goals = useGoalStore((state) => state.goals);
-  const { count: insightsCount } = useMoneyInsights();
+  const { count: insightsCount, countByType } = useMoneyInsights();
 
   // Subscribe to portfolio transactions and tickers so net worth updates live
   const portfolioTransactions = usePortfolioStore((state) => state.transactions);
@@ -623,9 +805,9 @@ export function MoneyDashboard() {
           </View>
         </View>
 
-        {/* ─── Smart Insights & Health Score (Same Row) ─── */}
+        {/* ─── Smart Insights & Health Score (Analytics-based Row) ─── */}
         <View style={styles.compactRow}>
-          {/* Smart Insights Card */}
+          {/* Smart Insights Analytics Donut Card */}
           <TouchableOpacity
             style={[
               styles.compactDashboardCard,
@@ -635,30 +817,54 @@ export function MoneyDashboard() {
               },
             ]}
             activeOpacity={0.75}
+            onLayout={(e) => setInsightsCardWidth(e.nativeEvent.layout.width - 32)}
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              handleHaptic();
               router.push('/money-insights');
             }}
           >
-            <View style={styles.compactCardTop}>
-              <View style={[styles.compactIconBox, { backgroundColor: 'rgba(0, 201, 167, 0.12)' }]}>
-                <Sparkles size={16} color="#00C9A7" />
-              </View>
-              <View style={[styles.compactBadge, { backgroundColor: 'rgba(0, 201, 167, 0.12)', borderColor: 'rgba(0, 201, 167, 0.3)' }]}>
-                <ThemedText style={[styles.compactBadgeText, { color: '#00C9A7' }]}>
-                  {insightsCount > 0 ? `${insightsCount}` : 'AI'}
+            <View style={styles.compactCardHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Sparkles size={12} color={currColors.textSecondary} />
+                <ThemedText style={[styles.compactCardSectionLabel, { color: currColors.textSecondary }]}>
+                  AI INSIGHTS
                 </ThemedText>
               </View>
+              <View style={[styles.iconCircleSmall, { backgroundColor: currColors.cardSecondary }]}>
+                <ArrowRight size={12} color={currColors.tint} />
+              </View>
             </View>
-            <ThemedText type="semiBold" style={[styles.compactTitle, { color: currColors.text }]} numberOfLines={1}>
-              Smart Insights
-            </ThemedText>
-            <ThemedText style={[styles.compactSubtitle, { color: currColors.textSecondary }]} numberOfLines={1}>
-              {insightsCount > 0 ? `${insightsCount} tips & alerts` : 'AI spending analysis'}
-            </ThemedText>
+
+            <View style={styles.compactMain}>
+              <MoneyInsightsDonut
+                warnings={countByType.warning}
+                tips={countByType.tip}
+                success={countByType.success}
+                size={Math.max(70, Math.min(95, insightsCardWidth * 0.82))}
+                trackColor={isDark ? '#2C2C2E' : '#E5E5EA'}
+                textColor={currColors.textSecondary}
+                isPrivacyMode={isPrivacyMode}
+              />
+            </View>
+
+            <View
+              style={[
+                styles.compactFooterBadge,
+                {
+                  backgroundColor: 'rgba(0, 201, 167, 0.12)',
+                  borderColor: 'rgba(0, 201, 167, 0.25)',
+                },
+              ]}
+            >
+              <ThemedText style={[styles.compactFooterBadgeText, { color: '#00C9A7' }]} numberOfLines={1}>
+                {insightsCount > 0
+                  ? `${countByType.warning > 0 ? `${countByType.warning}W • ` : ''}${countByType.tip + countByType.success} TIPS`
+                  : 'RUN AI AUDIT'}
+              </ThemedText>
+            </View>
           </TouchableOpacity>
 
-          {/* Health Score Card */}
+          {/* Health Score Gauge Card */}
           <TouchableOpacity
             style={[
               styles.compactDashboardCard,
@@ -668,66 +874,53 @@ export function MoneyDashboard() {
               },
             ]}
             activeOpacity={0.75}
+            onLayout={(e) => setHealthCardWidth(e.nativeEvent.layout.width - 32)}
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              handleHaptic();
               router.push('/money-health');
             }}
           >
-            <View style={styles.compactCardTop}>
-              <View style={[styles.compactIconBox, { backgroundColor: `${healthSummary.gradeColor}18` }]}>
-                <Activity size={16} color={healthSummary.gradeColor} />
-              </View>
-              <View style={[styles.compactBadge, { backgroundColor: `${healthSummary.gradeColor}18`, borderColor: `${healthSummary.gradeColor}30` }]}>
-                <ThemedText style={[styles.compactBadgeText, { color: healthSummary.gradeColor }]}>
-                  {healthSummary.grade} • {healthSummary.totalScore}
+            <View style={styles.compactCardHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Activity size={12} color={currColors.textSecondary} />
+                <ThemedText style={[styles.compactCardSectionLabel, { color: currColors.textSecondary }]}>
+                  HEALTH SCORE
                 </ThemedText>
               </View>
+              <View style={[styles.iconCircleSmall, { backgroundColor: currColors.cardSecondary }]}>
+                <ArrowRight size={12} color={currColors.tint} />
+              </View>
             </View>
-            <ThemedText type="semiBold" style={[styles.compactTitle, { color: currColors.text }]} numberOfLines={1}>
-              Health Score
-            </ThemedText>
-            <ThemedText style={[styles.compactSubtitle, { color: currColors.textSecondary }]} numberOfLines={1}>
-              Savings & safety stats
-            </ThemedText>
+
+            <View style={styles.compactMain}>
+              <HealthScoreGauge
+                score={healthSummary.totalScore}
+                size={Math.max(70, Math.min(95, healthCardWidth * 0.82))}
+                color={healthSummary.gradeColor}
+                trackColor={isDark ? '#2C2C2E' : '#E5E5EA'}
+                textColor={currColors.textSecondary}
+                isPrivacyMode={isPrivacyMode}
+              />
+            </View>
+
+            <View
+              style={[
+                styles.compactFooterBadge,
+                {
+                  backgroundColor: `${healthSummary.gradeColor}18`,
+                  borderColor: `${healthSummary.gradeColor}30`,
+                },
+              ]}
+            >
+              <ThemedText style={[styles.compactFooterBadgeText, { color: healthSummary.gradeColor }]} numberOfLines={1}>
+                GRADE {healthSummary.grade} • {healthSummary.totalScore >= 80 ? 'EXCELLENT' : healthSummary.totalScore >= 70 ? 'GOOD' : healthSummary.totalScore >= 55 ? 'FAIR' : 'NEEDS WORK'}
+              </ThemedText>
+            </View>
           </TouchableOpacity>
         </View>
 
-        {/* ─── Financial Goals Milestone Banner ─── */}
-        <TouchableOpacity
-          style={[
-            styles.healthBannerCard,
-            {
-              backgroundColor: currColors.card,
-              borderColor: currColors.border,
-              marginTop: 10,
-            },
-          ]}
-          activeOpacity={0.75}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push('/goals');
-          }}
-        >
-          <View style={[styles.toolIconWrapper, { backgroundColor: 'rgba(0, 201, 167, 0.12)' }]}>
-            <Target size={18} color="#00C9A7" />
-          </View>
-          <View style={{ flex: 1, marginLeft: 12, marginRight: 8 }}>
-            <ThemedText type="semiBold" style={{ fontSize: 14, color: currColors.text }}>
-              Financial Goals & Milestones
-            </ThemedText>
-            <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, marginTop: 2 }}>
-              {goals.length > 0
-                ? `${goals.length} active formula milestone${goals.length > 1 ? 's' : ''}`
-                : 'Track formulas like Cash + Savings + Emergency'}
-            </ThemedText>
-          </View>
-          <View style={[styles.healthBadge, { backgroundColor: 'rgba(0, 201, 167, 0.12)', borderColor: 'rgba(0, 201, 167, 0.3)' }]}>
-            <ThemedText style={[styles.healthBadgeText, { color: '#00C9A7' }]}>
-              {goals.length > 0 ? `${goals.length} Goal${goals.length > 1 ? 's' : ''}` : 'Set Goal'}
-            </ThemedText>
-          </View>
-          <ChevronRight size={16} color={currColors.textSecondary} style={{ marginRight: 4 }} />
-        </TouchableOpacity>
+        {/* ─── Financial Goals & Milestones Analytics Card ─── */}
+        <FinancialGoalsCard />
 
         {/* ─── Upcoming Payments (EMI + Subscriptions) ─── */}
         <View
@@ -766,9 +959,8 @@ export function MoneyDashboard() {
             </TouchableOpacity>
           </View>
 
-          {/* ─── Upcoming Payments (EMI + Subscriptions) ─── */}
           {upcomingPayments.length === 0 ? (
-            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
               <ThemedText style={{ color: currColors.textSecondary, fontSize: 13, fontFamily: 'Outfit_400Regular' }}>
                 No payments due in the next 14 days.
               </ThemedText>
@@ -838,8 +1030,6 @@ export function MoneyDashboard() {
           )}
         </View>
 
-
-
         {/* ─── Recent Transactions Card ─── */}
         <View
           style={[
@@ -885,105 +1075,101 @@ export function MoneyDashboard() {
               </ThemedText>
             </View>
           ) : (
-            <View style={{ paddingBottom: 8 }}>
-              {filteredRecentTxs.map((tx, index) => {
-                const account = accounts.find((a) => a.id === tx.accountId);
-                const toAccount = tx.toAccountId ? accounts.find((a) => a.id === tx.toAccountId) : null;
-                const isLast = index === filteredRecentTxs.length - 1;
+            filteredRecentTxs.map((tx, index) => {
+              const account = accounts.find((a) => a.id === tx.accountId);
+              const toAccount = tx.toAccountId ? accounts.find((a) => a.id === tx.toAccountId) : null;
+              const isLast = index === filteredRecentTxs.length - 1;
 
-                const getRelativeDateLabel = (dateStr: string) => {
-                  const d = new Date(dateStr);
-                  d.setHours(0, 0, 0, 0);
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const yesterday = new Date();
-                  yesterday.setDate(yesterday.getDate() - 1);
-                  yesterday.setHours(0, 0, 0, 0);
+              const getRelativeDateLabel = (dateStr: string) => {
+                const d = new Date(dateStr);
+                d.setHours(0, 0, 0, 0);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                yesterday.setHours(0, 0, 0, 0);
 
-                  if (d.getTime() === today.getTime()) {
-                    return 'Today';
-                  } else if (d.getTime() === yesterday.getTime()) {
-                    return 'Yesterday';
-                  } else {
-                    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-                  }
-                };
+                if (d.getTime() === today.getTime()) {
+                  return 'Today';
+                } else if (d.getTime() === yesterday.getTime()) {
+                  return 'Yesterday';
+                } else {
+                  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                }
+              };
 
-                return (
-                  <TouchableOpacity
-                    key={tx.id}
-                    style={[
-                      styles.txItem,
-                      {
-                        borderBottomColor: currColors.border,
-                        borderBottomWidth: isLast ? 0 : 1,
-                      },
-                    ]}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      handleHaptic();
-                      router.push({ pathname: '/add-money-transaction', params: { id: tx.id } });
-                    }}
-                  >
-                    <View style={styles.txLeft}>
-                      <View
-                        style={[
-                          styles.txIconBox,
-                          {
-                            backgroundColor:
-                              tx.type === 'income'
-                                ? 'rgba(52, 199, 89, 0.1)'
-                                : tx.type === 'expense'
-                                ? 'rgba(255, 59, 48, 0.1)'
-                                : 'rgba(142, 142, 147, 0.1)',
-                          },
-                        ]}
-                      >
-                        {tx.type === 'transfer' ? (
-                          <ArrowRightLeft size={18} color="#8E8E93" />
-                        ) : (
-                          <CategoryIcon
-                            name={tx.category}
-                            size={18}
-                            color={tx.type === 'income' ? '#34C759' : '#FF3B30'}
-                          />
-                        )}
-                      </View>
-                      <View style={styles.txInfo}>
-                        <ThemedText style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
-                          {tx.type === 'transfer' ? `Transfer: ${account?.name} → ${toAccount?.name}` : tx.category}
-                        </ThemedText>
-                        <ThemedText style={[styles.txDate, { color: currColors.textSecondary }]} numberOfLines={1}>
-                          {getRelativeDateLabel(tx.date)} • {account?.name || 'Unknown Account'}
-                          {tx.note ? ` • ${tx.note}` : ''}
-                        </ThemedText>
-                      </View>
-                    </View>
-
-                    <ThemedText
+              return (
+                <TouchableOpacity
+                  key={tx.id}
+                  style={[
+                    styles.txItem,
+                    {
+                      borderBottomColor: currColors.border,
+                      borderBottomWidth: isLast ? 0 : 1,
+                    },
+                  ]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    handleHaptic();
+                    router.push({ pathname: '/add-money-transaction', params: { id: tx.id } });
+                  }}
+                >
+                  <View style={styles.txLeft}>
+                    <View
                       style={[
-                        styles.txAmount,
+                        styles.txIconBox,
                         {
-                          color:
+                          backgroundColor:
                             tx.type === 'income'
-                              ? '#34C759'
+                              ? 'rgba(52, 199, 89, 0.1)'
                               : tx.type === 'expense'
-                              ? '#FF3B30'
-                              : currColors.text,
+                              ? 'rgba(255, 59, 48, 0.1)'
+                              : 'rgba(142, 142, 147, 0.1)',
                         },
                       ]}
                     >
-                      {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
-                      {formatAmount(tx.amount)}
-                    </ThemedText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                      {tx.type === 'transfer' ? (
+                        <ArrowRightLeft size={18} color="#8E8E93" />
+                      ) : (
+                        <CategoryIcon
+                          name={tx.category}
+                          size={18}
+                          color={tx.type === 'income' ? '#34C759' : '#FF3B30'}
+                        />
+                      )}
+                    </View>
+                    <View style={styles.txInfo}>
+                      <ThemedText style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
+                        {tx.type === 'transfer' ? `Transfer: ${account?.name} → ${toAccount?.name}` : tx.category}
+                      </ThemedText>
+                      <ThemedText style={[styles.txDate, { color: currColors.textSecondary }]} numberOfLines={1}>
+                        {getRelativeDateLabel(tx.date)} • {account?.name || 'Unknown Account'}
+                        {tx.note ? ` • ${tx.note}` : ''}
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  <ThemedText
+                    style={[
+                      styles.txAmount,
+                      {
+                        color:
+                          tx.type === 'income'
+                            ? '#34C759'
+                            : tx.type === 'expense'
+                            ? '#FF3B30'
+                            : currColors.text,
+                      },
+                    ]}
+                  >
+                    {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
+                    {formatAmount(tx.amount)}
+                  </ThemedText>
+                </TouchableOpacity>
+              );
+            })
           )}
         </View>
-
-
 
         {/* ─── Activity Calendar ─── */}
         <MoneyActivityCalendar transactions={moneyTransactions} />
@@ -997,16 +1183,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 110,
   },
 
   // ─── Hero Card ───
   heroCard: {
-    marginHorizontal: 16,
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    marginTop: 8,
+    marginBottom: 16,
   },
   heroHeaderRow: {
     flexDirection: 'row',
@@ -1063,28 +1250,125 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
 
-  // ─── Accounts Overview (accordion-style card) ───
+  // ─── Compact Side-by-Side Row ───
+  compactRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+    alignItems: 'stretch',
+  },
+  compactDashboardCard: {
+    flex: 1,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 16,
+    justifyContent: 'space-between',
+  },
+  compactCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  compactCardSectionLabel: {
+    fontSize: 9,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  iconCircleSmall: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  compactMain: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 6,
+  },
+  chartCenterBox: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chartCenterNum: {
+    fontSize: 18,
+    fontFamily: 'Outfit_700Bold',
+    lineHeight: 22,
+  },
+  chartCenterSub: {
+    fontSize: 8,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 1,
+  },
+  compactFooterBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compactFooterBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+
+  // ─── Health / Goals Banner ───
+  healthBannerCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  toolIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  healthBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginRight: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  healthBadgeText: {
+    fontSize: 11,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+
+  // ─── Accordion-Style Containers (Upcoming & Recent) ───
   accordionContainer: {
-    marginHorizontal: 16,
-    marginTop: 16,
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    paddingTop: 16,
+    marginBottom: 16,
   },
   headerWithAction: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingRight: 16,
-    marginBottom: 4,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 10,
   },
   innerSectionTitle: {
     fontSize: 10,
     fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginLeft: 16,
   },
   viewMoreButton: {
     padding: 2,
@@ -1126,67 +1410,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_400Regular',
   },
 
-  // ─── Section Headers ───
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 10,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  viewAllLink: {
-    color: '#00C9A7',
-    fontSize: 13,
-    fontFamily: 'Outfit_500Medium',
-  },
-
-  // ─── Filter Chips ───
-  filterStripContainer: {
-    marginBottom: 14,
-  },
-  filterChipsScroll: {
-    paddingLeft: 16,
-    paddingRight: 8,
-    gap: 8,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  filterChipText: {
-    fontSize: 12,
-  },
-
   // ─── Transaction Items ───
-  txsGroupsContainer: {
-    marginHorizontal: 16,
-    gap: 16,
-  },
-  txGroup: {
-    gap: 8,
-  },
-  txGroupHeader: {
-    fontSize: 9,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: 1,
-    marginLeft: 4,
-  },
-  txsListContainer: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
   txItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1223,125 +1447,5 @@ const styles = StyleSheet.create({
   txAmount: {
     fontSize: 14,
     fontFamily: 'Outfit_600SemiBold',
-  },
-  emptyTxsCard: {
-    marginHorizontal: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderStyle: 'dashed',
-  },
-
-  // ─── EMI Card ───
-  sectionContainer: {
-    marginTop: 8,
-  },
-  emiCard: {
-    marginHorizontal: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-  },
-  emiRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  emiInfo: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  emiTitleText: {
-    fontSize: 14,
-    fontFamily: 'Outfit_500Medium',
-  },
-  emiSubText: {
-    fontSize: 12,
-    fontFamily: 'Outfit_400Regular',
-    marginTop: 2,
-  },
-  emiAmountText: {
-    fontSize: 14,
-    fontFamily: 'Outfit_500Medium',
-  },
-
-  // ─── Health Banner ───
-  healthBannerCard: {
-    marginHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  toolIconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  healthBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginRight: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  healthBadgeText: {
-    fontSize: 12,
-    fontFamily: 'Outfit_600SemiBold',
-  },
-
-  // ─── Compact Side-by-Side Row ───
-  compactRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginHorizontal: 16,
-    marginTop: 14,
-    marginBottom: 4,
-  },
-  compactDashboardCard: {
-    flex: 1,
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 13,
-  },
-  compactCardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  compactIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  compactBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  compactBadgeText: {
-    fontSize: 11,
-    fontFamily: 'Outfit_700Bold',
-  },
-  compactTitle: {
-    fontSize: 13,
-    fontFamily: 'Outfit_600SemiBold',
-    marginBottom: 2,
-  },
-  compactSubtitle: {
-    fontSize: 11,
-    fontFamily: 'Outfit_400Regular',
   },
 });

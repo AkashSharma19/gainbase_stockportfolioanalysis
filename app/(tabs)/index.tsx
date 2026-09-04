@@ -10,6 +10,7 @@ import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { useAppModeStore } from '@/store/useAppModeStore';
 import { MoneyDashboard } from '@/components/MoneyDashboard';
+import { FinancialGoalsCard } from '@/components/FinancialGoalsCard';
 import { AppSwitcher } from '@/components/AppSwitcher';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -621,73 +622,14 @@ export function PortfolioScreen() {
             }}
           />
 
-          {/* Financial Goals Milestone Banner */}
-          <View style={[styles.section, { marginBottom: 16 }]}>
-            <TouchableOpacity
-              style={[
-                styles.accordionContainer,
-                {
-                  backgroundColor: currColors.card,
-                  borderColor: currColors.border,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                },
-              ]}
-              activeOpacity={0.75}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push('/goals');
-              }}
-            >
-              <View
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  backgroundColor: 'rgba(0, 201, 167, 0.12)',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginRight: 12,
-                }}
-              >
-                <Target size={18} color="#00C9A7" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <ThemedText type="semiBold" style={{ fontSize: 14, color: currColors.text }}>
-                  Financial Goals & Milestones
-                </ThemedText>
-                <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, marginTop: 2 }}>
-                  {goals.length > 0
-                    ? `${goals.length} active custom formula milestone${goals.length > 1 ? 's' : ''}`
-                    : 'Track milestones like HoldingsValue & PortfolioXIRR'}
-                </ThemedText>
-              </View>
-              <View
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                  borderRadius: 12,
-                  backgroundColor: 'rgba(0, 201, 167, 0.12)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(0, 201, 167, 0.3)',
-                  marginRight: 6,
-                }}
-              >
-                <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_600SemiBold', color: '#00C9A7' }}>
-                  {goals.length > 0 ? `${goals.length} Goals` : 'Set Goal'}
-                </ThemedText>
-              </View>
-              <ArrowRight size={16} color={currColors.textSecondary} />
-            </TouchableOpacity>
-          </View>
+          {/* Financial Goals & Milestones Analytics Card */}
+          <FinancialGoalsCard />
 
-          <View style={[styles.section, { marginBottom: 4 }]}>
+          <View style={[styles.section, { marginBottom: 16 }]}>
             <ActivityCalendar transactions={transactions} />
           </View>
 
-          <View style={[styles.section, { marginBottom: 24 }]}>
+          <View style={[styles.section, { marginBottom: 16 }]}>
             {yearlyAnalysis.length > 0 ? (
               <View
                 style={[
@@ -1077,7 +1019,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   header: {
     marginTop: 0,
@@ -1187,7 +1129,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    paddingTop: 16,
   },
   innerSectionTitle: {
     color: '#8E8E93',
@@ -1195,8 +1136,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 12,
-    marginLeft: 16,
   },
   dashboardRow: {
     flexDirection: 'row',
@@ -1207,12 +1146,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingRight: 16,
-    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 10,
   },
   viewMoreButton: {
     padding: 2,
-    marginBottom: 8,
   },
   iconCircle: {
     width: 28,

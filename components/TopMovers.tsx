@@ -102,9 +102,6 @@ export default function TopMovers() {
 
   return (
     <View style={styles.container}>
-      <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
-        TOP MOVERS
-      </ThemedText>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -213,7 +210,7 @@ export default function TopMovers() {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 24,
+    marginBottom: 16,
     marginHorizontal: -16,
   },
   sectionTitle: {
@@ -222,7 +219,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 12,
+    marginBottom: 10,
     marginLeft: 16,
   },
   listContent: {

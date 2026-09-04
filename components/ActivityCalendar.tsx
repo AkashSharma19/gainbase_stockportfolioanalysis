@@ -160,10 +160,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 16,
     paddingTop: 20,
-    marginBottom: 20,
+    marginBottom: 0,
     borderWidth: 1,
   },
-
   dayContainer: {
     width: 36,
     height: 36,
