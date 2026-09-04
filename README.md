@@ -55,15 +55,15 @@ A comprehensive iOS portfolio tracking application built with React Native and E
 
 ## 🛠 Tech Stack
 
-- **Framework**: React Native with Expo (~54.0.32)
-- **Navigation**: Expo Router (~6.0.22)
+- **Framework**: React Native (0.86.3) with Expo (~57.0.20)
+- **Navigation**: Expo Router (~57.0.19)
 - **State Management**: Zustand (~5.0.10)
-- **Database**: Expo SQLite (~16.0.10)
+- **Database**: Expo SQLite (~57.0.2)
 - **Charts**: React Native Gifted Charts (~1.4.70)
 - **Icons**: Lucide React Native (~0.563.0)
 - **UI Components**:
-  - React Native Gesture Handler (~2.28.0)
-  - React Native Reanimated (~4.1.1)
+  - React Native Gesture Handler (~2.32.0)
+  - React Native Reanimated (4.5.1)
   - Expo Linear Gradient (~15.0.8)
 - **Data Processing**:
   - XLSX (~0.18.5) for Excel file handling

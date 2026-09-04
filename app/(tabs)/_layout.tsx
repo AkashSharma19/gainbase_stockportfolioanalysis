@@ -29,7 +29,7 @@ function InsightsTabIcon({
   color,
   focused,
 }: {
-  color: string;
+  color: any;
   focused: boolean;
 }) {
   return (

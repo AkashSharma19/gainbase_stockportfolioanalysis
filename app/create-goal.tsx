@@ -452,6 +452,7 @@ export default function CreateGoalScreen() {
                     style={[
                       styles.segmentTrack,
                       {
+                        flex: Math.max(0.04, seg.spanRatio ?? 1),
                         height: 5,
                         backgroundColor: `${color}25`,
                         borderColor: seg.isAchieved ? `${color}80` : 'transparent',

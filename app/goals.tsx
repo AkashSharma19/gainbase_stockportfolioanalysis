@@ -279,6 +279,7 @@ const GoalItemCard = memo(
                   style={[
                     styles.minimalSegmentTrack,
                     {
+                      flex: Math.max(0.04, seg.spanRatio ?? 1),
                       backgroundColor: currColors.cardSecondary,
                       borderColor: seg.isAchieved ? `${goal.color}60` : 'transparent',
                     },

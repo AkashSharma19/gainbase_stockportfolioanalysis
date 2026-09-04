@@ -7,9 +7,9 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
-  useColorScheme,
   NativeModules,
 } from 'react-native';
+import { useColorScheme } from '@/components/useColorScheme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { 

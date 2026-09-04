@@ -753,7 +753,7 @@ export default function MoneyHealthScreen() {
         onRequestClose={() => setActiveModal(null)}
       >
         <View style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setActiveModal(null)} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setActiveModal(null)} />
           <View style={[styles.modalContent, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
               {/* Drag Indicator / Bar */}
               <View style={[styles.dragHandle, { backgroundColor: currColors.border }]} />

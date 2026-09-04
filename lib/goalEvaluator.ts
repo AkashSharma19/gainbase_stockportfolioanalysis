@@ -563,7 +563,7 @@ export function evaluateGoal(goal: FinancialGoal, liveValues: LiveVariableValues
 
   // Targets list normalization:
   // Use goal.targets array if provided and non-empty, otherwise fallback to [goal.targetValue]
-  let rawTargets = (goal.targets && goal.targets.length > 0) ? goal.targets : [goal.targetValue];
+  const rawTargets = (goal.targets && goal.targets.length > 0) ? goal.targets : [goal.targetValue];
   
   // Sort targets:
   // For growth (>=), sort ascending [1L, 5L, 10L]
@@ -600,6 +600,27 @@ export function evaluateGoal(goal: FinancialGoal, liveValues: LiveVariableValues
     : (goal.initialValue && goal.initialValue > finalTarget ? goal.initialValue : Math.max(currentValue, sortedTargets[0] || 0));
 
   const startBaseline = Math.max(dynamicDebtPeak, sortedTargets[0] || 0);
+
+  // Pre-calculate segment spans to compute ratios
+  const segmentSpans: number[] = [];
+  let totalSpan = 0;
+  for (let i = 0; i < totalSegments; i++) {
+    const segmentTarget = sortedTargets[i];
+    let rStart = 0;
+    let rEnd = segmentTarget;
+
+    if (effectiveOperator === '<=' || target === 0) {
+      rStart = i === 0 ? (startBaseline <= segmentTarget ? segmentTarget * 1.5 || 100 : startBaseline) : sortedTargets[i - 1];
+      rEnd = segmentTarget;
+    } else {
+      rStart = i === 0 ? 0 : sortedTargets[i - 1];
+      rEnd = segmentTarget;
+    }
+
+    const span = Math.max(0, Math.abs(rStart - rEnd));
+    segmentSpans.push(span);
+    totalSpan += span;
+  }
 
   for (let i = 0; i < totalSegments; i++) {
     const segmentTarget = sortedTargets[i];
@@ -649,6 +670,8 @@ export function evaluateGoal(goal: FinancialGoal, liveValues: LiveVariableValues
       foundActive = true;
     }
 
+    const spanRatio = totalSpan > 0 ? (segmentSpans[i] / totalSpan) : (1 / totalSegments);
+
     milestoneSegments.push({
       targetValue: segmentTarget,
       segmentIndex: i,
@@ -657,6 +680,7 @@ export function evaluateGoal(goal: FinancialGoal, liveValues: LiveVariableValues
       fillPercentage: Math.round(segFill * 10) / 10,
       rangeStart,
       rangeEnd,
+      spanRatio: Math.round(spanRatio * 1000) / 1000,
     });
   }
 
@@ -665,9 +689,12 @@ export function evaluateGoal(goal: FinancialGoal, liveValues: LiveVariableValues
     activeMilestoneTarget = sortedTargets[totalSegments - 1];
   }
 
-  // Calculate overall progress across all segments
-  const totalSegmentFill = milestoneSegments.reduce((sum, seg) => sum + seg.fillPercentage, 0);
-  const progressPercentage = totalSegments > 0 ? Math.round((totalSegmentFill / totalSegments) * 10) / 10 : 0;
+  // Calculate overall progress across all segments weighted by their respective goal ratios
+  const weightedProgress = milestoneSegments.reduce(
+    (sum, seg) => sum + (seg.fillPercentage * (seg.spanRatio ?? (1 / totalSegments))),
+    0
+  );
+  const progressPercentage = totalSegments > 0 ? Math.round(weightedProgress * 10) / 10 : 0;
 
   // Final condition is met when the final target milestone is achieved
   let isConditionMet = false;

@@ -38,6 +38,7 @@ export interface EvaluatedMilestoneSegment {
   fillPercentage: number; // 0 to 100% for this individual segment part
   rangeStart: number;
   rangeEnd: number;
+  spanRatio: number; // Fraction (0 to 1) of the total goal length that this segment represents
 }
 
 export interface EvaluatedGoal extends FinancialGoal {
