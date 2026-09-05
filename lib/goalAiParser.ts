@@ -227,7 +227,7 @@ Your task is to parse a user's natural language goal description (in English, Hi
 The available live variables in Gainbase are:
 - Cash & Liquidity: Cash, Savings, Emergency, LiquidCash, SafeToSpend
 - Investments: HoldingsValue, InvestedCapital, PortfolioGains, PortfolioReturnsPct, PortfolioXIRR, DayGain, DayGainPct, RealizedGains, StocksCount
-- Debts & Liabilities: MonthlyEMI, TotalDebt, LoanOutstanding, CreditCardDebt, ActiveLoansCount, DebtToIncome, Payables
+- Debts & Liabilities: MonthlyEMI, TotalDebt, LoanOutstanding, CreditCardDebt (current spent balance excluding blocked loan amounts), BlockedCCDebt (blocked loan principal), TotalCCDebt (credit card balance including blocked loan principal), ActiveLoansCount, DebtToIncome, Payables
 - Cashflow & Budgets: MonthlyIncome, MonthlyExpenses, MonthlySavings, MonthlySavingsRate, ActiveBudgetRemaining, Receivables, NetWorth
 
 Formulas support standard arithmetic like +, -, *, /, (, ). For example:

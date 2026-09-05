@@ -71,8 +71,24 @@ export const GOAL_VARIABLES: GoalVariableDefinition[] = [
   },
   {
     key: 'CreditCardDebt',
-    label: 'Credit Card Debt',
-    description: 'Total outstanding balances on credit cards',
+    label: 'Credit Card Debt (Excl. Blocked)',
+    description: 'Total outstanding balances on credit cards (does not include blocked loan EMI amounts)',
+    category: 'money',
+    unit: 'currency',
+    iconName: 'CreditCard',
+  },
+  {
+    key: 'BlockedCCDebt',
+    label: 'Blocked CC Loan Amount',
+    description: 'Total active loan principal blocked on credit cards',
+    category: 'money',
+    unit: 'currency',
+    iconName: 'CreditCard',
+  },
+  {
+    key: 'TotalCCDebt',
+    label: 'Total CC Debt (Incl. Blocked)',
+    description: 'Combined credit card balance plus active blocked loan principal',
     category: 'money',
     unit: 'currency',
     iconName: 'CreditCard',
@@ -333,10 +349,17 @@ export function extractLiveVariableValues(params: {
   // 3. Credit Card Debt
   const ccAccounts = accounts.filter((a) => !a.isArchived && a.includeInAssets !== false && a.type === 'credit_card');
   const ccAccountIds = new Set(ccAccounts.map((a) => a.id));
-  const ccDebt = ccAccounts.reduce((sum, a) => sum + Math.max(0, a.balance || 0), 0);
+  const ccDebt = ccAccounts.reduce((sum, a) => sum + Math.abs(a.balance || 0), 0);
   const ccRepaid = moneyTransactions
     .filter((tx) => (tx.type === 'transfer' && tx.toAccountId && ccAccountIds.has(tx.toAccountId)) || (tx.type === 'income' && ccAccountIds.has(tx.accountId)))
     .reduce((sum, tx) => sum + tx.amount, 0);
+
+  // Blocked principal on credit cards from linked active loans
+  const blockedCCDebt = activeLoans
+    .filter((l) => l.linkedAccountId && ccAccountIds.has(l.linkedAccountId))
+    .reduce((sum, l) => sum + (l.outstandingAmount || 0), 0);
+
+  const totalCCDebt = ccDebt + blockedCCDebt;
 
   const totalDebt = loanOutstanding + ccDebt + payables;
   const totalDebtRepaid = payablesRepaid + loansRepaid + ccRepaid;
@@ -405,6 +428,8 @@ export function extractLiveVariableValues(params: {
     TotalDebt: Math.round(totalDebt * 100) / 100,
     LoanOutstanding: Math.round(loanOutstanding * 100) / 100,
     CreditCardDebt: Math.round(ccDebt * 100) / 100,
+    BlockedCCDebt: Math.round(blockedCCDebt * 100) / 100,
+    TotalCCDebt: Math.round(totalCCDebt * 100) / 100,
     ActiveLoansCount: activeLoansCount,
     DebtToIncome: Math.round(debtToIncome * 10) / 10,
 
@@ -478,6 +503,12 @@ export function evaluateFormula(formula: string, liveValues: LiveVariableValues)
       'Loan': 'LoanOutstanding',
       'Credit Card': 'CreditCardDebt',
       'Credit Card Debt': 'CreditCardDebt',
+      'Credit Card Debt (Excl. Blocked)': 'CreditCardDebt',
+      'CC Debt': 'CreditCardDebt',
+      'Blocked CC Debt': 'BlockedCCDebt',
+      'Blocked CC Loan Amount': 'BlockedCCDebt',
+      'Total CC Debt': 'TotalCCDebt',
+      'Total CC Debt (Incl. Blocked)': 'TotalCCDebt',
       'DTI': 'DebtToIncome',
       'Subscriptions': 'MonthlySubscriptions',
       'Subscription': 'MonthlySubscriptions',

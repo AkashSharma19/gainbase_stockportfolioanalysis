@@ -16,6 +16,7 @@ import {
   TriangleAlert,
   Zap,
   Sparkles,
+  ChevronRight,
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
@@ -230,102 +231,95 @@ Instructions:
     }
   };
 
-  const renderInsightItem = (
-    insight: Insight,
-    index: number,
-    lastIndex: number,
-  ) => {
+  const handleHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const renderInsightItem = (insight: Insight) => {
     const IconComponent = IconMap[insight.icon] || Zap;
-    const showBorder = index !== lastIndex;
+    const isClickable = !!insight.symbol;
+    const isDark = theme === 'dark';
+    const cardBgColor = isDark ? `${insight.color}0D` : `${insight.color}06`;
+    const cardBorderColor = isDark ? `${insight.color}25` : `${insight.color}1A`;
 
     return (
       <TouchableOpacity
         key={insight.id}
-        activeOpacity={0.7}
+        activeOpacity={isClickable ? 0.75 : 1}
+        disabled={!isClickable}
         style={[
-          styles.insightItem,
+          styles.insightCard,
           {
-            borderBottomColor: currColors.border,
-            borderBottomWidth: showBorder ? 1 : 0,
+            backgroundColor: cardBgColor,
+            borderColor: cardBorderColor,
           },
         ]}
         onPress={() => {
           if (insight.symbol) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            handleHaptic();
             router.push(`/stock-details/${insight.symbol}`);
           }
         }}
       >
-        <View style={styles.cardContent}>
-          {/* Left: Logo/Icon */}
-          <View
-            style={[
-              styles.iconBox,
-              !insight.logo && { backgroundColor: currColors.cardSecondary },
-            ]}
-          >
+        {/* Card Header: Logo/Icon + Title/Ticker + Badge/Value */}
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.cardHeaderLeft}>
             {insight.logo ? (
-              <View
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: 12,
-                  padding: 2,
-                }}
-              >
+              <View style={[styles.logoWrap, { backgroundColor: '#FFFFFF' }]}>
                 <Image
                   source={{ uri: insight.logo }}
-                  style={{ width: 40, height: 40, borderRadius: 10 }}
+                  style={styles.logoImage}
                   resizeMode="contain"
                 />
               </View>
             ) : (
-              <IconComponent size={24} color={insight.color} />
+              <View style={[styles.iconWrap, { backgroundColor: `${insight.color}15` }]}>
+                <IconComponent size={20} color={insight.color} />
+              </View>
             )}
-          </View>
-
-          {/* Center: Company Name, Badge, Reason & Value */}
-          <View style={styles.textBox}>
-            <View style={styles.titleRow}>
-              <ThemedText
-                style={[styles.companyName, { color: currColors.text }]}
-                numberOfLines={1}
-              >
+            <View style={styles.titleColumn}>
+              <ThemedText style={[styles.companyName, { color: currColors.text }]} numberOfLines={1}>
                 {insight.title}
               </ThemedText>
-            </View>
-            {/* Badge pill + value pill side-by-side */}
-            <View style={styles.pillRow}>
-              <View
-                style={[
-                  styles.badgePill,
-                  { backgroundColor: `${insight.color}22` },
-                ]}
-              >
-                <ThemedText style={[styles.badgeText, { color: insight.color }]}>
-                  {insight.badge}
+              {insight.symbol ? (
+                <ThemedText style={[styles.symbolTicker, { color: currColors.textSecondary }]}>
+                  {insight.symbol}
                 </ThemedText>
-              </View>
-              <View
-                style={[
-                  styles.valuePill,
-                  {
-                    backgroundColor: `${insight.color}${theme === 'dark' ? '25' : '15'}`,
-                  },
-                ]}
-              >
-                <ThemedText style={[styles.valueText, { color: insight.color }]}>
+              ) : null}
+            </View>
+          </View>
+
+          {/* Badges Column */}
+          <View style={styles.badgeColumn}>
+            <View style={[styles.badgePill, { backgroundColor: `${insight.color}15` }]}>
+              <ThemedText style={[styles.badgeText, { color: insight.color }]}>
+                {insight.badge}
+              </ThemedText>
+            </View>
+            {insight.value ? (
+              <View style={[styles.valuePill, { backgroundColor: currColors.cardSecondary }]}>
+                <ThemedText style={[styles.valueText, { color: currColors.text }]}>
                   {insight.value}
                 </ThemedText>
               </View>
-            </View>
-            {/* Reason text — full width, no line limit */}
-            <ThemedText
-              style={[styles.reasonText, { color: currColors.textSecondary }]}
-            >
-              {insight.reason}
-            </ThemedText>
+            ) : null}
           </View>
         </View>
+
+        {/* Reason / Analysis Body */}
+        <ThemedText style={[styles.reasonText, { color: currColors.text }]}>
+          {insight.reason}
+        </ThemedText>
+
+        {/* Action Link Footer if clickable */}
+        {isClickable ? (
+          <View style={[styles.cardFooterRow, { borderTopColor: currColors.border }]}>
+            <ThemedText style={[styles.cardFooterText, { color: insight.color }]}>
+              View Holding & Transactions
+            </ThemedText>
+            <ChevronRight size={14} color={insight.color} />
+          </View>
+        ) : null}
       </TouchableOpacity>
     );
   };
@@ -518,11 +512,9 @@ Instructions:
             </View>
 
             {filteredInsights.length > 0 ? (
-              <View
-                style={[styles.insightCard, { backgroundColor: currColors.card }]}
-              >
-                {filteredInsights.map((insight, index) =>
-                  renderInsightItem(insight, index, filteredInsights.length - 1),
+              <View style={styles.listContainer}>
+                {filteredInsights.map((insight) =>
+                  renderInsightItem(insight),
                 )}
               </View>
             ) : (
@@ -550,8 +542,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingTop: 12,
+    paddingBottom: 10,
   },
   searchContainerOuter: {
     paddingHorizontal: 16,
@@ -560,6 +552,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 12,
+    borderWidth: 1,
     paddingHorizontal: 12,
     height: 44,
   },
@@ -568,43 +561,12 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     height: '100%',
     fontFamily: 'Outfit_400Regular',
   },
   clearButton: {
     padding: 4,
-  },
-  // Summary banner
-  summaryBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  summaryItem: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  summaryDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  summaryLabel: {
-    fontSize: 13,
-  },
-  summaryDivider: {
-    width: 1,
-    height: 16,
-    backgroundColor: '#3A3A3C',
-    marginHorizontal: 4,
   },
   // Tabs
   tabContainer: {
@@ -616,18 +578,18 @@ const styles = StyleSheet.create({
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
     borderRadius: 20,
     borderWidth: 1,
     gap: 6,
   },
   tabText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
   },
   tabBadge: {
-    minWidth: 20,
+    minWidth: 18,
     height: 18,
     borderRadius: 9,
     paddingHorizontal: 5,
@@ -636,7 +598,7 @@ const styles = StyleSheet.create({
   },
   tabBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
   },
   // Scroll
   scrollContent: {
@@ -646,79 +608,105 @@ const styles = StyleSheet.create({
   sectionLabel: {
     color: '#8E8E93',
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'Outfit_500Medium',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 8,
+  },
+  listContainer: {
     marginTop: 4,
   },
-  // Insight card container
+  // Insight card
   insightCard: {
     borderRadius: 16,
-    overflow: 'hidden',
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 12,
   },
-  insightItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-  },
-  cardContent: {
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 2,
-    flexShrink: 0,
-  },
-  textBox: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 4,
-  },
-  titleRow: {
+  cardHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
+  },
+  logoWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    padding: 2,
+  },
+  logoImage: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+  },
+  iconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  titleColumn: {
+    flex: 1,
   },
   companyName: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
   },
-  pillRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
+  symbolTicker: {
+    fontSize: 11,
+    fontFamily: 'Outfit_500Medium',
+    marginTop: 1,
+  },
+  badgeColumn: {
+    alignItems: 'flex-end',
+    gap: 4,
   },
   badgePill: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   badgeText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'Outfit_600SemiBold',
     letterSpacing: 0.3,
   },
-  reasonText: {
-    fontSize: 12,
-    lineHeight: 17,
-  },
   valuePill: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   valueText: {
     fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontFamily: 'Outfit_500Medium',
+  },
+  reasonText: {
+    fontSize: 13.5,
+    fontFamily: 'Outfit_400Regular',
+    lineHeight: 20,
+  },
+  cardFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 12,
+    paddingTop: 10,
+  },
+  cardFooterText: {
+    fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
   },
   // Empty state
   emptyState: {
@@ -737,11 +725,12 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: 'Outfit_600SemiBold',
     textAlign: 'center',
   },
   emptyMessage: {
-    fontSize: 14,
+    fontSize: 13.5,
+    fontFamily: 'Outfit_400Regular',
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -766,9 +755,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   aiHeroSubtitle: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontFamily: 'Outfit_400Regular',
-    lineHeight: 19,
+    lineHeight: 20,
     textAlign: 'center',
     marginBottom: 24,
   },

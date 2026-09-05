@@ -300,23 +300,24 @@ IMPORTANT RULES:
   };
 
   const getThemeStyles = (type: 'success' | 'warning' | 'tip') => {
-    if (colorScheme === 'dark') {
+    const isDark = colorScheme === 'dark';
+    if (isDark) {
       switch (type) {
         case 'success':
-          return { bg: '#061D1A', border: '#00C9A740', icon: '#00C9A7' };
+          return { bg: 'rgba(0, 201, 167, 0.07)', border: 'rgba(0, 201, 167, 0.22)', icon: '#00C9A7' };
         case 'warning':
-          return { bg: '#250B0B', border: '#FF3B3040', icon: '#FF3B30' };
+          return { bg: 'rgba(255, 59, 48, 0.07)', border: 'rgba(255, 59, 48, 0.22)', icon: '#FF3B30' };
         case 'tip':
-          return { bg: '#1F1306', border: '#FF950040', icon: '#FF9500' };
+          return { bg: 'rgba(255, 149, 0, 0.07)', border: 'rgba(255, 149, 0, 0.22)', icon: '#FF9500' };
       }
     } else {
       switch (type) {
         case 'success':
-          return { bg: '#EAF8F6', border: '#00C9A730', icon: '#007A65' };
+          return { bg: 'rgba(0, 201, 167, 0.05)', border: 'rgba(0, 201, 167, 0.18)', icon: '#008F77' };
         case 'warning':
-          return { bg: '#FDF2F2', border: '#FF3B3030', icon: '#C62828' };
+          return { bg: 'rgba(255, 59, 48, 0.05)', border: 'rgba(255, 59, 48, 0.18)', icon: '#D32F2F' };
         case 'tip':
-          return { bg: '#FEF8F0', border: '#FF950030', icon: '#B26A00' };
+          return { bg: 'rgba(255, 149, 0, 0.05)', border: 'rgba(255, 149, 0, 0.18)', icon: '#C97700' };
       }
     }
   };
@@ -667,26 +668,26 @@ const styles = StyleSheet.create({
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 7,
     paddingHorizontal: 12,
     borderRadius: 18,
     borderWidth: 1,
     gap: 6,
   },
   tabText: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: 'Outfit_600SemiBold',
   },
   tabBadge: {
     minWidth: 18,
-    height: 16,
-    borderRadius: 8,
-    paddingHorizontal: 4,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: 'Outfit_700Bold',
   },
   scrollContent: {
@@ -702,8 +703,9 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 10,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'Outfit_500Medium',
     letterSpacing: 1,
+    textTransform: 'uppercase',
     color: '#8E8E93',
   },
   refreshButtonRow: {
@@ -715,15 +717,15 @@ const styles = StyleSheet.create({
   },
   refreshBtnLabel: {
     fontSize: 10,
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: 'Outfit_600SemiBold',
     color: '#00C9A7',
     letterSpacing: 0.5,
   },
   listContainer: {
-    gap: 14,
+    gap: 12,
   },
   insightCard: {
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     padding: 16,
     gap: 10,
@@ -733,14 +735,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Outfit_600SemiBold',
     flex: 1,
   },
   cardMessage: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontFamily: 'Outfit_400Regular',
-    lineHeight: 19,
+    lineHeight: 20,
   },
   actionBtn: {
     flexDirection: 'row',
@@ -750,10 +752,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
   },
   actionText: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: 'Outfit_600SemiBold',
     marginRight: 4,
   },
@@ -766,15 +768,15 @@ const styles = StyleSheet.create({
     marginTop: 30,
   },
   emptyTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: 'Outfit_600SemiBold',
     marginBottom: 6,
   },
   emptyDesc: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: 'Outfit_400Regular',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 19,
     paddingHorizontal: 16,
   },
 });

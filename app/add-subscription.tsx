@@ -12,8 +12,21 @@ import {
   FlatList,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import { X, Check, ChevronDown, Tv, Music, Youtube, ShoppingBag, Cloud, Gamepad2, Sparkles, Layers, Repeat, Wallet, Landmark, Activity, CreditCard, PiggyBank, ArrowDownLeft, ArrowUpRight } from 'lucide-react-native';
+import { StatusBar } from 'expo-status-bar';
+import {
+  ChevronRight,
+  X,
+  Check,
+  Tv,
+  Music,
+  Youtube,
+  ShoppingBag,
+  Cloud,
+  Gamepad2,
+  Sparkles,
+  Layers,
+  Repeat,
+} from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
@@ -21,34 +34,9 @@ import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
-import { Subscription, AccountType } from '@/types/money';
-import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
+import { Subscription, Account } from '@/types/money';
+import { formatCurrencyINR, formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 import { BankLogo } from '@/components/BankLogo';
-
-const ACCOUNT_TYPE_ICONS: Record<AccountType, { icon: any; color: string }> = {
-  wallet: { icon: Wallet, color: '#00C9A7' },
-  savings: { icon: Landmark, color: '#007AFF' },
-  investment: { icon: Activity, color: '#AF52DE' },
-  credit_card: { icon: CreditCard, color: '#FF9500' },
-  emergency_fund: { icon: PiggyBank, color: '#FF2D55' },
-  receivable: { icon: ArrowDownLeft, color: '#34C759' },
-  payable: { icon: ArrowUpRight, color: '#FF3B30' },
-};
-
-function AccountIcon({ account, size = 24 }: { account: { logo?: string; type: AccountType }; size?: number }) {
-  if (account.logo) {
-    return <BankLogo logo={account.logo} size={size} style={{ marginRight: 12 }} />;
-  }
-  const config = ACCOUNT_TYPE_ICONS[account.type] || ACCOUNT_TYPE_ICONS.wallet;
-  const IconComp = config.icon;
-  return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: `${config.color}15`, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-      <IconComp size={size * 0.6} color={config.color} />
-    </View>
-  );
-}
-
-const COLORS = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF2D55', '#00C9A7', '#5AC8FA'];
 
 const BRAND_PRESETS = [
   { id: 'netflix', name: 'Netflix', iconName: 'tv', icon: Tv, color: '#E50914', category: 'Entertainment' },
@@ -61,24 +49,35 @@ const BRAND_PRESETS = [
   { id: 'adobe', name: 'Adobe CC', iconName: 'layers', icon: Layers, color: '#FF0000', category: 'Software' },
 ] as const;
 
-const AVAILABLE_ICONS = [
-  { name: 'tv', icon: Tv, label: 'Video' },
-  { name: 'music', icon: Music, label: 'Music' },
-  { name: 'youtube', icon: Youtube, label: 'Social' },
-  { name: 'shopping-bag', icon: ShoppingBag, label: 'Shopping' },
-  { name: 'sparkles', icon: Sparkles, label: 'AI/Tech' },
-  { name: 'cloud', icon: Cloud, label: 'Cloud' },
-  { name: 'gamepad-2', icon: Gamepad2, label: 'Gaming' },
-  { name: 'layers', icon: Layers, label: 'Design' },
-  { name: 'repeat', icon: Repeat, label: 'Other' },
-] as const;
-
 const CYCLES: { cycle: Subscription['billingCycle']; label: string }[] = [
-  { cycle: 'weekly', label: 'Weekly' },
   { cycle: 'monthly', label: 'Monthly' },
-  { cycle: 'quarterly', label: 'Quarterly' },
   { cycle: 'yearly', label: 'Yearly' },
+  { cycle: 'quarterly', label: 'Quarterly' },
+  { cycle: 'weekly', label: 'Weekly' },
 ];
+
+function AccountLogoOrInitials({ account, size = 24 }: { account: Account; size?: number }) {
+  if (account.logo) {
+    return <BankLogo logo={account.logo} size={size} style={{ marginRight: 8 }} />;
+  }
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: '#00C9A720',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 8,
+      }}
+    >
+      <ThemedText style={{ fontSize: size * 0.45, color: '#00C9A7', fontWeight: '700' }}>
+        {account.name.charAt(0).toUpperCase()}
+      </ThemedText>
+    </View>
+  );
+}
 
 export default function AddSubscriptionScreen() {
   const router = useRouter();
@@ -89,7 +88,7 @@ export default function AddSubscriptionScreen() {
   const { subscriptions, accounts, addSubscription, updateSubscription } = useMoneyStore();
 
   const editingSubscription = useMemo(() => {
-    return id ? subscriptions.find((s) => s.id === id) : null;
+    return id ? subscriptions.find((s) => String(s.id) === String(id)) : null;
   }, [id, subscriptions]);
 
   const [name, setName] = useState('');
@@ -98,12 +97,21 @@ export default function AddSubscriptionScreen() {
   const [nextPaymentDate, setNextPaymentDate] = useState(new Date());
   const [linkedAccountId, setLinkedAccountId] = useState('');
   const [category, setCategory] = useState('Entertainment');
-  const [color, setColor] = useState(COLORS[0]);
-  const [logo, setLogo] = useState('repeat');
+  const [color, setColor] = useState('#007AFF');
+  const [logo, setLogo] = useState<string | undefined>();
 
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showCycleModal, setShowCycleModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showBrandModal, setShowBrandModal] = useState(false);
+
+  const activeAccounts = useMemo(() => {
+    return accounts.filter((a) => !a.isArchived);
+  }, [accounts]);
+
+  const linkedAccount = useMemo(() => {
+    return accounts.find((a) => a.id === linkedAccountId);
+  }, [accounts, linkedAccountId]);
 
   useEffect(() => {
     if (editingSubscription) {
@@ -112,31 +120,27 @@ export default function AddSubscriptionScreen() {
       setBillingCycle(editingSubscription.billingCycle);
       setNextPaymentDate(new Date(editingSubscription.nextPaymentDate));
       setLinkedAccountId(editingSubscription.linkedAccountId || '');
-      setCategory(editingSubscription.category);
-      setColor(editingSubscription.color || COLORS[0]);
-      setLogo(editingSubscription.logo || 'repeat');
-    } else {
-      const activeAccounts = accounts.filter(a => !a.isArchived);
-      if (activeAccounts.length > 0) {
-        setLinkedAccountId(activeAccounts[0].id);
-      }
+      setCategory(editingSubscription.category || 'Entertainment');
+      setColor(editingSubscription.color || '#007AFF');
+      setLogo(editingSubscription.logo);
+    } else if (activeAccounts.length > 0) {
+      setLinkedAccountId(activeAccounts[0].id);
     }
-  }, [editingSubscription, accounts]);
+  }, [editingSubscription]);
 
-  const handleHaptic = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
+  const selectedBrandObj = useMemo(() => {
+    return BRAND_PRESETS.find((b) => b.iconName === logo || b.id === logo);
+  }, [logo]);
 
   const handleSave = () => {
-    handleHaptic();
     if (!name.trim()) {
-      Alert.alert('Required Fields', 'Please enter a subscription name.');
+      Alert.alert('Required Field', 'Please enter a subscription name.');
       return;
     }
 
-    const amountVal = parseIndianAmount(amount);
-    if (isNaN(amountVal) || amountVal <= 0) {
-      Alert.alert('Required Field', 'Please enter a valid billing amount.');
+    const parsedAmount = parseIndianAmount(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      Alert.alert('Required Field', 'Please enter a valid subscription amount.');
       return;
     }
 
@@ -144,16 +148,16 @@ export default function AddSubscriptionScreen() {
       id: editingSubscription ? editingSubscription.id : Math.random().toString(36).substring(2, 9),
       name: name.trim(),
       provider: name.trim(),
-      amount: amountVal,
+      amount: parsedAmount,
       billingCycle,
       nextPaymentDate: nextPaymentDate.toISOString(),
       linkedAccountId: linkedAccountId || undefined,
-      category: category.trim() || 'Other',
+      category: category.trim() || 'Entertainment',
+      color,
+      logo,
       isActive: true,
       createdAt: editingSubscription ? editingSubscription.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      color,
-      logo,
     };
 
     if (editingSubscription) {
@@ -166,521 +170,472 @@ export default function AddSubscriptionScreen() {
   };
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS !== 'ios') {
-      setShowDatePicker(false);
-    }
+    setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
       setNextPaymentDate(selectedDate);
     }
   };
 
-  const activeAccounts = useMemo(() => {
-    return accounts.filter((a) => !a.isArchived);
-  }, [accounts]);
-
-  const selectedAccount = accounts.find((a) => a.id === linkedAccountId);
-
-  const suggestedCategories = [
-    'Entertainment', 'Software', 'Utilities', 'Fitness', 'Music', 'Gaming', 'Education', 'Other'
-  ];
-
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={[styles.closeBtn, { backgroundColor: currColors.cardSecondary }]}
-            onPress={() => router.back()}
-          >
-            <X size={20} color={currColors.text} />
+    <View style={[styles.mainContainer, { backgroundColor: currColors.background }]}>
+      <StatusBar style={colorScheme === 'light' ? 'dark' : 'light'} />
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: currColors.background }]} edges={['top']}>
+        {/* iOS Clean Header */}
+        <View style={[styles.header, { backgroundColor: currColors.background, borderBottomColor: currColors.border }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.cancelButton}>
+            <ThemedText style={[styles.headerButtonText, { color: currColors.tint }]}>
+              Cancel
+            </ThemedText>
           </TouchableOpacity>
           <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
             {editingSubscription ? 'Edit Subscription' : 'Add Subscription'}
           </ThemedText>
-          <TouchableOpacity
-            style={[styles.saveBtn, { backgroundColor: '#00C9A7' }]}
-            onPress={handleSave}
-          >
-            <Check size={20} color="#FFFFFF" />
+          <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
+            <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: currColors.tint }]}>
+              Save
+            </ThemedText>
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
-          {/* Brand Presets */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>POPULAR BRANDS (TAP TO AUTO-FILL)</ThemedText>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.presetsContainer} bounces={false}>
-              {BRAND_PRESETS.map((brand) => (
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {/* GROUP 1: SERVICE DETAILS */}
+            <ThemedText style={[styles.groupLabel, { color: currColors.textSecondary }]}>
+              SERVICE DETAILS
+            </ThemedText>
+            <View style={[styles.formGroup, { backgroundColor: currColors.card }]}>
+              {/* Name Row */}
+              <View style={[styles.formRow, styles.formRowFirst, { borderBottomColor: currColors.border }]}>
+                <ThemedText style={[styles.label, { color: currColors.text }]}>Service Name</ThemedText>
+                <TextInput
+                  style={[styles.input, { color: currColors.text }]}
+                  placeholder="e.g. Netflix, Spotify, Gym"
+                  placeholderTextColor={currColors.textSecondary}
+                  value={name}
+                  onChangeText={setName}
+                  textAlign="right"
+                />
+              </View>
+
+              {/* Brand Preset Row */}
+              <TouchableOpacity
+                style={[styles.formRow, { borderBottomColor: currColors.border }]}
+                onPress={() => setShowBrandModal(true)}
+                activeOpacity={0.7}
+              >
+                <ThemedText style={[styles.label, { color: currColors.text }]}>Brand Preset</ThemedText>
+                <View style={styles.valueContainer}>
+                  {selectedBrandObj ? (
+                    (() => {
+                      const IconComp = selectedBrandObj.icon;
+                      return (
+                        <View style={styles.typeBadge}>
+                          <View style={[styles.typeIconWrap, { backgroundColor: `${selectedBrandObj.color}15` }]}>
+                            <IconComp size={15} color={selectedBrandObj.color} />
+                          </View>
+                          <ThemedText style={[styles.valueText, { color: currColors.text }]}>
+                            {selectedBrandObj.name}
+                          </ThemedText>
+                        </View>
+                      );
+                    })()
+                  ) : (
+                    <ThemedText style={[styles.valueText, styles.placeholderText, { color: currColors.textSecondary }]}>
+                      Choose Preset
+                    </ThemedText>
+                  )}
+                  <ChevronRight size={16} color={currColors.border} style={{ marginLeft: 6 }} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Category Row */}
+              <View style={[styles.formRow, styles.formRowLast]}>
+                <ThemedText style={[styles.label, { color: currColors.text }]}>Category</ThemedText>
+                <TextInput
+                  style={[styles.input, { color: currColors.text }]}
+                  placeholder="Entertainment, Software"
+                  placeholderTextColor={currColors.textSecondary}
+                  value={category}
+                  onChangeText={setCategory}
+                  textAlign="right"
+                />
+              </View>
+            </View>
+
+            {/* GROUP 2: BILLING & PAYMENT */}
+            <ThemedText style={[styles.groupLabel, { color: currColors.textSecondary }]}>
+              BILLING & PAYMENT
+            </ThemedText>
+            <View style={[styles.formGroup, { backgroundColor: currColors.card }]}>
+              {/* Amount Row */}
+              <View style={[styles.formRow, styles.formRowFirst, { borderBottomColor: currColors.border }]}>
+                <ThemedText style={[styles.label, { color: currColors.text }]}>Recurring Amount</ThemedText>
+                <View style={styles.amountInputRow}>
+                  <ThemedText style={[styles.currencyPrefix, { color: currColors.text }]}>₹</ThemedText>
+                  <TextInput
+                    style={[styles.input, { color: currColors.text }]}
+                    placeholder="0"
+                    placeholderTextColor={currColors.textSecondary}
+                    value={amount}
+                    onChangeText={(val) => setAmount(formatIndianAmount(val))}
+                    keyboardType="decimal-pad"
+                    textAlign="right"
+                  />
+                </View>
+              </View>
+
+              {/* Billing Cycle Row */}
+              <TouchableOpacity
+                style={[styles.formRow, { borderBottomColor: currColors.border }]}
+                onPress={() => setShowCycleModal(true)}
+                activeOpacity={0.7}
+              >
+                <ThemedText style={[styles.label, { color: currColors.text }]}>Billing Cycle</ThemedText>
+                <View style={styles.valueContainer}>
+                  <ThemedText style={[styles.valueText, { color: currColors.text }]}>
+                    {CYCLES.find((c) => c.cycle === billingCycle)?.label || 'Monthly'}
+                  </ThemedText>
+                  <ChevronRight size={16} color={currColors.border} style={{ marginLeft: 6 }} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Next Renewal Date Row */}
+              <View style={[styles.formRow, { borderBottomColor: currColors.border }]}>
+                <ThemedText style={[styles.label, { color: currColors.text }]}>Next Due Date</ThemedText>
+                <View style={{ flex: 1 }}>
+                  {Platform.OS === 'ios' ? (
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <DateTimePicker
+                        value={nextPaymentDate}
+                        mode="date"
+                        display="default"
+                        onChange={onDateChange}
+                        themeVariant={colorScheme}
+                      />
+                    </View>
+                  ) : (
+                    <TouchableOpacity onPress={() => setShowDatePicker(true)} style={{ alignItems: 'flex-end' }}>
+                      <ThemedText style={[styles.valueText, { color: currColors.text }]}>
+                        {nextPaymentDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
+              {showDatePicker && Platform.OS !== 'ios' && (
+                <DateTimePicker value={nextPaymentDate} mode="date" display="default" onChange={onDateChange} />
+              )}
+
+              {/* Linked Debit Account Row */}
+              <TouchableOpacity
+                style={[styles.formRow, styles.formRowLast]}
+                onPress={() => setShowAccountModal(true)}
+                activeOpacity={0.7}
+              >
+                <ThemedText style={[styles.label, { color: currColors.text }]}>Debit Account</ThemedText>
+                <View style={styles.valueContainer}>
+                  {linkedAccount ? (
+                    <View style={styles.accountBadge}>
+                      <AccountLogoOrInitials account={linkedAccount} size={20} />
+                      <ThemedText style={[styles.valueText, { color: currColors.text }]}>
+                        {linkedAccount.name}
+                      </ThemedText>
+                    </View>
+                  ) : (
+                    <ThemedText style={[styles.valueText, styles.placeholderText, { color: currColors.textSecondary }]}>
+                      Select Account
+                    </ThemedText>
+                  )}
+                  <ChevronRight size={16} color={currColors.border} style={{ marginLeft: 6 }} />
+                </View>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+
+      {/* BILLING CYCLE MODAL */}
+      <Modal visible={showCycleModal} animationType="slide" presentationStyle="pageSheet">
+        <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
+            <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Billing Frequency</ThemedText>
+            <TouchableOpacity onPress={() => setShowCycleModal(false)} style={styles.modalCloseButton}>
+              <X size={20} color={currColors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={CYCLES}
+            keyExtractor={(item) => item.cycle}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => {
+              const isSelected = billingCycle === item.cycle;
+              return (
                 <TouchableOpacity
-                  key={brand.id}
-                  style={[
-                    styles.brandChip,
-                    { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }
-                  ]}
+                  style={[styles.listItem, { borderBottomColor: currColors.border }]}
                   onPress={() => {
-                    handleHaptic();
-                    setName(brand.name);
-                    setColor(brand.color);
-                    setCategory(brand.category);
-                    setLogo(brand.iconName);
+                    setBillingCycle(item.cycle);
+                    setShowCycleModal(false);
                   }}
                 >
-                  <brand.icon size={16} color={brand.color} style={{ marginRight: 6 }} />
-                  <ThemedText style={[styles.brandChipText, { color: currColors.text }]}>{brand.name}</ThemedText>
+                  <ThemedText style={[styles.itemTitle, { color: currColors.text }]}>{item.label}</ThemedText>
+                  {isSelected && <Check size={18} color="#00C9A7" strokeWidth={2.5} />}
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+              );
+            }}
+          />
+        </View>
+      </Modal>
 
-          {/* Subscription Name */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>SUBSCRIPTION NAME</ThemedText>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
-              placeholder="e.g. Netflix Premium, Spotify"
-              placeholderTextColor={currColors.textSecondary}
-              value={name}
-              onChangeText={setName}
-            />
-          </View>
-
-          {/* Icon Selector (Choose Logo) */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>CHOOSE SUBSCRIPTION ICON</ThemedText>
-            <View style={styles.iconSelectorGrid}>
-              {AVAILABLE_ICONS.map((item) => {
-                const isSelected = logo === item.name;
-                const IconComponent = item.icon;
-                return (
-                  <TouchableOpacity
-                    key={item.name}
-                    style={[
-                      styles.iconOption,
-                      { backgroundColor: currColors.card, borderColor: currColors.border },
-                      isSelected && { borderColor: color || '#00C9A7', backgroundColor: `${color || '#00C9A7'}1A` }
-                    ]}
-                    onPress={() => {
-                      handleHaptic();
-                      setLogo(item.name);
-                    }}
-                  >
-                    <IconComponent size={20} color={isSelected ? (color || '#00C9A7') : currColors.textSecondary} />
-                    <ThemedText style={[styles.iconLabel, { color: isSelected ? currColors.text : currColors.textSecondary }]}>
-                      {item.label}
-                    </ThemedText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-
-          {/* Amount input */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>AMOUNT (₹)</ThemedText>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: currColors.card, borderColor: currColors.border, color: currColors.text }]}
-              placeholder="e.g. 1,499"
-              placeholderTextColor={currColors.textSecondary}
-              keyboardType="numeric"
-              value={amount}
-              onChangeText={(val) => setAmount(formatIndianAmount(val))}
-            />
-          </View>
-
-          {/* Billing Cycle Selector */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>BILLING CYCLE</ThemedText>
-            <View style={[styles.segmentContainer, { backgroundColor: currColors.cardSecondary }]}>
-              {CYCLES.map((c) => {
-                const isSelected = billingCycle === c.cycle;
-                return (
-                  <TouchableOpacity
-                    key={c.cycle}
-                    style={[
-                      styles.segmentTab,
-                      isSelected && { backgroundColor: '#00C9A7' },
-                    ]}
-                    onPress={() => {
-                      handleHaptic();
-                      setBillingCycle(c.cycle);
-                    }}
-                  >
-                    <ThemedText
-                      style={[
-                        styles.segmentLabel,
-                        {
-                          color: isSelected ? '#FFFFFF' : currColors.textSecondary,
-                          fontFamily: isSelected ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
-                        },
-                      ]}
-                    >
-                      {c.label}
-                    </ThemedText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Next Payment Date */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>NEXT PAYMENT DATE</ThemedText>
-            {Platform.OS === 'ios' ? (
-              <View style={styles.iosDatePickerContainer}>
-                <DateTimePicker
-                  value={nextPaymentDate}
-                  mode="date"
-                  display="default"
-                  onChange={onDateChange}
-                  themeVariant={colorScheme}
-                />
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={[styles.selectBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <ThemedText style={{ color: currColors.text, fontSize: 16 }}>
-                  {nextPaymentDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-                </ThemedText>
-              </TouchableOpacity>
-            )}
-            {showDatePicker && Platform.OS !== 'ios' && (
-              <DateTimePicker
-                value={nextPaymentDate}
-                mode="date"
-                display="default"
-                onChange={onDateChange}
-              />
-            )}
-          </View>
-
-          {/* Linked Account */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>PAYMENT ACCOUNT (OPTIONAL)</ThemedText>
-            <TouchableOpacity
-              style={[styles.selectBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-              onPress={() => {
-                handleHaptic();
-                setShowAccountModal(true);
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                {selectedAccount ? (
-                  <AccountIcon account={selectedAccount} size={24} />
-                ) : null}
-                <ThemedText style={{ color: selectedAccount ? currColors.text : currColors.textSecondary, fontSize: 15, fontFamily: 'Outfit_500Medium' }}>
-                  {selectedAccount ? selectedAccount.name : 'Select Account'}
-                </ThemedText>
-              </View>
-              <ChevronDown size={18} color={currColors.textSecondary} />
+      {/* BRAND PRESETS MODAL */}
+      <Modal visible={showBrandModal} animationType="slide" presentationStyle="pageSheet">
+        <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
+            <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Popular Subscriptions</ThemedText>
+            <TouchableOpacity onPress={() => setShowBrandModal(false)} style={styles.modalCloseButton}>
+              <X size={20} color={currColors.text} />
             </TouchableOpacity>
           </View>
 
-          {/* Category */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>CATEGORY</ThemedText>
-            <TouchableOpacity
-              style={[styles.selectBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}
-              onPress={() => {
-                handleHaptic();
-                setShowCategoryModal(true);
-              }}
-            >
-              <ThemedText style={{ color: currColors.text, fontSize: 16 }}>
-                {category}
-              </ThemedText>
-              <ChevronDown size={18} color={currColors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Color Picker */}
-          <View style={styles.inputGroup}>
-            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>COLOR TAG</ThemedText>
-            <View style={styles.colorRow}>
-              {COLORS.map((c) => (
+          <FlatList
+            data={BRAND_PRESETS}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => {
+              const IconComponent = item.icon;
+              return (
                 <TouchableOpacity
-                  key={c}
-                  style={[
-                    styles.colorDot,
-                    { backgroundColor: c },
-                    color === c && styles.colorDotActive,
-                  ]}
+                  style={[styles.listItem, { borderBottomColor: currColors.border }]}
                   onPress={() => {
-                    handleHaptic();
-                    setColor(c);
+                    setName(item.name);
+                    setColor(item.color);
+                    setLogo(item.iconName);
+                    setCategory(item.category);
+                    setShowBrandModal(false);
                   }}
-                />
-              ))}
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <View
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        backgroundColor: `${item.color}18`,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginRight: 12,
+                      }}
+                    >
+                      <IconComponent size={18} color={item.color} />
+                    </View>
+                    <View>
+                      <ThemedText style={[styles.itemTitle, { color: currColors.text }]}>{item.name}</ThemedText>
+                      <ThemedText style={[styles.itemSubtitle, { color: currColors.textSecondary }]}>
+                        {item.category}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <ChevronRight size={16} color={currColors.border} />
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
+      </Modal>
 
-      {/* Account Selection Modal */}
-      <Modal visible={showAccountModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowAccountModal(false)} />
-          <View style={[styles.modalContent, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            <View style={styles.modalDragHandle} />
-            <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
-              <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Select Account</ThemedText>
-              <TouchableOpacity onPress={() => setShowAccountModal(false)} style={styles.modalCloseIcon}>
-                <X size={20} color={currColors.text} />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={activeAccounts}
-              keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={false}
-              bounces={false}
-              contentContainerStyle={{ paddingBottom: 24 }}
-              renderItem={({ item }) => (
+      {/* ACCOUNT SELECTION MODAL */}
+      <Modal visible={showAccountModal} animationType="slide" presentationStyle="pageSheet">
+        <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
+            <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Select Debit Account</ThemedText>
+            <TouchableOpacity onPress={() => setShowAccountModal(false)} style={styles.modalCloseButton}>
+              <X size={20} color={currColors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={activeAccounts}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => {
+              const isSelected = linkedAccountId === item.id;
+              return (
                 <TouchableOpacity
-                  style={[styles.modalItem, { borderBottomColor: currColors.border }, item.includeInAssets === false && { opacity: 0.55 }]}
+                  style={[styles.listItem, { borderBottomColor: currColors.border }]}
                   onPress={() => {
-                    handleHaptic();
                     setLinkedAccountId(item.id);
                     setShowAccountModal(false);
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <AccountIcon account={item} size={26} />
-                    <View style={{ flex: 1 }}>
-                      <ThemedText type="semiBold" style={{ color: currColors.text, fontSize: 15 }}>{item.name}</ThemedText>
-                      <ThemedText style={{ color: currColors.textSecondary, fontSize: 11, marginTop: 2, fontFamily: 'Outfit_400Regular' }}>
-                        Balance: {item.balance.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}
+                    <AccountLogoOrInitials account={item} size={32} />
+                    <View style={{ flex: 1, marginLeft: 4 }}>
+                      <ThemedText style={[styles.itemTitle, { color: currColors.text }]}>{item.name}</ThemedText>
+                      <ThemedText style={[styles.itemSubtitle, { color: currColors.textSecondary }]}>
+                        Balance: {formatCurrencyINR(item.balance, true, 0)}
                       </ThemedText>
                     </View>
                   </View>
-                  {linkedAccountId === item.id && <Check size={18} color="#00C9A7" />}
+                  {isSelected && <Check size={18} color="#00C9A7" strokeWidth={2.5} />}
                 </TouchableOpacity>
-              )}
-            />
-          </View>
+              );
+            }}
+          />
         </View>
       </Modal>
-
-      {/* Category Selection Modal */}
-      <Modal visible={showCategoryModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: currColors.card }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
-              <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Select Category</ThemedText>
-              <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
-                <X size={22} color={currColors.text} />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={suggestedCategories}
-              keyExtractor={(item) => item}
-              bounces={false}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.modalItem, { borderBottomColor: currColors.border }]}
-                  onPress={() => {
-                    handleHaptic();
-                    setCategory(item);
-                    setShowCategoryModal(false);
-                  }}
-                >
-                  <ThemedText style={{ color: category === item ? '#00C9A7' : currColors.text, fontSize: 16 }}>
-                    {item}
-                  </ThemedText>
-                  {category === item && <Check size={18} color="#00C9A7" />}
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  mainContainer: {
+    flex: 1,
+  },
+  safeArea: {
     flex: 1,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    alignItems: 'center',
+    paddingHorizontal: 16,
     paddingVertical: 12,
+    borderBottomWidth: 0.5,
   },
   headerTitle: {
     fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
   },
-  closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+  headerButtonText: {
+    fontSize: 17,
+    fontFamily: 'Outfit_400Regular',
   },
-  saveBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+  cancelButton: {
+    padding: 4,
+  },
+  saveButton: {
+    padding: 4,
+  },
+  saveButtonText: {
+    fontFamily: 'Outfit_600SemiBold',
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingVertical: 16,
     paddingBottom: 40,
-    paddingTop: 10,
   },
-  inputGroup: {
-    marginBottom: 22,
+  groupLabel: {
+    fontSize: 12,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: 0.5,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    marginTop: 12,
   },
-  row: {
+  formGroup: {
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  formRow: {
     flexDirection: 'row',
-    gap: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0.5,
+    minHeight: 48,
+  },
+  formRowFirst: {},
+  formRowLast: {
+    borderBottomWidth: 0,
   },
   label: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  textInput: {
-    height: 52,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
     fontSize: 16,
     fontFamily: 'Outfit_400Regular',
   },
-  selectBox: {
-    height: 52,
-    borderWidth: 1,
-    borderRadius: 12,
+  valueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  segmentContainer: {
-    flexDirection: 'row',
-    height: 46,
-    borderRadius: 14,
-    padding: 3,
-    marginTop: 4,
-  },
-  segmentTab: {
+    justifyContent: 'flex-end',
     flex: 1,
-    height: '100%',
+  },
+  typeBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
+  },
+  typeIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
     justifyContent: 'center',
-    borderRadius: 12,
+    alignItems: 'center',
+    marginRight: 8,
   },
-  segmentLabel: {
-    fontSize: 12,
-    letterSpacing: 0.3,
-  },
-  iosDatePickerContainer: {
-    alignItems: 'flex-start',
-  },
-  colorRow: {
+  accountBadge: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 4,
+    alignItems: 'center',
   },
-  colorDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  valueText: {
+    fontSize: 16,
+    fontFamily: 'Outfit_400Regular',
   },
-  colorDotActive: {
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+  placeholderText: {
+    opacity: 0.6,
   },
-  modalOverlay: {
+  amountInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
-  modalContent: {
-    maxHeight: '65%',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+  currencyPrefix: {
+    fontSize: 16,
+    fontFamily: 'Outfit_600SemiBold',
+    marginRight: 4,
   },
-  modalDragHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(142, 142, 147, 0.3)',
-    alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 16,
+  input: {
+    flex: 1,
+    fontSize: 16,
+    padding: 0,
+    fontFamily: 'Outfit_400Regular',
+  },
+  modalContainer: {
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    marginBottom: 8,
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 0.5,
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
   },
-  modalCloseIcon: {
+  modalCloseButton: {
     padding: 4,
   },
-  modalItem: {
+  listContent: {
+    paddingBottom: 30,
+  },
+  listItem: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 14,
-    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0.5,
   },
-  presetsContainer: {
-    paddingRight: 10,
-    gap: 8,
-  },
-  brandChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  brandChipText: {
-    fontSize: 13,
+  itemTitle: {
+    fontSize: 16,
     fontFamily: 'Outfit_500Medium',
   },
-  iconSelectorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 4,
-  },
-  iconOption: {
-    width: '31%',
-    height: 72,
-    borderRadius: 14,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 6,
-  },
-  iconLabel: {
-    fontSize: 10,
-    fontFamily: 'Outfit_500Medium',
-    marginTop: 4,
+  itemSubtitle: {
+    fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
+    marginTop: 2,
   },
 });

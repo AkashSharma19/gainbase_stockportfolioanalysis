@@ -29,6 +29,9 @@ import {
   Check,
   RotateCcw,
   SlidersHorizontal,
+  Eye,
+  EyeOff,
+  PieChart,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -87,6 +90,7 @@ export default function AccountsScreen() {
   };
 
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
+  const togglePrivacyMode = usePortfolioStore((state) => state.togglePrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
   
   const transactions = usePortfolioStore((state) => state.transactions);
@@ -259,7 +263,7 @@ export default function AccountsScreen() {
         <View style={styles.cardMainRow}>
           <View style={styles.cardLeft}>
             {item.logo ? (
-              <BankLogo logo={item.logo} size={30} style={{ marginRight: 14 }} />
+              <BankLogo logo={item.logo} size={30} style={{ marginRight: 12 }} />
             ) : (
               <View style={[styles.iconWrapper, { backgroundColor: `${item.color}15` }]}>
                 <IconComponent size={18} color={item.color} />
@@ -311,7 +315,7 @@ export default function AccountsScreen() {
                 </View>
               )}
             </View>
-            <ChevronRight size={16} color={currColors.textSecondary} />
+            <ChevronRight size={14} color={currColors.textSecondary} />
           </View>
         </View>
 
@@ -351,8 +355,6 @@ export default function AccountsScreen() {
       </TouchableOpacity>
     );
   };
-
-
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
@@ -394,14 +396,39 @@ export default function AccountsScreen() {
             },
           ]}
         >
-          <View style={styles.netWorthHeader}>
+          <View style={styles.heroHeaderRow}>
             <ThemedText style={[styles.netWorthLabel, { color: currColors.textSecondary }]}>
               TOTAL NET WORTH
             </ThemedText>
-            <ThemedText style={[styles.netWorthVal, { color: currColors.text, fontFamily: 'Outfit_400Regular' }]}>
-              {formatAmount(summary.totalAssets - summary.totalLiabilities)}
-            </ThemedText>
+            <View style={styles.heroIcons}>
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  togglePrivacyMode();
+                }}
+                style={[styles.iconButton, { backgroundColor: currColors.cardSecondary }]}
+              >
+                {isPrivacyMode ? (
+                  <EyeOff size={16} color={currColors.text} />
+                ) : (
+                  <Eye size={16} color={currColors.text} />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  router.push('/money-analytics');
+                }}
+                style={[styles.iconButton, { backgroundColor: currColors.cardSecondary }]}
+              >
+                <PieChart size={16} color={currColors.text} />
+              </TouchableOpacity>
+            </View>
           </View>
+
+          <ThemedText style={[styles.netWorthVal, { color: currColors.text }]}>
+            {formatAmount(summary.totalAssets - summary.totalLiabilities)}
+          </ThemedText>
 
           <View style={[styles.dashedDivider, { borderColor: currColors.border }]} />
 
@@ -409,7 +436,7 @@ export default function AccountsScreen() {
             <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
               Total Assets
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#00C9A7' }]}>
+            <ThemedText style={[styles.heroRowValue, { color: '#34C759' }]}>
               {formatAmount(summary.totalAssets)}
             </ThemedText>
           </View>
@@ -662,7 +689,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 12,
   },
   headerTitle: {
@@ -670,35 +697,44 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_600SemiBold',
   },
   actionHeaderBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   addBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   premiumOverviewCard: {
     marginHorizontal: 16,
-    borderRadius: 24,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 20,
-    marginTop: 8,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    padding: 18,
+    marginTop: 4,
+    marginBottom: 20,
   },
-  netWorthHeader: {
-    alignItems: 'flex-start',
+  heroHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 2,
+  },
+  heroIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   netWorthLabel: {
     fontSize: 10,
@@ -708,23 +744,25 @@ const styles = StyleSheet.create({
   },
   netWorthVal: {
     fontSize: 24,
-    marginBottom: 16,
+    fontFamily: 'Outfit_600SemiBold',
+    marginBottom: 14,
+    marginTop: 2,
   },
   dashedDivider: {
     height: 1,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderRadius: 1,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   heroRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   heroRowLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Outfit_400Regular',
   },
   heroRowValue: {
@@ -735,7 +773,7 @@ const styles = StyleSheet.create({
     paddingBottom: 110,
   },
   groupContainer: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   groupTitle: {
     fontSize: 10,
@@ -747,8 +785,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginHorizontal: 20,
-    marginBottom: 10,
+    marginHorizontal: 16,
+    marginBottom: 8,
   },
   groupTotalText: {
     fontSize: 12,
@@ -756,18 +794,14 @@ const styles = StyleSheet.create({
   },
   groupWrapperCard: {
     marginHorizontal: 16,
-    borderRadius: 22,
+    borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 1,
   },
   accountListItem: {
     flexDirection: 'column',
-    padding: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   cardMainRow: {
     flexDirection: 'row',
@@ -781,12 +815,12 @@ const styles = StyleSheet.create({
     flex: 1.2,
   },
   iconWrapper: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   accountInfo: {
     flex: 1,
@@ -805,6 +839,7 @@ const styles = StyleSheet.create({
   accountSub: {
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
+    marginTop: 2,
   },
   cardRight: {
     flexDirection: 'row',
@@ -817,23 +852,23 @@ const styles = StyleSheet.create({
   },
   utilizationContainer: {
     width: '100%',
-    marginTop: 12,
+    marginTop: 10,
   },
   progressBarBG: {
-    height: 6,
-    borderRadius: 3,
+    height: 5,
+    borderRadius: 2.5,
     width: '100%',
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: 2.5,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 36,
-    marginTop: 100,
+    marginTop: 80,
   },
   emptyText: {
     fontSize: 14,
@@ -846,11 +881,11 @@ const styles = StyleSheet.create({
   },
   reorderModalContent: {
     maxHeight: '88%',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderWidth: 1,
     borderBottomWidth: 0,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingBottom: 34,
   },
   modalDragHandle: {
@@ -860,33 +895,33 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(142, 142, 147, 0.3)',
     alignSelf: 'center',
     marginTop: 10,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   reorderModalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 14,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   reorderModalTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: 'Outfit_600SemiBold',
   },
   doneBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
   },
   unifiedSectionCard: {
-    borderRadius: 18,
+    borderRadius: 14,
     borderWidth: 1,
     padding: 12,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   unifiedSectionHeader: {
     flexDirection: 'row',
@@ -899,7 +934,7 @@ const styles = StyleSheet.create({
   },
   nestedAccountsBox: {
     marginTop: 10,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -911,9 +946,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   nestedAccountDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     marginRight: 10,
   },
   nestedAccountName: {
@@ -925,8 +960,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   reorderIconWrap: {
-    width: 34,
-    height: 34,
+    width: 32,
+    height: 32,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -938,16 +973,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   arrowBtn: {
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   smallArrowBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 7,
+    width: 26,
+    height: 26,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },

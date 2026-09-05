@@ -229,6 +229,10 @@ function RootLayoutNav() {
             options={{ animation: 'slide_from_right', headerShown: false }}
           />
           <Stack.Screen
+            name="custom-goal-formula"
+            options={{ animation: 'slide_from_right', headerShown: false }}
+          />
+          <Stack.Screen
             name="manage-categories"
             options={{ animation: 'slide_from_right', headerShown: false }}
           />

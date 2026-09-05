@@ -63,9 +63,9 @@ export default function AccountDetailsScreen() {
   }, [id, moneyTransactions]);
 
   const formatAmount = (val: number) => {
-    if (isPrivacyMode) return '****';
+    if (isPrivacyMode) return '••••••';
     const formatted = Math.abs(val).toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
+      minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     });
     const prefix = val < 0 ? '-' : '';

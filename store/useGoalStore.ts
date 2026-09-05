@@ -1,10 +1,18 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FinancialGoal } from '../types/goals';
+import { FinancialGoal, GoalUnit, GoalOperator } from '../types/goals';
+
+export interface DraftCustomFormula {
+  formula: string;
+  unit: GoalUnit;
+  operator: GoalOperator;
+  label?: string;
+}
 
 export interface GoalState {
   goals: FinancialGoal[];
+  draftCustomFormula: DraftCustomFormula | null;
   
   // Actions
   addGoal: (goal: Omit<FinancialGoal, 'id' | 'createdAt' | 'updatedAt' | 'isManuallyCompleted'>) => string;
@@ -12,6 +20,7 @@ export interface GoalState {
   deleteGoal: (id: string) => void;
   toggleGoalCompleted: (id: string) => void;
   reorderGoals: (newOrder: FinancialGoal[]) => void;
+  setDraftCustomFormula: (draft: DraftCustomFormula | null) => void;
   resetToDefaults: () => void;
 }
 
@@ -70,6 +79,7 @@ export const useGoalStore = create<GoalState>()(
   persist(
     (set, get) => ({
       goals: DEFAULT_GOALS,
+      draftCustomFormula: null,
 
       addGoal: (goalData) => {
         const id = `goal-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
@@ -123,8 +133,12 @@ export const useGoalStore = create<GoalState>()(
         set({ goals: newOrder });
       },
 
+      setDraftCustomFormula: (draft) => {
+        set({ draftCustomFormula: draft });
+      },
+
       resetToDefaults: () => {
-        set({ goals: DEFAULT_GOALS });
+        set({ goals: DEFAULT_GOALS, draftCustomFormula: null });
       },
     }),
     {

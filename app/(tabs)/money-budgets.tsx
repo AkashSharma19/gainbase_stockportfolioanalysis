@@ -177,21 +177,20 @@ export default function BudgetsScreen() {
     return spendingDetails.categories.filter((cat) => cat.limit > 0);
   }, [spendingDetails.categories]);
 
-  const overallPercentage = useMemo(() => {
-    if (!activeBudget || activeBudget.totalLimit === 0) return 0;
-    return (spendingDetails.totalSpent / activeBudget.totalLimit) * 100;
-  }, [activeBudget, spendingDetails]);
+  const totalAllocatedLimit = useMemo(() => {
+    return spendingDetails.categories.reduce((sum, c) => sum + c.limit, 0);
+  }, [spendingDetails.categories]);
+
+  const totalOverallPercentage = useMemo(() => {
+    if (totalAllocatedLimit === 0) return 0;
+    return (spendingDetails.totalSpent / totalAllocatedLimit) * 100;
+  }, [totalAllocatedLimit, spendingDetails.totalSpent]);
 
   const getProgressColor = (pct: number) => {
     if (pct > 100) return '#FF3B30'; // Red for overspent
     if (pct > 80) return '#FF9500';  // Orange for warning
     return '#00C9A7';               // Teal for safe
   };
-
-  const ringColor = getProgressColor(overallPercentage);
-  const cardGradient = colorScheme === 'dark'
-    ? ['#1C1C1E', '#2C2C2E'] as const
-    : ['#FFFFFF', '#F2F2F7'] as const;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
@@ -207,7 +206,7 @@ export default function BudgetsScreen() {
             router.push('/add-budget');
           }}
         >
-          <Sliders size={20} color="#00C9A7" />
+          <Sliders size={18} color="#00C9A7" />
         </TouchableOpacity>
       </View>
 
@@ -228,17 +227,73 @@ export default function BudgetsScreen() {
                 </TouchableOpacity>
               </View>
 
+              {/* Overall Budget Summary Card */}
+              {totalAllocatedLimit > 0 && (
+                <View style={[styles.summaryCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+                  <View style={styles.summaryHeader}>
+                    <View>
+                      <ThemedText style={[styles.summarySubTitle, { color: currColors.textSecondary }]}>
+                        TOTAL SPENT / BUDGET
+                      </ThemedText>
+                      <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 2 }}>
+                        <ThemedText style={[styles.summaryVal, { color: spendingDetails.totalSpent > totalAllocatedLimit ? '#FF3B30' : currColors.text }]}>
+                          {formatAmount(spendingDetails.totalSpent)}
+                        </ThemedText>
+                        <ThemedText style={[styles.summaryLimit, { color: currColors.textSecondary }]}>
+                          {' '}/ {formatAmount(totalAllocatedLimit)}
+                        </ThemedText>
+                      </View>
+                    </View>
+                    <View style={[styles.badgePill, { backgroundColor: `${getProgressColor(totalOverallPercentage)}18` }]}>
+                      <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_600SemiBold', color: getProgressColor(totalOverallPercentage) }}>
+                        {totalOverallPercentage.toFixed(0)}%
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  <View style={[styles.progressBackground, { backgroundColor: currColors.cardSecondary, marginTop: 12 }]}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${Math.min(100, totalOverallPercentage)}%`,
+                          backgroundColor: getProgressColor(totalOverallPercentage),
+                        },
+                      ]}
+                    />
+                  </View>
+
+                  <View style={[styles.dashedDivider, { borderColor: currColors.border }]} />
+
+                  <View style={styles.summaryFooter}>
+                    <ThemedText style={[styles.footerLabel, { color: currColors.textSecondary }]}>
+                      {totalAllocatedLimit >= spendingDetails.totalSpent ? 'Remaining Budget' : 'Overbudget By'}
+                    </ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.footerValue,
+                        {
+                          color: totalAllocatedLimit >= spendingDetails.totalSpent ? '#00C9A7' : '#FF3B30',
+                          fontFamily: 'Outfit_600SemiBold',
+                        },
+                      ]}
+                    >
+                      {formatAmount(Math.abs(totalAllocatedLimit - spendingDetails.totalSpent))}
+                    </ThemedText>
+                  </View>
+                </View>
+              )}
 
               {/* Categories list */}
               <View style={styles.sectionHeader}>
                 <ThemedText type="medium" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
-                  CATEGORY ALLOCATIONS
+                  CATEGORY ALLOCATIONS ({activeCategories.length})
                 </ThemedText>
               </View>
 
               {activeCategories.length === 0 ? (
                 <View style={[styles.emptyCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                  <Info size={44} color={currColors.textSecondary} style={{ marginBottom: 12 }} />
+                  <Info size={40} color={currColors.textSecondary} style={{ marginBottom: 12 }} />
                   <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', lineHeight: 22, paddingHorizontal: 16 }}>
                     No budgets allocated. Tap the sliders icon in the header to set limits.
                   </ThemedText>
@@ -327,78 +382,87 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_600SemiBold',
   },
   addBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   scrollContent: {
     paddingBottom: 110,
   },
-  tabsScroll: {
-    paddingLeft: 16,
-    paddingRight: 8,
-    marginBottom: 16,
-    gap: 8,
-  },
-  tabItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
+  monthSwitcher: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    borderRadius: 12,
     borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 4,
+    marginBottom: 16,
   },
-  overviewHeader: {
+  monthArrow: {
+    padding: 4,
+  },
+  monthLabel: {
+    fontSize: 15,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  summaryCard: {
+    marginHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 18,
+    marginBottom: 20,
+  },
+  summaryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
-  cardSubTitle: {
+  summarySubTitle: {
     fontSize: 10,
     fontFamily: 'Outfit_500Medium',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 6,
   },
-  cardVal: {
-    fontSize: 26,
-    letterSpacing: -0.5,
+  summaryVal: {
+    fontSize: 22,
+    fontFamily: 'Outfit_600SemiBold',
   },
-  cardLimit: {
-    fontSize: 12,
-    fontFamily: 'Outfit_400Regular',
-    marginTop: 2,
-  },
-  percentageRing: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    borderWidth: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 16,
-  },
-  ringText: {
+  summaryLimit: {
     fontSize: 13,
+    fontFamily: 'Outfit_400Regular',
   },
-  progressBackground: {
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
+  badgePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
+  dashedDivider: {
+    height: 1,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 1,
+    marginVertical: 12,
   },
-  cardFooter: {
+  summaryFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 16,
+  },
+  footerLabel: {
+    fontSize: 13,
+    fontFamily: 'Outfit_400Regular',
+  },
+  footerValue: {
+    fontSize: 14,
   },
   sectionHeader: {
-    marginHorizontal: 16,
-    marginBottom: 12,
+    marginHorizontal: 20,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 10,
@@ -406,26 +470,31 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
+  progressBackground: {
+    height: 5,
+    borderRadius: 2.5,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 2.5,
+  },
   groupWrapperCard: {
     marginHorizontal: 16,
-    borderRadius: 22,
+    borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 1,
   },
   categoryRow: {
     flexDirection: 'column',
-    padding: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   emptyCard: {
     marginHorizontal: 16,
-    borderRadius: 22,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 28,
+    padding: 24,
     alignItems: 'center',
     borderStyle: 'dashed',
   },
@@ -433,18 +502,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   catHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     flex: 1.2,
   },
   catIconWrapper: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -460,46 +529,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   catSpentVal: {
-    fontSize: 15,
+    fontSize: 14,
   },
   catLimitVal: {
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
     marginLeft: 2,
   },
-  catFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 36,
-    marginTop: 100,
+    marginTop: 80,
   },
   emptyText: {
     fontSize: 14,
     textAlign: 'center',
-  },
-  monthSwitcher: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: 16,
-    borderRadius: 18,
-    borderWidth: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 12,
-  },
-  monthArrow: {
-    padding: 4,
-  },
-  monthLabel: {
-    fontSize: 15,
-    fontFamily: 'Outfit_500Medium',
   },
 });
