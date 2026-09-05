@@ -457,6 +457,7 @@ export default function AccountsScreen() {
           if (!list || list.length === 0) return null;
           const config = TYPE_CONFIG[type] || TYPE_CONFIG.savings;
           const totalBalance = list.reduce((sum, acc) => {
+            if (acc.includeInAssets === false) return sum;
             const balance = acc.type === 'investment' && acc.linkedBroker
               ? (brokerAllocations.find(b => b.name.toLowerCase().trim() === acc.linkedBroker!.toLowerCase().trim())?.value ?? 0)
               : acc.balance;
