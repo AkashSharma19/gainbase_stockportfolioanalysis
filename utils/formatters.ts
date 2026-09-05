@@ -45,13 +45,22 @@ export const parseIndianAmount = (val: string | number | null | undefined): numb
  */
 export const formatExpressionWithIndianCommas = (expr: string | null | undefined): string => {
   if (!expr) return '';
-  return expr.replace(/\b\d+(\.\d+)?\b/g, (match) => {
+  // Format each numeric group into Indian comma style
+  const withCommas = expr.replace(/\d+(\.\d*)?/g, (match) => {
     const parts = match.split('.');
     const intPart = parts[0];
-    const decPart = parts.length > 1 ? `.${parts[1]}` : '';
+    const hasDot = match.includes('.');
+    const decPart = hasDot ? `.${parts.slice(1).join('')}` : '';
+    
+    if (!intPart && hasDot) return `0${decPart}`;
+    if (!intPart) return match;
+    
     const num = parseInt(intPart, 10);
     return isNaN(num) ? match : `${num.toLocaleString('en-IN')}${decPart}`;
   });
+
+  // Ensure clean spacing around mathematical operators
+  return withCommas.replace(/(?<=\S)\s*([+−×÷\-*/])\s*(?=\S|$)/g, ' $1 ');
 };
 
 /**

@@ -215,6 +215,33 @@ export default function AddMoneyTransactionScreen() {
     ['.', '0', 'Done'],
   ];
 
+  // Live formatted expression with commas
+  const displayAmount = useMemo(() => {
+    return formatExpressionWithIndianCommas(amount);
+  }, [amount]);
+
+  // Dynamic font size scaling so numbers and commas never clip
+  const amountFontSize = useMemo(() => {
+    const len = displayAmount.length;
+    if (len <= 7) return 38;
+    if (len <= 10) return 32;
+    if (len <= 13) return 26;
+    if (len <= 16) return 22;
+    return 19;
+  }, [displayAmount]);
+
+  // Live evaluated sub-total preview for multi-term expressions
+  const liveEvaluatedTotal = useMemo(() => {
+    if (!amount || !/[+−×÷\-*/]/.test(amount)) return null;
+    const sanitized = amount.replace(/[+−×÷\-*/]+$/, '');
+    if (!sanitized) return null;
+    const res = evaluateExpression(sanitized);
+    if (!res) return null;
+    const num = parseFloat(res);
+    if (isNaN(num) || num <= 0) return null;
+    return num.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  }, [amount]);
+
   // Sort categories by historical proximity to typed amount, falling back to usage frequency
   const sortedCategoriesByUsage = useMemo(() => {
     const list = type === 'income' ? storeCategories.income : storeCategories.expense;
@@ -537,30 +564,80 @@ export default function AddMoneyTransactionScreen() {
 
           {/* Amount input */}
           <View style={styles.inputGroup}>
-            <ThemedText style={[styles.label, { color: currColors.textSecondary }]}>AMOUNT</ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <ThemedText style={[styles.label, { color: currColors.textSecondary, marginBottom: 0 }]}>AMOUNT</ThemedText>
+              {amount ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    handleHaptic();
+                    setAmount('');
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{ flexDirection: 'row', alignItems: 'center' }}
+                >
+                  <ThemedText style={{ fontSize: 12, color: '#FF3B30', fontFamily: 'Outfit_500Medium' }}>
+                    Clear
+                  </ThemedText>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
             <TouchableOpacity
-              activeOpacity={1}
+              activeOpacity={0.85}
               onPress={() => {
-                amountInputRef.current?.focus();
+                handleHaptic();
                 setShowCalculator(true);
                 Keyboard.dismiss();
               }}
-              style={[styles.amountInputContainer, { borderBottomColor: currColors.border }]}
+              style={[
+                styles.amountHeroCard,
+                {
+                  backgroundColor: currColors.card,
+                  borderColor: showCalculator ? currColors.tint : currColors.border,
+                },
+              ]}
             >
-              <ThemedText style={[styles.currencyPrefix, { color: getAmountColor() }]}>₹</ThemedText>
-              <TextInput
-                ref={amountInputRef}
-                style={[styles.amountInput, { color: getAmountColor() }]}
-                placeholder="0"
-                placeholderTextColor={currColors.textSecondary}
-                showSoftInputOnFocus={false}
-                onFocus={() => {
-                  setShowCalculator(true);
-                  Keyboard.dismiss();
-                }}
-                value={formatExpressionWithIndianCommas(amount)}
-                onChangeText={(val) => setAmount(val.replace(/,/g, ''))}
-              />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.amountScrollContent}
+                bounces={false}
+              >
+                <ThemedText
+                  style={[
+                    styles.currencyPrefix,
+                    {
+                      color: getAmountColor(),
+                      fontSize: Math.min(amountFontSize, 32),
+                    },
+                  ]}
+                >
+                  ₹
+                </ThemedText>
+                <ThemedText
+                  style={[
+                    styles.amountValueText,
+                    {
+                      color: amount ? getAmountColor() : currColors.textSecondary,
+                      fontSize: amountFontSize,
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {displayAmount || '0'}
+                </ThemedText>
+                {showCalculator && (
+                  <View style={[styles.cursorIndicator, { backgroundColor: getAmountColor() }]} />
+                )}
+              </ScrollView>
+
+              {liveEvaluatedTotal ? (
+                <View style={[styles.evaluatedBadge, { backgroundColor: `${getAmountColor()}18` }]}>
+                  <ThemedText style={[styles.evaluatedBadgeText, { color: getAmountColor() }]}>
+                    = ₹ {liveEvaluatedTotal}
+                  </ThemedText>
+                </View>
+              ) : null}
             </TouchableOpacity>
           </View>
 
@@ -990,24 +1067,45 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 8,
   },
-  amountInputContainer: {
+  amountHeroCard: {
+    borderRadius: 16,
+    borderWidth: 1.5,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 76,
+  },
+  amountScrollContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderBottomWidth: 1,
-    paddingVertical: 4,
+    flexGrow: 1,
   },
   currencyPrefix: {
-    fontSize: 34,
     fontFamily: 'Outfit_700Bold',
     marginRight: 6,
   },
-  amountInput: {
-    fontSize: 40,
+  amountValueText: {
     fontFamily: 'Outfit_700Bold',
-    textAlign: 'left',
-    minWidth: 100,
-    padding: 0,
+    letterSpacing: 0.5,
+  },
+  cursorIndicator: {
+    width: 2.5,
+    height: 28,
+    borderRadius: 1.5,
+    marginLeft: 4,
+    opacity: 0.8,
+  },
+  evaluatedBadge: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  evaluatedBadgeText: {
+    fontSize: 13,
+    fontFamily: 'Outfit_600SemiBold',
   },
   selectBox: {
     height: 54,
