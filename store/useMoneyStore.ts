@@ -397,9 +397,18 @@ export const useMoneyStore = create<MoneyState>()(
 
       // --- Budget Actions ---
       addBudget: (budget) =>
-        set((state) => ({
-          budgets: [...state.budgets, budget],
-        })),
+        set((state) => {
+          const timestamp = budget.updatedAt || new Date().toISOString();
+          const existingIndex = state.budgets.findIndex((b) => b.id === budget.id);
+          if (existingIndex >= 0) {
+            const updated = [...state.budgets];
+            updated[existingIndex] = { ...budget, updatedAt: timestamp };
+            return { budgets: updated };
+          }
+          return {
+            budgets: [...state.budgets, { ...budget, updatedAt: timestamp }],
+          };
+        }),
       updateBudget: (id, updates) =>
         set((state) => ({
           budgets: state.budgets.map((b) => (b.id === id ? { ...b, ...updates, updatedAt: new Date().toISOString() } : b)),
@@ -729,6 +738,21 @@ export const useMoneyStore = create<MoneyState>()(
           }
           if (uniqueAccs.length !== state.accounts.length) {
             state.accounts = uniqueAccs;
+          }
+        }
+
+        // Deduplicate budgets
+        if (Array.isArray(state.budgets)) {
+          const seenIds = new Set<string>();
+          const uniqueBudgets: Budget[] = [];
+          for (const b of state.budgets) {
+            if (!b || !b.id) continue;
+            if (seenIds.has(b.id)) continue;
+            seenIds.add(b.id);
+            uniqueBudgets.push(b);
+          }
+          if (uniqueBudgets.length !== state.budgets.length) {
+            state.budgets = uniqueBudgets;
           }
         }
       },

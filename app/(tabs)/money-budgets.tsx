@@ -65,14 +65,16 @@ export default function BudgetsScreen() {
   useEffect(() => {
     const expenseCategories = storeCategories.expense || [];
     if (budgets.length === 0) {
-      const budgetCats = expenseCategories.map((name, index) => {
+      const now = new Date().toISOString();
+      const budgetCats = expenseCategories.map((name) => {
         return {
-          id: Math.random().toString(36).substring(2, 9) + index,
+          id: `cat-global-${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
           name,
           icon: name,
           color: CATEGORY_META[name] || '#8E8E93',
           limit: 0,
           spent: 0,
+          updatedAt: now,
         };
       });
       addBudget({
@@ -84,32 +86,10 @@ export default function BudgetsScreen() {
         totalLimit: 0,
         categories: budgetCats,
         isActive: true,
+        updatedAt: now,
       });
-    } else {
-      const currentBudget = budgets[0];
-      const missingNames = expenseCategories.filter(
-        (name) => !currentBudget.categories.some((c) => c.name.toLowerCase() === name.toLowerCase())
-      );
-      if (missingNames.length > 0) {
-        const newCats = [
-          ...currentBudget.categories,
-          ...missingNames.map((name, index) => {
-            return {
-              id: Math.random().toString(36).substring(2, 9) + index,
-              name,
-              icon: name,
-              color: CATEGORY_META[name] || '#8E8E93',
-              limit: 0,
-              spent: 0,
-            };
-          }),
-        ];
-        updateBudget(currentBudget.id, {
-          categories: newCats,
-        });
-      }
     }
-  }, [budgets, storeCategories.expense]);
+  }, [budgets.length, storeCategories.expense]);
 
   const [activeBudgetId, setActiveBudgetId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());

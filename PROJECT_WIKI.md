@@ -140,7 +140,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     *   `moneyTransactions`: List of income and expense transactions.
     *   `loans`: Borrowed or lent funds with principal, interest rate, duration, and EMI configuration. Supports "EMIs Already Paid" tracking upon loan creation with automatic amortization schedule computation and historical EMI payment generation.
     *   `emiPayments`: Log of EMI transaction logs (linked to transactions via `transactionId`).
-    *   `budgets`: Set budgets per month/year.
+    *   `budgets`: Set budgets per month/year with deterministic category IDs, updatedAt ISO timestamps, and AsyncStorage deduplication on rehydration.
     *   `subscriptions`: Active repeating subscriptions.
     *   `subscriptionPayments`: Log of subscription payment logs (linked to transactions via `transactionId`).
     *   `categories`: List of tags for income/expense categorization.
@@ -148,6 +148,8 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 *   **Actions**:
     *   `setAccountTypesOrder(order)`: Persists customized ordering of account type sections.
     *   `reorderAccounts(accounts)`: Persists customized ordering of individual accounts.
+    *   `addBudget(budget)`: Inserts or updates budget with guaranteed string ID and timestamp, preventing duplicate ID accumulation.
+    *   `updateBudget(id, updates)`: Updates budget with fresh ISO timestamp.
     *   `removeMoneyTransaction(id)`: Deletes a transaction, adjusts account balances, and automatically removes linked EMI/subscription payments (reverting loan outstanding balance/billing cycles).
     *   `removeEMIPayment(paymentId)`: Directly removes an EMI payment and reverts the outstanding loan balance.
     *   `removeSubscriptionPayment(paymentId)`: Directly removes a subscription payment log and reverts the billing cycle.

@@ -55,7 +55,7 @@ const getEmiFingerprint = (e: any) =>
   `${e.loan_id || e.loanId || ''}|${Number(e.amount || 0)}|${e.date ? String(e.date).slice(0, 10) : ''}`;
 
 const getBudgetFingerprint = (b: any) =>
-  `${(b.name || '').trim().toLowerCase()}|${(b.period || '').toLowerCase()}|${b.start_date || b.startDate ? String(b.start_date || b.startDate).slice(0, 10) : ''}|${Number(b.total_limit || b.totalLimit || 0)}`;
+  `${(b.name || '').trim().toLowerCase()}|${(b.period || 'monthly').toLowerCase()}`;
 
 const getBudgetCategoryFingerprint = (c: any) =>
   `${c.budget_id || c.budgetId || ''}|${(c.name || '').trim().toLowerCase()}`;
@@ -648,7 +648,11 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
     localBudgets.forEach(b => {
       if (b.categories) {
         b.categories.forEach(c => {
-          localCategories.push({ ...c, budgetId: b.id });
+          localCategories.push({
+            ...c,
+            budgetId: b.id,
+            updatedAt: c.updatedAt || b.updatedAt || nowStr,
+          });
         });
       }
     });
@@ -714,8 +718,13 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
     const budgetsWithCats = budgetsMerge.mergedLocal.map(b => {
       const cats = catsMerge.mergedLocal
         .filter(c => c.budgetId === b.id)
-        .map(({ budgetId, ...c }) => c as BudgetCategory);
-      return { ...b, categories: cats };
+        .map(({ budgetId: _budgetId, ...c }) => c as BudgetCategory);
+      const computedTotal = cats.reduce((sum, c) => sum + (c.limit || 0), 0);
+      return {
+        ...b,
+        totalLimit: b.totalLimit > 0 ? b.totalLimit : computedTotal,
+        categories: cats,
+      };
     });
 
     // ----------------------------------------------------

@@ -8,7 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Search } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +23,7 @@ import { CategoryIcon } from '@/components/CategoryIcon';
 
 export default function AddBudgetScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string }>();
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
 
@@ -33,8 +34,11 @@ export default function AddBudgetScreen() {
   };
 
   const editingBudget = useMemo(() => {
-    return budgets[0] || null;
-  }, [budgets]);
+    if (id) {
+      return budgets.find((b) => b.id === id) || budgets[0] || null;
+    }
+    return budgets.find((b) => b.isActive) || budgets[0] || null;
+  }, [budgets, id]);
 
   const [categories, setCategories] = useState<
     { id: string; name: string; limit: string }[]
@@ -42,24 +46,25 @@ export default function AddBudgetScreen() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const expenseCats = storeCategories.expense;
+    const expenseCats = storeCategories.expense || [];
 
-    if (editingBudget) {
-      const list = expenseCats.map((cat, index) => {
+    if (editingBudget && Array.isArray(editingBudget.categories)) {
+      const list = expenseCats.map((cat) => {
         const existing = editingBudget.categories.find(
-          (c) => c.name.toLowerCase() === cat.toLowerCase()
+          (c) => c.name.toLowerCase().trim() === cat.toLowerCase().trim()
         );
+        const stableId = existing?.id || `cat-${cat.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
         return {
-          id: existing ? existing.id : Math.random().toString(36).substring(2, 9) + index,
+          id: stableId,
           name: cat,
           limit: existing ? (existing.limit > 0 ? formatIndianAmount(existing.limit.toString()) : '') : '',
         };
       });
       setCategories(list);
     } else {
-      const list = expenseCats.map((cat, index) => {
+      const list = expenseCats.map((cat) => {
         return {
-          id: Math.random().toString(36).substring(2, 9) + index,
+          id: `cat-${cat.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
           name: cat,
           limit: '',
         };
@@ -82,26 +87,34 @@ export default function AddBudgetScreen() {
   };
 
   const handleSave = () => {
+    const now = new Date().toISOString();
+    const budgetId = editingBudget ? editingBudget.id : 'global-budget';
+
     const budgetCategories: BudgetCategory[] = categories
-      .map((c) => ({
-        id: c.id,
-        name: c.name,
-        icon: 'Tag',
-        color: '#00C9A7',
-        limit: parseIndianAmount(c.limit) || 0,
-        spent: 0,
-      }))
+      .map((c) => {
+        const limitAmount = parseIndianAmount(c.limit) || 0;
+        return {
+          id: c.id || `cat-${c.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+          name: c.name,
+          icon: c.name,
+          color: '#00C9A7',
+          limit: limitAmount,
+          spent: 0,
+          updatedAt: now,
+        };
+      })
       .filter((c) => c.limit > 0);
 
     const budgetData: Budget = {
-      id: editingBudget ? editingBudget.id : 'global-budget',
-      name: 'Monthly Budget',
+      id: budgetId,
+      name: editingBudget?.name || 'Monthly Budget',
       period: 'monthly',
-      startDate: '',
-      endDate: '',
+      startDate: editingBudget?.startDate || '',
+      endDate: editingBudget?.endDate || '',
       totalLimit,
       categories: budgetCategories,
       isActive: true,
+      updatedAt: now,
     };
 
     if (editingBudget) {
@@ -109,6 +122,13 @@ export default function AddBudgetScreen() {
     } else {
       addBudget(budgetData);
     }
+
+    // Trigger background sync to propagate to cloud immediately
+    try {
+      import('@/utils/syncEngine').then(({ syncAllData }) => {
+        syncAllData().catch((e) => console.warn('Background sync error on budget save:', e));
+      });
+    } catch {}
 
     router.back();
   };
