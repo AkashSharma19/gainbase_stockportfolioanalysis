@@ -79,7 +79,7 @@ Gainbase has two distinct user modes configured in `useAppModeStore` and switche
 
 ### A. Investments Tracker Mode
 *   **Default View**: Displays total portfolio value, invested amount, total return percentage/PnL, day return percentage/PnL, XIRR, and privacy mode visibility toggle.
-*   **Holdings Breakdown**: Horizontal allocation pie charts by sector, company name, asset type, or broker (grouping unassigned broker holdings under **"Unassigned"**). Sorting features for current value, total returns, or contribution percentage.
+*   **Holdings Breakdown**: Horizontal allocation pie charts by sector, company name, asset type, or broker (grouping unassigned broker holdings under **"Unassigned"**). Multi-mode sorting and display filters for **Current (Invested)**, **Returns (%)**, **XIRR (%)**, and **Contribution (Current)** with ascending/descending toggles.
 *   **Detail Screens**: 
     *   `stock-details/[symbol]`: Real-time and historical transactions for a stock ticker, current/yesterday close price, gains.
     *   `portfolio-health`: Visual score gauges (out of 100) based on diversity, performance, risk concentration, and activity consistency.

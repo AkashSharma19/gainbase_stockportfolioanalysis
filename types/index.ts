@@ -95,6 +95,7 @@ export interface AllocationItem {
   quantity: number;
   stocksCount?: number;
   logo?: string;
+  xirr?: number;
 }
 
 export * from './money';

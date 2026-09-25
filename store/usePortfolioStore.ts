@@ -454,8 +454,24 @@ export const usePortfolioStore = create<PortfolioState>()(
 
           const groups: Record<
             string,
-            { value: number; cost: number; quantity: number; stocksCount: number; symbol?: string }
+            {
+              value: number;
+              cost: number;
+              quantity: number;
+              stocksCount: number;
+              symbol?: string;
+              cashFlows: { amount: number; date: Date }[];
+            }
           > = {};
+
+          sortedTransactions.forEach((t) => {
+            const broker = t.broker?.trim() || 'Unassigned';
+            if (!groups[broker]) {
+              groups[broker] = { value: 0, cost: 0, quantity: 0, stocksCount: 0, cashFlows: [] };
+            }
+            const amount = t.type === 'BUY' ? -(t.quantity * t.price) : t.quantity * t.price;
+            groups[broker].cashFlows.push({ amount, date: new Date(t.date) });
+          });
 
           brokerHoldingsMap.forEach((data) => {
             if (data.quantity <= 0) return;
@@ -467,7 +483,7 @@ export const usePortfolioStore = create<PortfolioState>()(
             const brokerName = data.broker;
 
             if (!groups[brokerName]) {
-              groups[brokerName] = { value: 0, cost: 0, quantity: 0, stocksCount: 0 };
+              groups[brokerName] = { value: 0, cost: 0, quantity: 0, stocksCount: 0, cashFlows: [] };
             }
             groups[brokerName].value += currentValue;
             groups[brokerName].cost += data.totalCost;
@@ -476,34 +492,68 @@ export const usePortfolioStore = create<PortfolioState>()(
           });
 
           return Object.entries(groups)
-            .map(([name, data]) => ({
-              name,
-              symbol: undefined,
-              value: data.value,
-              totalCost: data.cost,
-              quantity: data.quantity,
-              stocksCount: data.stocksCount,
-              logo: undefined,
-              pnl: data.value - data.cost,
-              pnlPercentage:
-                data.cost > 0 ? ((data.value - data.cost) / data.cost) * 100 : 0,
-              percentage:
-                globalPortfolioValue > 0
-                  ? (data.value / globalPortfolioValue) * 100
-                  : 0,
-            }))
+            .map(([name, data]) => {
+              const cf = [...data.cashFlows];
+              if (data.value > 0) {
+                cf.push({ amount: data.value, date: new Date() });
+              }
+              const xirr = calculateXIRR(cf);
+
+              return {
+                name,
+                symbol: undefined,
+                value: data.value,
+                totalCost: data.cost,
+                quantity: data.quantity,
+                stocksCount: data.stocksCount,
+                logo: undefined,
+                pnl: data.value - data.cost,
+                pnlPercentage:
+                  data.cost > 0 ? ((data.value - data.cost) / data.cost) * 100 : 0,
+                percentage:
+                  globalPortfolioValue > 0
+                    ? (data.value / globalPortfolioValue) * 100
+                    : 0,
+                xirr,
+              };
+            })
             .sort((a, b) => b.value - a.value);
         }
 
         // Standard dimensions: Sector, Asset Type, Company Name
         const groups: Record<
           string,
-          { value: number; cost: number; quantity: number; stocksCount: number; symbol?: string }
+          {
+            value: number;
+            cost: number;
+            quantity: number;
+            stocksCount: number;
+            symbol?: string;
+            cashFlows: { amount: number; date: Date }[];
+          }
         > = {};
+
+        sortedTransactions.forEach((t) => {
+          const symUpper = t.symbol.trim().toUpperCase();
+          const ticker = tickerMap.get(symUpper);
+          let dimensionValue = 'Unknown';
+          if (ticker && ticker[dimension]) {
+            dimensionValue = String(ticker[dimension]);
+          } else if (dimension === 'Company Name') {
+            dimensionValue = ticker ? ticker['Company Name'] : t.symbol;
+          }
+
+          if (!groups[dimensionValue]) {
+            groups[dimensionValue] = { value: 0, cost: 0, quantity: 0, stocksCount: 0, cashFlows: [] };
+          }
+          const amount = t.type === 'BUY' ? -(t.quantity * t.price) : t.quantity * t.price;
+          groups[dimensionValue].cashFlows.push({ amount, date: new Date(t.date) });
+        });
 
         globalHoldingsMap.forEach((data, symbol) => {
           if (data.quantity <= 0) return;
-          const ticker = tickerMap.get(symbol);
+          const symUpper = symbol.trim().toUpperCase();
+          const ticker = tickerMap.get(symUpper);
           const avgPrice = data.totalCost / data.quantity;
           const currentPrice = ticker?.['Current Value'] ?? avgPrice;
 
@@ -511,12 +561,12 @@ export const usePortfolioStore = create<PortfolioState>()(
           if (ticker && ticker[dimension]) {
             dimensionValue = String(ticker[dimension]);
           } else if (dimension === 'Company Name') {
-            dimensionValue = ticker ? ticker['Company Name'] : symbol;
+            dimensionValue = ticker ? ticker['Company Name'] : symUpper;
           }
 
           const currentValue = data.quantity * currentPrice;
           if (!groups[dimensionValue])
-            groups[dimensionValue] = { value: 0, cost: 0, quantity: 0, stocksCount: 0 };
+            groups[dimensionValue] = { value: 0, cost: 0, quantity: 0, stocksCount: 0, cashFlows: [] };
           groups[dimensionValue].value += currentValue;
           groups[dimensionValue].cost += data.totalCost;
           groups[dimensionValue].quantity += data.quantity;
@@ -526,22 +576,31 @@ export const usePortfolioStore = create<PortfolioState>()(
         });
 
         return Object.entries(groups)
-          .map(([name, data]) => ({
-            name,
-            symbol: data.symbol,
-            value: data.value,
-            totalCost: data.cost,
-            quantity: data.quantity,
-            stocksCount: data.stocksCount,
-            logo: data.symbol ? (tickerMap.get(data.symbol)?.Logo || getCompanyLogoUrl(data.symbol, name)) : undefined,
-            pnl: data.value - data.cost,
-            pnlPercentage:
-              data.cost > 0 ? ((data.value - data.cost) / data.cost) * 100 : 0,
-            percentage:
-              globalPortfolioValue > 0
-                ? (data.value / globalPortfolioValue) * 100
-                : 0,
-          }))
+          .map(([name, data]) => {
+            const cf = [...data.cashFlows];
+            if (data.value > 0) {
+              cf.push({ amount: data.value, date: new Date() });
+            }
+            const xirr = calculateXIRR(cf);
+
+            return {
+              name,
+              symbol: data.symbol,
+              value: data.value,
+              totalCost: data.cost,
+              quantity: data.quantity,
+              stocksCount: data.stocksCount,
+              logo: data.symbol ? (tickerMap.get(data.symbol)?.Logo || getCompanyLogoUrl(data.symbol, name)) : undefined,
+              pnl: data.value - data.cost,
+              pnlPercentage:
+                data.cost > 0 ? ((data.value - data.cost) / data.cost) * 100 : 0,
+              percentage:
+                globalPortfolioValue > 0
+                  ? (data.value / globalPortfolioValue) * 100
+                  : 0,
+              xirr,
+            };
+          })
           .sort((a, b) => b.value - a.value);
       },
       getHoldingsData: (brokerFilter?: string) => {

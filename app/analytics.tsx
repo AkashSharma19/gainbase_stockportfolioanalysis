@@ -76,7 +76,7 @@ export default function AnalyticsScreen() {
   const [selectedDimension, setSelectedDimension] =
     useState<Dimension>('Sector');
   const [holdingsViewMode, setHoldingsViewMode] = useState<
-    'Current' | 'Returns' | 'Contribution'
+    'Current' | 'Returns' | 'Contribution' | 'XIRR'
   >('Current');
   const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('DESC');
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
@@ -190,6 +190,9 @@ export default function AnalyticsScreen() {
       } else if (holdingsViewMode === 'Contribution') {
         valA = a.percentage || 0;
         valB = b.percentage || 0;
+      } else if (holdingsViewMode === 'XIRR') {
+        valA = a.xirr !== undefined && isFinite(a.xirr) ? a.xirr : -999999;
+        valB = b.xirr !== undefined && isFinite(b.xirr) ? b.xirr : -999999;
       } else {
         // Default: 'Current'
         valA = a.value || 0;
@@ -530,6 +533,8 @@ export default function AnalyticsScreen() {
                 if (holdingsViewMode === 'Current')
                   setHoldingsViewMode('Returns');
                 else if (holdingsViewMode === 'Returns')
+                  setHoldingsViewMode('XIRR');
+                else if (holdingsViewMode === 'XIRR')
                   setHoldingsViewMode('Contribution');
                 else setHoldingsViewMode('Current');
               }}
@@ -540,7 +545,9 @@ export default function AnalyticsScreen() {
                   ? 'Current (Invested)'
                   : holdingsViewMode === 'Returns'
                     ? 'Returns (%)'
-                    : 'Contribution (Current)'}
+                    : holdingsViewMode === 'XIRR'
+                      ? 'XIRR (%)'
+                      : 'Contribution (Current)'}
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -754,6 +761,39 @@ export default function AnalyticsScreen() {
                             {isPrivacyMode
                               ? '****'
                               : `${showCurrencySymbol ? '₹' : ''}${item.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                          </ThemedText>
+                        </>
+                      )}
+                      {holdingsViewMode === 'XIRR' && (
+                        <>
+                          <ThemedText
+                            style={[
+                              styles.primaryValue,
+                              {
+                                color:
+                                  item.xirr !== undefined && item.xirr >= 0
+                                    ? '#30D158'
+                                    : item.xirr !== undefined && item.xirr < 0
+                                      ? '#FF453A'
+                                      : currColors.text,
+                              },
+                            ]}
+                          >
+                            {isPrivacyMode
+                              ? '****'
+                              : item.xirr !== undefined && isFinite(item.xirr)
+                                ? `${item.xirr >= 0 ? '+' : ''}${item.xirr.toFixed(2)}%`
+                                : 'N/A'}
+                          </ThemedText>
+                          <ThemedText
+                            style={[
+                              styles.secondaryValue,
+                              { color: item.pnl >= 0 ? '#30D158' : '#FF453A' },
+                            ]}
+                          >
+                            {isPrivacyMode
+                              ? '****'
+                              : `${item.pnl >= 0 ? '+' : '-'}${showCurrencySymbol ? '₹' : ''}${Math.abs(item.pnl).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
                           </ThemedText>
                         </>
                       )}
