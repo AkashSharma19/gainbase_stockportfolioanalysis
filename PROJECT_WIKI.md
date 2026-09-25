@@ -194,7 +194,9 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 *   **Triggers**:
     *   **Success**: Monthly savings rate $\ge 20\%$, healthy Debt-to-Income (DTI) ratio $\le 15\%$.
     *   **Warning**: Spending deficit (savings rate $\le 0\%$), budget overspent ($\ge 100\%$), credit card utilization $> 50\%$, cash cover below 1.5x of monthly EMIs, low emergency fund savings (covers $< 3$ months of average expenses), high DTI ratio $> 35\%$, high credit card outstanding debt relative to savings ($> 50\%$).
-    *   **Tip**: Low savings rate ($< 10\%$), budget nearing limit ($\ge 85\%$), unbudgeted category spend (spent $\ge ₹2000$ without category limit configured), high idle cash (savings cover $\ge 6$ months of average expenses), high subscription cost burden ($> 8\%$ of income) or active subscription count $\ge 5$, upcoming subscription renewals (within 3 days).
+### 📅 Loan Installment & Next EMI Schedule Resolution
+*   **Location**: [finance.ts](file:///Users/akashsharma/Documents/Gainbase/lib/finance.ts#L150-L270) (`getNextLoanDuePayment`)
+*   **Methodology**: Accurately tracks cumulative payment credits and monthly advance rollovers. When multiple EMI payments are logged in the same calendar month or in advance, the engine advances the next unpaid due date by the exact number of excess installment credits ($+K$ months), preventing already-paid future installments from erroneously appearing in the 14-day upcoming payments dashboard.
 
 ### 🤖 AI Co-pilot Chat & Natural Language Action Execution
 *   **Location**: [ai-chat.tsx](file:///Users/akashsharma/Documents/Gainbase/app/ai-chat.tsx) & [useAiStore.ts](file:///Users/akashsharma/Documents/Gainbase/store/useAiStore.ts)

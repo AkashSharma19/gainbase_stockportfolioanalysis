@@ -48,6 +48,7 @@ import { MoneyTransaction } from '../types/money';
 import { MoneyActivityCalendar } from './MoneyActivityCalendar';
 import { FinancialGoalsCard } from './FinancialGoalsCard';
 import { useMoneyInsights } from '../hooks/useMoneyInsights';
+import { getNextLoanDuePayment } from '../lib/finance';
 
 const getSubscriptionIcon = (logoName: string | undefined) => {
   switch (logoName) {
@@ -312,37 +313,8 @@ export function MoneyDashboard() {
     // 1. Process active loans for EMIs
     loans.forEach((loan) => {
       if (loan.isActive && loan.emiAmount > 0) {
-        const start = new Date(loan.startDate);
-        const day = start.getDate();
-
-        // Check if an EMI payment has already been logged in the current calendar month
-        const hasPaidThisMonth = emiPayments.some(
-          (p) =>
-            p.loanId === loan.id &&
-            new Date(p.date).getMonth() === today.getMonth() &&
-            new Date(p.date).getFullYear() === today.getFullYear()
-        );
-
-        let nextDue = new Date(today.getFullYear(), today.getMonth(), day);
-        if (nextDue.getMonth() !== today.getMonth()) {
-          nextDue = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        }
-
-        // If paid this month, the next installment is next month
-        if (hasPaidThisMonth) {
-          nextDue = new Date(today.getFullYear(), today.getMonth() + 1, day);
-          if (nextDue.getMonth() !== (today.getMonth() + 1) % 12) {
-            nextDue = new Date(today.getFullYear(), today.getMonth() + 2, 0);
-          }
-        }
-
-        // Ensure next due date is not before the loan starts
-        if (nextDue < start) {
-          nextDue = new Date(start);
-        }
-
-        const endLimit = new Date(loan.endDate);
-        if (nextDue <= endLimit && nextDue >= thirtyDaysAgo && nextDue <= fourteenDaysLater) {
+        const nextDue = getNextLoanDuePayment(loan, emiPayments, today);
+        if (nextDue && nextDue >= thirtyDaysAgo && nextDue <= fourteenDaysLater) {
           list.push({
             id: `emi-${loan.id}`,
             targetId: loan.id,

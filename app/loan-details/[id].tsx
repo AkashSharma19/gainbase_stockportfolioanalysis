@@ -33,6 +33,7 @@ import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { EMIPayment } from '@/types/money';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
+import { getNextLoanDuePayment } from '@/lib/finance';
 
 const TYPE_CONFIG = {
   home: { label: 'Home Loan', color: '#007AFF', emoji: '🏠' },
@@ -239,8 +240,11 @@ export default function LoanDetailsScreen() {
     const rate = (loan.interestRate / 12) / 100;
     const emi = loan.emiAmount;
     
+    const computedNextDue = getNextLoanDuePayment(loan, loanPayments, new Date());
     let nextUnpaidDate: Date;
-    if (pastPaymentsAsc.length > 0) {
+    if (computedNextDue) {
+      nextUnpaidDate = new Date(computedNextDue.getFullYear(), computedNextDue.getMonth(), 1);
+    } else if (pastPaymentsAsc.length > 0) {
       const latestPaymentDate = new Date(pastPaymentsAsc[pastPaymentsAsc.length - 1].date);
       nextUnpaidDate = new Date(latestPaymentDate.getFullYear(), latestPaymentDate.getMonth() + 1, 1);
     } else {

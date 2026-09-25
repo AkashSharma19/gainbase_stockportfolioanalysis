@@ -146,3 +146,127 @@ export function advanceDateByCycle(dateStr: string, cycle: 'weekly' | 'monthly' 
   else if (cycle === 'yearly') d.setFullYear(d.getFullYear() + 1);
   return d.toISOString();
 }
+
+/**
+ * Calculates the next due payment date for a loan based on cumulative payments and monthly advance credits.
+ * Handles multiple payments in the same month and rolling advance installments.
+ */
+export function getNextLoanDuePayment(
+  loan: {
+    id: string;
+    startDate: string;
+    endDate: string;
+    emiAmount: number;
+    outstandingAmount: number;
+    interestRate: number;
+    isActive: boolean;
+  },
+  emiPayments: Array<{
+    loanId: string;
+    date: string;
+    amount: number;
+    principalPortion?: number;
+    interestPortion?: number;
+    status?: 'paid' | 'upcoming' | 'overdue';
+  }>,
+  today: Date = new Date()
+): Date | null {
+  if (!loan.isActive || loan.emiAmount <= 0 || loan.outstandingAmount <= 0) {
+    return null;
+  }
+
+  const start = new Date(loan.startDate);
+  const targetDay = start.getDate();
+  const endLimit = new Date(loan.endDate);
+
+  const getSafeDueDate = (year: number, month: number) => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    return new Date(year, month, Math.min(targetDay, daysInMonth));
+  };
+
+  // Filter regular paid payments for this loan
+  const loanPayments = emiPayments.filter((p) => {
+    if (p.loanId !== loan.id) return false;
+    if (p.status && p.status !== 'paid') return false;
+    // Exclude explicit pure prepayments where interest is 0 and amount differs from standard EMI
+    const isPrepayment =
+      loan.interestRate > 0 &&
+      p.interestPortion === 0 &&
+      Math.abs(p.amount - loan.emiAmount) > 1;
+    return !isPrepayment;
+  });
+
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+
+  let startTrackYear = start.getFullYear();
+  let startTrackMonth = start.getMonth();
+
+  // If start date is far in the past and user only logged recent payments
+  const earliestPayment = loanPayments.reduce<Date | null>((earliest, p) => {
+    const d = new Date(p.date);
+    return !earliest || d < earliest ? d : earliest;
+  }, null);
+
+  if (earliestPayment) {
+    const pYear = earliestPayment.getFullYear();
+    const pMonth = earliestPayment.getMonth();
+    const pTotalMonths = pYear * 12 + pMonth;
+    const startTotalMonths = startTrackYear * 12 + startTrackMonth;
+    if (pTotalMonths > startTotalMonths) {
+      startTrackYear = pYear;
+      startTrackMonth = pMonth;
+    }
+  } else {
+    const startTotalMonths = startTrackYear * 12 + startTrackMonth;
+    const currentTotalMonths = currentYear * 12 + currentMonth;
+    if (startTotalMonths < currentTotalMonths) {
+      startTrackYear = currentYear;
+      startTrackMonth = currentMonth;
+    }
+  }
+
+  // Iterate month by month from startTrack up to currentMonth
+  let credits = 0;
+  let iterYear = startTrackYear;
+  let iterMonth = startTrackMonth;
+
+  while (iterYear < currentYear || (iterYear === currentYear && iterMonth <= currentMonth)) {
+    const paymentsInMonth = loanPayments.filter((p) => {
+      const pDate = new Date(p.date);
+      return pDate.getFullYear() === iterYear && pDate.getMonth() === iterMonth;
+    }).length;
+
+    credits += paymentsInMonth;
+
+    if (iterYear < currentYear || iterMonth < currentMonth) {
+      if (credits > 0) {
+        credits -= 1;
+      }
+    }
+
+    iterMonth++;
+    if (iterMonth > 11) {
+      iterMonth = 0;
+      iterYear++;
+    }
+  }
+
+  // Determine next due date based on accumulated credits
+  let nextDue: Date;
+  if (credits === 0) {
+    nextDue = getSafeDueDate(currentYear, currentMonth);
+  } else {
+    nextDue = getSafeDueDate(currentYear, currentMonth + credits);
+  }
+
+  if (nextDue < start) {
+    nextDue = new Date(start);
+  }
+
+  if (nextDue > endLimit) {
+    return null;
+  }
+
+  return nextDue;
+}
