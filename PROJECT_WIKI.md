@@ -238,6 +238,14 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     3. **High-Resolution Stock Logo Engine (`getCompanyLogoUrl`)**: Dynamically resolves official company logos across the application (Stock Details Hero Card, Explore search & watchlist, Top Movers, Holdings/Allocations, and Transaction Pickers) matching against clean company domains and ticker symbols.
     4. **Direct Google Sheet Search**: Search across **Explore** and **Add Transaction** operates directly and exclusively against the user's authentic Google Sheet database (`tickers` store), matching symbols and company names without external dictionaries.
 
+### D. Native iOS Scene-Based Lifecycle (iOS SDK Compatibility)
+*   **Architecture**: Conforms to Apple's modern `UIScene` lifecycle required by recent iOS SDKs.
+*   **Scene Delegation**: [SceneDelegate.swift](file:///Users/akashsharma/Documents/Gainbase/ios/Gainbase/SceneDelegate.swift) manages the `UIWindow` and boots React Native via `appDelegate.reactNativeFactory.startReactNative`, handling scene connections, universal links, and deep link URL events.
+*   **App Delegation**: [AppDelegate.swift](file:///Users/akashsharma/Documents/Gainbase/ios/Gainbase/AppDelegate.swift) initializes the `ExpoReactNativeFactory` and provides session configurations via `configurationForConnecting` without legacy direct window binding.
+*   **Configuration**: [Info.plist](file:///Users/akashsharma/Documents/Gainbase/ios/Gainbase/Info.plist) and [app.json](file:///Users/akashsharma/Documents/Gainbase/app.json) declare `UIApplicationSceneManifest`.
+
+---
+
 ## 7. Maintenance Protocol for AI Agents
 
 Whenever you make updates to the Gainbase codebase:
@@ -246,4 +254,5 @@ Whenever you make updates to the Gainbase codebase:
 3.  **Commit Document**: Keep the wiki updated in the same pull request or tool execution stream as your implementation.
 
 ---
-*Wiki last updated: September 6, 2026*
+*Wiki last updated: September 21, 2026*
+
