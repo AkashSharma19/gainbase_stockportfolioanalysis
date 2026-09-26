@@ -2,13 +2,18 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 
 import { getSectorIcon } from '@/constants/Sectors';
+import { MASTER_STOCKS_LIST } from '@/constants/NSE_COMPANIES';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Ticker } from '@/types';
 import { getCompanyLogoUrl } from '@/services/logoService';
+import {
+  searchTwelveDataSymbols,
+  TwelveDataSearchResultItem,
+} from '@/services/TwelveDataService';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { TrendingUp } from 'lucide-react-native';
+import { TrendingUp, Globe } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -66,6 +71,8 @@ export default function ExploreScreen() {
   const [filterAssetType, setFilterAssetType] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [remoteResults, setRemoteResults] = useState<TwelveDataSearchResultItem[]>([]);
+  const [isSearchingRemote, setIsSearchingRemote] = useState(false);
 
   const { sector: paramSector } = useLocalSearchParams<{ sector?: string }>();
 
@@ -86,11 +93,14 @@ export default function ExploreScreen() {
     init();
   }, []);
 
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    await fetchTickers();
-    setRefreshing(false);
-  }, [fetchTickers]);
+  // Master stock map for instant symbol <-> company name matching
+  const masterNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of MASTER_STOCKS_LIST) {
+      map.set(m.symbol.toUpperCase(), m.name.toLowerCase());
+    }
+    return map;
+  }, []);
 
   const filteredTickers = useMemo(() => {
     let result = tickers.filter(
@@ -101,8 +111,16 @@ export default function ExploreScreen() {
       result = result.filter((item) => {
         const sym = (item.Tickers || '').toLowerCase();
         const name = (item['Company Name'] || '').toLowerCase();
-        const rawSym = sym.replace(/^(NSE|BOM|BSE|NASDAQ|NYSE|INDEX|INDEXNSE|INDEXBOM|INDEXSP|MUTF_IN|MUTF):/i, '');
-        return sym.includes(query) || name.includes(query) || rawSym.includes(query);
+        const rawSym = (item.Tickers || '')
+          .toUpperCase()
+          .replace(/^(NSE|BOM|BSE|NASDAQ|NYSE|INDEX|INDEXNSE|INDEXBOM|INDEXSP|MUTF_IN|MUTF):/i, '');
+        const masterName = masterNameMap.get(rawSym) || '';
+        return (
+          sym.includes(query) ||
+          name.includes(query) ||
+          rawSym.toLowerCase().includes(query) ||
+          masterName.includes(query)
+        );
       });
     } else if (!isSearchFocused) {
       // If no search query and search not focused, only show watchlist
@@ -135,7 +153,37 @@ export default function ExploreScreen() {
 
       return bChange - aChange;
     });
-  }, [tickers, searchQuery, filterAssetType, watchlist, isSearchFocused]);
+  }, [tickers, searchQuery, filterAssetType, watchlist, isSearchFocused, masterNameMap]);
+
+  // Debounced Twelve Data Market Data Remote Search
+  useEffect(() => {
+    const cleanQuery = searchQuery.trim();
+    if (cleanQuery.length < 2) {
+      setRemoteResults([]);
+      setIsSearchingRemote(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearchingRemote(true);
+      try {
+        const results = await searchTwelveDataSymbols(cleanQuery);
+        setRemoteResults(results);
+      } catch (err) {
+        console.warn('[Explore] Remote Twelve Data search error:', err);
+      } finally {
+        setIsSearchingRemote(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchTickers();
+    setRefreshing(false);
+  }, [fetchTickers]);
 
   const indicesData = useMemo(() => {
     return tickers.filter((t) => t['Asset Type'] === 'Index');
@@ -808,24 +856,241 @@ export default function ExploreScreen() {
             ListEmptyComponent={
               isSearchFocused && !searchQuery ? null : (
                 <View style={styles.emptyContainer}>
-                  <Ionicons
-                    name={searchQuery ? 'search-outline' : 'star-outline'}
-                    size={48}
-                    color={currColors.textSecondary}
-                    style={{ marginBottom: 16 }}
-                  />
-                  <ThemedText
-                    style={[
-                      styles.emptyText,
-                      { color: currColors.textSecondary, textAlign: 'center', marginBottom: 16 },
-                    ]}
-                  >
-                    {searchQuery
-                      ? `No local records for "${searchQuery}"`
-                      : 'Your watchlist is empty.\nSearch for companies to add them.'}
-                  </ThemedText>
+                  {isSearchingRemote ? (
+                    <>
+                      <ActivityIndicator
+                        size="large"
+                        color={currColors.tint}
+                        style={{ marginBottom: 16 }}
+                      />
+                      <ThemedText
+                        style={[
+                          styles.emptyText,
+                          {
+                            color: currColors.textSecondary,
+                            textAlign: 'center',
+                          },
+                        ]}
+                      >
+                        Searching global stocks on Twelve Data...
+                      </ThemedText>
+                    </>
+                  ) : remoteResults.length > 0 ? null : (
+                    <>
+                      <Ionicons
+                        name={searchQuery ? 'search-outline' : 'star-outline'}
+                        size={48}
+                        color={currColors.textSecondary}
+                        style={{ marginBottom: 16 }}
+                      />
+                      <ThemedText
+                        style={[
+                          styles.emptyText,
+                          {
+                            color: currColors.textSecondary,
+                            textAlign: 'center',
+                            marginBottom: 16,
+                          },
+                        ]}
+                      >
+                        {searchQuery
+                          ? `No stocks found for "${searchQuery}"`
+                          : 'Your watchlist is empty.\nSearch for companies to add them.'}
+                      </ThemedText>
+                    </>
+                  )}
                 </View>
               )
+            }
+            ListFooterComponent={
+              searchQuery && searchQuery.trim().length >= 2 ? (
+                <View style={{ marginTop: 16, paddingBottom: 20 }}>
+                  {(remoteResults.length > 0 || isSearchingRemote) && (
+                    <View
+                      style={[
+                        styles.sectionHeader,
+                        {
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginBottom: 8,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <Globe size={12} color={currColors.textSecondary} />
+                        <ThemedText
+                          style={[
+                            styles.sectionTitle,
+                            { color: currColors.textSecondary },
+                          ]}
+                        >
+                          GLOBAL / TWELVE DATA STOCKS
+                        </ThemedText>
+                      </View>
+                      {isSearchingRemote && (
+                        <ActivityIndicator
+                          size="small"
+                          color={currColors.tint}
+                        />
+                      )}
+                    </View>
+                  )}
+
+                  {remoteResults.map((item, index) => {
+                    const formattedSym =
+                      item.exchange &&
+                      (item.exchange === 'NSE' || item.exchange === 'BSE')
+                        ? `${item.symbol}:${item.exchange}`
+                        : item.symbol;
+
+                    return (
+                      <TouchableOpacity
+                        key={`${item.symbol}-${item.exchange}-${index}`}
+                        style={[
+                          styles.companyItem,
+                          { borderBottomColor: currColors.border },
+                        ]}
+                        activeOpacity={0.7}
+                        onPress={async () => {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light
+                          );
+                          addRecentSearch(
+                            item.instrument_name || item.symbol
+                          );
+                          fetchSingleTicker(formattedSym);
+                          router.push({
+                            pathname: '/stock-details/[symbol]',
+                            params: {
+                              symbol: formattedSym,
+                              name: item.instrument_name,
+                              exchange: item.exchange,
+                              country: item.country,
+                            },
+                          });
+                        }}
+                      >
+                        <View style={styles.itemLeft}>
+                          <View
+                            style={[
+                              styles.holdingIcon,
+                              {
+                                backgroundColor:
+                                  CHART_COLORS[
+                                    index % CHART_COLORS.length
+                                  ] + '22',
+                              },
+                            ]}
+                          >
+                            <ThemedText
+                              style={[
+                                styles.iconLetter,
+                                {
+                                  color:
+                                    CHART_COLORS[
+                                      index % CHART_COLORS.length
+                                    ],
+                                },
+                              ]}
+                            >
+                              {item.instrument_name?.[0]?.toUpperCase() ||
+                                item.symbol[0]?.toUpperCase() ||
+                                '?'}
+                            </ThemedText>
+                          </View>
+                          <View style={styles.infoCol}>
+                            <ThemedText
+                              style={[
+                                styles.companyName,
+                                { color: currColors.text },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {item.instrument_name}
+                            </ThemedText>
+                            <View style={styles.tickerRow}>
+                              <ThemedText
+                                style={[
+                                  styles.tickerText,
+                                  { color: currColors.textSecondary },
+                                ]}
+                              >
+                                {item.symbol}
+                              </ThemedText>
+                              {item.exchange ? (
+                                <>
+                                  <View
+                                    style={[
+                                      styles.tagDot,
+                                      { backgroundColor: currColors.border },
+                                    ]}
+                                  />
+                                  <ThemedText
+                                    style={[
+                                      styles.assetTag,
+                                      {
+                                        color: currColors.tint,
+                                        fontWeight: '600',
+                                      },
+                                    ]}
+                                  >
+                                    {item.exchange}
+                                  </ThemedText>
+                                </>
+                              ) : null}
+                              {item.country ? (
+                                <>
+                                  <View
+                                    style={[
+                                      styles.tagDot,
+                                      { backgroundColor: currColors.border },
+                                    ]}
+                                  />
+                                  <ThemedText
+                                    style={[
+                                      styles.assetTag,
+                                      { color: currColors.textSecondary },
+                                    ]}
+                                  >
+                                    {item.country}
+                                  </ThemedText>
+                                </>
+                              ) : null}
+                            </View>
+                          </View>
+                        </View>
+                        <View style={styles.itemRight}>
+                          <View
+                            style={{
+                              backgroundColor: currColors.cardSecondary,
+                              paddingHorizontal: 10,
+                              paddingVertical: 5,
+                              borderRadius: 8,
+                            }}
+                          >
+                            <ThemedText
+                              style={{
+                                color: currColors.tint,
+                                fontSize: 12,
+                                fontWeight: '600',
+                              }}
+                            >
+                              Live Quote
+                            </ThemedText>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : null
             }
           />
         )}

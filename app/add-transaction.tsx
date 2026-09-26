@@ -4,12 +4,17 @@ import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Ticker, TransactionType } from '@/types';
 import { getCompanyLogoUrl } from '@/services/logoService';
+import {
+  searchTwelveDataSymbols,
+  TwelveDataSearchResultItem,
+} from '@/services/TwelveDataService';
+import { MASTER_STOCKS_LIST } from '@/constants/NSE_COMPANIES';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Check, ChevronRight, Search, X } from 'lucide-react-native';
+import { Check, ChevronRight, Globe, Search, X } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -108,6 +113,18 @@ export default function AddTransactionScreen() {
     return tickers.find((t) => t.Tickers.toUpperCase() === sym);
   }, [symbol, tickers]);
 
+  const [remoteResults, setRemoteResults] = useState<TwelveDataSearchResultItem[]>([]);
+  const [isSearchingRemote, setIsSearchingRemote] = useState(false);
+
+  // Master stock map for instant symbol <-> company name matching
+  const masterNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of MASTER_STOCKS_LIST) {
+      map.set(m.symbol.toUpperCase(), m.name.toLowerCase());
+    }
+    return map;
+  }, []);
+
   const filteredTickers = useMemo(() => {
     if (!searchQuery || !searchQuery.trim()) return tickers;
     const query = searchQuery.trim().toLowerCase();
@@ -115,10 +132,42 @@ export default function AddTransactionScreen() {
     return tickers.filter((t) => {
       const sym = (t.Tickers || '').toLowerCase();
       const name = (t['Company Name'] || '').toLowerCase();
-      const rawSym = sym.replace(/^(NSE|BOM|BSE|NASDAQ|NYSE|INDEX|INDEXNSE|INDEXBOM|INDEXSP|MUTF_IN|MUTF):/i, '');
-      return sym.includes(query) || name.includes(query) || rawSym.includes(query);
+      const rawSym = (t.Tickers || '')
+        .toUpperCase()
+        .replace(/^(NSE|BOM|BSE|NASDAQ|NYSE|INDEX|INDEXNSE|INDEXBOM|INDEXSP|MUTF_IN|MUTF):/i, '');
+      const masterName = masterNameMap.get(rawSym) || '';
+      return (
+        sym.includes(query) ||
+        name.includes(query) ||
+        rawSym.toLowerCase().includes(query) ||
+        masterName.includes(query)
+      );
     });
-  }, [searchQuery, tickers]);
+  }, [searchQuery, tickers, masterNameMap]);
+
+  // Debounced Twelve Data Remote Search for Add Transaction
+  useEffect(() => {
+    const cleanQuery = searchQuery.trim();
+    if (!showSymbolModal || cleanQuery.length < 2) {
+      setRemoteResults([]);
+      setIsSearchingRemote(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearchingRemote(true);
+      try {
+        const results = await searchTwelveDataSymbols(cleanQuery);
+        setRemoteResults(results);
+      } catch (err) {
+        console.warn('[AddTransaction] Remote search error:', err);
+      } finally {
+        setIsSearchingRemote(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, showSymbolModal]);
 
   const existingBrokers = useMemo(() => {
     const brokers = new Set(transactions.map((t) => t.broker).filter(Boolean));
@@ -157,24 +206,51 @@ export default function AddTransactionScreen() {
     }
   };
 
+  const formatPriceToTwoDecimals = (val: number | string): string => {
+    const num = typeof val === 'number' ? val : parseFloat(val);
+    if (isNaN(num) || num <= 0) return '';
+    return num.toFixed(2);
+  };
+
   const selectTicker = async (item: Ticker) => {
     setSymbol(item.Tickers);
     setShowSymbolModal(false);
     setSearchQuery('');
 
-    // Pre-fill price immediately if current value is present
+    // Pre-fill price immediately if current value is present (up to 2 decimal places)
     if (!editingTransaction && item['Current Value'] > 0) {
-      setPrice(item['Current Value'].toString());
+      setPrice(formatPriceToTwoDecimals(item['Current Value']));
     }
 
     // Fetch real-time live price from portfolio store
     try {
       const live = await fetchSingleTicker(item.Tickers);
       if (live && live['Current Value'] > 0 && !editingTransaction) {
-        setPrice(live['Current Value'].toString());
+        setPrice(formatPriceToTwoDecimals(live['Current Value']));
       }
     } catch (err) {
       console.warn('Live quote hydration error on ticker select:', err);
+    }
+  };
+
+  const selectRemoteTicker = async (item: TwelveDataSearchResultItem) => {
+    const formattedSym =
+      item.exchange && (item.exchange === 'NSE' || item.exchange === 'BSE')
+        ? `${item.symbol}:${item.exchange}`
+        : item.symbol;
+
+    setSymbol(formattedSym);
+    setShowSymbolModal(false);
+    setSearchQuery('');
+
+    // Fetch real-time live price converted to INR from Twelve Data / portfolio store (up to 2 decimal places)
+    try {
+      const live = await fetchSingleTicker(formattedSym);
+      if (live && live['Current Value'] > 0 && !editingTransaction) {
+        setPrice(formatPriceToTwoDecimals(live['Current Value']));
+      }
+    } catch (err) {
+      console.warn('Live quote hydration error on remote ticker select:', err);
     }
   };
 
@@ -413,9 +489,16 @@ export default function AddTransactionScreen() {
                     value={
                       price ? (showCurrencySymbol ? `₹ ${formatIndianAmount(price)}` : formatIndianAmount(price)) : ''
                     }
-                    onChangeText={(text) =>
-                      setPrice(text.replace(/[^0-9.]/g, ''))
-                    }
+                    onChangeText={(text) => {
+                      const clean = text.replace(/[^0-9.]/g, '');
+                      const parts = clean.split('.');
+                      if (parts.length > 2) return;
+                      if (parts.length === 2 && parts[1].length > 2) {
+                        setPrice(`${parts[0]}.${parts[1].slice(0, 2)}`);
+                      } else {
+                        setPrice(clean);
+                      }
+                    }}
                     keyboardType="decimal-pad"
                     textAlign="right"
                   />
@@ -614,6 +697,8 @@ export default function AddTransactionScreen() {
               placeholderTextColor={currColors.textSecondary}
               value={searchQuery}
               onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
               autoFocus
             />
             {searchQuery.length > 0 && (
@@ -765,35 +850,184 @@ export default function AddTransactionScreen() {
             }}
             ListEmptyComponent={() => (
               <View style={{ padding: 32, alignItems: 'center' }}>
-                <ThemedText style={{ color: currColors.textSecondary, marginBottom: 16, textAlign: 'center', fontSize: 13.5 }}>
-                  {searchQuery ? `No local tickers match "${searchQuery}".` : 'Search for a stock ticker (e.g. TCS, RELIANCE, ZOMATO)'}
-                </ThemedText>
-                {searchQuery.trim().length > 0 && (
-                  <TouchableOpacity
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: currColors.tint,
-                      paddingHorizontal: 20,
-                      paddingVertical: 12,
-                      borderRadius: 12,
-                      gap: 8,
-                    }}
-                    onPress={() => {
-                      const cleanSym = searchQuery.trim().toUpperCase();
-                      setSymbol(cleanSym);
-                      setShowSymbolModal(false);
-                      setSearchQuery('');
-                    }}
-                  >
-                    <Search size={16} color={colorScheme === 'dark' ? '#000' : '#FFF'} />
-                    <ThemedText style={{ color: colorScheme === 'dark' ? '#000' : '#FFF', fontWeight: '600' }}>
-                      Use "{searchQuery.trim().toUpperCase()}"
+                {isSearchingRemote ? (
+                  <>
+                    <ActivityIndicator size="large" color={currColors.tint} style={{ marginBottom: 12 }} />
+                    <ThemedText style={{ color: currColors.textSecondary, fontSize: 13.5, textAlign: 'center' }}>
+                      Searching Twelve Data global stocks...
                     </ThemedText>
-                  </TouchableOpacity>
+                  </>
+                ) : remoteResults.length > 0 ? null : (
+                  <>
+                    <ThemedText style={{ color: currColors.textSecondary, marginBottom: 16, textAlign: 'center', fontSize: 13.5 }}>
+                      {searchQuery ? `No local tickers match "${searchQuery}".` : 'Search for a stock ticker (e.g. TCS, RELIANCE, SPOT, AAPL)'}
+                    </ThemedText>
+                    {searchQuery.trim().length > 0 && (
+                      <TouchableOpacity
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: currColors.tint,
+                          paddingHorizontal: 20,
+                          paddingVertical: 12,
+                          borderRadius: 12,
+                          gap: 8,
+                        }}
+                        onPress={() => {
+                          const cleanSym = searchQuery.trim().toUpperCase();
+                          setSymbol(cleanSym);
+                          setShowSymbolModal(false);
+                          setSearchQuery('');
+                          fetchSingleTicker(cleanSym).then((live) => {
+                            if (live && live['Current Value'] > 0 && !editingTransaction) {
+                              setPrice(formatPriceToTwoDecimals(live['Current Value']));
+                            }
+                          });
+                        }}
+                      >
+                        <Search size={16} color={colorScheme === 'dark' ? '#000' : '#FFF'} />
+                        <ThemedText style={{ color: colorScheme === 'dark' ? '#000' : '#FFF', fontWeight: '600' }}>
+                          Use "{searchQuery.trim().toUpperCase()}"
+                        </ThemedText>
+                      </TouchableOpacity>
+                    )}
+                  </>
                 )}
               </View>
             )}
+            ListFooterComponent={
+              searchQuery && searchQuery.trim().length >= 2 ? (
+                <View style={{ marginTop: 16, paddingBottom: 24 }}>
+                  {(remoteResults.length > 0 || isSearchingRemote) && (
+                    <View
+                      style={[
+                        styles.sectionHeader,
+                        {
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginBottom: 8,
+                          paddingHorizontal: 16,
+                        },
+                      ]}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Globe size={12} color={currColors.textSecondary} />
+                        <ThemedText
+                          style={[
+                            styles.sectionTitle,
+                            { color: currColors.textSecondary },
+                          ]}
+                        >
+                          GLOBAL / TWELVE DATA STOCKS
+                        </ThemedText>
+                      </View>
+                      {isSearchingRemote && (
+                        <ActivityIndicator size="small" color={currColors.tint} />
+                      )}
+                    </View>
+                  )}
+
+                  {remoteResults.map((item, index) => {
+                    return (
+                      <TouchableOpacity
+                        key={`${item.symbol}-${item.exchange}-${index}`}
+                        style={[
+                          styles.tickerItem,
+                          { borderBottomColor: currColors.border },
+                        ]}
+                        onPress={() => selectRemoteTicker(item)}
+                      >
+                        <View style={styles.tickerLeft}>
+                          <View
+                            style={[
+                              styles.modalLogoPlaceholder,
+                              { backgroundColor: currColors.cardSecondary },
+                            ]}
+                          >
+                            <ThemedText
+                              style={[styles.logoLetter, { color: currColors.text }]}
+                            >
+                              {item.instrument_name?.[0] || item.symbol[0]}
+                            </ThemedText>
+                          </View>
+                          <View style={styles.tickerNames}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                              <ThemedText
+                                style={[styles.tickerSymbol, { color: currColors.text }]}
+                              >
+                                {item.symbol}
+                              </ThemedText>
+                              {item.exchange ? (
+                                <View
+                                  style={{
+                                    backgroundColor: currColors.cardSecondary,
+                                    paddingHorizontal: 6,
+                                    paddingVertical: 2,
+                                    borderRadius: 4,
+                                    marginLeft: 6,
+                                  }}
+                                >
+                                  <ThemedText
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: '600',
+                                      color: currColors.tint,
+                                    }}
+                                  >
+                                    {item.exchange}
+                                  </ThemedText>
+                                </View>
+                              ) : null}
+                              {item.country ? (
+                                <ThemedText
+                                  style={{
+                                    fontSize: 11,
+                                    color: currColors.textSecondary,
+                                    marginLeft: 6,
+                                  }}
+                                >
+                                  • {item.country}
+                                </ThemedText>
+                              ) : null}
+                            </View>
+                            <ThemedText
+                              style={[
+                                styles.companyNameList,
+                                { color: currColors.textSecondary },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {item.instrument_name}
+                            </ThemedText>
+                          </View>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <View
+                            style={{
+                              backgroundColor: currColors.cardSecondary,
+                              paddingHorizontal: 8,
+                              paddingVertical: 3,
+                              borderRadius: 6,
+                            }}
+                          >
+                            <ThemedText
+                              style={{
+                                color: currColors.tint,
+                                fontSize: 11,
+                                fontWeight: '600',
+                              }}
+                            >
+                              Select & Quote
+                            </ThemedText>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : null
+            }
             contentContainerStyle={styles.tickerList}
           />
         </View>
@@ -1232,6 +1466,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
     letterSpacing: 0.5,
   },
 });

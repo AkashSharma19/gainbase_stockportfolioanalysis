@@ -39,7 +39,12 @@ interface NewsItem {
 }
 
 export default function StockDetailsScreen() {
-  const { symbol } = useLocalSearchParams<{ symbol: string }>();
+  const { symbol, name, exchange, country } = useLocalSearchParams<{
+    symbol: string;
+    name?: string;
+    exchange?: string;
+    country?: string;
+  }>();
   const router = useRouter();
   const getHoldingsData = usePortfolioStore((state) => state.getHoldingsData);
   const transactions = usePortfolioStore((state) => state.transactions);
@@ -140,8 +145,34 @@ export default function StockDetailsScreen() {
       };
     }
 
+    // 3. Fallback to navigation parameters from Twelve Data search
+    if (name) {
+      return {
+        symbol: cleanSym,
+        companyName: name,
+        quantity: 0,
+        avgPrice: 0,
+        currentPrice: 0,
+        investedValue: 0,
+        currentValue: 0,
+        pnl: 0,
+        pnlPercentage: 0,
+        contributionPercentage: 0,
+        assetType: 'Equity',
+        sector: inferSector(name, cleanSym),
+        broker: exchange || country || 'Global',
+        dayChange: 0,
+        dayChangePercentage: 0,
+        high52: undefined,
+        low52: undefined,
+        logo: getCompanyLogoUrl(cleanSym, name),
+        marketCap: undefined,
+        PE: undefined,
+      };
+    }
+
     return null;
-  }, [getHoldingsData, symbol, transactions, tickers]);
+  }, [getHoldingsData, symbol, transactions, tickers, name, exchange, country]);
 
   React.useEffect(() => {
     const fetchNews = async () => {

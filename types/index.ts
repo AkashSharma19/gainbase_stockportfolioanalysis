@@ -22,6 +22,9 @@ export interface Ticker {
   High52?: number;
   Low52?: number;
   Logo?: string;
+  Currency?: string;
+  OriginalCurrency?: string;
+  OriginalPrice?: number;
   'Market Cap'?: string | number;
   PE?: number | string | null;
   DividendYield?: number | string | null;

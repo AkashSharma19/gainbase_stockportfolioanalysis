@@ -5,6 +5,7 @@ import { calculateXIRR } from '../lib/finance';
 import { PortfolioSummary, Ticker, Transaction } from '../types';
 import { supabase } from '../lib/supabase';
 import { getCompanyLogoUrl } from '../services/logoService';
+import { fetchTwelveDataQuote, fetchTwelveDataLogo } from '../services/TwelveDataService';
 
 interface PortfolioState {
   transactions: Transaction[];
@@ -170,7 +171,7 @@ export const usePortfolioStore = create<PortfolioState>()(
         const existing = get().tickers.find(
           (t) => t.Tickers.trim().toUpperCase() === cleanSym
         );
-        if (existing) return existing;
+        if (existing && (existing['Current Value'] || 0) > 0) return existing;
 
         try {
           const { data } = await supabase
@@ -202,6 +203,49 @@ export const usePortfolioStore = create<PortfolioState>()(
               tickers: [...state.tickers.filter((t) => t.Tickers.trim().toUpperCase() !== cleanSym), tickerObj],
             }));
             return tickerObj;
+          }
+
+          // Fallback: Query Twelve Data Market Data API
+          const tdQuote = await fetchTwelveDataQuote(cleanSym);
+          if (tdQuote && tdQuote['Current Value'] !== undefined) {
+            const tdLogo = await fetchTwelveDataLogo(cleanSym);
+            const liveTicker: Ticker = {
+              Tickers: cleanSym,
+              'Current Value': tdQuote['Current Value'] || 0,
+              'Company Name': tdQuote['Company Name'] || cleanSym,
+              'Asset Type': 'Equity',
+              Sector: 'General',
+              'Yesterday Close': tdQuote['Yesterday Close'],
+              High52: tdQuote.High52,
+              Low52: tdQuote.Low52,
+              Currency: tdQuote.Currency,
+              Logo: tdLogo || getCompanyLogoUrl(cleanSym, tdQuote['Company Name']),
+            };
+
+            set((state) => ({
+              tickers: [...state.tickers.filter((t) => t.Tickers.trim().toUpperCase() !== cleanSym), liveTicker],
+            }));
+
+            // Asynchronously sync to Supabase Table A so other users/sessions have it immediately
+            supabase
+              .from('tickers')
+              .upsert({
+                ticker: cleanSym,
+                company_name: liveTicker['Company Name'],
+                current_value: liveTicker['Current Value'],
+                yesterday_close: liveTicker['Yesterday Close'] ?? liveTicker['Current Value'],
+                high_52: liveTicker.High52 ?? null,
+                low_52: liveTicker.Low52 ?? null,
+                asset_type: liveTicker['Asset Type'] || 'Equity',
+                sector: liveTicker.Sector || 'General',
+                logo: liveTicker.Logo || null,
+                updated_at: new Date().toISOString(),
+              }, { onConflict: 'ticker' })
+              .then(({ error }) => {
+                if (error) console.warn('[SupabaseSync] Background upsert error:', error.message);
+              });
+
+            return liveTicker;
           }
         } catch (e) {
           console.warn(`Failed to fetch ticker for ${cleanSym}:`, e);
