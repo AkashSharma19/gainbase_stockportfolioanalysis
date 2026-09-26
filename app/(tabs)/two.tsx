@@ -11,7 +11,9 @@ import {
   ArrowUpRight,
   Edit2,
   Trash2,
+  Plus,
 } from 'lucide-react-native';
+import { BackButton } from '@/components/BackButton';
 import React, { memo, useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -393,16 +395,17 @@ export default function HistoryScreen() {
     >
       {/* Search Header */}
       <View style={styles.header}>
-        <View style={styles.searchContainerOuter}>
+        <View style={styles.searchRow}>
+          <BackButton />
           <View
             style={[
               styles.searchContainer,
-              { backgroundColor: currColors.card },
+              { backgroundColor: currColors.card, flex: 1 },
             ]}
           >
             <Ionicons
               name="search"
-              size={20}
+              size={18}
               color={currColors.textSecondary}
               style={styles.searchIcon}
             />
@@ -430,6 +433,15 @@ export default function HistoryScreen() {
               </TouchableOpacity>
             )}
           </View>
+          <TouchableOpacity
+            style={[styles.addBtn, { backgroundColor: currColors.cardSecondary }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push('/add-transaction');
+            }}
+          >
+            <Plus size={20} color="#007AFF" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -520,8 +532,18 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 15,
   },
-  searchContainerOuter: {
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
+    gap: 10,
+  },
+  addBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -589,7 +611,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   listContent: {
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   transactionItem: {
     flexDirection: 'row',

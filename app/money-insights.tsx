@@ -239,8 +239,8 @@ IMPORTANT RULES:
     "type": "warning",
     "title": "Short Punchy Title (max 6 words)",
     "message": "Specific analytical insight explaining what was detected and the exact recommendation (1-2 sentences).",
-    "actionLabel": "Action Button Label (e.g. 'View Budgets', 'Check Accounts', 'View EMIs', 'View Analytics')",
-    "actionPath": "/(tabs)/money-budgets",
+    "actionLabel": "Action Button Label (e.g. 'View Analytics', 'Check Accounts', 'View EMIs')",
+    "actionPath": "/money-analytics",
     "icon": "AlertTriangle"
   }
 ]`;

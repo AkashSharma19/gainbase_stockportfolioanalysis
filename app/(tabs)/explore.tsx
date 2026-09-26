@@ -904,7 +904,7 @@ export default function ExploreScreen() {
             }
             ListFooterComponent={
               searchQuery && searchQuery.trim().length >= 2 ? (
-                <View style={{ marginTop: 16, paddingBottom: 20 }}>
+                <View style={{ marginTop: 16, paddingBottom: 110 }}>
                   {(remoteResults.length > 0 || isSearchingRemote) && (
                     <View
                       style={[
@@ -1265,7 +1265,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: 110,
   },
   companyItem: {
     flexDirection: 'row',

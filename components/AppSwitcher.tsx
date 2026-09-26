@@ -1,23 +1,18 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View, Dimensions } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  interpolate,
-} from 'react-native-reanimated';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { TrendingUp, Wallet, Sparkles } from 'lucide-react-native';
+import { TrendingUp, Wallet } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 
 import { useAppModeStore, AppMode } from '../store/useAppModeStore';
 import { ThemedText } from './ThemedText';
 import { useColorScheme } from './useColorScheme';
 import Colors from '../constants/Colors';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
+import { GeminiAiButton } from './GeminiAiButton';
 
 export function AppSwitcher() {
+  const router = useRouter();
   const { activeMode, setActiveMode, setIsTransitioning } = useAppModeStore();
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
@@ -33,6 +28,10 @@ export function AppSwitcher() {
     setTimeout(() => {
       setIsTransitioning(false);
     }, 320);
+  };
+
+  const handleOpenAi = () => {
+    router.push('/ai-chat');
   };
 
   return (
@@ -75,6 +74,7 @@ export function AppSwitcher() {
               />
             </View>
             <ThemedText
+              numberOfLines={1}
               style={[
                 styles.chipLabel,
                 isInvestments
@@ -124,6 +124,7 @@ export function AppSwitcher() {
               />
             </View>
             <ThemedText
+              numberOfLines={1}
               style={[
                 styles.chipLabel,
                 !isInvestments
@@ -135,6 +136,9 @@ export function AppSwitcher() {
             </ThemedText>
           </View>
         </TouchableOpacity>
+
+        {/* --- Gemini AI Button --- */}
+        <GeminiAiButton onPress={handleOpenAi} size={40} />
       </View>
     </View>
   );
@@ -149,12 +153,12 @@ const styles = StyleSheet.create({
   chipsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   chip: {
     flex: 1,
-    height: 42,
-    borderRadius: 21,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: 'transparent',
     overflow: 'hidden',
@@ -167,26 +171,24 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   gradientFill: {
-    borderRadius: 21,
+    borderRadius: 20,
   },
   chipContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    gap: 8,
+    paddingHorizontal: 8,
+    gap: 6,
   },
   iconBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   chipLabel: {
-    fontSize: 13,
+    fontSize: 12.5,
     letterSpacing: 0.2,
   },
 });
-
-

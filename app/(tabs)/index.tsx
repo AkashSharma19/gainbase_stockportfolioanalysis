@@ -25,6 +25,9 @@ import {
   Share2,
   TrendingUp,
   Target,
+  Plus,
+  ArrowDownLeft,
+  ArrowUpRight,
 } from 'lucide-react-native';
 import { useGoalStore } from '@/store/useGoalStore';
 
@@ -243,6 +246,28 @@ export function PortfolioScreen() {
     };
   }, [summary, holdings, userName, health.totalScore]);
 
+  const tickerMap = useMemo(() => {
+    const map = new Map<string, (typeof tickers)[0]>();
+    if (Array.isArray(tickers)) {
+      tickers.forEach((t) => {
+        if (!t) return;
+        const sym = (t.Tickers || t.Symbol || (t as any).symbol || (t as any).ticker || '').toString().trim().toUpperCase();
+        if (sym) {
+          map.set(sym, t);
+        }
+      });
+    }
+    return map;
+  }, [tickers]);
+
+  const recentTransactions = useMemo(() => {
+    if (!Array.isArray(transactions)) return [];
+    return [...transactions]
+      .filter((tx) => tx && tx.date)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 3);
+  }, [transactions]);
+
   return (
     <View
       style={[styles.container, { backgroundColor: currColors.background }]}
@@ -342,6 +367,18 @@ export function PortfolioScreen() {
                     ]}
                   >
                     <Share2 size={16} color={currColors.text} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push('/add-transaction');
+                    }}
+                    style={[
+                      styles.iconButton,
+                      { backgroundColor: currColors.cardSecondary },
+                    ]}
+                  >
+                    <Plus size={16} color={currColors.text} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -624,6 +661,217 @@ export function PortfolioScreen() {
 
           {/* Financial Goals & Milestones Analytics Card */}
           <FinancialGoalsCard />
+
+          {/* ─── Recent Investments Card ─── */}
+          <View style={[styles.section, { marginBottom: 16 }]}>
+            <View
+              style={[
+                styles.accordionContainer,
+                {
+                  backgroundColor: currColors.card,
+                  borderColor: currColors.border,
+                },
+              ]}
+            >
+              <View style={styles.headerWithAction}>
+                <ThemedText
+                  style={[
+                    styles.innerSectionTitle,
+                    { color: currColors.textSecondary },
+                  ]}
+                >
+                  RECENT INVESTMENTS
+                </ThemedText>
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push('/two');
+                  }}
+                  style={styles.viewMoreButton}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText
+                    style={{
+                      fontSize: 12,
+                      fontFamily: 'Outfit_500Medium',
+                      color: currColors.tint,
+                      marginRight: 4,
+                    }}
+                  >
+                    View All
+                  </ThemedText>
+                  <View
+                    style={[
+                      styles.iconCircle,
+                      { backgroundColor: currColors.cardSecondary },
+                    ]}
+                  >
+                    <ArrowRight size={14} color={currColors.tint} />
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              {recentTransactions.length === 0 ? (
+                <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                  <ThemedText
+                    style={{
+                      color: currColors.textSecondary,
+                      textAlign: 'center',
+                      fontFamily: 'Outfit_400Regular',
+                      fontSize: 13,
+                      lineHeight: 18,
+                      paddingHorizontal: 12,
+                    }}
+                  >
+                    No investment transactions logged yet.
+                  </ThemedText>
+                </View>
+              ) : (
+                recentTransactions.map((tx, index) => {
+                  const symUpper = (tx.symbol || '').toString().trim().toUpperCase();
+                  const ticker = tickerMap.get(symUpper);
+                  const isBuy = tx.type === 'BUY';
+                  const isLast = index === recentTransactions.length - 1;
+                  const totalValue = (tx.quantity || 0) * (tx.price || 0);
+                  const symbolLetter =
+                    ticker?.['Company Name']?.[0]?.toUpperCase() ||
+                    symUpper[0] ||
+                    '?';
+                  const displayName = ticker?.['Company Name'] || tx.symbol || 'Unknown';
+                  const formattedDate = new Date(tx.date).toLocaleDateString(
+                    'en-IN',
+                    {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    },
+                  );
+
+                  return (
+                    <TouchableOpacity
+                      key={tx.id}
+                      style={[
+                        styles.recentTxItem,
+                        {
+                          borderBottomColor: currColors.border,
+                          borderBottomWidth: isLast ? 0 : 1,
+                        },
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.push(`/stock-details/${tx.symbol}`);
+                      }}
+                    >
+                      {/* Logo / Initial with Buy/Sell Arrow Badge */}
+                      <View
+                        style={[
+                          styles.assetIconSmall,
+                          { backgroundColor: currColors.cardSecondary },
+                        ]}
+                      >
+                        {ticker?.Logo ? (
+                          <View
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              borderRadius: 8,
+                              padding: 2,
+                            }}
+                          >
+                            <Image
+                              source={{ uri: ticker.Logo }}
+                              style={{ width: 32, height: 32, borderRadius: 6 }}
+                              resizeMode="contain"
+                            />
+                          </View>
+                        ) : (
+                          <ThemedText
+                            style={{
+                              fontSize: 14,
+                              fontFamily: 'Outfit_600SemiBold',
+                              color: currColors.text,
+                            }}
+                          >
+                            {symbolLetter}
+                          </ThemedText>
+                        )}
+                        <View
+                          style={[
+                            styles.badgeContainerSmall,
+                            { backgroundColor: isBuy ? '#34C759' : '#FF3B30' },
+                          ]}
+                        >
+                          {isBuy ? (
+                            <ArrowDownLeft
+                              size={8}
+                              color="#FFF"
+                              strokeWidth={3}
+                            />
+                          ) : (
+                            <ArrowUpRight
+                              size={8}
+                              color="#FFF"
+                              strokeWidth={3}
+                            />
+                          )}
+                        </View>
+                      </View>
+
+                      {/* Info Col */}
+                      <View style={{ flex: 1, marginLeft: 12, marginRight: 8 }}>
+                        <ThemedText
+                          style={{
+                            fontSize: 14,
+                            fontFamily: 'Outfit_500Medium',
+                            color: currColors.text,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {displayName}
+                        </ThemedText>
+                        <ThemedText
+                          style={{
+                            fontSize: 11,
+                            fontFamily: 'Outfit_400Regular',
+                            color: currColors.textSecondary,
+                            marginTop: 2,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {formattedDate} {tx.broker ? `• ${tx.broker}` : ''}
+                        </ThemedText>
+                      </View>
+
+                      {/* Right Col */}
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <ThemedText
+                          style={{
+                            fontSize: 14,
+                            fontFamily: 'Outfit_500Medium',
+                            color: currColors.text,
+                          }}
+                        >
+                          {isPrivacyMode
+                            ? '••••••'
+                            : `${showCurrencySymbol ? '₹' : ''}${totalValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                        </ThemedText>
+                        <ThemedText
+                          style={{
+                            fontSize: 11,
+                            fontFamily: 'Outfit_400Regular',
+                            color: isBuy ? '#34C759' : '#FF3B30',
+                            marginTop: 2,
+                          }}
+                        >
+                          {isBuy ? 'Buy' : 'Sell'} • {tx.quantity} qty
+                        </ThemedText>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </View>
+          </View>
 
           <View style={[styles.section, { marginBottom: 16 }]}>
             <ActivityCalendar transactions={transactions} />
@@ -1151,6 +1399,8 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   viewMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 2,
   },
   iconCircle: {
@@ -1159,6 +1409,32 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  recentTxItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  assetIconSmall: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  badgeContainerSmall: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#1C1C1E',
   },
   accordionItem: {
     borderBottomWidth: 1,

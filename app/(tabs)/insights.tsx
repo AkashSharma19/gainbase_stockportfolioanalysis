@@ -749,7 +749,7 @@ const styles = StyleSheet.create({
   // Scroll
   scrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   sectionLabel: {
     color: '#8E8E93',

@@ -35,6 +35,7 @@ import {
   Sparkles,
   TrendingUp,
   Target,
+  Plus,
 } from 'lucide-react-native';
 
 import { ThemedText } from './ThemedText';
@@ -653,6 +654,18 @@ export function MoneyDashboard() {
                 ]}
               >
                 <PieChart size={16} color={currColors.text} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  router.push('/add-money-transaction');
+                }}
+                style={[
+                  styles.iconButton,
+                  { backgroundColor: currColors.cardSecondary },
+                ]}
+              >
+                <Plus size={16} color={currColors.text} />
               </TouchableOpacity>
             </View>
           </View>
