@@ -13,20 +13,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
   ChevronRight,
-  TrendingUp,
-  TrendingDown,
-  PiggyBank,
-  Wallet,
   ArrowUpDown,
   Calendar,
-  Layers,
   Check,
-  CreditCard,
-  Building2,
-  Banknote,
-  Percent,
 } from 'lucide-react-native';
-import { PieChart, BarChart } from 'react-native-gifted-charts';
+import { PieChart } from 'react-native-gifted-charts';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -89,10 +80,8 @@ const getCategoryColor = (name: string, customMeta?: Record<string, { icon: stri
 };
 
 type TimeFrame = 'month' | 'quarter' | 'year' | 'all';
-type AnalyticsTab = 'category' | 'trends';
-type CategoryFilterType = 'expense' | 'income';
+type AnalyticsTab = 'expense' | 'income' | 'surplus';
 type SortOption = 'amount' | 'name' | 'count';
-type TrendMode = 'dual' | 'surplus';
 
 export default function MoneyAnalyticsScreen() {
   const router = useRouter();
@@ -105,11 +94,9 @@ export default function MoneyAnalyticsScreen() {
 
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('month');
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [activeTab, setActiveTab] = useState<AnalyticsTab>('category');
-  const [categoryType, setCategoryType] = useState<CategoryFilterType>('expense');
+  const [activeTab, setActiveTab] = useState<AnalyticsTab>('expense');
   const [sortBy, setSortBy] = useState<SortOption>('amount');
   const [focusedCategory, setFocusedCategory] = useState<string | null>(null);
-  const [trendMode, setTrendMode] = useState<TrendMode>('dual');
   const [showTimeframeModal, setShowTimeframeModal] = useState(false);
 
   const handleHaptic = () => {
@@ -189,49 +176,46 @@ export default function MoneyAnalyticsScreen() {
     });
   }, [moneyTransactions, timeFrame, selectedDate]);
 
-  // ─── Hero Overview Metrics ───
+  // ─── Overview Metrics ───
   const overviewMetrics = useMemo(() => {
     let income = 0;
     let expense = 0;
+    let incomeCount = 0;
+    let expenseCount = 0;
 
     periodTransactions.forEach((tx) => {
-      if (tx.type === 'income') income += tx.amount;
-      else if (tx.type === 'expense') expense += tx.amount;
+      if (tx.type === 'income') {
+        income += tx.amount;
+        incomeCount += 1;
+      } else if (tx.type === 'expense') {
+        expense += tx.amount;
+        expenseCount += 1;
+      }
     });
 
     const netSurplus = income - expense;
     const savingsRate = income > 0 ? (netSurplus / income) * 100 : expense > 0 ? -100 : 0;
 
-    // Approximate days in timeframe for daily run-rate
-    let days = 30;
-    if (timeFrame === 'month') {
-      days = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
-    } else if (timeFrame === 'quarter') {
-      days = 90;
-    } else if (timeFrame === 'year') {
-      days = 365;
-    } else if (timeFrame === 'all') {
-      days = Math.max(1, Math.ceil((Date.now() - new Date(moneyTransactions[moneyTransactions.length - 1]?.date || Date.now()).getTime()) / (1000 * 60 * 60 * 24)));
-    }
-    const avgDailySpend = days > 0 ? expense / days : 0;
-
     return {
       income,
       expense,
+      incomeCount,
+      expenseCount,
       netSurplus,
       savingsRate,
-      avgDailySpend,
       txCount: periodTransactions.length,
     };
-  }, [periodTransactions, timeFrame, selectedDate, moneyTransactions]);
+  }, [periodTransactions]);
 
-  // ─── Category Breakdown Aggregations ───
+  // ─── Category Breakdown Aggregations for Active Category Tab ───
+  const currentCategoryType = activeTab === 'income' ? 'income' : 'expense';
+
   const categoryData = useMemo(() => {
     const totals: Record<string, { amount: number; count: number; color: string; icon: string }> = {};
     let totalAmount = 0;
 
     periodTransactions.forEach((tx) => {
-      if (tx.type !== categoryType) return;
+      if (tx.type !== currentCategoryType) return;
       totalAmount += tx.amount;
 
       if (!totals[tx.category]) {
@@ -261,7 +245,7 @@ export default function MoneyAnalyticsScreen() {
     }
 
     return { list, totalAmount };
-  }, [periodTransactions, categoryType, categoryMetadata, sortBy]);
+  }, [periodTransactions, currentCategoryType, categoryMetadata, sortBy]);
 
   // ─── Gifted Charts Pie Data ───
   const pieChartData = useMemo(() => {
@@ -348,38 +332,6 @@ export default function MoneyAnalyticsScreen() {
     return activeList.length > 0 ? activeList : list.slice(6);
   }, [moneyTransactions]);
 
-  // Gifted Charts Dual Bar Data (Grouped Income vs Expense)
-  const dualBarChartData = useMemo(() => {
-    const chartData: any[] = [];
-    monthlyTrends.forEach((m) => {
-      chartData.push({
-        value: m.income,
-        label: m.monthLabel,
-        spacing: 4,
-        labelWidth: 32,
-        labelTextStyle: { color: currColors.textSecondary, fontSize: 9, fontFamily: 'Outfit_400Regular' },
-        frontColor: '#34C759',
-      });
-      chartData.push({
-        value: m.expense,
-        frontColor: '#FF3B30',
-      });
-    });
-    return chartData;
-  }, [monthlyTrends, currColors]);
-
-  // Gifted Charts Surplus Bar Data
-  const surplusBarChartData = useMemo(() => {
-    return monthlyTrends.map((m) => ({
-      value: Math.max(0, m.surplus),
-      label: m.monthLabel,
-      frontColor: m.surplus >= 0 ? '#34C759' : '#FF3B30',
-      labelTextStyle: { color: currColors.textSecondary, fontSize: 9, fontFamily: 'Outfit_400Regular' },
-    }));
-  }, [monthlyTrends, currColors]);
-
-
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -406,7 +358,6 @@ export default function MoneyAnalyticsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
-        
         {/* ─── Period Navigator Banner (When Not All-Time) ─── */}
         {timeFrame !== 'all' && (
           <View style={[styles.periodNavigator, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
@@ -427,169 +378,84 @@ export default function MoneyAnalyticsScreen() {
           </View>
         )}
 
-        {/* ─── 1. Unified Hero Cash Flow Card ─── */}
-        <View style={[styles.heroCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-          <View style={styles.heroHeaderRow}>
-            <ThemedText style={[styles.heroLabel, { color: currColors.textSecondary }]}>
-              NET CASH FLOW
-            </ThemedText>
-            <View
-              style={[
-                styles.badgePill,
-                {
-                  backgroundColor:
-                    overviewMetrics.netSurplus >= 0
-                      ? 'rgba(52, 199, 89, 0.12)'
-                      : 'rgba(255, 59, 48, 0.12)',
-                },
-              ]}
-            >
-              <ThemedText
-                style={[
-                  styles.badgeText,
-                  { color: overviewMetrics.netSurplus >= 0 ? '#34C759' : '#FF3B30' },
-                ]}
-              >
-                {overviewMetrics.netSurplus >= 0
-                  ? `${overviewMetrics.savingsRate.toFixed(1)}% SAVED`
-                  : 'DEFICIT'}
-              </ThemedText>
-            </View>
-          </View>
-
-          <ThemedText
-            style={[
-              styles.heroValue,
-              { color: overviewMetrics.netSurplus >= 0 ? '#34C759' : '#FF3B30' },
-            ]}
-          >
-            {formatAmount(overviewMetrics.netSurplus, true)}
-          </ThemedText>
-
-          <View style={[styles.dashedDivider, { borderColor: currColors.border }]} />
-
-          {/* Clean Stat Rows */}
-          <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
-              Total Inflow (Income)
-            </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#34C759' }]}>
-              {formatAmount(overviewMetrics.income, true)}
-            </ThemedText>
-          </View>
-
-          <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
-              Total Outflow (Expenses)
-            </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#FF3B30' }]}>
-              {formatAmount(overviewMetrics.expense, true)}
-            </ThemedText>
-          </View>
-
-          <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
-              Daily Burn Rate
-            </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: currColors.text }]}>
-              {formatAmount(overviewMetrics.avgDailySpend)}/day
-            </ThemedText>
-          </View>
-
-          <View style={[styles.heroRow, { marginBottom: 0 }]}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
-              Savings Rate
-            </ThemedText>
-            <ThemedText
-              style={[
-                styles.heroRowValue,
-                { color: overviewMetrics.savingsRate >= 20 ? '#34C759' : overviewMetrics.savingsRate > 0 ? '#FF9500' : '#FF3B30' },
-              ]}
-            >
-              {overviewMetrics.savingsRate.toFixed(1)}%
-            </ThemedText>
-          </View>
-        </View>
-
-        {/* ─── 2. Segmented Navigation Tabs ─── */}
+        {/* ─── 3 Simplified Primary Tabs (Expense / Income / Surplus) ─── */}
         <View style={[styles.segmentedTabBar, { backgroundColor: currColors.cardSecondary }]}>
           <TouchableOpacity
-            style={[styles.segmentedTabBtn, activeTab === 'category' && { backgroundColor: '#00C9A7' }]}
+            style={[
+              styles.segmentedTabBtn,
+              activeTab === 'expense' && { backgroundColor: '#FF3B30' },
+            ]}
             onPress={() => {
               handleHaptic();
-              setActiveTab('category');
+              setActiveTab('expense');
+              setFocusedCategory(null);
             }}
           >
             <ThemedText
               style={[
                 styles.segmentedTabText,
-                { color: activeTab === 'category' ? '#FFFFFF' : currColors.textSecondary },
+                { color: activeTab === 'expense' ? '#FFFFFF' : currColors.textSecondary },
               ]}
             >
-              Categories
+              Expense
             </ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.segmentedTabBtn, activeTab === 'trends' && { backgroundColor: '#00C9A7' }]}
+            style={[
+              styles.segmentedTabBtn,
+              activeTab === 'income' && { backgroundColor: '#34C759' },
+            ]}
             onPress={() => {
               handleHaptic();
-              setActiveTab('trends');
+              setActiveTab('income');
+              setFocusedCategory(null);
             }}
           >
             <ThemedText
               style={[
                 styles.segmentedTabText,
-                { color: activeTab === 'trends' ? '#FFFFFF' : currColors.textSecondary },
+                { color: activeTab === 'income' ? '#FFFFFF' : currColors.textSecondary },
               ]}
             >
-              Cashflow Trends
+              Income
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.segmentedTabBtn,
+              activeTab === 'surplus' && { backgroundColor: '#00C9A7' },
+            ]}
+            onPress={() => {
+              handleHaptic();
+              setActiveTab('surplus');
+              setFocusedCategory(null);
+            }}
+          >
+            <ThemedText
+              style={[
+                styles.segmentedTabText,
+                { color: activeTab === 'surplus' ? '#FFFFFF' : currColors.textSecondary },
+              ]}
+            >
+              Surplus
             </ThemedText>
           </TouchableOpacity>
         </View>
 
-        {/* ─── TAB 1: CATEGORIES BREAKDOWN ─── */}
-        {activeTab === 'category' && (
+        {/* ─── TAB 1 & 2: EXPENSE / INCOME BREAKDOWN ─── */}
+        {(activeTab === 'expense' || activeTab === 'income') && (
           <View>
-            {/* Sub-toggle: Expense vs Income & Sort */}
+            {/* Header summary row & sort button */}
             <View style={styles.subFilterRow}>
-              <View style={[styles.miniToggleBar, { backgroundColor: currColors.cardSecondary }]}>
-                <TouchableOpacity
-                  style={[styles.miniTogglePill, categoryType === 'expense' && { backgroundColor: '#FF3B30' }]}
-                  onPress={() => {
-                    handleHaptic();
-                    setCategoryType('expense');
-                    setFocusedCategory(null);
-                  }}
-                >
-                  <ThemedText
-                    style={{
-                      fontSize: 11,
-                      fontFamily: 'Outfit_500Medium',
-                      color: categoryType === 'expense' ? '#FFFFFF' : currColors.textSecondary,
-                    }}
-                  >
-                    Expenses
-                  </ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.miniTogglePill, categoryType === 'income' && { backgroundColor: '#34C759' }]}
-                  onPress={() => {
-                    handleHaptic();
-                    setCategoryType('income');
-                    setFocusedCategory(null);
-                  }}
-                >
-                  <ThemedText
-                    style={{
-                      fontSize: 11,
-                      fontFamily: 'Outfit_500Medium',
-                      color: categoryType === 'income' ? '#FFFFFF' : currColors.textSecondary,
-                    }}
-                  >
-                    Income
-                  </ThemedText>
-                </TouchableOpacity>
+              <View>
+                <ThemedText style={{ fontSize: 18, fontFamily: 'Outfit_600SemiBold', color: activeTab === 'expense' ? '#FF3B30' : '#34C759' }}>
+                  {formatAmount(categoryData.totalAmount)}
+                </ThemedText>
+                <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_400Regular', color: currColors.textSecondary }}>
+                  {categoryData.list.length} {categoryData.list.length === 1 ? 'category' : 'categories'} • {activeTab === 'expense' ? overviewMetrics.expenseCount : overviewMetrics.incomeCount} tx
+                </ThemedText>
               </View>
 
               <TouchableOpacity
@@ -627,7 +493,7 @@ export default function MoneyAnalyticsScreen() {
                         }}
                         numberOfLines={1}
                       >
-                        {activeFocusedItem ? activeFocusedItem.name : categoryType === 'expense' ? 'Total Spent' : 'Total Inflow'}
+                        {activeFocusedItem ? activeFocusedItem.name : activeTab === 'expense' ? 'Total Spent' : 'Total Inflow'}
                       </ThemedText>
                       <ThemedText
                         style={{
@@ -662,7 +528,7 @@ export default function MoneyAnalyticsScreen() {
             {/* Category Ranking Grouped Card */}
             <View style={styles.sectionHeaderMargin}>
               <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
-                {categoryType.toUpperCase()} BREAKDOWN ({categoryData.list.length})
+                {activeTab.toUpperCase()} BREAKDOWN ({categoryData.list.length})
               </ThemedText>
             </View>
 
@@ -670,7 +536,7 @@ export default function MoneyAnalyticsScreen() {
               {categoryData.list.length === 0 ? (
                 <View style={styles.emptyState}>
                   <ThemedText style={{ color: currColors.textSecondary, fontSize: 13, fontFamily: 'Outfit_400Regular' }}>
-                    No {categoryType} transactions recorded for this period.
+                    No {activeTab} transactions recorded for this period.
                   </ThemedText>
                 </View>
               ) : (
@@ -726,100 +592,53 @@ export default function MoneyAnalyticsScreen() {
           </View>
         )}
 
-        {/* ─── TAB 2: CASHFLOW & TRENDS ─── */}
-        {activeTab === 'trends' && (
+        {/* ─── TAB 3: SURPLUS & CASH FLOW HISTORY ─── */}
+        {activeTab === 'surplus' && (
           <View>
-            {/* Trend Mode Switcher */}
+            {/* Header summary row */}
             <View style={styles.subFilterRow}>
-              <View style={[styles.miniToggleBar, { backgroundColor: currColors.cardSecondary }]}>
-                <TouchableOpacity
-                  style={[styles.miniTogglePill, trendMode === 'dual' && { backgroundColor: '#00C9A7' }]}
-                  onPress={() => {
-                    handleHaptic();
-                    setTrendMode('dual');
+              <View>
+                <ThemedText
+                  style={{
+                    fontSize: 18,
+                    fontFamily: 'Outfit_600SemiBold',
+                    color: overviewMetrics.netSurplus >= 0 ? '#34C759' : '#FF3B30',
                   }}
                 >
-                  <ThemedText
-                    style={{
-                      fontSize: 11,
-                      fontFamily: 'Outfit_500Medium',
-                      color: trendMode === 'dual' ? '#FFFFFF' : currColors.textSecondary,
-                    }}
-                  >
-                    Income vs Expense
-                  </ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.miniTogglePill, trendMode === 'surplus' && { backgroundColor: '#00C9A7' }]}
-                  onPress={() => {
-                    handleHaptic();
-                    setTrendMode('surplus');
+                  {formatAmount(overviewMetrics.netSurplus, true)}
+                </ThemedText>
+                <ThemedText
+                  style={{
+                    fontSize: 11,
+                    fontFamily: 'Outfit_400Regular',
+                    color: currColors.textSecondary,
                   }}
                 >
-                  <ThemedText
-                    style={{
-                      fontSize: 11,
-                      fontFamily: 'Outfit_500Medium',
-                      color: trendMode === 'surplus' ? '#FFFFFF' : currColors.textSecondary,
-                    }}
-                  >
-                    Net Surplus
-                  </ThemedText>
-                </TouchableOpacity>
+                  In: {formatAmount(overviewMetrics.income)} • Out: {formatAmount(overviewMetrics.expense)}
+                </ThemedText>
               </View>
 
-              {/* Legend Indicator */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                {trendMode === 'dual' ? (
-                  <>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#34C759' }} />
-                      <ThemedText style={{ fontSize: 10, color: currColors.textSecondary }}>Inflow</ThemedText>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF3B30' }} />
-                      <ThemedText style={{ fontSize: 10, color: currColors.textSecondary }}>Outflow</ThemedText>
-                    </View>
-                  </>
-                ) : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#34C759' }} />
-                    <ThemedText style={{ fontSize: 10, color: currColors.textSecondary }}>Savings</ThemedText>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* Trend Bar Chart Card */}
-            <View style={[styles.trendChartCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-              <View style={{ alignItems: 'center', paddingVertical: 8 }}>
-                {trendMode === 'dual' ? (
-                  <BarChart
-                    data={dualBarChartData}
-                    barWidth={11}
-                    spacing={14}
-                    noOfSections={4}
-                    initialSpacing={8}
-                    hideRules
-                    yAxisThickness={0}
-                    xAxisThickness={0}
-                    yAxisTextStyle={{ color: currColors.textSecondary, fontSize: 9, fontFamily: 'Outfit_400Regular' }}
-                    formatYLabel={(val) => formatAmount(Number(val))}
-                  />
-                ) : (
-                  <BarChart
-                    data={surplusBarChartData}
-                    barWidth={18}
-                    spacing={14}
-                    noOfSections={4}
-                    initialSpacing={10}
-                    hideRules
-                    yAxisThickness={0}
-                    xAxisThickness={0}
-                    yAxisTextStyle={{ color: currColors.textSecondary, fontSize: 9, fontFamily: 'Outfit_400Regular' }}
-                    formatYLabel={(val) => formatAmount(Number(val))}
-                  />
-                )}
+              <View
+                style={[
+                  styles.badgePill,
+                  {
+                    backgroundColor:
+                      overviewMetrics.netSurplus >= 0
+                        ? 'rgba(52, 199, 89, 0.12)'
+                        : 'rgba(255, 59, 48, 0.12)',
+                  },
+                ]}
+              >
+                <ThemedText
+                  style={[
+                    styles.badgeText,
+                    { color: overviewMetrics.netSurplus >= 0 ? '#34C759' : '#FF3B30' },
+                  ]}
+                >
+                  {overviewMetrics.netSurplus >= 0
+                    ? `${overviewMetrics.savingsRate.toFixed(1)}% SAVED`
+                    : 'DEFICIT'}
+                </ThemedText>
               </View>
             </View>
 
@@ -883,9 +702,6 @@ export default function MoneyAnalyticsScreen() {
             </View>
           </View>
         )}
-
-
-
       </ScrollView>
 
       {/* ─── Timeframe Picker Modal ─── */}
@@ -996,58 +812,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_400Regular',
     marginTop: 1,
   },
-  heroCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
-  },
-  heroHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  heroLabel: {
-    fontSize: 10,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  badgePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: 0.5,
-  },
-  heroValue: {
-    fontSize: 24,
-    fontFamily: 'Outfit_400Regular',
-    marginBottom: 12,
-  },
-  dashedDivider: {
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  heroRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  heroRowLabel: {
-    fontSize: 13,
-    fontFamily: 'Outfit_400Regular',
-  },
-  heroRowValue: {
-    fontSize: 14,
-    fontFamily: 'Outfit_500Medium',
-  },
   segmentedTabBar: {
     flexDirection: 'row',
     borderRadius: 12,
@@ -1062,7 +826,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   segmentedTabText: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: 'Outfit_500Medium',
   },
   subFilterRow: {
@@ -1071,22 +835,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  miniToggleBar: {
-    flexDirection: 'row',
-    borderRadius: 8,
-    padding: 2,
-  },
-  miniTogglePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
   sortButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
   },
@@ -1107,13 +861,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  trendChartCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    marginBottom: 14,
-    overflow: 'hidden',
+  badgePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.5,
   },
   sectionHeaderMargin: {
     marginHorizontal: 4,

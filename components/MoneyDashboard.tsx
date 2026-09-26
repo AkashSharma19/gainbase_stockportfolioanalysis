@@ -369,35 +369,13 @@ export function MoneyDashboard() {
     });
 
     const savingsRate = income > 0 ? ((income - expense) / income) * 100 : 0;
-
-    return { income, expense, savingsRate };
-  }, [moneyTransactions]);
-
-  // "Safe-to-Spend" Daily Run-Rate Calculation (from active Wallet & Savings accounts with include in assets ON)
-  const safeToSpend = useMemo(() => {
-    const now = new Date();
-    const currentDay = now.getDate();
+    const currentDay = Math.max(1, now.getDate());
+    const dailyBurnRate = currentDay > 0 ? expense / currentDay : 0;
     const totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const daysRemaining = Math.max(1, totalDaysInMonth - currentDay + 1);
+    const avgDailyEarning = totalDaysInMonth > 0 ? income / totalDaysInMonth : 0;
 
-    // Sum balances of active Wallet and Savings accounts with includeInAssets !== false
-    const liquidPool = (accounts || [])
-      .filter(
-        (acc) =>
-          !acc.isArchived &&
-          acc.includeInAssets !== false &&
-          (acc.type === 'wallet' || acc.type === 'savings')
-      )
-      .reduce((sum, acc) => sum + Math.max(0, acc.balance), 0);
-
-    const dailyAmount = liquidPool > 0 ? liquidPool / daysRemaining : 0;
-
-    return {
-      amount: dailyAmount,
-      liquidPool,
-      daysRemaining,
-    };
-  }, [accounts]);
+    return { income, expense, savingsRate, dailyBurnRate, avgDailyEarning };
+  }, [moneyTransactions]);
 
   // Calculate Financial Health Score & Grade for the dashboard button
   const healthSummary = useMemo(() => {
@@ -749,30 +727,21 @@ export function MoneyDashboard() {
             </ThemedText>
           </View>
 
+          <View style={styles.heroRow}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+              Daily Burn Rate
+            </ThemedText>
+            <ThemedText style={[styles.heroRowValue, { color: currColors.text }]}>
+              {isPrivacyMode ? '••••••' : `${formatAmount(monthlyStats.dailyBurnRate)}/day`}
+            </ThemedText>
+          </View>
+
           <View style={[styles.heroRow, { marginBottom: 0 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
-                Safe-to-Spend
-              </ThemedText>
-              <View style={[styles.daysLeftPill, { backgroundColor: currColors.cardSecondary }]}>
-                <ThemedText style={{ fontSize: 10, fontFamily: 'Outfit_500Medium', color: currColors.textSecondary }}>
-                  {safeToSpend.daysRemaining}d left
-                </ThemedText>
-              </View>
-            </View>
-            <ThemedText
-              style={[
-                styles.heroRowValue,
-                {
-                  color: isPrivacyMode
-                    ? currColors.text
-                    : safeToSpend.amount > 0
-                    ? '#00C9A7'
-                    : '#FF3B30',
-                },
-              ]}
-            >
-              {isPrivacyMode ? '••••••' : `${formatAmount(safeToSpend.amount)}/day`}
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+              Avg Daily Earning
+            </ThemedText>
+            <ThemedText style={[styles.heroRowValue, { color: '#34C759' }]}>
+              {isPrivacyMode ? '••••••' : `+${formatAmount(monthlyStats.avgDailyEarning)}/day`}
             </ThemedText>
           </View>
         </View>
