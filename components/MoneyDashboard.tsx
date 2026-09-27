@@ -789,32 +789,39 @@ export function MoneyDashboard() {
               </View>
             </View>
 
-            <View style={styles.compactMain}>
+            <View style={[styles.compactMain, { flex: 1, justifyContent: 'center' }]}>
               <MoneyInsightsDonut
                 warnings={countByType.warning}
                 tips={countByType.tip}
                 success={countByType.success}
-                size={Math.max(70, Math.min(95, insightsCardWidth * 0.82))}
+                size={insightsCardWidth * 0.85}
                 trackColor={isDark ? '#2C2C2E' : '#E5E5EA'}
                 textColor={currColors.textSecondary}
                 isPrivacyMode={isPrivacyMode}
               />
-            </View>
-
-            <View
-              style={[
-                styles.compactFooterBadge,
-                {
-                  backgroundColor: 'rgba(0, 201, 167, 0.12)',
-                  borderColor: 'rgba(0, 201, 167, 0.25)',
-                },
-              ]}
-            >
-              <ThemedText style={[styles.compactFooterBadgeText, { color: '#00C9A7' }]} numberOfLines={1}>
-                {insightsCount > 0
-                  ? `${countByType.warning > 0 ? `${countByType.warning}W • ` : ''}${countByType.tip + countByType.success} TIPS`
-                  : 'RUN AI AUDIT'}
-              </ThemedText>
+              <View
+                style={[
+                  styles.compactFooterBadge,
+                  {
+                    backgroundColor:
+                      insightsCount > 0
+                        ? 'rgba(0, 201, 167, 0.12)'
+                        : currColors.cardSecondary,
+                  },
+                ]}
+              >
+                <ThemedText
+                  style={[
+                    styles.compactFooterBadgeText,
+                    { color: insightsCount > 0 ? '#00C9A7' : currColors.textSecondary },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {insightsCount > 0
+                    ? `${countByType.warning > 0 ? `${countByType.warning}W • ` : ''}${countByType.tip + countByType.success} TIPS`
+                    : 'RUN AI AUDIT'}
+                </ThemedText>
+              </View>
             </View>
           </TouchableOpacity>
 
@@ -846,29 +853,31 @@ export function MoneyDashboard() {
               </View>
             </View>
 
-            <View style={styles.compactMain}>
+            <View style={[styles.compactMain, { flex: 1, justifyContent: 'center' }]}>
               <HealthScoreGauge
                 score={healthSummary.totalScore}
-                size={Math.max(70, Math.min(95, healthCardWidth * 0.82))}
+                size={healthCardWidth * 0.85}
                 color={healthSummary.gradeColor}
                 trackColor={isDark ? '#2C2C2E' : '#E5E5EA'}
                 textColor={currColors.textSecondary}
                 isPrivacyMode={isPrivacyMode}
               />
-            </View>
-
-            <View
-              style={[
-                styles.compactFooterBadge,
-                {
-                  backgroundColor: `${healthSummary.gradeColor}18`,
-                  borderColor: `${healthSummary.gradeColor}30`,
-                },
-              ]}
-            >
-              <ThemedText style={[styles.compactFooterBadgeText, { color: healthSummary.gradeColor }]} numberOfLines={1}>
-                GRADE {healthSummary.grade} • {healthSummary.totalScore >= 80 ? 'EXCELLENT' : healthSummary.totalScore >= 70 ? 'GOOD' : healthSummary.totalScore >= 55 ? 'FAIR' : 'NEEDS WORK'}
-              </ThemedText>
+              <View
+                style={[
+                  styles.compactFooterBadge,
+                  { backgroundColor: `${healthSummary.gradeColor}18` },
+                ]}
+              >
+                <ThemedText
+                  style={[
+                    styles.compactFooterBadgeText,
+                    { color: healthSummary.gradeColor },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {`GRADE ${healthSummary.grade}`.toUpperCase()}
+                </ThemedText>
+              </View>
             </View>
           </TouchableOpacity>
         </View>
@@ -1215,34 +1224,34 @@ const styles = StyleSheet.create({
   },
   compactDashboardCard: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1,
-    padding: 14,
+    padding: 16,
     justifyContent: 'space-between',
   },
   compactCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 0,
   },
   compactCardSectionLabel: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 9,
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   iconCircleSmall: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   compactMain: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 6,
+    paddingTop: 8,
   },
   chartCenterBox: {
     position: 'absolute',
@@ -1250,26 +1259,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chartCenterNum: {
-    fontSize: 17,
+    fontSize: 22,
     fontFamily: 'Outfit_500Medium',
-    lineHeight: 20,
   },
   chartCenterSub: {
-    fontSize: 8,
-    fontFamily: 'Outfit_500Medium',
-    letterSpacing: 1,
+    fontSize: 7,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.5,
+    marginTop: -2,
   },
   compactFooterBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   compactFooterBadgeText: {
-    fontSize: 10,
-    fontFamily: 'Outfit_500Medium',
+    fontSize: 9,
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },

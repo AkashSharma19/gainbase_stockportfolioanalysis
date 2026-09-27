@@ -176,7 +176,7 @@ export default function ForecastDetailsScreen() {
             }]} />
           </View>
           <ThemedText style={[styles.progressText, { color: c.textSecondary }]}>
-            {((summary.totalValue / targetGoal) * 100).toFixed(1)}% ({isPrivacyMode ? '****' : formatIndianNumber(summary.totalValue)}) of your goal reached today
+            {((summary.totalValue / targetGoal) * 100).toFixed(1)}% ({isPrivacyMode ? '••••••' : formatIndianNumber(summary.totalValue)}) of your goal reached today
           </ThemedText>
         </View>
 
@@ -188,12 +188,12 @@ export default function ForecastDetailsScreen() {
                 PROJECTED VAL (+{years}Y)
               </ThemedText>
               <ThemedText style={[styles.heroValue, { color: c.text }]}>
-                {isPrivacyMode ? '****' : formatIndianNumber(chartData[years]?.value || 0)}
+                {isPrivacyMode ? '••••••' : formatIndianNumber(chartData[years]?.value || 0)}
               </ThemedText>
               <View style={styles.inflationTag}>
                 <TrendingUp size={12} color="#5AC8FA" />
                 <ThemedText style={styles.inflationTagText}>
-                  ~ {isPrivacyMode ? '****' : formatIndianNumber((chartData[years]?.value || 0) / Math.pow(1.06, years))} in today's value
+                  ~ {isPrivacyMode ? '••••••' : formatIndianNumber((chartData[years]?.value || 0) / Math.pow(1.06, years))} in today's value
                 </ThemedText>
               </View>
             </View>
@@ -268,13 +268,13 @@ export default function ForecastDetailsScreen() {
           <View style={styles.dataRow}>
             <ThemedText style={[styles.dataLabel, { color: c.textSecondary }]}>Current Value</ThemedText>
             <ThemedText style={[styles.dataValue, { color: c.text }]}>
-              {isPrivacyMode ? '****' : formatIndianNumber(summary.totalValue)}
+              {isPrivacyMode ? '••••••' : formatIndianNumber(summary.totalValue)}
             </ThemedText>
           </View>
           <View style={styles.dataRow}>
             <ThemedText style={[styles.dataLabel, { color: c.textSecondary }]}>Monthly Investment</ThemedText>
             <ThemedText style={[styles.dataValue, { color: c.text }]}>
-              {isPrivacyMode ? '****' : formatIndianNumber(monthlySIP)}
+              {isPrivacyMode ? '••••••' : formatIndianNumber(monthlySIP)}
             </ThemedText>
           </View>
           <View style={styles.dataRow}>
@@ -287,13 +287,13 @@ export default function ForecastDetailsScreen() {
           <View style={styles.dataRow}>
             <ThemedText style={[styles.dataLabel, { color: c.textSecondary }]}>Total Invested Capital</ThemedText>
             <ThemedText style={[styles.dataValue, { color: c.text }]}>
-              {isPrivacyMode ? '****' : formatIndianNumber(chartData[years]?.data?.totalInvested || 0)}
+              {isPrivacyMode ? '••••••' : formatIndianNumber(chartData[years]?.data?.totalInvested || 0)}
             </ThemedText>
           </View>
           <View style={styles.dataRow}>
             <ThemedText style={[styles.dataLabel, { color: c.textSecondary }]}>Est. Capital Gains</ThemedText>
             <ThemedText style={[styles.dataValue, { color: '#4CAF50' }]}>
-              {isPrivacyMode ? '****' : `+${formatIndianNumber(chartData[years]?.data?.estimatedGains || 0)}`}
+              {isPrivacyMode ? '••••••' : `+${formatIndianNumber(chartData[years]?.data?.estimatedGains || 0)}`}
             </ThemedText>
           </View>
         </View>
@@ -317,19 +317,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 20,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.5,
   },
-  scrollContent: { padding: 20, paddingBottom: 60 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 60 },
   goalHeader: {
     padding: 20,
-    borderRadius: 24,
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   goalTop: {
     flexDirection: 'row',
@@ -339,13 +340,14 @@ const styles = StyleSheet.create({
   },
   tinyLabel: {
     fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.2,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     marginBottom: 4,
   },
   goalTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Outfit_600SemiBold',
   },
   inlineInputGroup: {
     flexDirection: 'row',

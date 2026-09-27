@@ -1,5 +1,4 @@
 import { usePortfolioStore } from '@/store/usePortfolioStore';
-import { Ticker } from '../types';
 import { useMemo } from 'react';
 
 export interface HealthMetric {

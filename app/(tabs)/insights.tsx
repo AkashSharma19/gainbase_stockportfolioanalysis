@@ -385,8 +385,8 @@ INSTRUCTIONS:
     const IconComponent = IconMap[insight.icon] || Zap;
     const isClickable = !!insight.symbol;
     const isDark = theme === 'dark';
-    const cardBgColor = isDark ? `${insight.color}0D` : `${insight.color}06`;
-    const cardBorderColor = isDark ? `${insight.color}25` : `${insight.color}1A`;
+    const cardBgColor = isDark ? '#1C1C1E' : '#FFFFFF';
+    const cardBorderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
     return (
       <TouchableOpacity
@@ -407,7 +407,7 @@ INSTRUCTIONS:
           }
         }}
       >
-        {/* Card Header: Logo/Icon + Title/Ticker + Badge/Value */}
+        {/* Top Note Title Row */}
         <View style={styles.cardHeaderRow}>
           <View style={styles.cardHeaderLeft}>
             {insight.logo ? (
@@ -420,52 +420,51 @@ INSTRUCTIONS:
               </View>
             ) : (
               <View style={[styles.iconWrap, { backgroundColor: `${insight.color}15` }]}>
-                <IconComponent size={20} color={insight.color} />
+                <IconComponent size={16} color={insight.color} />
               </View>
             )}
             <View style={styles.titleColumn}>
               <ThemedText style={[styles.companyName, { color: currColors.text }]} numberOfLines={1}>
                 {insight.title}
               </ThemedText>
-              {insight.symbol ? (
-                <ThemedText style={[styles.symbolTicker, { color: currColors.textSecondary }]}>
-                  {insight.symbol}
-                </ThemedText>
-              ) : null}
             </View>
           </View>
 
-          {/* Badges Column */}
-          <View style={styles.badgeColumn}>
-            <View style={[styles.badgePill, { backgroundColor: `${insight.color}15` }]}>
-              <ThemedText style={[styles.badgeText, { color: insight.color }]}>
-                {insight.badge}
-              </ThemedText>
-            </View>
-            {insight.value ? (
-              <View style={[styles.valuePill, { backgroundColor: currColors.cardSecondary }]}>
-                <ThemedText style={[styles.valueText, { color: currColors.text }]}>
-                  {insight.value}
-                </ThemedText>
-              </View>
-            ) : null}
-          </View>
+          {isClickable && (
+            <ChevronRight size={16} color={currColors.textSecondary} />
+          )}
         </View>
 
-        {/* Reason / Analysis Body */}
-        <ThemedText style={[styles.reasonText, { color: currColors.text }]}>
+        {/* Note Body Text */}
+        <ThemedText style={[styles.reasonText, { color: isDark ? '#D1D1D6' : '#3A3A3C' }]}>
           {insight.reason}
         </ThemedText>
 
-        {/* Action Link Footer if clickable */}
-        {isClickable ? (
-          <View style={[styles.cardFooterRow, { borderTopColor: currColors.border }]}>
-            <ThemedText style={[styles.cardFooterText, { color: insight.color }]}>
-              View Holding & Transactions
+        {/* Note Bottom Tags Row (Google Notes style chips) */}
+        <View style={styles.tagsRow}>
+          {insight.symbol ? (
+            <View style={[styles.tagChip, { backgroundColor: currColors.cardSecondary }]}>
+              <ThemedText style={[styles.tagText, { color: currColors.textSecondary }]}>
+                {insight.symbol}
+              </ThemedText>
+            </View>
+          ) : null}
+
+          <View style={[styles.tagChip, { backgroundColor: `${insight.color}18` }]}>
+            <View style={[styles.tagDot, { backgroundColor: insight.color }]} />
+            <ThemedText style={[styles.tagText, { color: insight.color }]}>
+              {insight.badge}
             </ThemedText>
-            <ChevronRight size={14} color={insight.color} />
           </View>
-        ) : null}
+
+          {insight.value ? (
+            <View style={[styles.tagChip, { backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA' }]}>
+              <ThemedText style={[styles.tagText, { color: currColors.text }]}>
+                {insight.value}
+              </ThemedText>
+            </View>
+          ) : null}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -761,7 +760,7 @@ const styles = StyleSheet.create({
   listContainer: {
     marginTop: 4,
   },
-  // Insight card
+  // Google Notes Minimal Insight Card
   insightCard: {
     borderRadius: 16,
     borderWidth: 1,
@@ -770,7 +769,7 @@ const styles = StyleSheet.create({
   },
   cardHeaderRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
   },
@@ -779,28 +778,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     marginRight: 10,
+    gap: 10,
   },
   logoWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
-    padding: 2,
   },
   logoImage: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
   },
   iconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
   },
   titleColumn: {
     flex: 1,
@@ -809,49 +806,33 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Outfit_600SemiBold',
   },
-  symbolTicker: {
-    fontSize: 11,
-    fontFamily: 'Outfit_500Medium',
-    marginTop: 1,
-  },
-  badgeColumn: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  badgePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: 0.3,
-  },
-  valuePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  valueText: {
-    fontSize: 11,
-    fontFamily: 'Outfit_500Medium',
-  },
   reasonText: {
     fontSize: 13.5,
     fontFamily: 'Outfit_400Regular',
     lineHeight: 20,
+    marginBottom: 12,
   },
-  cardFooterRow: {
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    alignItems: 'center',
+  },
+  tagChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: 12,
-    paddingTop: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
   },
-  cardFooterText: {
-    fontSize: 12,
+  tagDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  tagText: {
+    fontSize: 11,
     fontFamily: 'Outfit_500Medium',
   },
   // Empty state

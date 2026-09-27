@@ -25,6 +25,7 @@ import {
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
+import { BackButton } from '@/components/BackButton';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
@@ -263,21 +264,17 @@ export default function AllTransactionsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backBtn, { backgroundColor: currColors.cardSecondary }]}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft size={20} color={currColors.text} />
-        </TouchableOpacity>
-        <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+        <BackButton />
+        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
           All Transactions
         </ThemedText>
         <TouchableOpacity
-          style={[styles.filterTriggerBtn, { backgroundColor: currColors.cardSecondary }]}
+          style={[styles.filterTriggerBtn, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}
           onPress={() => {
             handleHaptic();
             setFilterModalVisible(true);
           }}
+          activeOpacity={0.7}
         >
           <SlidersHorizontal size={18} color={currColors.text} />
           {isFilterActive && <View style={styles.activeFilterDot} />}
@@ -705,24 +702,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 12,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 20,
     fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.5,
   },
   filterTriggerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',

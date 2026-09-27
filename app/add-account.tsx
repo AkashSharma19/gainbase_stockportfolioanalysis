@@ -210,16 +210,16 @@ export default function AddAccountScreen() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: currColors.background }]} edges={['top']}>
         {/* iOS Clean Header */}
         <View style={[styles.header, { backgroundColor: currColors.background, borderBottomColor: currColors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.cancelButton}>
-            <ThemedText style={[styles.headerButtonText, { color: currColors.tint }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.cancelButton} activeOpacity={0.7}>
+            <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
               Cancel
             </ThemedText>
           </TouchableOpacity>
-          <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+          <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
             {editingAccount ? 'Edit Account' : 'Add Account'}
           </ThemedText>
-          <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-            <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: currColors.tint }]}>
+          <TouchableOpacity onPress={handleSave} style={styles.saveButton} activeOpacity={0.7}>
+            <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
               Save
             </ThemedText>
           </TouchableOpacity>

@@ -92,7 +92,7 @@ export default function YearlyAnalysisScreen() {
             }}
           >
             {isPrivacyMode
-              ? '****'
+              ? '••••••'
               : (item.averageMonthlyInvestment / 1000).toFixed(0) + 'k'}
           </ThemedText>
         ),
@@ -309,7 +309,7 @@ export default function YearlyAnalysisScreen() {
                       >
                         Avg. Inv:{' '}
                         {isPrivacyMode
-                          ? '****'
+                          ? '••••••'
                           : `${showCurrencySymbol ? '₹' : ''}${item.averageMonthlyInvestment.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
                       </ThemedText>
                     </View>
@@ -424,7 +424,7 @@ export default function YearlyAnalysisScreen() {
                               ]}
                             >
                               {isPrivacyMode
-                                ? '****'
+                                ? '••••••'
                                 : `${showCurrencySymbol ? '₹' : ''}${asset.value.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
                             </ThemedText>
                           </View>
@@ -457,8 +457,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 20,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.5,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -481,7 +482,7 @@ const styles = StyleSheet.create({
   },
   chartTitle: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },

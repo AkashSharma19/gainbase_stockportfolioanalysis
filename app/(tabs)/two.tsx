@@ -228,7 +228,7 @@ const TransactionItem = memo(
           <View style={styles.rightCol}>
             <ThemedText style={[styles.amountText, { color: currColors.text }]}>
               {isPrivacyMode
-                ? '****'
+                ? '••••••'
                 : `${showCurrencySymbol ? '₹' : ''}${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </ThemedText>
             <ThemedText

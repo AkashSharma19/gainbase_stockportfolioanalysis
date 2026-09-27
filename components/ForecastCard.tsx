@@ -69,7 +69,7 @@ export const ForecastCard = ({
           <View>
             <ThemedText style={[styles.mainValue, { color: currColors.text }]}>
               {isPrivacyMode
-                ? '****'
+                ? '••••••'
                 : `${showCurrencySymbol ? '₹' : ''}${formatIndianNumber(projection.totalFutureValue)}`}
             </ThemedText>
             <ThemedText

@@ -41,6 +41,7 @@ import {
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
+import { BackButton } from '@/components/BackButton';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useAiStore, ChatMessage, ChatAction } from '@/store/useAiStore';
@@ -970,14 +971,15 @@ Return JSON:
         {/* Header */}
         <View style={[styles.header, { backgroundColor: geminiColors.headerBg, borderBottomColor: geminiColors.border, paddingTop: insets.top + 6 }]}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={() => router.back()}
-            >
-              <ArrowLeft size={22} color={geminiColors.text} />
-            </TouchableOpacity>
-            <View style={{ marginLeft: 6 }}>
-              <ThemedText style={{ fontSize: 16, fontFamily: 'Outfit_600SemiBold', color: geminiColors.text }}>Gainbase Co-pilot</ThemedText>
+            <BackButton
+              color={geminiColors.text}
+              borderColor={geminiColors.border}
+              backgroundColor={geminiColors.inputBg}
+            />
+            <View style={{ marginLeft: 10 }}>
+              <ThemedText style={{ fontSize: 17, fontFamily: 'Outfit_600SemiBold', color: geminiColors.text }}>
+                Gainbase Co-pilot
+              </ThemedText>
             </View>
           </View>
           <View style={styles.headerRight}>
@@ -1181,9 +1183,9 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   actionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
   },

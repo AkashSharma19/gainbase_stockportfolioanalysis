@@ -385,7 +385,7 @@ export function PortfolioScreen() {
 
               <ThemedText style={[styles.heroValue, { color: currColors.text }]}>
                 {isPrivacyMode
-                  ? '****'
+                  ? '••••••'
                   : `${showCurrencySymbol ? '₹' : ''}${summary.totalValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
               </ThemedText>
 
@@ -443,7 +443,7 @@ export function PortfolioScreen() {
                   ]}
                 >
                   {isPrivacyMode
-                    ? '****'
+                    ? '••••••'
                     : `${summary.dayChange >= 0 ? '+' : '-'}${showCurrencySymbol ? '₹' : ''}${Math.abs(summary.dayChange).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} (${Math.abs(summary.dayChangePercentage).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%)`}
                 </ThemedText>
               </View>
@@ -470,7 +470,7 @@ export function PortfolioScreen() {
                   ]}
                 >
                   {isPrivacyMode
-                    ? '****'
+                    ? '••••••'
                     : `${summary.profitAmount >= 0 ? '+' : '-'}${showCurrencySymbol ? '₹' : ''}${Math.abs(summary.profitAmount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} (${Math.abs(summary.profitPercentage).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%)`}
                 </ThemedText>
               </View>
@@ -497,7 +497,7 @@ export function PortfolioScreen() {
                   ]}
                 >
                   {isPrivacyMode
-                    ? '****'
+                    ? '••••••'
                     : `${summary.realizedReturn >= 0 ? '+' : '-'}${showCurrencySymbol ? '₹' : ''}${Math.abs(summary.realizedReturn).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                 </ThemedText>
               </View>
@@ -524,7 +524,7 @@ export function PortfolioScreen() {
                   ]}
                 >
                   {isPrivacyMode
-                    ? '****'
+                    ? '••••••'
                     : `${summary.unrealizedReturn >= 0 ? '+' : '-'}${showCurrencySymbol ? '₹' : ''}${Math.abs(summary.unrealizedReturn).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                 </ThemedText>
               </View>
@@ -542,7 +542,7 @@ export function PortfolioScreen() {
                   style={[styles.heroRowValueWhite, { color: currColors.text }]}
                 >
                   {isPrivacyMode
-                    ? '****'
+                    ? '••••••'
                     : `${showCurrencySymbol ? '₹' : ''}${summary.totalCost.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                 </ThemedText>
               </View>
@@ -569,7 +569,7 @@ export function PortfolioScreen() {
                   ]}
                 >
                   {isPrivacyMode
-                    ? '****'
+                    ? '••••••'
                     : `${summary.xirr.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%`}
                 </ThemedText>
               </View>
@@ -610,7 +610,7 @@ export function PortfolioScreen() {
                   ]}
                 >
                   {isPrivacyMode ? (
-                    '****'
+                    '••••••'
                   ) : (
                     <ThemedText>
                       PF XIRR{' '}
@@ -954,7 +954,7 @@ export function PortfolioScreen() {
                           >
                             Avg. Inv:{' '}
                             {isPrivacyMode
-                              ? '****'
+                              ? '••••••'
                               : `${showCurrencySymbol ? '₹' : ''}${item.averageMonthlyInvestment.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
                           </ThemedText>
                         </View>
@@ -1069,7 +1069,7 @@ export function PortfolioScreen() {
                                   ]}
                                 >
                                   {isPrivacyMode
-                                    ? '****'
+                                    ? '••••••'
                                     : `${showCurrencySymbol ? '₹' : ''}${asset.value.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
                                 </ThemedText>
                               </View>
@@ -1171,7 +1171,7 @@ export function PortfolioScreen() {
                       >
                         Invested:{' '}
                         {isPrivacyMode
-                          ? '****'
+                          ? '••••••'
                           : `${showCurrencySymbol ? '₹' : ''}${item.investment.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
                       </ThemedText>
                     </View>

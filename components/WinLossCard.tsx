@@ -199,10 +199,15 @@ export default function WinLossCard({
               isPrivacyMode={isPrivacyMode}
               textColor={currColors.text}
             />
-            <View style={[styles.compactFooter, { marginTop: 12 }]}>
+            <View
+              style={[
+                styles.compactFooterBadge,
+                { backgroundColor: currColors.cardSecondary },
+              ]}
+            >
               <ThemedText
                 style={[
-                  styles.compactFooterText,
+                  styles.compactFooterBadgeText,
                   { color: currColors.textSecondary },
                 ]}
               >
@@ -216,7 +221,7 @@ export default function WinLossCard({
               <View style={styles.headerRight}>
                 <View style={styles.rateContainer}>
                   <ThemedText style={[styles.rateValue, { color: currColors.text }]}>
-                    {isPrivacyMode ? '****' : `${stats.winRate.toFixed(0)}%`}
+                    {isPrivacyMode ? '••••••' : `${stats.winRate.toFixed(0)}%`}
                   </ThemedText>
                   <ThemedText
                     style={[
@@ -277,7 +282,7 @@ export default function WinLossCard({
                   >
                     <ArrowUpRight size={14} color="#4CAF50" />
                     <ThemedText style={[styles.statValue, { color: '#4CAF50' }]}>
-                      {isPrivacyMode ? '****' : stats.winners}
+                      {isPrivacyMode ? '••••••' : stats.winners}
                     </ThemedText>
                   </View>
                   <ThemedText
@@ -289,7 +294,7 @@ export default function WinLossCard({
                     adjustsFontSizeToFit
                   >
                     {isPrivacyMode
-                      ? '****'
+                      ? '••••••'
                       : `+${showCurrencySymbol ? '₹' : ''}${stats.winnersProfit.toLocaleString('en-IN', { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
                   </ThemedText>
                 </View>
@@ -315,7 +320,7 @@ export default function WinLossCard({
                   >
                     <ArrowDownRight size={14} color="#F44336" />
                     <ThemedText style={[styles.statValue, { color: '#F44336' }]}>
-                      {isPrivacyMode ? '****' : stats.losers}
+                      {isPrivacyMode ? '••••••' : stats.losers}
                     </ThemedText>
                   </View>
                   <ThemedText
@@ -327,7 +332,7 @@ export default function WinLossCard({
                     adjustsFontSizeToFit
                   >
                     {isPrivacyMode
-                      ? '****'
+                      ? '••••••'
                       : `-${showCurrencySymbol ? '₹' : ''}${Math.abs(stats.losersLoss).toLocaleString('en-IN', { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
                   </ThemedText>
                 </View>
@@ -447,20 +452,25 @@ const styles = StyleSheet.create({
   },
   compactRateValue: {
     fontSize: 22,
-    fontWeight: '500',
+    fontFamily: 'Outfit_500Medium',
   },
   compactRateLabel: {
     fontSize: 7,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 0.5,
     marginTop: -2,
   },
-  compactFooter: {
-    marginTop: 12,
+  compactFooterBadge: {
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
   },
-  compactFooterText: {
-    fontSize: 10,
-    fontWeight: '600',
+  compactFooterBadgeText: {
+    fontSize: 9,
+    fontFamily: 'Outfit_700Bold',
+    fontWeight: '700',
     letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });

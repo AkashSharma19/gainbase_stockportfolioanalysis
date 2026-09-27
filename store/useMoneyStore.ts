@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { Account, MoneyTransaction, Loan, EMIPayment, Budget, AccountType, Subscription, SubscriptionPayment } from '../types/money';
 import { usePortfolioStore } from './usePortfolioStore';
+import { advanceDateByCycle } from '@/lib/finance';
 
 interface MoneyState {
   accounts: Account[];
@@ -307,10 +308,22 @@ export const useMoneyStore = create<MoneyState>()(
               if (sub.id === matchedSubPayment!.subscriptionId) {
                 const nextDate = new Date(sub.nextPaymentDate);
                 const prevDate = new Date(nextDate);
-                if (sub.billingCycle === 'weekly') prevDate.setDate(prevDate.getDate() - 7);
-                else if (sub.billingCycle === 'monthly') prevDate.setMonth(prevDate.getMonth() - 1);
-                else if (sub.billingCycle === 'quarterly') prevDate.setMonth(prevDate.getMonth() - 3);
-                else if (sub.billingCycle === 'yearly') prevDate.setFullYear(prevDate.getFullYear() - 1);
+                const targetDay = prevDate.getDate();
+                if (sub.billingCycle === 'weekly') {
+                  prevDate.setDate(prevDate.getDate() - 7);
+                } else if (sub.billingCycle === 'monthly') {
+                  prevDate.setDate(1);
+                  prevDate.setMonth(prevDate.getMonth() - 1);
+                  const maxDays = new Date(prevDate.getFullYear(), prevDate.getMonth() + 1, 0).getDate();
+                  prevDate.setDate(Math.min(targetDay, maxDays));
+                } else if (sub.billingCycle === 'quarterly') {
+                  prevDate.setDate(1);
+                  prevDate.setMonth(prevDate.getMonth() - 3);
+                  const maxDays = new Date(prevDate.getFullYear(), prevDate.getMonth() + 1, 0).getDate();
+                  prevDate.setDate(Math.min(targetDay, maxDays));
+                } else if (sub.billingCycle === 'yearly') {
+                  prevDate.setFullYear(prevDate.getFullYear() - 1);
+                }
                 return { ...sub, nextPaymentDate: prevDate.toISOString(), updatedAt: new Date().toISOString() };
               }
               return sub;
@@ -448,13 +461,8 @@ export const useMoneyStore = create<MoneyState>()(
         set((state) => {
           const updatedSubs = state.subscriptions.map((sub) => {
             if (sub.id === payment.subscriptionId) {
-              const nextDate = new Date(sub.nextPaymentDate);
-              const newNext = new Date(nextDate);
-              if (sub.billingCycle === 'weekly') newNext.setDate(newNext.getDate() + 7);
-              else if (sub.billingCycle === 'monthly') newNext.setMonth(newNext.getMonth() + 1);
-              else if (sub.billingCycle === 'quarterly') newNext.setMonth(newNext.getMonth() + 3);
-              else if (sub.billingCycle === 'yearly') newNext.setFullYear(newNext.getFullYear() + 1);
-              return { ...sub, nextPaymentDate: newNext.toISOString() };
+              const newNextIso = advanceDateByCycle(sub.nextPaymentDate, sub.billingCycle);
+              return { ...sub, nextPaymentDate: newNextIso };
             }
             return sub;
           });
@@ -471,12 +479,23 @@ export const useMoneyStore = create<MoneyState>()(
 
           const updatedSubscriptions = state.subscriptions.map((sub) => {
             if (sub.id === payment.subscriptionId) {
-              const nextDate = new Date(sub.nextPaymentDate);
-              const prevDate = new Date(nextDate);
-              if (sub.billingCycle === 'weekly') prevDate.setDate(prevDate.getDate() - 7);
-              else if (sub.billingCycle === 'monthly') prevDate.setMonth(prevDate.getMonth() - 1);
-              else if (sub.billingCycle === 'quarterly') prevDate.setMonth(prevDate.getMonth() - 3);
-              else if (sub.billingCycle === 'yearly') prevDate.setFullYear(prevDate.getFullYear() - 1);
+              const prevDate = new Date(sub.nextPaymentDate);
+              const targetDay = prevDate.getDate();
+              if (sub.billingCycle === 'weekly') {
+                prevDate.setDate(prevDate.getDate() - 7);
+              } else if (sub.billingCycle === 'monthly') {
+                prevDate.setDate(1);
+                prevDate.setMonth(prevDate.getMonth() - 1);
+                const maxDays = new Date(prevDate.getFullYear(), prevDate.getMonth() + 1, 0).getDate();
+                prevDate.setDate(Math.min(targetDay, maxDays));
+              } else if (sub.billingCycle === 'quarterly') {
+                prevDate.setDate(1);
+                prevDate.setMonth(prevDate.getMonth() - 3);
+                const maxDays = new Date(prevDate.getFullYear(), prevDate.getMonth() + 1, 0).getDate();
+                prevDate.setDate(Math.min(targetDay, maxDays));
+              } else if (sub.billingCycle === 'yearly') {
+                prevDate.setFullYear(prevDate.getFullYear() - 1);
+              }
               return { ...sub, nextPaymentDate: prevDate.toISOString(), updatedAt: new Date().toISOString() };
             }
             return sub;

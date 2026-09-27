@@ -49,6 +49,7 @@ export default function SectorsScreen() {
           styles.sectorListItem,
           { borderBottomColor: currColors.border },
         ]}
+        activeOpacity={0.7}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           router.push(`/sector-details/${encodeURIComponent(sName)}`);
@@ -145,8 +146,9 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 20,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.5,
   },
   searchContainer: {
     paddingHorizontal: 16,

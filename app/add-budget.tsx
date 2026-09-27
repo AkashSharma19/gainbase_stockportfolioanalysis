@@ -128,7 +128,9 @@ export default function AddBudgetScreen() {
       import('@/utils/syncEngine').then(({ syncAllData }) => {
         syncAllData().catch((e) => console.warn('Background sync error on budget save:', e));
       });
-    } catch {}
+    } catch (e) {
+      console.warn('Sync dispatch error:', e);
+    }
 
     router.back();
   };
@@ -146,16 +148,16 @@ export default function AddBudgetScreen() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: currColors.background }]} edges={['top']}>
         {/* iOS Clean Header */}
         <View style={[styles.header, { backgroundColor: currColors.background, borderBottomColor: currColors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.cancelButton}>
-            <ThemedText style={[styles.headerButtonText, { color: currColors.tint }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.cancelButton} activeOpacity={0.7}>
+            <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
               Cancel
             </ThemedText>
           </TouchableOpacity>
-          <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+          <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
             Monthly Budgets
           </ThemedText>
-          <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-            <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: currColors.tint }]}>
+          <TouchableOpacity onPress={handleSave} style={styles.saveButton} activeOpacity={0.7}>
+            <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
               Save
             </ThemedText>
           </TouchableOpacity>

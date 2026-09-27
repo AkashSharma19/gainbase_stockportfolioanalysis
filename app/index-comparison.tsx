@@ -146,7 +146,7 @@ export default function IndexComparisonScreen() {
         <View style={styles.header}>
           <BackButton />
           <View>
-            <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+            <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
               Market Benchmark
             </ThemedText>
           </View>
@@ -248,6 +248,8 @@ export default function IndexComparisonScreen() {
               {indices.map((idx: any) => (
                 <TouchableOpacity
                   key={idx.Tickers}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                   style={[
                     styles.benchmarkChip,
                     {
@@ -267,10 +269,10 @@ export default function IndexComparisonScreen() {
                   <ThemedText
                     style={[
                       styles.benchmarkChipText,
-                      { color: currColors.textSecondary },
+                      { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' },
                       defaultIndex === idx.Tickers && {
                         color: theme === 'dark' ? '#000000' : '#FFFFFF',
-                        fontWeight: '600',
+                        fontFamily: 'Outfit_600SemiBold',
                       },
                     ]}
                   >
@@ -301,8 +303,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 20,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.5,
     textAlign: 'center',
   },
   scrollContent: {

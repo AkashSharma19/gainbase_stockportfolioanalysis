@@ -206,7 +206,11 @@ export default function AddLoanScreen() {
       : P;
 
     const endDate = new Date(startDate);
+    const startDay = endDate.getDate();
+    endDate.setDate(1);
     endDate.setMonth(endDate.getMonth() + N);
+    const maxDays = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0).getDate();
+    endDate.setDate(Math.min(startDay, maxDays));
 
     const loanData: Loan = {
       id: editingLoan ? editingLoan.id : Math.random().toString(36).substring(2, 9),
@@ -247,16 +251,16 @@ export default function AddLoanScreen() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: currColors.background }]} edges={['top']}>
         {/* iOS Clean Header */}
         <View style={[styles.header, { backgroundColor: currColors.background, borderBottomColor: currColors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.cancelButton}>
-            <ThemedText style={[styles.headerButtonText, { color: currColors.tint }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.cancelButton} activeOpacity={0.7}>
+            <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
               Cancel
             </ThemedText>
           </TouchableOpacity>
-          <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+          <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
             {editingLoan ? 'Edit Loan & EMI' : 'Add Loan & EMI'}
           </ThemedText>
-          <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-            <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: currColors.tint }]}>
+          <TouchableOpacity onPress={handleSave} style={styles.saveButton} activeOpacity={0.7}>
+            <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
               Save
             </ThemedText>
           </TouchableOpacity>

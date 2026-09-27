@@ -26,6 +26,7 @@ import {
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
+import { BackButton } from '@/components/BackButton';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
@@ -236,6 +237,9 @@ export default function PrepayLoanScreen() {
   if (!loan) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]}>
+        <View style={styles.header}>
+          <BackButton />
+        </View>
         <View style={styles.centered}>
           <ThemedText style={{ color: currColors.textSecondary }}>Loan not found.</ThemedText>
         </View>
@@ -254,16 +258,11 @@ export default function PrepayLoanScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={[styles.backBtn, { backgroundColor: currColors.cardSecondary }]}
-            onPress={() => router.back()}
-          >
-            <ArrowLeft size={20} color={currColors.text} />
-          </TouchableOpacity>
-          <ThemedText style={[styles.headerTitle, { color: currColors.text }]} numberOfLines={1}>
+          <BackButton />
+          <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]} numberOfLines={1}>
             Prepay Loan
           </ThemedText>
-          <View style={{ width: 36 }} />
+          <View style={{ width: 38 }} />
         </View>
 
         <ScrollView

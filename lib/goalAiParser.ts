@@ -1,5 +1,4 @@
 import { GoalCategory, GoalOperator, GoalUnit } from '../types/goals';
-import { GOAL_VARIABLES } from './goalEvaluator';
 
 export interface ParsedAiGoal {
   name: string;
@@ -306,7 +305,7 @@ Respond ONLY with valid JSON matching this schema:
       color: parsed.color || '#00C9A7',
       targetDate: parsed.targetDate,
     };
-  } catch (error) {
+  } catch {
     return parseGoalPromptOffline(cleanPrompt);
   }
 }

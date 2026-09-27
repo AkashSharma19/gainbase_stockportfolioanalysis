@@ -23,8 +23,10 @@ import {
   TrendingUp,
   ShieldCheck,
 } from 'lucide-react-native';
+import Svg, { Circle } from 'react-native-svg';
 
 import { ThemedText } from '@/components/ThemedText';
+import { BackButton } from '@/components/BackButton';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
@@ -371,26 +373,18 @@ export default function MoneyHealthScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: currColors.background }]} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backBtn, { backgroundColor: currColors.cardSecondary }]}
-          onPress={() => {
-            handleHaptic();
-            router.back();
-          }}
-        >
-          <ArrowLeft size={20} color={currColors.text} />
-        </TouchableOpacity>
+        <BackButton />
         <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
           Financial Health
         </ThemedText>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 38 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         {/* Score Radial Grade Banner */}
         <LinearGradient colors={ratingGradient} style={[styles.scoreHeroCard, { borderColor: currColors.border }]}>
           <View style={styles.scoreRow}>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
               <ThemedText style={[styles.scoreLabel, { color: currColors.textSecondary }]}>
                 CASH HEALTH GRADE
               </ThemedText>
@@ -401,10 +395,35 @@ export default function MoneyHealthScreen() {
                 Evaluated from cash flows, outstanding liabilities, and emergency reserves.
               </ThemedText>
             </View>
-            <View style={[styles.gradeCircle, { borderColor: healthData.gradeColor }]}>
-              <ThemedText type="bold" style={[styles.gradeText, { color: healthData.gradeColor }]}>
-                {healthData.grade}
-              </ThemedText>
+
+            {/* Radial SVG Gauge Ring with Grade */}
+            <View style={styles.gradeCircleWrapper}>
+              <Svg width={68} height={68} style={{ transform: [{ rotate: '-90deg' }] }}>
+                <Circle
+                  cx={34}
+                  cy={34}
+                  r={28}
+                  stroke={currColors.cardSecondary}
+                  strokeWidth={5}
+                  fill="none"
+                />
+                <Circle
+                  cx={34}
+                  cy={34}
+                  r={28}
+                  stroke={healthData.gradeColor}
+                  strokeWidth={5}
+                  strokeDasharray={2 * Math.PI * 28}
+                  strokeDashoffset={2 * Math.PI * 28 - (Math.min(100, Math.max(0, healthData.totalScore)) / 100) * (2 * Math.PI * 28)}
+                  strokeLinecap="round"
+                  fill="none"
+                />
+              </Svg>
+              <View style={styles.gradeCenterTextWrapper}>
+                <ThemedText type="bold" style={[styles.gradeText, { color: healthData.gradeColor }]}>
+                  {healthData.grade}
+                </ThemedText>
+              </View>
             </View>
           </View>
         </LinearGradient>
@@ -1051,12 +1070,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 20,
     fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.5,
   },
   backBtn: {
     width: 40,
@@ -1098,16 +1118,20 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginRight: 12,
   },
-  gradeCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 5,
+  gradeCircleWrapper: {
+    width: 68,
+    height: 68,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  gradeCenterTextWrapper: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   gradeText: {
-    fontSize: 26,
+    fontSize: 24,
   },
   sectionHeader: {
     marginBottom: 12,
@@ -1228,7 +1252,7 @@ const styles = StyleSheet.create({
   },
   dividerLight: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(128, 128, 128, 0.15)',
     marginVertical: 6,
   },
 });

@@ -181,8 +181,6 @@ export function calculateProjection(
   let totalInvested = currentVal;
   let currentMonthlySIP = monthlySIP;
 
-  const inflationFactor = isInflationAdjusted ? 1 + inflationRate : 1;
-
   for (let year = 1; year <= years; year++) {
     // Apply returns and SIP for 12 months
     for (let month = 1; month <= 12; month++) {
@@ -276,10 +274,22 @@ export function formatIndianNumber(num: number | string | undefined | null): str
 
 export function advanceDateByCycle(dateStr: string, cycle: 'weekly' | 'monthly' | 'quarterly' | 'yearly'): string {
   const d = new Date(dateStr);
-  if (cycle === 'weekly') d.setDate(d.getDate() + 7);
-  else if (cycle === 'monthly') d.setMonth(d.getMonth() + 1);
-  else if (cycle === 'quarterly') d.setMonth(d.getMonth() + 3);
-  else if (cycle === 'yearly') d.setFullYear(d.getFullYear() + 1);
+  const targetDay = d.getDate();
+  if (cycle === 'weekly') {
+    d.setDate(d.getDate() + 7);
+  } else if (cycle === 'monthly') {
+    d.setDate(1);
+    d.setMonth(d.getMonth() + 1);
+    const maxDays = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(targetDay, maxDays));
+  } else if (cycle === 'quarterly') {
+    d.setDate(1);
+    d.setMonth(d.getMonth() + 3);
+    const maxDays = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(targetDay, maxDays));
+  } else if (cycle === 'yearly') {
+    d.setFullYear(d.getFullYear() + 1);
+  }
   return d.toISOString();
 }
 

@@ -365,12 +365,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   compactScoreNum: {
-    fontSize: 24,
-    fontWeight: '500',
+    fontSize: 22,
+    fontFamily: 'Outfit_500Medium',
   },
   compactScoreLabel: {
     fontSize: 7,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginTop: -2,
@@ -383,7 +383,8 @@ const styles = StyleSheet.create({
   },
   compactGradeText: {
     fontSize: 9,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });

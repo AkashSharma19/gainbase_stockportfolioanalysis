@@ -570,7 +570,7 @@ export function evaluateFormula(formula: string, liveValues: LiveVariableValues)
       return Math.round(result * 100) / 100;
     }
     return 0;
-  } catch (e) {
+  } catch {
     return 0;
   }
 }

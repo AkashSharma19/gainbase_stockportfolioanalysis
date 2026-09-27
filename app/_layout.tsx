@@ -166,7 +166,7 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="sectors"
-            options={{ animation: 'slide_from_right', headerShown: true }}
+            options={{ animation: 'slide_from_right', headerShown: false }}
           />
           <Stack.Screen
             name="sector-details/[sector]"
@@ -234,7 +234,7 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="create-goal"
-            options={{ animation: 'slide_from_right', headerShown: false }}
+            options={{ presentation: 'modal', headerShown: false }}
           />
           <Stack.Screen
             name="custom-goal-formula"
@@ -246,6 +246,10 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="ai-chat"
+            options={{ animation: 'slide_from_right', headerShown: false }}
+          />
+          <Stack.Screen
+            name="cloud-backup"
             options={{ animation: 'slide_from_right', headerShown: false }}
           />
         </Stack>

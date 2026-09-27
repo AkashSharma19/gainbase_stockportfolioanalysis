@@ -64,7 +64,7 @@ export const ActivityCalendar = ({ transactions }: ActivityCalendarProps) => {
           {sellValue > 0 && (
             <ThemedText style={styles.sellText} numberOfLines={1}>
               {isPrivacyMode
-                ? '****'
+                ? '••••••'
                 : `-${sellValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
             </ThemedText>
           )}
@@ -89,7 +89,7 @@ export const ActivityCalendar = ({ transactions }: ActivityCalendarProps) => {
           {buyValue > 0 && (
             <ThemedText style={styles.buyText} numberOfLines={1}>
               {isPrivacyMode
-                ? '****'
+                ? '••••••'
                 : `+${buyValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
             </ThemedText>
           )}

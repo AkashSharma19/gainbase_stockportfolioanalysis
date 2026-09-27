@@ -16,13 +16,13 @@ import {
   Cloud, 
   CloudOff, 
   ArrowLeft, 
-  LogOut, 
-  RefreshCw, 
+  LogOut,
+  RefreshCw,
   Activity,
   Smartphone,
   Layers,
   Trash2,
-  Chrome
+  Chrome,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
@@ -30,6 +30,8 @@ import { supabase } from '../lib/supabase';
 import { syncAllData, wipeCloudData } from '../utils/syncEngine';
 import { useMoneyStore } from '../store/useMoneyStore';
 import { usePortfolioStore } from '../store/usePortfolioStore';
+import { ThemedText } from '@/components/ThemedText';
+import { BackButton } from '@/components/BackButton';
 import Colors from '../constants/Colors';
 
 // Replace these with your actual OAuth Client IDs from Google Cloud Console
@@ -265,134 +267,140 @@ export default function CloudBackupScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: currColors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft size={24} color={currColors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: currColors.text }]}>Cloud Sync & Backup</Text>
-          <View style={{ width: 40 }} />
-        </View>
+        <BackButton />
+        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+          Cloud Sync & Backup
+        </ThemedText>
+        <View style={{ width: 38 }} />
+      </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {isLoggedIn ? (
-            // LOGGED IN VIEW
-            <View style={styles.cardContainer}>
-              <View style={[styles.statusCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                <View style={[styles.iconBox, { backgroundColor: 'rgba(0, 201, 167, 0.15)' }]}>
-                  <Cloud size={32} color="#00C9A7" />
-                </View>
-                <Text style={[styles.statusTitle, { color: currColors.text }]}>Cloud Sync Active</Text>
-                <Text style={[styles.statusSubtitle, { color: currColors.textSecondary }]}>
-                  Connected as: <Text style={{ color: currColors.text, fontWeight: '500' }}>{userEmail}</Text>
-                </Text>
-                
-                <View style={[styles.syncDivider, { backgroundColor: currColors.border }]} />
-
-                <View style={styles.metaRow}>
-                  <Text style={[styles.metaLabel, { color: currColors.textSecondary }]}>Last Synced:</Text>
-                  <Text style={[styles.metaValue, { color: currColors.text }]}>{lastSyncTime}</Text>
-                </View>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {isLoggedIn ? (
+          // LOGGED IN VIEW
+          <View style={styles.cardContainer}>
+            <View style={[styles.statusCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+              <View style={[styles.iconBox, { backgroundColor: 'rgba(0, 201, 167, 0.15)' }]}>
+                <Cloud size={32} color="#00C9A7" />
               </View>
+              <ThemedText type="semiBold" style={[styles.statusTitle, { color: currColors.text }]}>
+                Cloud Sync Active
+              </ThemedText>
+              <ThemedText style={[styles.statusSubtitle, { color: currColors.textSecondary }]}>
+                Connected as: <ThemedText type="medium" style={{ color: currColors.text }}>{userEmail}</ThemedText>
+              </ThemedText>
+              
+              <View style={[styles.syncDivider, { backgroundColor: currColors.border }]} />
 
-              {/* Data Summary Stats */}
-              <View style={[styles.statsCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                <Text style={[styles.sectionTitle, { color: currColors.text }]}>Sync Summary</Text>
-                
-                <View style={styles.statLine}>
-                  <View style={styles.statLineLeft}>
-                    <Layers size={18} color="#007AFF" style={styles.statIcon} />
-                    <Text style={[styles.statLabelText, { color: currColors.text }]}>Money Manager Accounts</Text>
-                  </View>
-                  <Text style={[styles.statValueText, { color: currColors.textSecondary }]}>{accountsCount}</Text>
-                </View>
-
-                <View style={styles.statLine}>
-                  <View style={styles.statLineLeft}>
-                    <Activity size={18} color="#AF52DE" style={styles.statIcon} />
-                    <Text style={[styles.statLabelText, { color: currColors.text }]}>Transactions</Text>
-                  </View>
-                  <Text style={[styles.statValueText, { color: currColors.textSecondary }]}>{txsCount}</Text>
-                </View>
-
-                <View style={styles.statLine}>
-                  <View style={styles.statLineLeft}>
-                    <Smartphone size={18} color="#FF9500" style={styles.statIcon} />
-                    <Text style={[styles.statLabelText, { color: currColors.text }]}>Loans & Subscriptions</Text>
-                  </View>
-                  <Text style={[styles.statValueText, { color: currColors.textSecondary }]}>{loansCount + subsCount}</Text>
-                </View>
-
-                <View style={styles.statLine}>
-                  <View style={styles.statLineLeft}>
-                    <Layers size={18} color="#34C759" style={styles.statIcon} />
-                    <Text style={[styles.statLabelText, { color: currColors.text }]}>Investment Trades</Text>
-                  </View>
-                  <Text style={[styles.statValueText, { color: currColors.textSecondary }]}>{portfolioTxsCount}</Text>
-                </View>
+              <View style={styles.metaRow}>
+                <ThemedText style={[styles.metaLabel, { color: currColors.textSecondary }]}>Last Synced:</ThemedText>
+                <ThemedText type="medium" style={[styles.metaValue, { color: currColors.text }]}>{lastSyncTime}</ThemedText>
               </View>
-
-              <TouchableOpacity
-                style={[styles.syncButton, { backgroundColor: '#00C9A7' }]}
-                onPress={() => triggerSync()}
-                disabled={syncing}
-              >
-                {syncing ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <>
-                    <RefreshCw size={20} color="#FFFFFF" style={styles.buttonIcon} />
-                    <Text style={styles.syncButtonText}>Sync Now</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.logoutButton, { borderColor: currColors.border }]}
-                onPress={handleLogout}
-                disabled={loading}
-              >
-                <LogOut size={20} color="#FF3B30" style={styles.buttonIcon} />
-                <Text style={styles.logoutButtonText}>Disconnect Sync</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.wipeButton, { borderColor: '#FF3B30' }]}
-                onPress={handleWipeCloudData}
-                disabled={loading || syncing}
-              >
-                <Trash2 size={20} color="#FF3B30" style={styles.buttonIcon} />
-                <Text style={styles.wipeButtonText}>Wipe Cloud Backup</Text>
-              </TouchableOpacity>
             </View>
-          ) : (
-            // GOOGLE SIGN IN ONLY
-            <View style={styles.authContainer}>
-              <View style={styles.iconContainer}>
-                <CloudOff size={60} color={currColors.textSecondary} />
-              </View>
-              <Text style={[styles.authTitle, { color: currColors.text }]}>Cloud Sync Offline</Text>
-              <Text style={[styles.authSubtitle, { color: currColors.textSecondary }]}>
-                Sign in with Google to save your portfolio, accounts, and budgets safely in the cloud and sync them across devices.
-              </Text>
 
-              <TouchableOpacity
-                style={[styles.googleButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border, width: '100%', marginTop: 10 }]}
-                onPress={handleGoogleSignIn}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color={currColors.text} size="small" />
-                ) : (
-                  <>
-                    <Chrome size={20} color={currColors.text} style={styles.googleIcon} />
-                    <Text style={[styles.googleButtonText, { color: currColors.text }]}>
-                      Continue with Google
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
+            {/* Data Summary Stats */}
+            <View style={[styles.statsCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+              <ThemedText type="semiBold" style={[styles.sectionTitle, { color: currColors.text }]}>Sync Summary</ThemedText>
+              
+              <View style={styles.statLine}>
+                <View style={styles.statLineLeft}>
+                  <Layers size={18} color="#007AFF" style={styles.statIcon} />
+                  <ThemedText style={[styles.statLabelText, { color: currColors.text }]}>Money Manager Accounts</ThemedText>
+                </View>
+                <ThemedText type="medium" style={[styles.statValueText, { color: currColors.textSecondary }]}>{accountsCount}</ThemedText>
+              </View>
+
+              <View style={styles.statLine}>
+                <View style={styles.statLineLeft}>
+                  <Activity size={18} color="#AF52DE" style={styles.statIcon} />
+                  <ThemedText style={[styles.statLabelText, { color: currColors.text }]}>Transactions</ThemedText>
+                </View>
+                <ThemedText type="medium" style={[styles.statValueText, { color: currColors.textSecondary }]}>{txsCount}</ThemedText>
+              </View>
+
+              <View style={styles.statLine}>
+                <View style={styles.statLineLeft}>
+                  <Smartphone size={18} color="#FF9500" style={styles.statIcon} />
+                  <ThemedText style={[styles.statLabelText, { color: currColors.text }]}>Loans & Subscriptions</ThemedText>
+                </View>
+                <ThemedText type="medium" style={[styles.statValueText, { color: currColors.textSecondary }]}>{loansCount + subsCount}</ThemedText>
+              </View>
+
+              <View style={styles.statLine}>
+                <View style={styles.statLineLeft}>
+                  <Layers size={18} color="#34C759" style={styles.statIcon} />
+                  <ThemedText style={[styles.statLabelText, { color: currColors.text }]}>Investment Trades</ThemedText>
+                </View>
+                <ThemedText type="medium" style={[styles.statValueText, { color: currColors.textSecondary }]}>{portfolioTxsCount}</ThemedText>
+              </View>
             </View>
-          )}
-        </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.syncButton, { backgroundColor: '#00C9A7' }]}
+              onPress={() => triggerSync()}
+              disabled={syncing}
+              activeOpacity={0.8}
+            >
+              {syncing ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <RefreshCw size={18} color="#FFFFFF" style={styles.buttonIcon} />
+                  <ThemedText type="semiBold" style={styles.syncButtonText}>Sync Now</ThemedText>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.logoutButton, { borderColor: currColors.border, backgroundColor: currColors.cardSecondary }]}
+              onPress={handleLogout}
+              disabled={loading}
+              activeOpacity={0.7}
+            >
+              <LogOut size={18} color="#FF3B30" style={styles.buttonIcon} />
+              <ThemedText type="semiBold" style={styles.logoutButtonText}>Disconnect Sync</ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.wipeButton, { borderColor: '#FF3B30', backgroundColor: 'rgba(255, 59, 48, 0.06)' }]}
+              onPress={handleWipeCloudData}
+              disabled={loading || syncing}
+              activeOpacity={0.7}
+            >
+              <Trash2 size={18} color="#FF3B30" style={styles.buttonIcon} />
+              <ThemedText type="semiBold" style={styles.wipeButtonText}>Wipe Cloud Backup</ThemedText>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          // GOOGLE SIGN IN ONLY
+          <View style={styles.authContainer}>
+            <View style={styles.iconContainer}>
+              <CloudOff size={60} color={currColors.textSecondary} />
+            </View>
+            <ThemedText type="semiBold" style={[styles.authTitle, { color: currColors.text }]}>Cloud Sync Offline</ThemedText>
+            <ThemedText style={[styles.authSubtitle, { color: currColors.textSecondary }]}>
+              Sign in with Google to save your portfolio, accounts, and budgets safely in the cloud and sync them across devices.
+            </ThemedText>
+
+            <TouchableOpacity
+              style={[styles.googleButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border, width: '100%', marginTop: 10 }]}
+              onPress={handleGoogleSignIn}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color={currColors.text} size="small" />
+              ) : (
+                <>
+                  <Chrome size={20} color={currColors.text} style={styles.googleIcon} />
+                  <ThemedText type="semiBold" style={[styles.googleButtonText, { color: currColors.text }]}>
+                    Continue with Google
+                  </ThemedText>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }

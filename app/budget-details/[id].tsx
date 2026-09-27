@@ -20,6 +20,7 @@ import {
 import { PieChart } from 'react-native-gifted-charts';
 
 import { ThemedText } from '@/components/ThemedText';
+import { BackButton } from '@/components/BackButton';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
@@ -89,7 +90,7 @@ export default function BudgetDetailsScreen() {
   }, [budget, moneyTransactions, selectedYear, selectedMonth]);
 
   const formatAmount = (val: number) => {
-    if (isPrivacyMode) return '****';
+    if (isPrivacyMode) return '••••••';
     const formatted = Math.abs(val).toLocaleString('en-IN', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
@@ -154,7 +155,7 @@ export default function BudgetDetailsScreen() {
       return {
         value: val,
         color: c.color,
-        text: isPrivacyMode ? '****' : `${c.name}: ${formatAmount(val)}`,
+        text: isPrivacyMode ? '••••••' : `${c.name}: ${formatAmount(val)}`,
       };
     });
   }, [spendingDetails, isPrivacyMode]);
@@ -170,6 +171,9 @@ export default function BudgetDetailsScreen() {
   if (!budget) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]}>
+        <View style={styles.header}>
+          <BackButton />
+        </View>
         <View style={styles.centered}>
           <ThemedText style={{ color: currColors.textSecondary }}>Budget not found.</ThemedText>
         </View>
@@ -183,13 +187,8 @@ export default function BudgetDetailsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backBtn, { backgroundColor: currColors.cardSecondary }]}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft size={20} color={currColors.text} />
-        </TouchableOpacity>
-        <ThemedText style={[styles.headerTitle, { color: currColors.text }]} numberOfLines={1}>
+        <BackButton />
+        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]} numberOfLines={1}>
           {budget.name} Details
         </ThemedText>
         <View style={styles.headerRight}>
@@ -410,9 +409,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
   },

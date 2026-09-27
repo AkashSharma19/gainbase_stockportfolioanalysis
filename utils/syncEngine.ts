@@ -28,16 +28,6 @@ function ensureTimestamp(val: any, fallback: string = new Date().toISOString()):
   return d.toISOString();
 }
 
-function ensureOptionalTimestamp(val: any): string | null {
-  if (!val || typeof val !== 'string' || val.trim() === '') {
-    return null;
-  }
-  const d = new Date(val);
-  if (isNaN(d.getTime())) {
-    return null;
-  }
-  return d.toISOString();
-}
 
 /**
  * Content fingerprint generators for reliable deduplication across local and cloud

@@ -77,7 +77,7 @@ const DEFAULT_GOALS: FinancialGoal[] = [
 
 export const useGoalStore = create<GoalState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       goals: DEFAULT_GOALS,
       draftCustomFormula: null,
 

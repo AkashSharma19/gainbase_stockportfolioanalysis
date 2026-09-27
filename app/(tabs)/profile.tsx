@@ -1402,7 +1402,7 @@ export default function ProfileScreen() {
             <View style={styles.statsBar}>
               <View style={styles.statItem}>
                 <ThemedText style={[styles.statValue, { color: currColors.text }]}>
-                  {isPrivacyMode ? '****' : transactions.length}
+                  {isPrivacyMode ? '••••••' : transactions.length}
                 </ThemedText>
                 <ThemedText
                   style={[
@@ -1416,7 +1416,7 @@ export default function ProfileScreen() {
               <View style={styles.statItem}>
                 <ThemedText style={[styles.statValue, { color: currColors.text }]}>
                   {isPrivacyMode
-                    ? '****'
+                    ? '••••••'
                     : `${showCurrencySymbol ? '₹' : ''}${summary.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
                 </ThemedText>
                 <ThemedText

@@ -250,16 +250,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 20,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.5,
   },
   content: {
     flex: 1,
     padding: 16,
   },
   section: {
-    borderRadius: 24,
-    padding: 20,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
   },
   settingRow: {

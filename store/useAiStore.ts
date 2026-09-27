@@ -51,11 +51,15 @@ export interface AiMoneyInsight {
   id: string;
   type: 'warning' | 'tip' | 'success';
   title: string;
+  subtitle?: string;
+  badge?: string;
+  value?: string;
   message: string;
   actionLabel: string;
   actionPath: string;
   metric?: string;
   icon?: string;
+  color?: string;
 }
 
 interface AiState {

@@ -232,7 +232,7 @@ export default function AnalyticsScreen() {
       return {
         value: item.percentage,
         color: color,
-        text: isPrivacyMode ? '****' : `${item.percentage.toFixed(2)}%`,
+        text: isPrivacyMode ? '••••••' : `${item.percentage.toFixed(2)}%`,
         label: item.name,
         onPress: () => handlePiePress(item, index),
         focused: focusedIndex === index,
@@ -701,7 +701,7 @@ export default function AnalyticsScreen() {
                             ]}
                           >
                             {isPrivacyMode
-                              ? '****'
+                              ? '••••••'
                               : `${showCurrencySymbol ? '₹' : ''}${item.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
                           </ThemedText>
                           <ThemedText
@@ -711,7 +711,7 @@ export default function AnalyticsScreen() {
                             ]}
                           >
                             {isPrivacyMode
-                              ? '****'
+                              ? '••••••'
                               : `${showCurrencySymbol ? '₹' : ''}${item.totalCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
                           </ThemedText>
                         </>
@@ -725,7 +725,7 @@ export default function AnalyticsScreen() {
                             ]}
                           >
                             {isPrivacyMode
-                              ? '****'
+                              ? '••••••'
                               : `${item.pnl >= 0 ? '+' : '-'}${showCurrencySymbol ? '₹' : ''}${Math.abs(item.pnl).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
                           </ThemedText>
                           <ThemedText
@@ -735,7 +735,7 @@ export default function AnalyticsScreen() {
                             ]}
                           >
                             {isPrivacyMode
-                              ? '****'
+                              ? '••••••'
                               : `${item.pnl >= 0 ? '+' : ''}${item.pnlPercentage.toFixed(2)}%`}
                           </ThemedText>
                         </>
@@ -749,7 +749,7 @@ export default function AnalyticsScreen() {
                             ]}
                           >
                             {isPrivacyMode
-                              ? '****'
+                              ? '••••••'
                               : `${item.percentage.toFixed(2)}%`}
                           </ThemedText>
                           <ThemedText
@@ -759,7 +759,7 @@ export default function AnalyticsScreen() {
                             ]}
                           >
                             {isPrivacyMode
-                              ? '****'
+                              ? '••••••'
                               : `${showCurrencySymbol ? '₹' : ''}${item.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
                           </ThemedText>
                         </>
@@ -780,7 +780,7 @@ export default function AnalyticsScreen() {
                             ]}
                           >
                             {isPrivacyMode
-                              ? '****'
+                              ? '••••••'
                               : item.xirr !== undefined && isFinite(item.xirr)
                                 ? `${item.xirr >= 0 ? '+' : ''}${item.xirr.toFixed(2)}%`
                                 : 'N/A'}
@@ -792,7 +792,7 @@ export default function AnalyticsScreen() {
                             ]}
                           >
                             {isPrivacyMode
-                              ? '****'
+                              ? '••••••'
                               : `${item.pnl >= 0 ? '+' : '-'}${showCurrencySymbol ? '₹' : ''}${Math.abs(item.pnl).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
                           </ThemedText>
                         </>
@@ -1033,16 +1033,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   contributionProgressBarContainer: {
-    height: 3,
+    height: 5,
     backgroundColor: '#2C2C2E',
-    borderRadius: 1.5,
+    borderRadius: 2.5,
     marginTop: 14,
     marginHorizontal: 0,
     overflow: 'hidden',
   },
   contributionProgressBarFill: {
     height: '100%',
-    borderRadius: 1.5,
+    borderRadius: 2.5,
   },
   heatmapContainer: {
     width: SCREEN_WIDTH - 64,

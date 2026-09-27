@@ -31,6 +31,7 @@ import {
 import * as LucideIcons from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
+import { BackButton } from '@/components/BackButton';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
@@ -233,19 +234,11 @@ export default function ManageCategoriesScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backBtn, { backgroundColor: currColors.cardSecondary }]}
-          onPress={() => {
-            handleHaptic();
-            router.back();
-          }}
-        >
-          <ArrowLeft size={20} color={currColors.text} />
-        </TouchableOpacity>
+        <BackButton />
         <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
           Manage Categories
         </ThemedText>
-        <TouchableOpacity style={[styles.addBtn, { backgroundColor: '#00C9A7' }]} onPress={openCreateModal}>
+        <TouchableOpacity style={[styles.addBtn, { backgroundColor: '#00C9A7' }]} onPress={openCreateModal} activeOpacity={0.8}>
           <Plus size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -637,12 +630,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 20,
     fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.5,
   },
   backBtn: {
     width: 40,

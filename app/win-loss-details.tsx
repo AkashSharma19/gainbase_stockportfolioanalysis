@@ -120,7 +120,7 @@ export default function WinLossDetailsScreen() {
             WIN RATE
           </ThemedText>
           <ThemedText style={[styles.heroValue, { color: currColors.text }]}>
-            {isPrivacyMode ? '****' : `${stats.winRate.toFixed(2)}%`}
+            {isPrivacyMode ? '••••••' : `${stats.winRate.toFixed(2)}%`}
           </ThemedText>
 
           {/* Progress Bar */}
@@ -161,11 +161,11 @@ export default function WinLossDetailsScreen() {
                 Winners
               </ThemedText>
               <ThemedText style={[styles.summaryValue, { color: '#4CAF50' }]}>
-                {isPrivacyMode ? '****' : stats.winners}
+                {isPrivacyMode ? '••••••' : stats.winners}
               </ThemedText>
               <ThemedText style={[styles.summaryAmount, { color: '#4CAF50' }]}>
                 {isPrivacyMode
-                  ? '****'
+                  ? '••••••'
                   : `+${showCurrencySymbol ? '₹' : ''}${formatCompactValue(stats.winnersProfit)}`}
               </ThemedText>
             </View>
@@ -185,11 +185,11 @@ export default function WinLossDetailsScreen() {
                 Losers
               </ThemedText>
               <ThemedText style={[styles.summaryValue, { color: '#F44336' }]}>
-                {isPrivacyMode ? '****' : stats.losers}
+                {isPrivacyMode ? '••••••' : stats.losers}
               </ThemedText>
               <ThemedText style={[styles.summaryAmount, { color: '#F44336' }]}>
                 {isPrivacyMode
-                  ? '****'
+                  ? '••••••'
                   : `-${showCurrencySymbol ? '₹' : ''}${formatCompactValue(Math.abs(stats.losersLoss))}`}
               </ThemedText>
             </View>
@@ -329,7 +329,7 @@ export default function WinLossDetailsScreen() {
                       ]}
                     >
                       {isPrivacyMode
-                        ? '****'
+                        ? '••••••'
                         : `${showCurrencySymbol ? '₹' : ''}${formatCompactValue(holding.currentValue)}`}
                     </ThemedText>
                   </View>
@@ -337,7 +337,7 @@ export default function WinLossDetailsScreen() {
                 <View style={styles.holdingRight}>
                   <ThemedText style={[styles.pnlAmount, { color: currentColor }]}>
                     {isPrivacyMode
-                      ? '****'
+                      ? '••••••'
                       : `${activeTab === 'winners' ? '+' : '-'}${showCurrencySymbol ? '₹' : ''}${formatValue(Math.abs(holding.pnl))}`}
                   </ThemedText>
                   <View
@@ -355,7 +355,7 @@ export default function WinLossDetailsScreen() {
                       style={[styles.percentageText, { color: currentColor }]}
                     >
                       {isPrivacyMode
-                        ? '**'
+                        ? '••••••'
                         : `${activeTab === 'winners' ? '+' : ''}${holding.pnlPercentage.toFixed(2)}%`}
                     </ThemedText>
                   </View>
@@ -393,45 +393,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 20,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.5,
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 40,
   },
   heroCard: {
-    borderRadius: 24,
-    padding: 32,
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 1,
-    marginBottom: 32,
+    marginBottom: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroLabel: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
     marginBottom: 8,
     textTransform: 'uppercase',
   },
   heroValue: {
     fontSize: 32,
-    fontWeight: '400',
-    marginBottom: 20,
+    fontFamily: 'Outfit_600SemiBold',
+    marginBottom: 16,
     letterSpacing: -0.5,
   },
   barContainer: {
     flexDirection: 'row',
     height: 8,
-    width: '100%',
-    marginBottom: 20,
     borderRadius: 4,
     overflow: 'hidden',
+    width: '100%',
+    marginBottom: 16,
   },
   barsection: {
     height: '100%',

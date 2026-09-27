@@ -16,7 +16,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HealthGauge } from '@/components/HealthGauge';
 import { HealthDetailCard } from '@/components/HealthDetailCard';
-import { LucideIcon, Info, TrendingUp, Sparkles, Target } from 'lucide-react-native';
+import { LucideIcon, Info, TrendingUp, Sparkles, Target, Activity } from 'lucide-react-native';
 
 export default function PortfolioHealthScreen() {
   const router = useRouter();
@@ -24,9 +24,7 @@ export default function PortfolioHealthScreen() {
   const c = Colors[theme];
   const health = usePortfolioHealth();
 
-  if (health.isEmpty) return null;
-
-  const { totalScore, grade, gradeColor, dimensions, summary } = health;
+  const { totalScore, grade, gradeColor, dimensions, summary, isEmpty } = health;
 
   return (
     <SafeAreaView
@@ -35,17 +33,44 @@ export default function PortfolioHealthScreen() {
     >
       <View style={[styles.header, { backgroundColor: c.background }]}>
         <BackButton />
-        <ThemedText style={[styles.headerTitle, { color: c.text }]}>
+        <ThemedText type="semiBold" style={[styles.headerTitle, { color: c.text }]}>
           Portfolio Health
         </ThemedText>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 38 }} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces={true}
-      >
+      {isEmpty ? (
+        <View style={styles.emptyContainer}>
+          <View style={[styles.emptyCard, { backgroundColor: c.card, borderColor: c.border }]}>
+            <View style={[styles.emptyIconBox, { backgroundColor: c.cardSecondary }]}>
+              <Activity size={32} color="#0A84FF" />
+            </View>
+            <ThemedText type="semiBold" style={[styles.emptyTitle, { color: c.text }]}>
+              No Holdings Tracked Yet
+            </ThemedText>
+            <ThemedText style={[styles.emptySubtitle, { color: c.textSecondary }]}>
+              Add investments and stock transactions to unlock comprehensive portfolio health grading, diversification scoring, and risk analytics.
+            </ThemedText>
+            <TouchableOpacity
+              style={[styles.emptyActionButton, { backgroundColor: '#0A84FF' }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push('/add-transaction');
+              }}
+              activeOpacity={0.8}
+            >
+              <ThemedText type="semiBold" style={styles.emptyActionText}>
+                + Add Transaction
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={true}
+        >
         <HealthGauge score={totalScore} gradeColor={gradeColor} grade={grade} />
 
         <View style={[styles.summaryCard, { backgroundColor: c.card, borderColor: c.border }]}>
@@ -91,6 +116,7 @@ export default function PortfolioHealthScreen() {
           </ThemedText>
         </TouchableOpacity>
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -170,5 +196,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     textDecorationLine: 'underline',
+  },
+  emptyContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 40,
+  },
+  emptyCard: {
+    width: '100%',
+    padding: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    borderStyle: 'dashed',
+  },
+  emptyIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 10,
+  },
+  emptyActionButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  emptyActionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
   },
 });

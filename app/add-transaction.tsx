@@ -175,7 +175,9 @@ export default function AddTransactionScreen() {
   }, [transactions]);
 
   const handleSave = () => {
-    if (!symbol || !quantity || price === '' || isOverselling) return;
+    const q = parseFloat(quantity);
+    const p = parseIndianAmount(price);
+    if (!symbol || isNaN(q) || q <= 0 || isNaN(p) || p <= 0 || isOverselling) return;
 
     const transactionData = {
       id: editingTransaction
@@ -275,20 +277,21 @@ export default function AddTransactionScreen() {
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.cancelButton}
+            activeOpacity={0.7}
           >
-            <ThemedText style={[styles.headerButtonText, { color: currColors.tint }]}>
+            <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
               Cancel
             </ThemedText>
           </TouchableOpacity>
-          <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+          <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
             {editingTransaction ? 'Edit Transaction' : 'Add Transaction'}
           </ThemedText>
-          <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
+          <TouchableOpacity onPress={handleSave} style={styles.saveButton} activeOpacity={0.7}>
             <ThemedText
               style={[
                 styles.headerButtonText,
                 styles.saveButtonText,
-                { color: currColors.tint },
+                { color: '#0A84FF', fontFamily: 'Outfit_600SemiBold' },
               ]}
             >
               Save

@@ -897,6 +897,28 @@ export default function ExploreScreen() {
                           ? `No stocks found for "${searchQuery}"`
                           : 'Your watchlist is empty.\nSearch for companies to add them.'}
                       </ThemedText>
+                      {!searchQuery && (
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            router.push('/sectors');
+                          }}
+                          style={{
+                            paddingHorizontal: 18,
+                            paddingVertical: 10,
+                            borderRadius: 20,
+                            backgroundColor: currColors.cardSecondary,
+                            borderWidth: 1,
+                            borderColor: currColors.border,
+                            marginTop: 4,
+                          }}
+                        >
+                          <ThemedText type="semiBold" style={{ color: currColors.tint, fontSize: 13 }}>
+                            Explore All Sectors
+                          </ThemedText>
+                        </TouchableOpacity>
+                      )}
                     </>
                   )}
                 </View>

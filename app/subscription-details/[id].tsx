@@ -29,6 +29,7 @@ import {
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
+import { BackButton } from '@/components/BackButton';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
@@ -318,13 +319,8 @@ interface ScheduleRow {
           text: 'Confirm',
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            const today = new Date();
-            const nextDate = new Date(today);
-            if (subscription.billingCycle === 'weekly') nextDate.setDate(today.getDate() + 7);
-            else if (subscription.billingCycle === 'monthly') nextDate.setMonth(today.getMonth() + 1);
-            else if (subscription.billingCycle === 'quarterly') nextDate.setMonth(today.getMonth() + 3);
-            else if (subscription.billingCycle === 'yearly') nextDate.setFullYear(today.getFullYear() + 1);
-            updateSubscription(subscription.id, { isActive: true, nextPaymentDate: nextDate.toISOString() });
+            const nextDateIso = advanceDateByCycle(new Date().toISOString(), subscription.billingCycle);
+            updateSubscription(subscription.id, { isActive: true, nextPaymentDate: nextDateIso });
           },
         },
       ]
@@ -334,6 +330,9 @@ interface ScheduleRow {
   if (!subscription) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]}>
+        <View style={styles.header}>
+          <BackButton />
+        </View>
         <View style={styles.centered}>
           <ThemedText style={{ color: currColors.textSecondary }}>Subscription not found.</ThemedText>
         </View>
@@ -368,13 +367,8 @@ interface ScheduleRow {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backBtn, { backgroundColor: currColors.cardSecondary }]}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft size={20} color={currColors.text} />
-        </TouchableOpacity>
-        <ThemedText style={[styles.headerTitle, { color: currColors.text }]} numberOfLines={1}>
+        <BackButton />
+        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]} numberOfLines={1}>
           {subscription.name}
         </ThemedText>
         <View style={styles.headerRight}>
@@ -839,9 +833,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -22,6 +22,7 @@ import {
   Trash2,
   Sparkles,
 } from 'lucide-react-native';
+import { BackButton } from '@/components/BackButton';
 
 import { ThemedText } from '../components/ThemedText';
 import Colors from '../constants/Colors';
@@ -335,18 +336,12 @@ export default function GoalsScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
       {/* Header Matching Gainbase Patterns */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: currColors.cardSecondary }]}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <ArrowLeft size={20} color={currColors.text} />
-        </TouchableOpacity>
+        <BackButton />
         <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
           Financial Goals
         </ThemedText>
         <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: currColors.cardSecondary }]}
+          style={[styles.addBtn, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}
           onPress={openAddModal}
           activeOpacity={0.7}
         >
@@ -524,13 +519,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 20,
     fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.5,
   },
   addBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -568,13 +564,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   progressBackground: {
-    height: 3.5,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 2.5,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 2.5,
   },
   dashedDivider: {
     borderBottomWidth: 1,
@@ -695,19 +691,19 @@ const styles = StyleSheet.create({
   // Segmented Progress Track
   segmentedProgressRow: {
     flexDirection: 'row',
-    gap: 3,
-    height: 3,
-    marginTop: 2,
+    gap: 4,
+    height: 5,
+    marginTop: 4,
   },
   segmentTrack: {
     flex: 1,
-    height: 3,
-    borderRadius: 1.5,
+    height: 5,
+    borderRadius: 2.5,
     overflow: 'hidden',
   },
   segmentFill: {
     height: '100%',
-    borderRadius: 1.5,
+    borderRadius: 2.5,
   },
 
   // Swipe Actions

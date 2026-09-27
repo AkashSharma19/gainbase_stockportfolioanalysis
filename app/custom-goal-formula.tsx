@@ -32,6 +32,7 @@ import {
 } from 'lucide-react-native';
 
 import { ThemedText } from '../components/ThemedText';
+import { BackButton } from '@/components/BackButton';
 import Colors from '../constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useGoalStore } from '../store/useGoalStore';
@@ -257,15 +258,9 @@ export default function CustomGoalFormulaScreen() {
 
       {/* Screen Header */}
       <View style={[styles.header, { borderBottomColor: currColors.border }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.headerBtn}
-          activeOpacity={0.7}
-        >
-          <ArrowLeft size={22} color={currColors.text} />
-        </TouchableOpacity>
+        <BackButton />
 
-        <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
           Custom Formula Studio
         </ThemedText>
 

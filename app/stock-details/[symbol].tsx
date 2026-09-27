@@ -308,9 +308,32 @@ export default function StockDetailsScreen() {
               </ThemedText>
             </View>
           ) : (
-            <ThemedText style={[styles.errorText, { color: currColors.text }]}>
-              Company details not found
-            </ThemedText>
+            <View style={{ alignItems: 'center', gap: 16 }}>
+              <ThemedText style={[styles.errorText, { color: currColors.text }]}>
+                Company details not found
+              </ThemedText>
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  if (symbol) {
+                    setIsHydrating(true);
+                    fetchSingleTicker(symbol).finally(() => setIsHydrating(false));
+                  }
+                }}
+                style={{
+                  paddingHorizontal: 20,
+                  paddingVertical: 10,
+                  borderRadius: 20,
+                  backgroundColor: currColors.cardSecondary,
+                  borderWidth: 1,
+                  borderColor: currColors.border,
+                }}
+              >
+                <ThemedText type="semiBold" style={{ color: currColors.tint, fontSize: 13 }}>
+                  Retry
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </SafeAreaView>
@@ -330,6 +353,7 @@ export default function StockDetailsScreen() {
         <BackButton />
         <View style={styles.headerTitle}>
           <ThemedText
+            type="semiBold"
             style={[styles.companyNameText, { color: currColors.text }]}
             numberOfLines={2}
           >
@@ -431,7 +455,7 @@ export default function StockDetailsScreen() {
                 </View>
                 <ThemedText style={[styles.heroValue, { color: currColors.text, marginBottom: 0 }]}>
                   {isPrivacyMode
-                    ? '****'
+                    ? '••••••'
                     : `${showCurrencySymbol ? '₹' : ''}${(holding.quantity > 0 ? holding.currentValue : holding.currentPrice).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                 </ThemedText>
               </View>
@@ -480,7 +504,7 @@ export default function StockDetailsScreen() {
                 ]}
               >
                 {isPrivacyMode
-                  ? '****'
+                  ? '••••••'
                   : `${holding.dayChange >= 0 ? '+' : ''}${showCurrencySymbol ? '₹' : ''}${Math.abs(holding.quantity > 0 ? holding.dayChange : holding.dayChange).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} (${Math.abs(holding.dayChangePercentage).toFixed(2)}%)`}
               </ThemedText>
             </View>
@@ -508,7 +532,7 @@ export default function StockDetailsScreen() {
                   ]}
                 >
                   {isPrivacyMode
-                    ? '****'
+                    ? '••••••'
                     : `${holding.pnl >= 0 ? '+' : '-'}${showCurrencySymbol ? '₹' : ''}${Math.abs(holding.pnl).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} (${Math.abs(holding.pnlPercentage).toFixed(2)}%)`}
                 </ThemedText>
               </View>
@@ -532,7 +556,7 @@ export default function StockDetailsScreen() {
                     ]}
                   >
                     {isPrivacyMode
-                      ? '****'
+                      ? '••••••'
                       : `${showCurrencySymbol ? '₹' : ''}${holding.investedValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                   </ThemedText>
                 </View>
@@ -595,7 +619,7 @@ export default function StockDetailsScreen() {
                     ]}
                   >
                     {isPrivacyMode
-                      ? '****'
+                      ? '••••••'
                       : `${showCurrencySymbol ? '₹' : ''}${holding.avgPrice.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                   </ThemedText>
                 </View>
@@ -902,7 +926,7 @@ export default function StockDetailsScreen() {
                       style={[styles.historyValue, { color: currColors.text }]}
                     >
                       {isPrivacyMode
-                        ? '****'
+                        ? '••••••'
                         : `${showCurrencySymbol ? '₹' : ''}${(item.quantity * item.price).toLocaleString()}`}
                     </ThemedText>
                     <ThemedText
@@ -912,7 +936,7 @@ export default function StockDetailsScreen() {
                       ]}
                     >
                       Qty: {item.quantity} @{' '}
-                      {isPrivacyMode ? '****' : item.price.toLocaleString()}
+                      {isPrivacyMode ? '••••••' : item.price.toLocaleString()}
                     </ThemedText>
                   </View>
                 </TouchableOpacity>
@@ -1041,7 +1065,6 @@ const styles = StyleSheet.create({
   companyNameText: {
     color: '#FFF',
     fontSize: 17,
-    fontWeight: '600',
     textAlign: 'center',
   },
   scrollContent: {
@@ -1234,14 +1257,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rangeTrack: {
-    height: 4,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 2.5,
     width: '100%',
-    backgroundColor: '#333',
   },
   rangeFill: {
-    height: 4,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 2.5,
     position: 'absolute',
     left: 0,
   },

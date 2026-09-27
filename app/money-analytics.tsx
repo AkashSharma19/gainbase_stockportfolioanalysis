@@ -17,7 +17,6 @@ import {
   Calendar,
   Check,
 } from 'lucide-react-native';
-import { PieChart } from 'react-native-gifted-charts';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -133,6 +132,7 @@ export default function MoneyAnalyticsScreen() {
     handleHaptic();
     setFocusedCategory(null);
     const newDate = new Date(selectedDate);
+    newDate.setDate(1);
     if (timeFrame === 'month') {
       newDate.setMonth(newDate.getMonth() - 1);
     } else if (timeFrame === 'quarter') {
@@ -147,6 +147,7 @@ export default function MoneyAnalyticsScreen() {
     handleHaptic();
     setFocusedCategory(null);
     const newDate = new Date(selectedDate);
+    newDate.setDate(1);
     if (timeFrame === 'month') {
       newDate.setMonth(newDate.getMonth() + 1);
     } else if (timeFrame === 'quarter') {
@@ -247,31 +248,6 @@ export default function MoneyAnalyticsScreen() {
     return { list, totalAmount };
   }, [periodTransactions, currentCategoryType, categoryMetadata, sortBy]);
 
-  // ─── Gifted Charts Pie Data ───
-  const pieChartData = useMemo(() => {
-    if (categoryData.list.length === 0) {
-      return [{ value: 1, color: currColors.cardSecondary, text: 'No Data' }];
-    }
-
-    return categoryData.list.map((item) => {
-      const isFocused = focusedCategory === item.name;
-      return {
-        value: item.amount,
-        color: item.color,
-        text: item.name,
-        focused: isFocused,
-        strokeWidth: isFocused ? 3 : 0,
-        strokeColor: '#FFFFFF',
-      };
-    });
-  }, [categoryData.list, focusedCategory, currColors]);
-
-  // Active focused item metadata for Pie center
-  const activeFocusedItem = useMemo(() => {
-    if (!focusedCategory) return null;
-    return categoryData.list.find((c) => c.name === focusedCategory) || null;
-  }, [focusedCategory, categoryData.list]);
-
   // ─── 12-Month Trend Aggregation ───
   const monthlyTrends = useMemo(() => {
     const list: {
@@ -338,10 +314,12 @@ export default function MoneyAnalyticsScreen() {
 
       {/* ─── Top Header ─── */}
       <View style={styles.header}>
-        <BackButton />
-        <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
-          Money Analytics
-        </ThemedText>
+        <View style={styles.headerLeft}>
+          <BackButton />
+          <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+            Money Analytics
+          </ThemedText>
+        </View>
         <TouchableOpacity
           style={[styles.timeframePill, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}
           onPress={() => {
@@ -349,6 +327,7 @@ export default function MoneyAnalyticsScreen() {
             setShowTimeframeModal(true);
           }}
           activeOpacity={0.7}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
           <Calendar size={13} color="#00C9A7" />
           <ThemedText style={[styles.timeframePillText, { color: currColors.text }]}>
@@ -361,30 +340,31 @@ export default function MoneyAnalyticsScreen() {
         {/* ─── Period Navigator Banner (When Not All-Time) ─── */}
         {timeFrame !== 'all' && (
           <View style={[styles.periodNavigator, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            <TouchableOpacity onPress={handlePrevPeriod} style={styles.navArrowBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity onPress={handlePrevPeriod} style={styles.navArrowBtn} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <ChevronLeft size={20} color={currColors.text} />
             </TouchableOpacity>
             <View style={{ alignItems: 'center' }}>
-              <ThemedText style={[styles.periodNavLabel, { color: currColors.text }]}>
+              <ThemedText type="semiBold" style={[styles.periodNavLabel, { color: currColors.text }]}>
                 {timeframeLabel}
               </ThemedText>
               <ThemedText style={[styles.periodNavSubtitle, { color: currColors.textSecondary }]}>
                 {overviewMetrics.txCount} {overviewMetrics.txCount === 1 ? 'transaction' : 'transactions'}
               </ThemedText>
             </View>
-            <TouchableOpacity onPress={handleNextPeriod} style={styles.navArrowBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity onPress={handleNextPeriod} style={styles.navArrowBtn} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <ChevronRight size={20} color={currColors.text} />
             </TouchableOpacity>
           </View>
         )}
 
         {/* ─── 3 Simplified Primary Tabs (Expense / Income / Surplus) ─── */}
-        <View style={[styles.segmentedTabBar, { backgroundColor: currColors.cardSecondary }]}>
+        <View style={[styles.segmentedTabBar, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
           <TouchableOpacity
             style={[
               styles.segmentedTabBtn,
               activeTab === 'expense' && { backgroundColor: '#FF3B30' },
             ]}
+            activeOpacity={0.75}
             onPress={() => {
               handleHaptic();
               setActiveTab('expense');
@@ -394,7 +374,10 @@ export default function MoneyAnalyticsScreen() {
             <ThemedText
               style={[
                 styles.segmentedTabText,
-                { color: activeTab === 'expense' ? '#FFFFFF' : currColors.textSecondary },
+                {
+                  color: activeTab === 'expense' ? '#FFFFFF' : currColors.textSecondary,
+                  fontFamily: activeTab === 'expense' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                },
               ]}
             >
               Expense
@@ -406,6 +389,7 @@ export default function MoneyAnalyticsScreen() {
               styles.segmentedTabBtn,
               activeTab === 'income' && { backgroundColor: '#34C759' },
             ]}
+            activeOpacity={0.75}
             onPress={() => {
               handleHaptic();
               setActiveTab('income');
@@ -415,7 +399,10 @@ export default function MoneyAnalyticsScreen() {
             <ThemedText
               style={[
                 styles.segmentedTabText,
-                { color: activeTab === 'income' ? '#FFFFFF' : currColors.textSecondary },
+                {
+                  color: activeTab === 'income' ? '#FFFFFF' : currColors.textSecondary,
+                  fontFamily: activeTab === 'income' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                },
               ]}
             >
               Income
@@ -427,6 +414,7 @@ export default function MoneyAnalyticsScreen() {
               styles.segmentedTabBtn,
               activeTab === 'surplus' && { backgroundColor: '#00C9A7' },
             ]}
+            activeOpacity={0.75}
             onPress={() => {
               handleHaptic();
               setActiveTab('surplus');
@@ -436,7 +424,10 @@ export default function MoneyAnalyticsScreen() {
             <ThemedText
               style={[
                 styles.segmentedTabText,
-                { color: activeTab === 'surplus' ? '#FFFFFF' : currColors.textSecondary },
+                {
+                  color: activeTab === 'surplus' ? '#FFFFFF' : currColors.textSecondary,
+                  fontFamily: activeTab === 'surplus' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                },
               ]}
             >
               Surplus
@@ -450,16 +441,20 @@ export default function MoneyAnalyticsScreen() {
             {/* Header summary row & sort button */}
             <View style={styles.subFilterRow}>
               <View>
-                <ThemedText style={{ fontSize: 18, fontFamily: 'Outfit_600SemiBold', color: activeTab === 'expense' ? '#FF3B30' : '#34C759' }}>
+                <ThemedText type="semiBold" style={{ fontSize: 18, color: activeTab === 'expense' ? '#FF3B30' : '#34C759' }}>
                   {formatAmount(categoryData.totalAmount)}
                 </ThemedText>
                 <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_400Regular', color: currColors.textSecondary }}>
-                  {categoryData.list.length} {categoryData.list.length === 1 ? 'category' : 'categories'} • {activeTab === 'expense' ? overviewMetrics.expenseCount : overviewMetrics.incomeCount} tx
+                  {activeTab === 'expense' ? overviewMetrics.expenseCount : overviewMetrics.incomeCount}{' '}
+                  {(activeTab === 'expense' ? overviewMetrics.expenseCount : overviewMetrics.incomeCount) === 1
+                    ? 'transaction'
+                    : 'transactions'}
                 </ThemedText>
               </View>
 
               <TouchableOpacity
                 style={[styles.sortButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}
+                activeOpacity={0.7}
                 onPress={() => {
                   handleHaptic();
                   setSortBy(sortBy === 'amount' ? 'count' : sortBy === 'count' ? 'name' : 'amount');
@@ -472,63 +467,10 @@ export default function MoneyAnalyticsScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Donut Chart Card */}
-            <View style={[styles.chartCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-              <View style={styles.pieWrapper}>
-                <PieChart
-                  data={pieChartData}
-                  donut
-                  sectionAutoFocus
-                  radius={SCREEN_WIDTH * 0.23}
-                  innerRadius={SCREEN_WIDTH * 0.16}
-                  innerCircleColor={currColors.card}
-                  centerLabelComponent={() => (
-                    <View style={{ alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 }}>
-                      <ThemedText
-                        style={{
-                          fontSize: 11,
-                          color: currColors.textSecondary,
-                          fontFamily: 'Outfit_500Medium',
-                          textAlign: 'center',
-                        }}
-                        numberOfLines={1}
-                      >
-                        {activeFocusedItem ? activeFocusedItem.name : activeTab === 'expense' ? 'Total Spent' : 'Total Inflow'}
-                      </ThemedText>
-                      <ThemedText
-                        style={{
-                          fontSize: 16,
-                          color: activeFocusedItem ? activeFocusedItem.color : currColors.text,
-                          fontFamily: 'Outfit_600SemiBold',
-                          marginTop: 2,
-                          textAlign: 'center',
-                        }}
-                        numberOfLines={1}
-                      >
-                        {formatAmount(activeFocusedItem ? activeFocusedItem.amount : categoryData.totalAmount)}
-                      </ThemedText>
-                      {activeFocusedItem && (
-                        <ThemedText
-                          style={{
-                            fontSize: 11,
-                            color: currColors.textSecondary,
-                            fontFamily: 'Outfit_400Regular',
-                            marginTop: 1,
-                          }}
-                        >
-                          {activeFocusedItem.percentage.toFixed(1)}%
-                        </ThemedText>
-                      )}
-                    </View>
-                  )}
-                />
-              </View>
-            </View>
-
             {/* Category Ranking Grouped Card */}
             <View style={styles.sectionHeaderMargin}>
               <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
-                {activeTab.toUpperCase()} BREAKDOWN ({categoryData.list.length})
+                {activeTab.toUpperCase()} BREAKDOWN
               </ThemedText>
             </View>
 
@@ -549,7 +491,7 @@ export default function MoneyAnalyticsScreen() {
                       style={[
                         styles.categoryRowItem,
                         !isLast && { borderBottomWidth: 1, borderBottomColor: currColors.border },
-                        isFocused && { backgroundColor: `${item.color}12` },
+                        isFocused && { backgroundColor: `${item.color}14` },
                       ]}
                       activeOpacity={0.7}
                       onPress={() => {
@@ -557,32 +499,37 @@ export default function MoneyAnalyticsScreen() {
                         setFocusedCategory(isFocused ? null : item.name);
                       }}
                     >
-                      <View style={styles.categoryRowLeft}>
+                      <View style={styles.categoryMain}>
                         <View style={[styles.categoryIconSquare, { backgroundColor: `${item.color}18` }]}>
                           <CategoryIcon name={item.icon} color={item.color} size={18} />
                         </View>
-                        <View style={{ flex: 1, paddingRight: 8 }}>
+                        <View style={styles.categoryInfo}>
                           <ThemedText style={[styles.categoryName, { color: currColors.text }]} numberOfLines={1}>
                             {item.name}
                           </ThemedText>
-                          <View style={styles.rowProgressBarBG}>
-                            <View
-                              style={[
-                                styles.rowProgressBarFill,
-                                { width: `${Math.min(100, item.percentage)}%`, backgroundColor: item.color },
-                              ]}
-                            />
-                          </View>
+                          <ThemedText style={[styles.categorySub, { color: currColors.textSecondary }]}>
+                            {item.count} {item.count === 1 ? 'transaction' : 'transactions'}
+                          </ThemedText>
+                        </View>
+
+                        <View style={styles.categoryValues}>
+                          <ThemedText type="semiBold" style={[styles.primaryValue, { color: currColors.text }]}>
+                            {item.percentage.toFixed(2)}%
+                          </ThemedText>
+                          <ThemedText style={[styles.secondaryValue, { color: currColors.textSecondary }]}>
+                            {formatAmount(item.amount)}
+                          </ThemedText>
                         </View>
                       </View>
 
-                      <View style={styles.categoryRowRight}>
-                        <ThemedText style={[styles.categoryAmount, { color: currColors.text }]}>
-                          {formatAmount(item.amount)}
-                        </ThemedText>
-                        <ThemedText style={[styles.categoryPercent, { color: currColors.textSecondary }]}>
-                          {item.percentage.toFixed(1)}% • {item.count} tx
-                        </ThemedText>
+                      {/* Full-width Contribution Progress Bar matching analytics.tsx */}
+                      <View style={[styles.contributionProgressBarContainer, { backgroundColor: currColors.cardSecondary }]}>
+                        <View
+                          style={[
+                            styles.contributionProgressBarFill,
+                            { width: `${Math.min(100, item.percentage)}%`, backgroundColor: item.color },
+                          ]}
+                        />
                       </View>
                     </TouchableOpacity>
                   );
@@ -662,7 +609,7 @@ export default function MoneyAnalyticsScreen() {
                     ]}
                   >
                     <View>
-                      <ThemedText style={[styles.trendMonthLabel, { color: currColors.text }]}>
+                      <ThemedText type="semiBold" style={[styles.trendMonthLabel, { color: currColors.text }]}>
                         {item.fullLabel}
                       </ThemedText>
                       <ThemedText style={[styles.trendMonthSub, { color: currColors.textSecondary }]}>
@@ -672,6 +619,7 @@ export default function MoneyAnalyticsScreen() {
 
                     <View style={{ alignItems: 'flex-end' }}>
                       <ThemedText
+                        type="semiBold"
                         style={[
                           styles.trendSurplusText,
                           { color: isPositive ? '#34C759' : '#FF3B30' },
@@ -768,9 +716,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 20,
     fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.5,
   },
   timeframePill: {
     flexDirection: 'row',
@@ -848,19 +802,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
   },
-  chartCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  pieWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   badgePill: {
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -889,51 +830,58 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   categoryRowItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
-  categoryRowLeft: {
+  categoryMain: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    gap: 10,
+    width: '100%',
   },
   categoryIconSquare: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
+  },
+  categoryInfo: {
+    justifyContent: 'center',
+    flex: 1,
+    minWidth: 0,
   },
   categoryName: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Outfit_500Medium',
   },
-  rowProgressBarBG: {
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 1.5,
-    marginTop: 6,
-    width: '90%',
-    overflow: 'hidden',
-  },
-  rowProgressBarFill: {
-    height: '100%',
-    borderRadius: 1.5,
-  },
-  categoryRowRight: {
-    alignItems: 'flex-end',
-  },
-  categoryAmount: {
-    fontSize: 14,
-    fontFamily: 'Outfit_500Medium',
-  },
-  categoryPercent: {
-    fontSize: 11,
+  categorySub: {
+    fontSize: 12,
     fontFamily: 'Outfit_400Regular',
     marginTop: 2,
+  },
+  categoryValues: {
+    alignItems: 'flex-end',
+    flexShrink: 0,
+  },
+  primaryValue: {
+    fontSize: 15,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  secondaryValue: {
+    fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
+    marginTop: 2,
+  },
+  contributionProgressBarContainer: {
+    height: 5,
+    borderRadius: 2.5,
+    marginTop: 12,
+    marginHorizontal: 0,
+    overflow: 'hidden',
+  },
+  contributionProgressBarFill: {
+    height: '100%',
+    borderRadius: 2.5,
   },
   trendRowItem: {
     flexDirection: 'row',

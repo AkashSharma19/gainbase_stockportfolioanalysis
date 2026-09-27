@@ -17,7 +17,7 @@ export async function fetchLivePE(sym: string): Promise<number | undefined> {
     });
     if (!res.ok) return undefined;
     const text = await res.text();
-    const match = text.match(/P\/E ratio[\s\S]*?>([\d\.,]+)<\/div>/i);
+    const match = text.match(/P\/E ratio[\s\S]*?>([\d.,]+)<\/div>/i);
     if (match && match[1] && !isNaN(parseFloat(match[1].replace(/,/g, '')))) {
       return parseFloat(match[1].replace(/,/g, ''));
     }
@@ -54,7 +54,7 @@ export async function fetchLiveMarketCap(sym: string): Promise<number | undefine
     });
     if (res.ok) {
       const text = await res.text();
-      const mcMatch = text.match(/<span class=['"]Number['"]>([\d\.,]+)<\/span>\s*Cr\./i);
+      const mcMatch = text.match(/<span class=['"]Number['"]>([\d.,]+)<\/span>\s*Cr\./i);
       if (mcMatch && mcMatch[1]) {
         const mcCr = parseFloat(mcMatch[1].replace(/,/g, ''));
         if (!isNaN(mcCr) && mcCr > 0) {
@@ -284,7 +284,9 @@ export function getCompanyLogoUrl(
       if (domainMatch && domainMatch.includes('.')) {
         return `https://unavatar.io/${domainMatch}`;
       }
-    } catch {}
+    } catch (e) {
+      // Ignore domain parsing errors
+    }
   }
 
   // 2. Direct dictionary match for known tickers

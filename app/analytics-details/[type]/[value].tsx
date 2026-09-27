@@ -180,14 +180,14 @@ export default function AnalyticsDetailsScreen() {
             <>
               <ThemedText style={[styles.currentPrice, { color: currColors.text }]}>
                 {isPrivacyMode
-                  ? '****'
+                  ? '••••••'
                   : `${showCurrencySymbol ? '₹' : ''}${item.currentValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
               </ThemedText>
               <ThemedText
                 style={[styles.tickerText, { color: currColors.textSecondary }]}
               >
                 {isPrivacyMode
-                  ? '****'
+                  ? '••••••'
                   : `${showCurrencySymbol ? '₹' : ''}${item.investedValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
               </ThemedText>
             </>
@@ -201,7 +201,7 @@ export default function AnalyticsDetailsScreen() {
                 ]}
               >
                 {isPrivacyMode
-                  ? '****'
+                  ? '••••••'
                   : `${item.pnl >= 0 ? '+' : '-'}${showCurrencySymbol ? '₹' : ''}${Math.abs(item.pnl).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
               </ThemedText>
               <View
@@ -232,14 +232,14 @@ export default function AnalyticsDetailsScreen() {
             <>
               <ThemedText style={[styles.currentPrice, { color: currColors.text }]}>
                 {isPrivacyMode
-                  ? '****'
+                  ? '••••••'
                   : `${(item.contributionPercentage ?? 0).toFixed(2)}%`}
               </ThemedText>
               <ThemedText
                 style={[styles.tickerText, { color: currColors.textSecondary }]}
               >
                 {isPrivacyMode
-                  ? '****'
+                  ? '••••••'
                   : `${showCurrencySymbol ? '₹' : ''}${item.currentValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
               </ThemedText>
             </>

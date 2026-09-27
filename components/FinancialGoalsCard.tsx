@@ -187,18 +187,45 @@ export function FinancialGoalsCard() {
           </View>
         </View>
 
-        {/* Minimal Progress Bar */}
-        <View style={[styles.progressBarTrack, { backgroundColor: currColors.cardSecondary }]}>
-          <View
-            style={[
-              styles.progressBarFill,
-              {
-                width: `${Math.min(100, Math.max(0, featuredGoal.progressPercentage))}%`,
-                backgroundColor: goalColor,
-              },
-            ]}
-          />
-        </View>
+        {/* Progress Bar (Supports Segmented Milestones or Minimal Continuous Bar) */}
+        {featuredGoal.milestoneSegments && featuredGoal.milestoneSegments.length > 1 ? (
+          <View style={styles.segmentTrackRow}>
+            {featuredGoal.milestoneSegments.map((seg, idx) => (
+              <View
+                key={`seg-${idx}`}
+                style={[
+                  styles.segmentTrack,
+                  {
+                    flex: Math.max(0.04, seg.spanRatio ?? 1),
+                    backgroundColor: currColors.cardSecondary,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.segmentFill,
+                    {
+                      width: `${seg.fillPercentage}%`,
+                      backgroundColor: goalColor,
+                    },
+                  ]}
+                />
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={[styles.progressBarTrack, { backgroundColor: currColors.cardSecondary }]}>
+            <View
+              style={[
+                styles.progressBarFill,
+                {
+                  width: `${Math.min(100, Math.max(0, featuredGoal.progressPercentage))}%`,
+                  backgroundColor: goalColor,
+                },
+              ]}
+            />
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -258,12 +285,27 @@ const styles = StyleSheet.create({
   },
   progressBarTrack: {
     height: 5,
-    borderRadius: 3,
+    borderRadius: 2.5,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: 2.5,
+  },
+  segmentTrackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    width: '100%',
+  },
+  segmentTrack: {
+    height: 5,
+    borderRadius: 2.5,
+    overflow: 'hidden',
+  },
+  segmentFill: {
+    height: '100%',
+    borderRadius: 2.5,
   },
   emptyRow: {
     paddingVertical: 2,

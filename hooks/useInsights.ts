@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
-import { useAiStore, AiInsight } from '@/store/useAiStore';
+import { useAiStore } from '@/store/useAiStore';
 
 export type InsightCategory = 'Buy' | 'Sell' | 'Hold' | 'Not Sure';
 
