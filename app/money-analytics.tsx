@@ -23,7 +23,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
-import { CategoryIcon } from '@/components/CategoryIcon';
+import { Category3DIcon } from '@/components/Category3DIcon';
 import { BackButton } from '@/components/BackButton';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -500,9 +500,12 @@ export default function MoneyAnalyticsScreen() {
                       }}
                     >
                       <View style={styles.categoryMain}>
-                        <View style={[styles.categoryIconSquare, { backgroundColor: `${item.color}18` }]}>
-                          <CategoryIcon name={item.icon} color={item.color} size={18} />
-                        </View>
+                        <Category3DIcon
+                          name={item.name}
+                          icon={item.icon}
+                          size={34}
+                          style={{ marginRight: 12 }}
+                        />
                         <View style={styles.categoryInfo}>
                           <ThemedText style={[styles.categoryName, { color: currColors.text }]} numberOfLines={1}>
                             {item.name}

@@ -1787,7 +1787,7 @@ export default function ProfileScreen() {
                     }}
                     style={styles.modalAvatar}
                   />
-                  <View style={styles.editImageOverlay}>
+                  <View style={[styles.editImageOverlay, { borderColor: currColors.card }]}>
                     <Edit2 size={16} color="#FFF" />
                   </View>
                 </TouchableOpacity>
@@ -1893,7 +1893,6 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 28,
     fontWeight: '600',
-    color: '#FFF',
   },
   headerIcons: {
     flexDirection: 'row',
@@ -1936,7 +1935,6 @@ const styles = StyleSheet.create({
   nameText: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FFF',
   },
   emailText: {
     fontSize: 14,
@@ -1961,7 +1959,6 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFF',
     marginBottom: 4,
   },
   statLabel: {
@@ -1993,7 +1990,6 @@ const styles = StyleSheet.create({
   },
   gridLabel: {
     fontSize: 12,
-    color: '#FFF',
     fontWeight: '400',
   },
   // Modal Styles
@@ -2018,7 +2014,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FFF',
   },
   closeButton: {
     padding: 4,
@@ -2050,7 +2045,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#1C1C1E',
   },
   inputGroup: {
     flexDirection: 'row',
@@ -2067,7 +2061,6 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     flex: 1,
-    color: '#FFF',
     fontSize: 16,
   },
   saveButton: {

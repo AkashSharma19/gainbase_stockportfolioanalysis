@@ -27,6 +27,7 @@ import { BackButton } from '@/components/BackButton';
 import { ThemedText } from '../components/ThemedText';
 import Colors from '../constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { Category3DIcon } from '@/components/Category3DIcon';
 import { useGoalStore } from '../store/useGoalStore';
 import { useMoneyStore } from '../store/useMoneyStore';
 import { usePortfolioStore } from '../store/usePortfolioStore';
@@ -87,8 +88,6 @@ const GoalRowItem = memo(
       </View>
     );
 
-    // Dynamic icon resolution
-    const IconComponent = (LucideIcons as any)[goal.icon] || Target;
     const goalColor = goal.color || '#00C9A7';
 
     // Calculate remaining text
@@ -126,7 +125,7 @@ const GoalRowItem = memo(
           <View style={styles.cardMainRow}>
             {/* Left Icon Container */}
             <View style={[styles.iconWrapper, { backgroundColor: `${goalColor}15` }]}>
-              <IconComponent size={18} color={goalColor} />
+              <Category3DIcon name={goal.icon} icon={goal.icon} size={26} />
             </View>
 
             {/* Middle Info Column */}

@@ -302,6 +302,50 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
     const forcePull = mode === 'force_pull';
 
     // ----------------------------------------------------
+    // CATEGORY CUSTOMIZATIONS & METADATA SYNC (USER METADATA)
+    // ----------------------------------------------------
+    const remoteCategoryMeta = (session.user.user_metadata?.category_metadata || {}) as Record<string, { icon: string; color: string }>;
+    const remoteCustomCategories = session.user.user_metadata?.custom_categories as { income?: string[]; expense?: string[] } | undefined;
+    const localCategoryMeta = (useMoneyStore.getState().categoryMetadata || {}) as Record<string, { icon: string; color: string }>;
+    const localGlobalCategories = useMoneyStore.getState().categories || { income: [], expense: [] };
+
+    let mergedCategoryMeta: Record<string, { icon: string; color: string }>;
+    let mergedCategories: { income: string[]; expense: string[] };
+
+    if (forcePull) {
+      mergedCategoryMeta = session.user.user_metadata?.category_metadata ? remoteCategoryMeta : localCategoryMeta;
+      mergedCategories = remoteCustomCategories && (remoteCustomCategories.income || remoteCustomCategories.expense)
+        ? {
+            income: remoteCustomCategories.income || localGlobalCategories.income || [],
+            expense: remoteCustomCategories.expense || localGlobalCategories.expense || [],
+          }
+        : localGlobalCategories;
+    } else if (mode === 'force_push') {
+      mergedCategoryMeta = localCategoryMeta;
+      mergedCategories = localGlobalCategories;
+    } else {
+      mergedCategoryMeta = { ...remoteCategoryMeta, ...localCategoryMeta };
+      const mergedIncome = Array.from(new Set([...(localGlobalCategories.income || []), ...(remoteCustomCategories?.income || [])]));
+      const mergedExpense = Array.from(new Set([...(localGlobalCategories.expense || []), ...(remoteCustomCategories?.expense || [])]));
+      mergedCategories = {
+        income: mergedIncome,
+        expense: mergedExpense,
+      };
+    }
+
+    // Push merged category definitions back to Supabase auth user_metadata
+    try {
+      await supabase.auth.updateUser({
+        data: {
+          category_metadata: mergedCategoryMeta,
+          custom_categories: mergedCategories,
+        },
+      });
+    } catch (metaErr) {
+      console.warn('Sync user category metadata warning:', metaErr);
+    }
+
+    // ----------------------------------------------------
     // TABLE 1: ACCOUNTS (PARENT)
     // ----------------------------------------------------
     const localAccounts = forcePull ? [] : (useMoneyStore.getState().accounts || []);
@@ -1008,6 +1052,8 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
       budgets: budgetsWithCats,
       subscriptions: subsMerge.mergedLocal,
       subscriptionPayments: subPaymentsMerge.mergedLocal,
+      categories: mergedCategories,
+      categoryMetadata: mergedCategoryMeta,
       
       // Clear tracking lists since they are successfully synced
       deletedAccountIds: [],
@@ -1081,6 +1127,18 @@ export async function wipeCloudData(): Promise<{ success: boolean; message: stri
       .update({ primary_device_id: null, updated_at: new Date().toISOString() })
       .eq('id', userId);
     if (profileError) throw profileError;
+
+    // Reset user category metadata in Auth
+    try {
+      await supabase.auth.updateUser({
+        data: {
+          category_metadata: null,
+          custom_categories: null,
+        },
+      });
+    } catch (metaErr) {
+      console.warn('Wipe user category metadata warning:', metaErr);
+    }
 
     // Reset last synced time in store
     usePortfolioStore.setState({ lastSyncedAt: null });

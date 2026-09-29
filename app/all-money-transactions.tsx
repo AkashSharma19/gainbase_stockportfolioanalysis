@@ -26,6 +26,7 @@ import {
 
 import { ThemedText } from '@/components/ThemedText';
 import { BackButton } from '@/components/BackButton';
+import { Category3DIcon } from '@/components/Category3DIcon';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
@@ -494,6 +495,8 @@ export default function AllTransactionsScreen() {
                                 {
                                   backgroundColor: isSelected ? activeFilterBg : currColors.cardSecondary,
                                   borderColor: isSelected ? activeFilterBg : currColors.border,
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
                                 },
                               ]}
                               onPress={() => {
@@ -501,6 +504,7 @@ export default function AllTransactionsScreen() {
                                 setSelectedCategory(isSelected ? null : cat);
                               }}
                             >
+                              <Category3DIcon name={cat} size={16} style={{ marginRight: 6 }} />
                               <ThemedText
                                 style={[
                                   styles.categoryTagText,
@@ -640,27 +644,27 @@ export default function AllTransactionsScreen() {
                   }}
                 >
                   <View style={styles.txLeft}>
-                    <View
-                      style={[
-                        styles.txIcon,
-                        {
-                          backgroundColor:
-                            isTransfer
-                              ? 'rgba(142, 142, 147, 0.1)'
-                              : isIncome
-                              ? 'rgba(52, 199, 89, 0.1)'
-                              : 'rgba(255, 59, 48, 0.1)',
-                        },
-                      ]}
-                    >
-                      {isTransfer ? (
+                    {isTransfer ? (
+                      <View
+                        style={[
+                          styles.txIcon,
+                          {
+                            backgroundColor:
+                              colorScheme === 'dark'
+                                ? 'rgba(255, 255, 255, 0.08)'
+                                : 'rgba(0, 0, 0, 0.05)',
+                          },
+                        ]}
+                      >
                         <ArrowRightLeft size={18} color="#8E8E93" />
-                      ) : isIncome ? (
-                        <ArrowDownLeft size={18} color="#34C759" />
-                      ) : (
-                        <ArrowUpRight size={18} color="#FF3B30" />
-                      )}
-                    </View>
+                      </View>
+                    ) : (
+                      <Category3DIcon
+                        name={tx.category}
+                        size={36}
+                        style={{ marginRight: 12 }}
+                      />
+                    )}
                     <View style={styles.txInfo}>
                       <ThemedText style={[styles.txLabelText, { color: currColors.text }]} numberOfLines={1}>
                         {typeLabel}

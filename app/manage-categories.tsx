@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,72 +7,63 @@ import {
   TextInput,
   Modal,
   Alert,
-  KeyboardAvoidingView,
   Platform,
-  FlatList,
-  Dimensions,
+  Keyboard,
 } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ArrowLeft,
   Plus,
   Search,
   Pencil,
   Trash2,
   Check,
   X,
-  Sparkles,
-  Tag,
-  ArrowDownLeft,
-  ArrowUpRight,
+  ChevronDown,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react-native';
-import * as LucideIcons from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { BackButton } from '@/components/BackButton';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
-import { CategoryIcon } from '@/components/CategoryIcon';
+import { Category3DIcon } from '@/components/Category3DIcon';
 import {
-  CATEGORY_ICONS_LIST,
-  CATEGORY_COLOR_PALETTE,
-  getSmartIconSuggestions,
-  IconDefinition,
-} from '@/constants/CategoryIcons';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
+  CATEGORY_3D_ICONS_LIST,
+  findBest3DIconForText,
+} from '@/constants/Category3DIcons';
 
 export default function ManageCategoriesScreen() {
-  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
+
+  const headerTopPadding = Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24);
 
   const storeCategories = useMoneyStore((state) => state.categories) || {
-    income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
+    income: ['Salary', 'Investments', 'Business', 'Freelance', 'Gift', 'Refund', 'Other'],
     expense: [
-      'Food & Dining',
+      'Holiday',
+      'Grocery',
       'Food',
-      'Junk',
-      'Rent & Bills',
-      'House',
-      'Electricity Bill',
+      'Beverage',
+      'Transport',
+      'Internet',
+      'Electric',
+      'Water',
+      'Gas',
+      'Gym',
+      'Books',
       'Shopping',
-      'Shopping - Electronics',
-      'Shopping - Clothes',
-      'Entertainment',
-      'Subscriptions - OTT',
-      'Subscriptions - WiFi',
-      'Travel',
-      'Travel/ Trips',
-      'Transport - Fuel',
-      'Transport - Cab',
       'Medical',
+      'Entertainment',
+      'House',
       'Education',
-      'Maintainance',
-      'Family',
       'Gifts',
       'EMI Payments',
       'Others',
@@ -83,26 +74,52 @@ export default function ManageCategoriesScreen() {
   const addCategory = useMoneyStore((state) => state.addCategory);
   const updateCategory = useMoneyStore((state) => state.updateCategory);
   const removeCategory = useMoneyStore((state) => state.removeCategory);
+  const reorderCategories = useMoneyStore((state) => state.reorderCategories);
   const moneyTransactions = useMoneyStore((state) => state.moneyTransactions) || [];
 
   // Tab State
   const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [isReorderMode, setIsReorderMode] = useState(false);
 
-  // Category Editor Modal State
-  const [isEditorVisible, setIsEditorVisible] = useState(false);
-  const [editingOldName, setEditingOldName] = useState<string | null>(null);
-  const [formName, setFormName] = useState('');
-  const [formIcon, setFormIcon] = useState('Tag');
-  const [formColor, setFormColor] = useState(CATEGORY_COLOR_PALETTE[0]);
-  const [iconSearchQuery, setIconSearchQuery] = useState('');
-  const [selectedIconGroup, setSelectedIconGroup] = useState<string>('All');
+  // Inline Adding State
+  const [isInlineAdding, setIsInlineAdding] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('food');
+  const [isIconManuallyOverridden, setIsIconManuallyOverridden] = useState(false);
+
+  // Inline Editing State
+  const [editingCatName, setEditingCatName] = useState<string | null>(null);
+  const [editFormName, setEditFormName] = useState('');
+  const [editFormIcon, setEditFormIcon] = useState('');
+
+  // Icon Picker Full Page Modal State
+  const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
+  const [iconPickerTarget, setIconPickerTarget] = useState<'add' | 'edit'>('add');
+  const [iconPickerSearch, setIconPickerSearch] = useState('');
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const addInputRef = useRef<TextInput>(null);
+  const editInputRef = useRef<TextInput>(null);
 
   const handleHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  // Transaction count per category
+  // Keyboard scroll listener to keep inline input cleanly visible
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        if (isInlineAdding || editingCatName) {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }
+      }
+    );
+    return () => showSub.remove();
+  }, [isInlineAdding, editingCatName]);
+
+  // Transaction counts
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     moneyTransactions.forEach((tx) => {
@@ -113,68 +130,88 @@ export default function ManageCategoriesScreen() {
     return counts;
   }, [moneyTransactions]);
 
-  // Filtered categories for current tab
+  // Current list of categories for active tab
+  const currentTabCategories = useMemo(() => {
+    return storeCategories[activeTab] || [];
+  }, [storeCategories, activeTab]);
+
+  // Filtered categories for current tab with search query
   const displayedCategories = useMemo(() => {
-    const list = storeCategories[activeTab] || [];
-    if (!searchQuery.trim()) return list;
-    const q = searchQuery.toLowerCase().trim();
-    return list.filter((c) => c.toLowerCase().includes(q));
-  }, [storeCategories, activeTab, searchQuery]);
+    if (!categorySearch.trim()) return currentTabCategories;
+    const q = categorySearch.toLowerCase().trim();
+    return currentTabCategories.filter((c) => c.toLowerCase().includes(q));
+  }, [currentTabCategories, categorySearch]);
 
-  // Smart suggestions for editor
-  const smartSuggestions = useMemo(() => {
-    return getSmartIconSuggestions(formName);
-  }, [formName]);
-
-  // Icon groups for catalog filter
-  const iconGroups = useMemo(() => {
-    const groups = new Set<string>();
-    CATEGORY_ICONS_LIST.forEach((item) => groups.add(item.category));
-    return ['All', ...Array.from(groups)];
-  }, []);
-
-  // Filtered 100+ icons in catalog
-  const filteredCatalogIcons = useMemo(() => {
-    let list = CATEGORY_ICONS_LIST;
-    if (selectedIconGroup !== 'All') {
-      list = list.filter((item) => item.category === selectedIconGroup);
+  // Auto-suggest icon when typing new category name
+  const handleNewNameChange = (text: string) => {
+    setNewCatName(text);
+    if (!isIconManuallyOverridden) {
+      if (text.trim().length > 0) {
+        const bestIcon = findBest3DIconForText(text);
+        setNewCatIcon(bestIcon);
+      } else {
+        setNewCatIcon(activeTab === 'income' ? 'banknote' : 'food');
+      }
     }
-    if (iconSearchQuery.trim()) {
-      const q = iconSearchQuery.toLowerCase().trim();
-      list = list.filter(
-        (item) =>
-          item.name.toLowerCase().includes(q) ||
-          item.keywords.some((kw) => kw.toLowerCase().includes(q))
-      );
-    }
-    return list;
-  }, [selectedIconGroup, iconSearchQuery]);
-
-  const openCreateModal = () => {
-    handleHaptic();
-    setEditingOldName(null);
-    setFormName('');
-    setFormIcon('Tag');
-    setFormColor(activeTab === 'income' ? '#00C9A7' : '#FF3B30');
-    setIconSearchQuery('');
-    setSelectedIconGroup('All');
-    setIsEditorVisible(true);
   };
 
-  const openEditModal = (catName: string) => {
+  // Auto-suggest icon when editing category name
+  const handleEditNameChange = (text: string) => {
+    setEditFormName(text);
+    if (!isIconManuallyOverridden && text.trim().length > 0) {
+      const bestIcon = findBest3DIconForText(text);
+      setEditFormIcon(bestIcon);
+    }
+  };
+
+  // Start Inline Add
+  const startInlineAdd = () => {
     handleHaptic();
+    setEditingCatName(null);
+    setIsReorderMode(false);
+    setIsInlineAdding(true);
+    setNewCatName('');
+    setIsIconManuallyOverridden(false);
+    setNewCatIcon(activeTab === 'income' ? 'banknote' : 'food');
+
+    setTimeout(() => {
+      addInputRef.current?.focus();
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 50);
+  };
+
+  // Start Inline Edit
+  const startEditCategory = (catName: string) => {
+    handleHaptic();
+    setIsInlineAdding(false);
+    setIsReorderMode(false);
+    setEditingCatName(catName);
+    setEditFormName(catName);
     const meta = categoryMetadata[catName];
-    setEditingOldName(catName);
-    setFormName(catName);
-    setFormIcon(meta?.icon || 'Tag');
-    setFormColor(meta?.color || '#00C9A7');
-    setIconSearchQuery('');
-    setSelectedIconGroup('All');
-    setIsEditorVisible(true);
+    setEditFormIcon(meta?.icon || catName.toLowerCase());
+    setIsIconManuallyOverridden(false);
+
+    setTimeout(() => {
+      editInputRef.current?.focus();
+    }, 100);
   };
 
-  const handleSaveCategory = () => {
-    const cleanName = formName.trim();
+  // Move Category Up / Down
+  const moveCategory = (index: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= currentTabCategories.length) return;
+
+    const newOrder = [...currentTabCategories];
+    const temp = newOrder[index];
+    newOrder[index] = newOrder[targetIdx];
+    newOrder[targetIdx] = temp;
+    reorderCategories(activeTab, newOrder);
+    handleHaptic();
+  };
+
+  // Submit New Category
+  const handleSaveNewCategory = () => {
+    const cleanName = newCatName.trim();
     if (!cleanName) {
       Alert.alert('Required', 'Please enter a category name.');
       return;
@@ -182,24 +219,44 @@ export default function ManageCategoriesScreen() {
 
     const currentList = storeCategories[activeTab] || [];
     const isDuplicate = currentList.some(
-      (c) => c.toLowerCase() === cleanName.toLowerCase() && c !== editingOldName
+      (c) => c.toLowerCase() === cleanName.toLowerCase()
     );
-
     if (isDuplicate) {
       Alert.alert('Duplicate', 'A category with this name already exists.');
       return;
     }
 
     handleHaptic();
-    if (editingOldName) {
-      updateCategory(activeTab, editingOldName, cleanName, formIcon, formColor);
-    } else {
-      addCategory(activeTab, cleanName, formIcon, formColor);
-    }
-
-    setIsEditorVisible(false);
+    addCategory(activeTab, cleanName, newCatIcon, currColors.tintMoney);
+    setNewCatName('');
+    setIsInlineAdding(false);
+    setIsIconManuallyOverridden(false);
   };
 
+  // Save Edited Category
+  const handleSaveEditedCategory = () => {
+    if (!editingCatName) return;
+    const cleanName = editFormName.trim();
+    if (!cleanName) {
+      Alert.alert('Required', 'Please enter a category name.');
+      return;
+    }
+
+    const currentList = storeCategories[activeTab] || [];
+    const isDuplicate = currentList.some(
+      (c) => c.toLowerCase() === cleanName.toLowerCase() && c !== editingCatName
+    );
+    if (isDuplicate) {
+      Alert.alert('Duplicate', 'A category with this name already exists.');
+      return;
+    }
+
+    handleHaptic();
+    updateCategory(activeTab, editingCatName, cleanName, editFormIcon, currColors.tintMoney);
+    setEditingCatName(null);
+  };
+
+  // Delete Category
   const handleDelete = (catName: string) => {
     if (catName === 'Other' || catName === 'Others') {
       Alert.alert('Restricted', 'The "Other" category is required by default.');
@@ -221,6 +278,9 @@ export default function ManageCategoriesScreen() {
           style: 'destructive',
           onPress: () => {
             handleHaptic();
+            if (editingCatName === catName) {
+              setEditingCatName(null);
+            }
             removeCategory(activeTab, catName);
           },
         },
@@ -228,50 +288,122 @@ export default function ManageCategoriesScreen() {
     );
   };
 
+  // Open Full-Page Icon Picker
+  const openIconPicker = (target: 'add' | 'edit') => {
+    handleHaptic();
+    setIconPickerTarget(target);
+    setIconPickerSearch('');
+    setIsIconPickerVisible(true);
+  };
+
+  // Select Icon from Full-Page Picker
+  const handleSelectIcon = (iconId: string) => {
+    handleHaptic();
+    if (iconPickerTarget === 'add') {
+      setNewCatIcon(iconId);
+      setIsIconManuallyOverridden(true);
+    } else {
+      setEditFormIcon(iconId);
+      setIsIconManuallyOverridden(true);
+    }
+    setIsIconPickerVisible(false);
+  };
+
+  // Filtered icons in full-page picker
+  const filteredPickerIcons = useMemo(() => {
+    if (!iconPickerSearch.trim()) {
+      return CATEGORY_3D_ICONS_LIST;
+    }
+    const q = iconPickerSearch.toLowerCase().trim();
+    return CATEGORY_3D_ICONS_LIST.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q) ||
+        item.group.toLowerCase().includes(q) ||
+        item.keywords.some((kw) => kw.toLowerCase().includes(q))
+    );
+  }, [iconPickerSearch]);
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: currColors.background, paddingTop: headerTopPadding }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header */}
+      {/* Top Header */}
       <View style={styles.header}>
         <BackButton />
-        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+        <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
           Manage Categories
         </ThemedText>
-        <TouchableOpacity style={[styles.addBtn, { backgroundColor: '#00C9A7' }]} onPress={openCreateModal} activeOpacity={0.8}>
-          <Plus size={20} color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[
+              styles.headerActionBtn,
+              { backgroundColor: isReorderMode ? '#00C9A722' : currColors.cardSecondary },
+            ]}
+            onPress={() => {
+              handleHaptic();
+              setIsReorderMode(!isReorderMode);
+              if (isInlineAdding) setIsInlineAdding(false);
+              if (editingCatName) setEditingCatName(null);
+            }}
+            activeOpacity={0.8}
+          >
+            <ArrowUpDown size={17} color={isReorderMode ? '#00C9A7' : currColors.text} strokeWidth={2.2} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.headerAddBtn, { backgroundColor: currColors.tintMoney }]}
+            onPress={startInlineAdd}
+            activeOpacity={0.8}
+          >
+            <Plus size={19} color="#FFFFFF" strokeWidth={2.5} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Segment Tab Selector (Expense vs Income) */}
-      <View style={[styles.tabSelectorContainer, { backgroundColor: currColors.cardSecondary }]}>
+      {/* Minimal Segmented Tab Switcher (Expense / Income) */}
+      <View style={[styles.tabContainer, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
         <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'expense' && { backgroundColor: currColors.card }]}
+          style={[
+            styles.tabBtn,
+            activeTab === 'expense' && [styles.tabBtnActive, { backgroundColor: currColors.card, borderColor: currColors.border }],
+          ]}
           onPress={() => {
             handleHaptic();
             setActiveTab('expense');
+            setIsInlineAdding(false);
+            setEditingCatName(null);
           }}
+          activeOpacity={0.8}
         >
           <ThemedText
             style={[
-              styles.tabText,
-              { color: activeTab === 'expense' ? currColors.text : currColors.textSecondary },
+              styles.tabBtnText,
+              { color: activeTab === 'expense' ? '#FF3B30' : currColors.textSecondary },
+              activeTab === 'expense' && styles.tabBtnTextActive,
             ]}
           >
             Expense ({storeCategories.expense?.length || 0})
           </ThemedText>
         </TouchableOpacity>
+
         <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'income' && { backgroundColor: currColors.card }]}
+          style={[
+            styles.tabBtn,
+            activeTab === 'income' && [styles.tabBtnActive, { backgroundColor: currColors.card, borderColor: currColors.border }],
+          ]}
           onPress={() => {
             handleHaptic();
             setActiveTab('income');
+            setIsInlineAdding(false);
+            setEditingCatName(null);
           }}
+          activeOpacity={0.8}
         >
           <ThemedText
             style={[
-              styles.tabText,
-              { color: activeTab === 'income' ? currColors.text : currColors.textSecondary },
+              styles.tabBtnText,
+              { color: activeTab === 'income' ? '#34C759' : currColors.textSecondary },
+              activeTab === 'income' && styles.tabBtnTextActive,
             ]}
           >
             Income ({storeCategories.income?.length || 0})
@@ -279,55 +411,181 @@ export default function ManageCategoriesScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Search Input Bar */}
-      <View style={styles.searchContainer}>
-        <View style={[styles.searchBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-          <Search size={18} color={currColors.textSecondary} style={{ marginRight: 8 }} />
-          <TextInput
-            style={[styles.searchInput, { color: currColors.text }]}
-            placeholder={`Search ${activeTab} categories...`}
-            placeholderTextColor={currColors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            clearButtonMode="while-editing"
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X size={16} color={currColors.textSecondary} />
-            </TouchableOpacity>
-          ) : null}
+      {/* Search Categories Bar */}
+      {!isReorderMode && (
+        <View style={styles.searchBarWrapper}>
+          <View style={[styles.searchBarBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            <Search size={15} color={currColors.textSecondary} style={{ marginRight: 8 }} />
+            <TextInput
+              style={[styles.searchBarInput, { color: currColors.text }]}
+              placeholder={`Search ${activeTab} categories...`}
+              placeholderTextColor={currColors.textSecondary}
+              value={categorySearch}
+              onChangeText={setCategorySearch}
+              clearButtonMode="while-editing"
+            />
+            {Boolean(categorySearch) && (
+              <TouchableOpacity onPress={() => setCategorySearch('')} style={{ padding: 4 }}>
+                <X size={14} color={currColors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
+      )}
 
-      {/* Categories List */}
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
-        <View style={[styles.cardList, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-          {displayedCategories.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <ThemedText style={{ color: currColors.textSecondary, fontSize: 14 }}>
-                No categories found matching "{searchQuery}".
+      {/* Scrollable Categories List */}
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.scrollList}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom + 24, 40) },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets={true}
+      >
+        <View style={[styles.cardContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          {displayedCategories.length === 0 && !isInlineAdding ? (
+            <View style={styles.emptyWrap}>
+              <ThemedText style={{ color: currColors.textSecondary, fontSize: 13 }}>
+                No categories found for "{categorySearch}"
               </ThemedText>
             </View>
           ) : (
             displayedCategories.map((catName, index) => {
-              const isLast = index === displayedCategories.length - 1;
+              const isLast = index === displayedCategories.length - 1 && !isInlineAdding;
               const count = categoryCounts[catName] || 0;
-              const meta = categoryMetadata[catName];
-              const badgeColor = meta?.color || (activeTab === 'income' ? '#34C759' : '#00C9A7');
+              const isEditingThis = editingCatName === catName;
+              const isFirstItem = index === 0;
+              const isLastItem = index === displayedCategories.length - 1;
 
+              if (isEditingThis) {
+                // Inline Edit Row
+                return (
+                  <View
+                    key={`edit_${catName}`}
+                    style={[
+                      styles.inlineEditRow,
+                      { backgroundColor: isDark ? '#00C9A714' : '#00C9A70A', borderColor: currColors.tintMoney },
+                      !isLast && [styles.rowBorder, { borderBottomColor: currColors.border }],
+                    ]}
+                  >
+                    {/* 3D Icon Button (Tap to pick) */}
+                    <TouchableOpacity
+                      style={[styles.inlineIconButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.tintMoney }]}
+                      onPress={() => openIconPicker('edit')}
+                      activeOpacity={0.7}
+                    >
+                      <Category3DIcon name={editFormName} icon={editFormIcon} size={34} />
+                      <View style={[styles.iconEditBadge, { backgroundColor: currColors.tintMoney }]}>
+                        <Pencil size={8} color="#FFFFFF" strokeWidth={2.5} />
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Category Name Input */}
+                    <View style={styles.inlineInputWrap}>
+                      <TextInput
+                        ref={editInputRef}
+                        style={[styles.inlineInput, { color: currColors.text }]}
+                        value={editFormName}
+                        onChangeText={handleEditNameChange}
+                        placeholder="Category name"
+                        placeholderTextColor={currColors.textSecondary}
+                        returnKeyType="done"
+                        onSubmitEditing={handleSaveEditedCategory}
+                      />
+                    </View>
+
+                    {/* Actions: Cancel & Save */}
+                    <View style={styles.inlineActionButtons}>
+                      <TouchableOpacity
+                        style={[styles.inlineSmallBtn, { backgroundColor: currColors.cardSecondary }]}
+                        onPress={() => setEditingCatName(null)}
+                      >
+                        <X size={15} color={currColors.textSecondary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.inlineSmallBtn, { backgroundColor: currColors.tintMoney }]}
+                        onPress={handleSaveEditedCategory}
+                      >
+                        <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              }
+
+              // Reorder Mode Category Row
+              if (isReorderMode) {
+                return (
+                  <View
+                    key={catName}
+                    style={[
+                      styles.categoryRow,
+                      !isLast && [styles.rowBorder, { borderBottomColor: currColors.border }],
+                    ]}
+                  >
+                    <View style={styles.categoryLeft}>
+                      <View style={styles.category3DWrap}>
+                        <Category3DIcon name={catName} size={34} />
+                      </View>
+                      <View style={styles.categoryInfo}>
+                        <ThemedText style={[styles.categoryTitle, { color: currColors.text }]} numberOfLines={1}>
+                          {catName}
+                        </ThemedText>
+                        <ThemedText style={[styles.categorySubtitle, { color: currColors.textSecondary }]}>
+                          Position #{index + 1}
+                        </ThemedText>
+                      </View>
+                    </View>
+
+                    <View style={styles.reorderButtonGroup}>
+                      <TouchableOpacity
+                        style={[
+                          styles.reorderArrowBtn,
+                          { backgroundColor: currColors.cardSecondary },
+                          isFirstItem && { opacity: 0.25 },
+                        ]}
+                        disabled={isFirstItem}
+                        onPress={() => moveCategory(index, 'up')}
+                        activeOpacity={0.7}
+                      >
+                        <ArrowUp size={14} color={currColors.text} strokeWidth={2.2} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.reorderArrowBtn,
+                          { backgroundColor: currColors.cardSecondary },
+                          isLastItem && { opacity: 0.25 },
+                        ]}
+                        disabled={isLastItem}
+                        onPress={() => moveCategory(index, 'down')}
+                        activeOpacity={0.7}
+                      >
+                        <ArrowDown size={14} color={currColors.text} strokeWidth={2.2} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              }
+
+              // Standard Category Row
               return (
-                <TouchableOpacity
+                <View
                   key={catName}
-                  activeOpacity={0.7}
-                  onPress={() => openEditModal(catName)}
                   style={[
                     styles.categoryRow,
                     !isLast && [styles.rowBorder, { borderBottomColor: currColors.border }],
                   ]}
                 >
-                  <View style={styles.categoryLeft}>
-                    <View style={[styles.categoryIconWrap, { backgroundColor: `${badgeColor}18` }]}>
-                      <CategoryIcon name={catName} color={badgeColor} size={20} />
+                  <TouchableOpacity
+                    style={styles.categoryLeft}
+                    activeOpacity={0.7}
+                    onPress={() => startEditCategory(catName)}
+                  >
+                    <View style={styles.category3DWrap}>
+                      <Category3DIcon name={catName} size={36} />
                     </View>
                     <View style={styles.categoryInfo}>
                       <ThemedText style={[styles.categoryTitle, { color: currColors.text }]} numberOfLines={1}>
@@ -337,288 +595,190 @@ export default function ManageCategoriesScreen() {
                         {count} {count === 1 ? 'transaction' : 'transactions'}
                       </ThemedText>
                     </View>
-                  </View>
+                  </TouchableOpacity>
 
                   <View style={styles.categoryActions}>
                     <TouchableOpacity
                       hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                       style={[styles.iconActionBtn, { backgroundColor: currColors.cardSecondary }]}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        openEditModal(catName);
-                      }}
+                      onPress={() => startEditCategory(catName)}
                     >
-                      <Pencil size={15} color={currColors.text} />
+                      <Pencil size={14} color={currColors.text} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                       style={[styles.iconActionBtn, { backgroundColor: currColors.cardSecondary }]}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleDelete(catName);
-                      }}
+                      onPress={() => handleDelete(catName)}
                     >
-                      <Trash2 size={15} color="#FF3B30" />
+                      <Trash2 size={14} color="#FF3B30" />
                     </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
+                </View>
               );
             })
+          )}
+
+          {/* INLINE ADD ROW AT BOTTOM */}
+          {isInlineAdding && (
+            <View
+              style={[
+                styles.inlineAddRow,
+                { backgroundColor: isDark ? '#00C9A718' : '#00C9A70D', borderColor: currColors.tintMoney },
+              ]}
+            >
+              {/* Tap to Pick 3D Icon */}
+              <TouchableOpacity
+                style={[styles.inlineIconButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.tintMoney }]}
+                onPress={() => openIconPicker('add')}
+                activeOpacity={0.7}
+              >
+                <Category3DIcon name={newCatName} icon={newCatIcon} size={34} />
+                <View style={[styles.iconEditBadge, { backgroundColor: currColors.tintMoney }]}>
+                  <ChevronDown size={8} color="#FFFFFF" strokeWidth={3} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Inline Text Input */}
+              <View style={styles.inlineInputWrap}>
+                <TextInput
+                  ref={addInputRef}
+                  style={[styles.inlineInput, { color: currColors.text }]}
+                  placeholder="New category name (e.g. Fuel, Pet)..."
+                  placeholderTextColor={currColors.textSecondary}
+                  value={newCatName}
+                  onChangeText={handleNewNameChange}
+                  returnKeyType="done"
+                  onSubmitEditing={handleSaveNewCategory}
+                  autoCapitalize="words"
+                  onFocus={() => {
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                    }, 200);
+                  }}
+                />
+                <ThemedText style={[styles.inlineHint, { color: currColors.tintMoney }]}>
+                  Auto-suggesting icon • Tap icon to choose
+                </ThemedText>
+              </View>
+
+              {/* Inline Actions */}
+              <View style={styles.inlineActionButtons}>
+                <TouchableOpacity
+                  style={[styles.inlineSmallBtn, { backgroundColor: currColors.cardSecondary }]}
+                  onPress={() => setIsInlineAdding(false)}
+                >
+                  <X size={15} color={currColors.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.inlineSmallBtn, { backgroundColor: currColors.tintMoney }]}
+                  onPress={handleSaveNewCategory}
+                >
+                  <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
         </View>
       </ScrollView>
 
-      {/* Dedicated Category Designer & Icon Studio Modal */}
+      {/* FULL-PAGE CHOOSE ICON MODAL */}
       <Modal
-        visible={isEditorVisible}
+        visible={isIconPickerVisible}
         animationType="slide"
-        transparent
-        onRequestClose={() => setIsEditorVisible(false)}
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
+        onRequestClose={() => setIsIconPickerVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setIsEditorVisible(false)} />
-          <View
-            style={[
-              styles.modalContent,
-              { backgroundColor: currColors.card, borderColor: currColors.border },
-            ]}
-          >
-            <View style={styles.modalDragHandle} />
-
-            {/* Modal Header */}
-            <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
-              <View>
-                <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
-                  {editingOldName ? 'Edit Category' : 'New Category'}
-                </ThemedText>
-                <ThemedText style={{ fontSize: 12, color: currColors.textSecondary, marginTop: 2 }}>
-                  Customize icon, badge color, and name
-                </ThemedText>
-              </View>
-              <TouchableOpacity style={[styles.doneBtn, { backgroundColor: '#00C9A7' }]} onPress={handleSaveCategory}>
-                <Check size={20} color="#FFFFFF" strokeWidth={2.5} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} bounces={false} style={{ maxHeight: 580 }}>
-              {/* Live Preview Card */}
-              <View
-                style={[
-                  styles.previewCard,
-                  { backgroundColor: currColors.cardSecondary, borderColor: currColors.border },
-                ]}
-              >
-                <View style={[styles.previewIconWrap, { backgroundColor: `${formColor}22` }]}>
-                  {(() => {
-                    const PreviewIconComp = (LucideIcons as any)[formIcon] || LucideIcons.Tag;
-                    return <PreviewIconComp size={24} color={formColor} />;
-                  })()}
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    LIVE PREVIEW
-                  </ThemedText>
-                  <ThemedText style={[styles.previewName, { color: currColors.text }]} numberOfLines={1}>
-                    {formName.trim() || 'Category Name'}
-                  </ThemedText>
-                </View>
-              </View>
-
-              {/* Category Name Input */}
-              <View style={styles.editorInputSection}>
-                <ThemedText style={[styles.sectionLabel, { color: currColors.textSecondary }]}>
-                  CATEGORY NAME
-                </ThemedText>
-                <TextInput
-                  style={[
-                    styles.nameInput,
-                    { backgroundColor: currColors.cardSecondary, borderColor: currColors.border, color: currColors.text },
-                  ]}
-                  placeholder="e.g. Coffee, Freelance, Gym, Groceries"
-                  placeholderTextColor={currColors.textSecondary}
-                  value={formName}
-                  onChangeText={setFormName}
-                />
-              </View>
-
-              {/* Smart Suggested Icons */}
-              {smartSuggestions.length > 0 && (
-                <View style={styles.editorInputSection}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <Sparkles size={14} color="#FFCC00" style={{ marginRight: 6 }} />
-                    <ThemedText style={[styles.sectionLabel, { color: currColors.textSecondary, marginBottom: 0 }]}>
-                      SMART SUGGESTIONS (BASED ON NAME)
-                    </ThemedText>
-                  </View>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                    {smartSuggestions.map((item, idx) => {
-                      const IconComp = (LucideIcons as any)[item.name] || LucideIcons.Tag;
-                      const isSelected = formIcon === item.name;
-                      return (
-                        <TouchableOpacity
-                          key={`sugg_${item.name}_${idx}`}
-                          style={[
-                            styles.suggestionPill,
-                            { backgroundColor: currColors.cardSecondary, borderColor: currColors.border },
-                            isSelected && { borderColor: formColor, backgroundColor: `${formColor}18` },
-                          ]}
-                          onPress={() => {
-                            handleHaptic();
-                            setFormIcon(item.name);
-                          }}
-                        >
-                          <IconComp size={16} color={isSelected ? formColor : currColors.text} />
-                          <ThemedText
-                            style={{
-                              fontSize: 12,
-                              color: isSelected ? formColor : currColors.text,
-                              marginLeft: 6,
-                              fontFamily: isSelected ? 'Outfit_600SemiBold' : 'Outfit_400Regular',
-                            }}
-                          >
-                            {item.name}
-                          </ThemedText>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
-              )}
-
-              {/* Color Palette */}
-              <View style={styles.editorInputSection}>
-                <ThemedText style={[styles.sectionLabel, { color: currColors.textSecondary }]}>
-                  BADGE COLOR
-                </ThemedText>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-                  {CATEGORY_COLOR_PALETTE.map((c) => (
-                    <TouchableOpacity
-                      key={c}
-                      style={[
-                        styles.colorCircle,
-                        { backgroundColor: c },
-                        formColor === c && { borderColor: currColors.text, borderWidth: 3 },
-                      ]}
-                      onPress={() => {
-                        handleHaptic();
-                        setFormColor(c);
-                      }}
-                    >
-                      {formColor === c && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-
-              {/* 100+ Icons Full Catalog */}
-              <View style={styles.editorInputSection}>
-                <ThemedText style={[styles.sectionLabel, { color: currColors.textSecondary }]}>
-                  ICON CATALOG (130+ ICONS)
-                </ThemedText>
-
-                {/* Icon Search Input */}
-                <View
-                  style={[
-                    styles.iconSearchBox,
-                    { backgroundColor: currColors.cardSecondary, borderColor: currColors.border },
-                  ]}
-                >
-                  <Search size={16} color={currColors.textSecondary} style={{ marginRight: 8 }} />
-                  <TextInput
-                    style={[styles.iconSearchInput, { color: currColors.text }]}
-                    placeholder="Search 130+ icons (e.g. coffee, car, flight)..."
-                    placeholderTextColor={currColors.textSecondary}
-                    value={iconSearchQuery}
-                    onChangeText={setIconSearchQuery}
-                    clearButtonMode="while-editing"
-                  />
-                </View>
-
-                {/* Group Filter Chips */}
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ gap: 6, marginBottom: 12 }}
-                >
-                  {iconGroups.map((grp) => {
-                    const isSelected = selectedIconGroup === grp;
-                    return (
-                      <TouchableOpacity
-                        key={grp}
-                        style={[
-                          styles.groupChip,
-                          { backgroundColor: currColors.cardSecondary },
-                          isSelected && { backgroundColor: formColor },
-                        ]}
-                        onPress={() => {
-                          handleHaptic();
-                          setSelectedIconGroup(grp);
-                        }}
-                      >
-                        <ThemedText
-                          style={{
-                            fontSize: 11,
-                            fontFamily: 'Outfit_500Medium',
-                            color: isSelected ? '#FFFFFF' : currColors.textSecondary,
-                          }}
-                        >
-                          {grp}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-
-                {/* Icon Grid */}
-                <View style={styles.iconGrid}>
-                  {filteredCatalogIcons.length === 0 ? (
-                    <View style={{ padding: 20, alignItems: 'center', width: '100%' }}>
-                      <ThemedText style={{ color: currColors.textSecondary, fontSize: 13 }}>
-                        No icons found for "{iconSearchQuery}"
-                      </ThemedText>
-                    </View>
-                  ) : (
-                    filteredCatalogIcons.map((def, index) => {
-                      const IconComp = (LucideIcons as any)[def.name] || LucideIcons.Tag;
-                      const isSelected = formIcon === def.name;
-                      return (
-                        <TouchableOpacity
-                          key={`${def.category}_${def.name}_${index}`}
-                          style={[
-                            styles.iconGridTile,
-                            { backgroundColor: currColors.cardSecondary, borderColor: currColors.border },
-                            isSelected && {
-                              borderColor: formColor,
-                              backgroundColor: `${formColor}20`,
-                              borderWidth: 2,
-                            },
-                          ]}
-                          onPress={() => {
-                            handleHaptic();
-                            setFormIcon(def.name);
-                          }}
-                        >
-                          <IconComp size={22} color={isSelected ? formColor : currColors.text} />
-                          <ThemedText
-                            style={[
-                              styles.iconTileLabel,
-                              { color: isSelected ? formColor : currColors.textSecondary },
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {def.name}
-                          </ThemedText>
-                        </TouchableOpacity>
-                      );
-                    })
-                  )}
-                </View>
-              </View>
-            </ScrollView>
+        <View
+          style={[
+            styles.fullModalContainer,
+            { backgroundColor: currColors.background, paddingTop: headerTopPadding },
+          ]}
+        >
+          {/* Full Page Header */}
+          <View style={[styles.fullModalHeader, { borderBottomColor: currColors.border }]}>
+            <BackButton onPress={() => setIsIconPickerVisible(false)} />
+            <ThemedText style={[styles.fullModalTitle, { color: currColors.text }]}>
+              Choose Icon
+            </ThemedText>
+            <TouchableOpacity
+              onPress={() => setIsIconPickerVisible(false)}
+              style={[styles.fullModalDoneBtn, { backgroundColor: currColors.tintMoney }]}
+              activeOpacity={0.8}
+            >
+              <Check size={18} color="#FFFFFF" strokeWidth={2.5} />
+            </TouchableOpacity>
           </View>
+
+          {/* Search Box in Full-Page Modal */}
+          <View style={styles.fullModalSearchWrap}>
+            <View style={[styles.searchBarBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+              <Search size={15} color={currColors.textSecondary} style={{ marginRight: 8 }} />
+              <TextInput
+                style={[styles.searchBarInput, { color: currColors.text }]}
+                placeholder="Search icons (spotify, netflix, gym, coffee)..."
+                placeholderTextColor={currColors.textSecondary}
+                value={iconPickerSearch}
+                onChangeText={setIconPickerSearch}
+                clearButtonMode="while-editing"
+                autoCorrect={false}
+              />
+            </View>
+          </View>
+
+          {/* 3D Icons Grid */}
+          <ScrollView
+            contentContainerStyle={[
+              styles.fullModalGrid,
+              { paddingBottom: Math.max(insets.bottom + 24, 40) },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {filteredPickerIcons.length === 0 ? (
+              <View style={styles.popupEmpty}>
+                <ThemedText style={{ color: currColors.textSecondary, fontSize: 13 }}>
+                  No icons found for "{iconPickerSearch}"
+                </ThemedText>
+              </View>
+            ) : (
+              filteredPickerIcons.map((def, idx) => {
+                const isSelected =
+                  iconPickerTarget === 'add' ? newCatIcon === def.id : editFormIcon === def.id;
+
+                return (
+                  <TouchableOpacity
+                    key={`icon_${def.id}_${idx}`}
+                    style={[
+                      styles.iconTile,
+                      { backgroundColor: currColors.card, borderColor: currColors.border },
+                      isSelected && [
+                        styles.iconTileSelected,
+                        { borderColor: currColors.tintMoney, backgroundColor: isDark ? '#00C9A722' : '#00C9A714' },
+                      ],
+                    ]}
+                    onPress={() => handleSelectIcon(def.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Category3DIcon name={def.id} icon={def.id} size={34} />
+                    <ThemedText
+                      style={[
+                        styles.iconTileLabel,
+                        { color: isSelected ? currColors.tintMoney : currColors.textSecondary },
+                        isSelected && { fontFamily: 'Outfit_600SemiBold' },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {def.name}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </ScrollView>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -631,105 +791,125 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: 10,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tabSelectorContainer: {
+  headerActions: {
     flexDirection: 'row',
-    borderRadius: 14,
-    padding: 4,
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerAddBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabContainer: {
+    flexDirection: 'row',
     marginHorizontal: 16,
-    marginBottom: 12,
+    marginTop: 4,
+    marginBottom: 10,
+    borderRadius: 20,
+    padding: 3,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  tabButton: {
+  tabBtn: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 17,
   },
-  tabText: {
+  tabBtnActive: {
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabBtnText: {
     fontSize: 13,
+    fontFamily: 'Outfit_500Medium',
+  },
+  tabBtnTextActive: {
     fontFamily: 'Outfit_600SemiBold',
   },
-  searchContainer: {
+  searchBarWrapper: {
     paddingHorizontal: 16,
-    marginBottom: 14,
+    marginBottom: 10,
   },
-  searchBox: {
+  searchBarBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 44,
-    borderRadius: 14,
+    height: 38,
+    borderRadius: 12,
     borderWidth: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
   },
-  searchInput: {
+  searchBarInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Outfit_400Regular',
+  },
+  scrollList: {
+    flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 40,
   },
-  cardList: {
-    borderRadius: 22,
+  cardContainer: {
+    borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
   },
-  emptyContainer: {
-    padding: 32,
+  emptyWrap: {
+    paddingVertical: 32,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   categoryRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   rowBorder: {
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   categoryLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 12,
+    marginRight: 10,
   },
-  categoryIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    justifyContent: 'center',
+  category3DWrap: {
+    width: 38,
+    height: 38,
     alignItems: 'center',
-    marginRight: 14,
+    justifyContent: 'center',
+    marginRight: 12,
   },
   categoryInfo: {
     flex: 1,
   },
   categoryTitle: {
-    fontSize: 15,
-    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 14,
+    fontFamily: 'Outfit_500Medium',
   },
   categorySubtitle: {
     fontSize: 11,
@@ -742,145 +922,139 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   iconActionBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    maxHeight: '92%',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 36,
-  },
-  modalDragHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(142, 142, 147, 0.3)',
-    alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 14,
-  },
-  modalHeader: {
+  reorderButtonGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    marginBottom: 14,
+    gap: 6,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontFamily: 'Outfit_600SemiBold',
-  },
-  doneBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  reorderArrowBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
   },
-  previewCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 18,
-  },
-  previewIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  previewName: {
-    fontSize: 17,
-    fontFamily: 'Outfit_600SemiBold',
-    marginTop: 2,
-  },
-  editorInputSection: {
-    marginBottom: 18,
-  },
-  sectionLabel: {
-    fontSize: 10,
-    fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: 0.8,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  nameInput: {
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    fontFamily: 'Outfit_400Regular',
-  },
-  suggestionPill: {
+  inlineEditRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    margin: 6,
+  },
+  inlineIconButton: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    marginRight: 10,
   },
-  colorCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  iconEditBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inlineInputWrap: {
+    flex: 1,
+    marginRight: 8,
+  },
+  inlineInput: {
+    fontSize: 14,
+    fontFamily: 'Outfit_500Medium',
+    paddingVertical: 4,
+  },
+  inlineHint: {
+    fontSize: 10,
+    fontFamily: 'Outfit_400Regular',
+    marginTop: 2,
+  },
+  inlineActionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  inlineSmallBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inlineAddRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+  },
+  fullModalContainer: {
+    flex: 1,
+  },
+  fullModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  fullModalTitle: {
+    fontSize: 17,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.3,
+  },
+  fullModalDoneBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconSearchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 40,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    marginBottom: 10,
+  fullModalSearchWrap: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  iconSearchInput: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: 'Outfit_400Regular',
-  },
-  groupChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-  },
-  iconGrid: {
+  fullModalGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    rowGap: 10,
-    columnGap: 8,
-    paddingBottom: 28,
+    paddingHorizontal: 12,
+    gap: 10,
   },
-  iconGridTile: {
-    width: '22.8%',
-    height: 68,
+  popupEmpty: {
+    width: '100%',
+    paddingVertical: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconTile: {
+    width: '22.5%',
+    aspectRatio: 1,
     borderRadius: 14,
     borderWidth: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 2,
-    paddingVertical: 6,
+    justifyContent: 'center',
+    padding: 6,
+  },
+  iconTileSelected: {
+    borderWidth: 1.5,
   },
   iconTileLabel: {
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: 'Outfit_400Regular',
     marginTop: 4,
     textAlign: 'center',

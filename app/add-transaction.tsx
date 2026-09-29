@@ -32,11 +32,12 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
 export default function AddTransactionScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
     addTransaction,
@@ -258,13 +259,16 @@ export default function AddTransactionScreen() {
 
   return (
     <View
-      style={[styles.mainContainer, { backgroundColor: currColors.background }]}
+      style={[
+        styles.mainContainer,
+        {
+          backgroundColor: currColors.background,
+          paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 52 : 16),
+        },
+      ]}
     >
       <StatusBar style={colorScheme === 'light' ? 'dark' : 'light'} />
-      <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: currColors.background }]}
-        edges={['top']}
-      >
+      <View style={[styles.safeArea, { backgroundColor: currColors.background }]}>
         <View
           style={[
             styles.header,
@@ -652,13 +656,14 @@ export default function AddTransactionScreen() {
             )}
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
 
-      {/* SYMBOL SELECTION MODAL */}
+      {/* FULL PAGE SYMBOL SELECTION MODAL */}
       <Modal
         visible={showSymbolModal}
         animationType="slide"
-        presentationStyle="pageSheet"
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
         onRequestClose={() => setShowSymbolModal(false)}
       >
         <View
@@ -673,24 +678,32 @@ export default function AddTransactionScreen() {
               {
                 backgroundColor: currColors.background,
                 borderBottomColor: currColors.border,
+                paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24),
               },
             ]}
           >
-            <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
-              Select Asset
-            </ThemedText>
             <TouchableOpacity
               onPress={() => setShowSymbolModal(false)}
-              style={styles.modalCloseButton}
+              style={styles.cancelButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <X size={24} color={currColors.text} />
+              <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+                Cancel
+              </ThemedText>
             </TouchableOpacity>
+
+            <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+              Select Asset
+            </ThemedText>
+
+            <View style={{ width: 50 }} />
           </View>
 
           <View
             style={[
               styles.searchBarContainer,
-              { backgroundColor: currColors.card },
+              { backgroundColor: currColors.card, borderColor: currColors.border },
             ]}
           >
             <Search size={18} color={currColors.textSecondary} />
@@ -1036,11 +1049,12 @@ export default function AddTransactionScreen() {
         </View>
       </Modal>
 
-      {/* BROKER SELECTION MODAL */}
+      {/* FULL PAGE BROKER SELECTION MODAL */}
       <Modal
         visible={showBrokerModal}
         animationType="slide"
-        presentationStyle="pageSheet"
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
         onRequestClose={() => setShowBrokerModal(false)}
       >
         <View
@@ -1055,24 +1069,32 @@ export default function AddTransactionScreen() {
               {
                 backgroundColor: currColors.background,
                 borderBottomColor: currColors.border,
+                paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24),
               },
             ]}
           >
-            <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
-              Select Broker
-            </ThemedText>
             <TouchableOpacity
               onPress={() => setShowBrokerModal(false)}
-              style={styles.modalCloseButton}
+              style={styles.cancelButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <X size={24} color={currColors.text} />
+              <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+                Cancel
+              </ThemedText>
             </TouchableOpacity>
+
+            <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+              Select Broker
+            </ThemedText>
+
+            <View style={{ width: 50 }} />
           </View>
 
           <View
             style={[
               styles.searchBarContainer,
-              { backgroundColor: currColors.card },
+              { backgroundColor: currColors.card, borderColor: currColors.border },
             ]}
           >
             <Search size={18} color={currColors.textSecondary} />
@@ -1150,11 +1172,9 @@ export default function AddTransactionScreen() {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: '#000',
   },
   safeArea: {
     flex: 1,
-    backgroundColor: '#000',
   },
   header: {
     flexDirection: 'row',
@@ -1163,10 +1183,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1C1C1E',
   },
   headerTitle: {
-    color: '#FFF',
     fontSize: 17,
     fontWeight: '600',
   },
@@ -1195,7 +1213,6 @@ const styles = StyleSheet.create({
   },
   typeSelector: {
     flexDirection: 'row',
-    backgroundColor: '#1C1C1E',
     borderRadius: 8,
     padding: 2,
   },
@@ -1214,20 +1231,17 @@ const styles = StyleSheet.create({
   typeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFF',
   },
   typeTextActive: {
     color: '#000', // Black text on colored background
   },
   groupLabel: {
     fontSize: 12,
-    color: '#8E8E93',
     marginLeft: 16,
     marginBottom: 8,
     textTransform: 'uppercase',
   },
   formGroup: {
-    backgroundColor: '#1C1C1E',
     borderRadius: 12,
     marginHorizontal: 16,
     marginBottom: 16,
@@ -1240,7 +1254,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#2C2C2E',
     minHeight: 48,
   },
   formRowFirst: {
@@ -1253,11 +1266,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 12,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#2C2C2E',
   },
   label: {
     fontSize: 16,
-    color: '#FFF',
   },
   valueContainer: {
     flexDirection: 'row',
@@ -1265,7 +1276,6 @@ const styles = StyleSheet.create({
   },
   valueText: {
     fontSize: 16,
-    color: '#FFF',
   },
   placeholderText: {
     color: '#8E8E93',
@@ -1273,37 +1283,32 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#FFF',
     padding: 0,
     fontFamily: 'Outfit_400Regular',
   },
   currencyPrefix: {
     fontSize: 16,
-    color: '#FFF',
     marginRight: 2,
   },
   companyName: {
     fontSize: 13,
-    color: '#8E8E93',
   },
 
   // Modal Styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#1C1C1E',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2C2C2E',
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    borderBottomWidth: 0.5,
   },
   modalTitle: {
-    color: '#FFF',
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
   },
   modalCloseButton: {
     padding: 4,
@@ -1312,15 +1317,14 @@ const styles = StyleSheet.create({
     margin: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2C2C2E',
     borderRadius: 10,
     paddingHorizontal: 10,
     height: 40,
+    borderWidth: 1,
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
-    color: '#FFF',
     fontSize: 16,
     fontFamily: 'Outfit_400Regular',
   },
@@ -1334,21 +1338,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#2C2C2E',
   },
   tickerSymbol: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFF',
   },
   companyNameList: {
     fontSize: 12,
-    color: '#8E8E93',
     marginTop: 2,
   },
   tickerPrice: {
     fontSize: 14,
-    color: '#FFF',
   },
   availableLabel: {
     fontSize: 12,

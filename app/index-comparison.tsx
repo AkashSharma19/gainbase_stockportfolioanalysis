@@ -103,8 +103,8 @@ export default function IndexComparisonScreen() {
       data.push({
         value: return1Y,
         label: displayLabel,
-        frontColor: idx.Tickers === defaultIndex ? currColors.tint : '#2C2C2E',
-        gradientColor: idx.Tickers === defaultIndex ? '#FF9500' : '#48484A',
+        frontColor: idx.Tickers === defaultIndex ? currColors.tint : (theme === 'dark' ? '#2C2C2E' : '#C7C7CC'),
+        gradientColor: idx.Tickers === defaultIndex ? '#FF9500' : (theme === 'dark' ? '#48484A' : '#E5E5EA'),
         showGradient: true,
         topLabelComponent: () => (
           <View style={{ width: 40, alignItems: 'center' }}>

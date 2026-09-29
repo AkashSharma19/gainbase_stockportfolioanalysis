@@ -25,7 +25,6 @@ import {
   Share2,
   TrendingUp,
   Target,
-  Plus,
   ArrowDownLeft,
   ArrowUpRight,
 } from 'lucide-react-native';
@@ -367,18 +366,6 @@ export function PortfolioScreen() {
                     ]}
                   >
                     <Share2 size={16} color={currColors.text} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.push('/add-transaction');
-                    }}
-                    style={[
-                      styles.iconButton,
-                      { backgroundColor: currColors.cardSecondary },
-                    ]}
-                  >
-                    <Plus size={16} color={currColors.text} />
                   </TouchableOpacity>
                 </View>
               </View>

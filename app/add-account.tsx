@@ -11,9 +11,11 @@ import {
   Modal,
   FlatList,
   Switch,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Haptics from 'expo-haptics';
 import {
   ChevronRight,
   Search,
@@ -27,7 +29,12 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
 } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Category3DIcon } from '@/components/Category3DIcon';
+import { CATEGORY_3D_ICONS_LIST } from '@/constants/Category3DIcons';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -62,6 +69,7 @@ const TYPES: { type: AccountType; label: string; icon: any; color: string }[] = 
 export default function AddAccountScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
 
@@ -80,10 +88,13 @@ export default function AddAccountScreen() {
   const [logo, setLogo] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [color, setColor] = useState(COLORS[0]);
+  const [iconId, setIconId] = useState(''); // 3D icon ID for receivable/payable
   const [isLogoManuallySelected, setIsLogoManuallySelected] = useState(false);
   const [includeInAssets, setIncludeInAssets] = useState(true);
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [showLogoModal, setShowLogoModal] = useState(false);
+  const [showIconModal, setShowIconModal] = useState(false);
+  const [iconSearchQuery, setIconSearchQuery] = useState('');
   const [linkedBroker, setLinkedBroker] = useState('');
   const [showBrokerModal, setShowBrokerModal] = useState(false);
   const [brandSearchQuery, setBrandSearchQuery] = useState('');
@@ -100,6 +111,18 @@ export default function AddAccountScreen() {
     return Array.from(merged);
   }, [portfolioTransactions]);
 
+  // Filtered 3D icons for receivable/payable icon picker
+  const filteredIcons = useMemo(() => {
+    if (!iconSearchQuery.trim()) return CATEGORY_3D_ICONS_LIST;
+    const q = iconSearchQuery.toLowerCase().trim();
+    return CATEGORY_3D_ICONS_LIST.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q) ||
+        (item.keywords && item.keywords.some((kw) => kw.toLowerCase().includes(q)))
+    );
+  }, [iconSearchQuery]);
+
   useEffect(() => {
     if (editingAccount) {
       setName(editingAccount.name);
@@ -110,6 +133,7 @@ export default function AddAccountScreen() {
       setLogo(editingAccount.logo || '');
       setAccountNumber(editingAccount.accountNumber || '');
       setColor(editingAccount.color);
+      setIconId(editingAccount.icon || '');
       setIncludeInAssets(editingAccount.includeInAssets !== false);
       setLinkedBroker(editingAccount.linkedBroker || '');
     }
@@ -131,7 +155,12 @@ export default function AddAccountScreen() {
     }
   };
 
+  const handleHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
   const handleSave = () => {
+    handleHaptic();
     if (!name.trim()) {
       Alert.alert('Required Field', 'Please enter an account name.');
       return;
@@ -162,15 +191,25 @@ export default function AddAccountScreen() {
         logo: logo || undefined,
         accountNumber: accountNumber.trim() || undefined,
         color,
+        icon: (type === 'receivable' || type === 'payable') ? (iconId || 'users') : undefined,
         includeInAssets,
         linkedBroker: type === 'investment' ? (linkedBroker || undefined) : undefined,
       });
     } else {
+      const resolvedIcon =
+        (type === 'receivable' || type === 'payable') && iconId
+          ? iconId
+          : type === 'wallet' ? 'Wallet'
+          : type === 'savings' ? 'Landmark'
+          : type === 'investment' ? 'Activity'
+          : type === 'receivable' ? 'ArrowDownLeft'
+          : type === 'payable' ? 'ArrowUpRight'
+          : 'CreditCard';
       const newAccount: Account = {
         id: Math.random().toString(36).substring(2, 9),
         name: name.trim(),
         type,
-        icon: type === 'wallet' ? 'Wallet' : type === 'savings' ? 'Landmark' : type === 'investment' ? 'Activity' : 'CreditCard',
+        icon: resolvedIcon,
         balance: finalBalance,
         creditLimit: type === 'credit_card' ? (parsedLimit || 0) : undefined,
         institution: institution.trim() || undefined,
@@ -204,26 +243,43 @@ export default function AddAccountScreen() {
     return BANK_BRANDS.find((b) => b.id.toLowerCase() === (logo || '').toLowerCase());
   }, [logo]);
 
+  const headerTopPadding = Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24);
+
   return (
     <View style={[styles.mainContainer, { backgroundColor: currColors.background }]}>
       <StatusBar style={colorScheme === 'light' ? 'dark' : 'light'} />
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: currColors.background }]} edges={['top']}>
-        {/* iOS Clean Header */}
-        <View style={[styles.header, { backgroundColor: currColors.background, borderBottomColor: currColors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.cancelButton} activeOpacity={0.7}>
-            <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
-              Cancel
-            </ThemedText>
-          </TouchableOpacity>
-          <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
-            {editingAccount ? 'Edit Account' : 'Add Account'}
+      
+      {/* iOS Full Page Clean Header with dynamic top safe padding */}
+      <View style={[styles.header, { paddingTop: headerTopPadding, backgroundColor: currColors.background, borderBottomColor: currColors.border }]}>
+        <TouchableOpacity
+          onPress={() => {
+            handleHaptic();
+            router.back();
+          }}
+          style={styles.headerButton}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+            Cancel
           </ThemedText>
-          <TouchableOpacity onPress={handleSave} style={styles.saveButton} activeOpacity={0.7}>
-            <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
-              Save
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
+
+        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+          {editingAccount ? 'Edit Account' : 'Add Account'}
+        </ThemedText>
+
+        <TouchableOpacity
+          onPress={handleSave}
+          style={styles.headerButton}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+            Save
+          </ThemedText>
+        </TouchableOpacity>
+      </View>
 
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -284,36 +340,36 @@ export default function AddAccountScreen() {
                 <ThemedText style={[styles.label, { color: currColors.text }]}>
                   {type === 'credit_card' ? 'Outstanding Debt' : 'Current Balance'}
                 </ThemedText>
-                <View style={styles.amountInputRow}>
-                  <ThemedText style={[styles.currencyPrefix, { color: currColors.text }]}>₹</ThemedText>
-                  <TextInput
-                    style={[styles.input, { color: currColors.text }]}
-                    placeholder="0"
-                    placeholderTextColor={currColors.textSecondary}
-                    value={balance}
-                    onChangeText={(val) => setBalance(formatIndianAmount(val))}
-                    keyboardType="decimal-pad"
-                    textAlign="right"
-                  />
-                </View>
+                <TextInput
+                  style={[styles.input, { color: currColors.text }]}
+                  placeholder="₹ 0"
+                  placeholderTextColor={currColors.textSecondary}
+                  value={balance ? `₹ ${balance}` : ''}
+                  onChangeText={(val) => {
+                    const clean = val.replace(/[^0-9.]/g, '');
+                    setBalance(formatIndianAmount(clean));
+                  }}
+                  keyboardType="decimal-pad"
+                  textAlign="right"
+                />
               </View>
 
               {/* Credit Limit Row (Credit Card Only) */}
               {type === 'credit_card' ? (
                 <View style={[styles.formRow, { borderBottomColor: currColors.border }]}>
                   <ThemedText style={[styles.label, { color: currColors.text }]}>Total Credit Limit</ThemedText>
-                  <View style={styles.amountInputRow}>
-                    <ThemedText style={[styles.currencyPrefix, { color: currColors.text }]}>₹</ThemedText>
-                    <TextInput
-                      style={[styles.input, { color: currColors.text }]}
-                      placeholder="0"
-                      placeholderTextColor={currColors.textSecondary}
-                      value={creditLimit}
-                      onChangeText={(val) => setCreditLimit(formatIndianAmount(val))}
-                      keyboardType="decimal-pad"
-                      textAlign="right"
-                    />
-                  </View>
+                  <TextInput
+                    style={[styles.input, { color: currColors.text }]}
+                    placeholder="₹ 0"
+                    placeholderTextColor={currColors.textSecondary}
+                    value={creditLimit ? `₹ ${creditLimit}` : ''}
+                    onChangeText={(val) => {
+                      const clean = val.replace(/[^0-9.]/g, '');
+                      setCreditLimit(formatIndianAmount(clean));
+                    }}
+                    keyboardType="decimal-pad"
+                    textAlign="right"
+                  />
                 </View>
               ) : null}
 
@@ -385,6 +441,26 @@ export default function AddAccountScreen() {
                 </TouchableOpacity>
               ) : null}
 
+              {/* Icon Row (only for receivable/payable) */}
+              {(type === 'receivable' || type === 'payable') ? (
+                <TouchableOpacity
+                  style={[styles.formRow, { borderBottomColor: currColors.border }]}
+                  onPress={() => setShowIconModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText style={[styles.label, { color: currColors.text }]}>Account Icon</ThemedText>
+                  <View style={styles.valueContainer}>
+                    <View style={styles.typeBadge}>
+                      <Category3DIcon name={iconId || 'users'} icon={iconId || 'users'} size={26} />
+                      <ThemedText style={[styles.valueText, { color: currColors.text, marginLeft: 8 }]}>
+                        {CATEGORY_3D_ICONS_LIST.find((i) => i.id === iconId)?.name || 'Default'}
+                      </ThemedText>
+                    </View>
+                    <ChevronRight size={16} color={currColors.border} style={{ marginLeft: 6 }} />
+                  </View>
+                </TouchableOpacity>
+              ) : null}
+
               {/* Include in Net Worth Switch */}
               <View style={[styles.formRow, styles.formRowLast]}>
                 <ThemedText style={[styles.label, { color: currColors.text }]}>Include in Net Worth</ThemedText>
@@ -398,15 +474,56 @@ export default function AddAccountScreen() {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
 
       {/* ACCOUNT TYPE SELECTION MODAL */}
-      <Modal visible={showTypeModal} animationType="slide" presentationStyle="pageSheet">
+      <Modal
+        visible={showTypeModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
+        onRequestClose={() => setShowTypeModal(false)}
+      >
         <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
-            <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Account Type</ThemedText>
-            <TouchableOpacity onPress={() => setShowTypeModal(false)} style={styles.modalCloseButton}>
-              <X size={20} color={currColors.text} />
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                paddingTop: headerTopPadding,
+                borderBottomColor: currColors.border,
+                backgroundColor: currColors.background,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                setShowTypeModal(false);
+              }}
+              style={styles.headerButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+                Cancel
+              </ThemedText>
+            </TouchableOpacity>
+
+            <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+              Account Type
+            </ThemedText>
+
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                setShowTypeModal(false);
+              }}
+              style={styles.headerButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+                Done
+              </ThemedText>
             </TouchableOpacity>
           </View>
 
@@ -421,9 +538,11 @@ export default function AddAccountScreen() {
                 <TouchableOpacity
                   style={[styles.listItem, { borderBottomColor: currColors.border }]}
                   onPress={() => {
+                    handleHaptic();
                     setType(item.type);
                     setShowTypeModal(false);
                   }}
+                  activeOpacity={0.7}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <View style={[styles.typeIconCircle, { backgroundColor: `${item.color}15` }]}>
@@ -440,25 +559,70 @@ export default function AddAccountScreen() {
       </Modal>
 
       {/* BANK BRAND LOGO SELECTION MODAL */}
-      <Modal visible={showLogoModal} animationType="slide" presentationStyle="pageSheet">
+      <Modal
+        visible={showLogoModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
+        onRequestClose={() => setShowLogoModal(false)}
+      >
         <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
-            <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Select Bank / Brand</ThemedText>
-            <TouchableOpacity onPress={() => setShowLogoModal(false)} style={styles.modalCloseButton}>
-              <X size={20} color={currColors.text} />
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                paddingTop: headerTopPadding,
+                borderBottomColor: currColors.border,
+                backgroundColor: currColors.background,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                setShowLogoModal(false);
+              }}
+              style={styles.headerButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+                Cancel
+              </ThemedText>
+            </TouchableOpacity>
+
+            <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+              Institution Logo
+            </ThemedText>
+
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                setShowLogoModal(false);
+              }}
+              style={styles.headerButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+                Done
+              </ThemedText>
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.searchBarContainer, { backgroundColor: currColors.cardSecondary }]}>
-            <Search size={16} color={currColors.textSecondary} />
-            <TextInput
-              style={[styles.searchInput, { color: currColors.text }]}
-              placeholder="Search banks, wallets, brokers..."
-              placeholderTextColor={currColors.textSecondary}
-              value={brandSearchQuery}
-              onChangeText={setBrandSearchQuery}
-              clearButtonMode="while-editing"
-            />
+          <View style={styles.searchBarContainer}>
+            <View style={[styles.searchBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+              <Search size={16} color={currColors.textSecondary} style={{ marginRight: 8 }} />
+              <TextInput
+                style={[styles.searchInput, { color: currColors.text }]}
+                placeholder="Search banks, wallets, brokers..."
+                placeholderTextColor={currColors.textSecondary}
+                value={brandSearchQuery}
+                onChangeText={setBrandSearchQuery}
+                clearButtonMode="while-editing"
+                autoCorrect={false}
+              />
+            </View>
           </View>
 
           {/* Custom Logo Generator Card on Search */}
@@ -466,6 +630,7 @@ export default function AddAccountScreen() {
             <TouchableOpacity
               style={[styles.customBadgeCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}
               onPress={() => {
+                handleHaptic();
                 const customId = `custom:${brandSearchQuery.trim()}`;
                 setLogo(customId);
                 setColor(getCustomBrandColor(brandSearchQuery.trim()));
@@ -473,6 +638,7 @@ export default function AddAccountScreen() {
                 setShowLogoModal(false);
                 setBrandSearchQuery('');
               }}
+              activeOpacity={0.7}
             >
               <BankLogo logo={`custom:${brandSearchQuery.trim()}`} size={32} style={{ marginRight: 12 }} />
               <View style={{ flex: 1 }}>
@@ -496,10 +662,12 @@ export default function AddAccountScreen() {
                 <TouchableOpacity
                   style={[styles.listItem, { borderBottomColor: currColors.border }]}
                   onPress={() => {
+                    handleHaptic();
                     setLogo('');
                     setIsLogoManuallySelected(true);
                     setShowLogoModal(false);
                   }}
+                  activeOpacity={0.7}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <View style={[styles.noLogoCircle, { backgroundColor: currColors.cardSecondary }]}>
@@ -521,12 +689,14 @@ export default function AddAccountScreen() {
                 <TouchableOpacity
                   style={[styles.listItem, { borderBottomColor: currColors.border }]}
                   onPress={() => {
+                    handleHaptic();
                     setLogo(item.id);
                     setColor(item.color);
                     setIsLogoManuallySelected(true);
                     setShowLogoModal(false);
                     setBrandSearchQuery('');
                   }}
+                  activeOpacity={0.7}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <BankLogo logo={item.id} size={32} style={{ marginRight: 12 }} />
@@ -541,12 +711,54 @@ export default function AddAccountScreen() {
       </Modal>
 
       {/* BROKER SELECTION MODAL */}
-      <Modal visible={showBrokerModal} animationType="slide" presentationStyle="pageSheet">
+      <Modal
+        visible={showBrokerModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
+        onRequestClose={() => setShowBrokerModal(false)}
+      >
         <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
-            <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Link Portfolio Broker</ThemedText>
-            <TouchableOpacity onPress={() => setShowBrokerModal(false)} style={styles.modalCloseButton}>
-              <X size={20} color={currColors.text} />
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                paddingTop: headerTopPadding,
+                borderBottomColor: currColors.border,
+                backgroundColor: currColors.background,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                setShowBrokerModal(false);
+              }}
+              style={styles.headerButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+                Cancel
+              </ThemedText>
+            </TouchableOpacity>
+
+            <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+              Link Broker
+            </ThemedText>
+
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                setShowBrokerModal(false);
+              }}
+              style={styles.headerButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+                Done
+              </ThemedText>
             </TouchableOpacity>
           </View>
 
@@ -560,9 +772,11 @@ export default function AddAccountScreen() {
                 <TouchableOpacity
                   style={[styles.listItem, { borderBottomColor: currColors.border }]}
                   onPress={() => {
+                    handleHaptic();
                     setLinkedBroker(item === 'None (Manual Balance)' ? '' : item);
                     setShowBrokerModal(false);
                   }}
+                  activeOpacity={0.7}
                 >
                   <ThemedText style={[styles.itemTitle, { color: currColors.text }]}>{item}</ThemedText>
                   {isSelected && <Check size={18} color="#00C9A7" strokeWidth={2.5} />}
@@ -570,6 +784,133 @@ export default function AddAccountScreen() {
               );
             }}
           />
+        </View>
+      </Modal>
+
+      {/* ICON PICKER MODAL (3D Icons for Receivable/Payable) */}
+      <Modal
+        visible={showIconModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
+        onRequestClose={() => setShowIconModal(false)}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                paddingTop: headerTopPadding,
+                borderBottomColor: currColors.border,
+                backgroundColor: currColors.background,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                setShowIconModal(false);
+                setIconSearchQuery('');
+              }}
+              style={styles.headerButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+                Cancel
+              </ThemedText>
+            </TouchableOpacity>
+
+            <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+              Account Icon
+            </ThemedText>
+
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                setShowIconModal(false);
+                setIconSearchQuery('');
+              }}
+              style={styles.headerButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+                Done
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          {/* Search */}
+          <View style={[styles.iconSearchBar, { backgroundColor: currColors.cardSecondary }]}>
+            <Search size={16} color={currColors.textSecondary} />
+            <TextInput
+              style={[styles.iconSearchInput, { color: currColors.text }]}
+              placeholder="Search icons (people, money, star, fire)..."
+              placeholderTextColor={currColors.textSecondary}
+              value={iconSearchQuery}
+              onChangeText={setIconSearchQuery}
+              clearButtonMode="while-editing"
+              autoCorrect={false}
+            />
+          </View>
+
+          {/* 3D Icons Grid */}
+          <ScrollView
+            contentContainerStyle={[styles.iconsGridContent, { paddingBottom: Math.max(insets.bottom, 24) + 20 }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {filteredIcons.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <ThemedText style={{ color: currColors.textSecondary, fontSize: 14, fontFamily: 'Outfit_400Regular' }}>
+                  No icons found for "{iconSearchQuery}"
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={styles.gridRowWrap}>
+                {filteredIcons.map((item) => {
+                  const isSelected = iconId === item.id;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[
+                        styles.iconTile,
+                        { backgroundColor: currColors.card, borderColor: currColors.border },
+                        isSelected && [
+                          styles.iconTileSelected,
+                          { borderColor: '#00C9A7', backgroundColor: colorScheme === 'dark' ? '#00C9A722' : '#00C9A714' },
+                        ],
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        handleHaptic();
+                        setIconId(item.id);
+                        setShowIconModal(false);
+                        setIconSearchQuery('');
+                      }}
+                    >
+                      <Category3DIcon name={item.id} icon={item.id} size={36} />
+                      <ThemedText
+                        style={[
+                          styles.iconTileLabel,
+                          { color: isSelected ? '#00C9A7' : currColors.textSecondary },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.name}
+                      </ThemedText>
+                      {isSelected && (
+                        <View style={styles.checkBadge}>
+                          <Check size={10} color="#FFFFFF" strokeWidth={3} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -580,30 +921,25 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
   },
-  safeArea: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: 14,
     borderBottomWidth: 0.5,
   },
   headerTitle: {
     fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
   },
+  headerButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
   headerButtonText: {
     fontSize: 17,
     fontFamily: 'Outfit_400Regular',
-  },
-  cancelButton: {
-    padding: 4,
-  },
-  saveButton: {
-    padding: 4,
   },
   saveButtonText: {
     fontFamily: 'Outfit_600SemiBold',
@@ -678,17 +1014,6 @@ const styles = StyleSheet.create({
   placeholderText: {
     opacity: 0.6,
   },
-  amountInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  currencyPrefix: {
-    fontSize: 16,
-    fontFamily: 'Outfit_600SemiBold',
-    marginRight: 4,
-  },
   input: {
     flex: 1,
     fontSize: 16,
@@ -702,29 +1027,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
     borderBottomWidth: 0.5,
   },
   modalTitle: {
     fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
   },
-  modalCloseButton: {
-    padding: 4,
-  },
   searchBarContainer: {
-    margin: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 12,
+    height: 42,
     borderRadius: 10,
-    paddingHorizontal: 10,
-    height: 40,
+    borderWidth: 1,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: 'Outfit_400Regular',
+    paddingVertical: 0,
   },
   listContent: {
     paddingBottom: 30,
@@ -765,5 +1092,64 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+  },
+  // Icon Picker Grid
+  iconSearchBar: {
+    margin: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 40,
+  },
+  iconSearchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 15,
+    fontFamily: 'Outfit_400Regular',
+  },
+  iconsGridContent: {
+    paddingHorizontal: 14,
+    paddingBottom: 40,
+  },
+  gridRowWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    gap: 10,
+  },
+  iconTile: {
+    width: '22.5%',
+    aspectRatio: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 6,
+    position: 'relative',
+  },
+  iconTileSelected: {
+    borderWidth: 1.5,
+  },
+  iconTileLabel: {
+    fontSize: 10,
+    fontFamily: 'Outfit_500Medium',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  checkBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#00C9A7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyWrap: {
+    paddingVertical: 40,
+    alignItems: 'center',
   },
 });

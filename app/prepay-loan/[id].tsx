@@ -32,6 +32,8 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { EMIPayment } from '@/types/money';
+import { Category3DIcon } from '@/components/Category3DIcon';
+import { LOAN_3D_ICON_MAP } from '@/constants/Category3DIcons';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
 export default function PrepayLoanScreen() {
@@ -274,9 +276,15 @@ export default function PrepayLoanScreen() {
           {/* Current Loan Snapshot Card */}
           <View style={[styles.snapshotCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
             <View style={styles.snapshotHeader}>
-              <ThemedText style={[styles.snapshotLabel, { color: currColors.textSecondary }]}>
-                CURRENT OUTSTANDING
-              </ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Category3DIcon
+                  name={loan.icon || LOAN_3D_ICON_MAP[loan.type] || 'loan'}
+                  size={24}
+                />
+                <ThemedText style={[styles.snapshotLabel, { color: currColors.textSecondary }]}>
+                  CURRENT OUTSTANDING
+                </ThemedText>
+              </View>
               <View style={[styles.badgePill, { backgroundColor: 'rgba(0, 201, 167, 0.12)' }]}>
                 <ThemedText style={[styles.badgeText, { color: '#00C9A7' }]}>
                   {loan.lenderName.toUpperCase()}

@@ -218,18 +218,18 @@ export default function AddBudgetScreen() {
                       <ThemedText style={[styles.label, { color: currColors.text }]}>{item.name}</ThemedText>
                     </View>
 
-                    <View style={styles.amountInputRow}>
-                      <ThemedText style={[styles.currencyPrefix, { color: currColors.text }]}>₹</ThemedText>
-                      <TextInput
-                        style={[styles.input, { color: currColors.text }]}
-                        placeholder="No limit"
-                        placeholderTextColor={currColors.textSecondary}
-                        value={item.limit}
-                        onChangeText={(val) => handleLimitChange(item.id, val)}
-                        keyboardType="decimal-pad"
-                        textAlign="right"
-                      />
-                    </View>
+                    <TextInput
+                      style={[styles.input, { color: currColors.text }]}
+                      placeholder="No limit"
+                      placeholderTextColor={currColors.textSecondary}
+                      value={item.limit ? `₹ ${item.limit}` : ''}
+                      onChangeText={(val) => {
+                        const clean = val.replace(/[^0-9.]/g, '');
+                        handleLimitChange(item.id, formatIndianAmount(clean));
+                      }}
+                      keyboardType="decimal-pad"
+                      textAlign="right"
+                    />
                   </View>
                 );
               })}
@@ -345,17 +345,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 15,
     fontFamily: 'Outfit_500Medium',
-  },
-  amountInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: 140,
-    justifyContent: 'flex-end',
-  },
-  currencyPrefix: {
-    fontSize: 15,
-    fontFamily: 'Outfit_600SemiBold',
-    marginRight: 3,
   },
   input: {
     flex: 1,

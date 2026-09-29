@@ -13,7 +13,7 @@ import {
   FlatList,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -47,6 +47,8 @@ import {
 import { ThemedText } from '../components/ThemedText';
 import Colors from '../constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { Category3DIcon } from '@/components/Category3DIcon';
+import { CATEGORY_3D_ICONS_LIST, findBest3DIconForText } from '@/constants/Category3DIcons';
 import { useGoalStore } from '../store/useGoalStore';
 import { useMoneyStore } from '../store/useMoneyStore';
 import { usePortfolioStore } from '../store/usePortfolioStore';
@@ -57,40 +59,6 @@ import { parseGoalPromptWithAI } from '../lib/goalAiParser';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const GOAL_COLOR_PALETTE: {
-  hex: string;
-  name: string;
-  description: string;
-}[] = [
-  { hex: '#00C9A7', name: 'Gainbase Teal', description: 'Primary brand accent for savings & milestone goals' },
-  { hex: '#34C759', name: 'Emerald Green', description: 'Growth, investment compounding & wealth building' },
-  { hex: '#007AFF', name: 'Electric Blue', description: 'Institutional clarity for debts & capital tracking' },
-  { hex: '#5856D6', name: 'Indigo Dream', description: 'Focused financial discipline & long-term targets' },
-  { hex: '#AF52DE', name: 'Royal Purple', description: 'Net worth & wealth accumulation milestones' },
-  { hex: '#FF2D55', name: 'Coral Pink', description: 'Lifestyle, vacations & luxury reward goals' },
-  { hex: '#FF9500', name: 'Sunset Amber', description: 'High-performing portfolio yield & returns' },
-  { hex: '#FFCC00', name: 'Golden Sun', description: 'Precious metals, golden milestones & buffer goals' },
-  { hex: '#FF3B30', name: 'Crimson Red', description: 'Urgent debt elimination & risk reduction' },
-  { hex: '#64D2FF', name: 'Sky Cyan', description: 'Liquid cash reserves & financial freedom' },
-];
-
-const GOAL_COLORS = GOAL_COLOR_PALETTE.map((c) => c.hex);
-
-const GOAL_ICONS = [
-  'Target',
-  'ShieldCheck',
-  'TrendingUp',
-  'Activity',
-  'Coins',
-  'Landmark',
-  'Wallet',
-  'Crown',
-  'Percent',
-  'CreditCard',
-  'ShoppingBag',
-  'CheckCircle2',
-];
 
 const CATEGORIES: { key: GoalCategory; label: string; icon: any; color: string }[] = [
   { key: 'savings', label: 'Savings & Emergency', icon: PiggyBank, color: '#00C9A7' },
@@ -111,19 +79,19 @@ const QUICK_TRACK_PRESETS: {
   color: string;
   category: GoalCategory;
 }[] = [
-  { label: 'Net Worth', formula: 'NetWorth', description: 'Total Assets minus Total Liabilities', unit: 'currency', operator: '>=', icon: 'Crown', iconComponent: Crown, color: '#AF52DE', category: 'retirement' },
-  { label: 'Cash & Emergency', formula: 'Cash + Savings + Emergency', description: 'Liquid cash reserves buffer', unit: 'currency', operator: '>=', icon: 'ShieldCheck', iconComponent: ShieldCheck, color: '#00C9A7', category: 'savings' },
-  { label: 'Stock Portfolio', formula: 'HoldingsValue', description: 'Direct stock & ETF holding value', unit: 'currency', operator: '>=', icon: 'TrendingUp', iconComponent: TrendingUp, color: '#34C759', category: 'investments' },
-  { label: 'Total Liquid Assets', formula: 'LiquidCash', description: 'Combined cash, savings & emergency funds', unit: 'currency', operator: '>=', icon: 'Coins', iconComponent: Coins, color: '#34C759', category: 'savings' },
-  { label: 'Pay Off All Debts', formula: 'TotalDebt', description: 'Total outstanding loans & card debt', unit: 'currency', operator: '<=', icon: 'CreditCard', iconComponent: CreditCard, color: '#007AFF', category: 'debt' },
-  { label: 'Credit Card Debt (Excl. Blocked)', formula: 'CreditCardDebt', description: 'Active credit card spend balance', unit: 'currency', operator: '<=', icon: 'CreditCard', iconComponent: CreditCard, color: '#FF9500', category: 'debt' },
-  { label: 'Blocked CC Loan Amount', formula: 'BlockedCCDebt', description: 'Principal balance blocked for loan EMIs', unit: 'currency', operator: '<=', icon: 'CreditCard', iconComponent: CreditCard, color: '#FF3B30', category: 'debt' },
-  { label: 'Total CC Debt (Incl. Blocked)', formula: 'TotalCCDebt', description: 'Combined card spent balance + EMI loan debt', unit: 'currency', operator: '<=', icon: 'CreditCard', iconComponent: CreditCard, color: '#FF3B30', category: 'debt' },
-  { label: 'Loan Outstanding', formula: 'LoanOutstanding', description: 'Unpaid active loan balances', unit: 'currency', operator: '<=', icon: 'TrendingDown', iconComponent: TrendingDown, color: '#FF3B30', category: 'debt' },
-  { label: 'Portfolio XIRR', formula: 'PortfolioXIRR', description: 'Annualized investment compounding rate', unit: 'percentage', operator: '>=', icon: 'Activity', iconComponent: Activity, color: '#FF9500', category: 'investments' },
-  { label: 'Monthly Savings Rate', formula: 'MonthlySavingsRate', description: 'Savings as percentage of monthly income', unit: 'percentage', operator: '>=', icon: 'Percent', iconComponent: Percent, color: '#00C9A7', category: 'savings' },
-  { label: 'Debt-to-Income (DTI)', formula: 'DebtToIncome', description: 'Monthly EMI burden relative to income', unit: 'percentage', operator: '<=', icon: 'Percent', iconComponent: Percent, color: '#FF3B30', category: 'debt' },
-  { label: 'Daily Safe-to-Spend', formula: 'SafeToSpend', description: 'Remaining daily disposable run-rate', unit: 'currency', operator: '>=', icon: 'Sparkles', iconComponent: Sparkles, color: '#00C9A7', category: 'savings' },
+  { label: 'Net Worth', formula: 'NetWorth', description: 'Total Assets minus Total Liabilities', unit: 'currency', operator: '>=', icon: 'crown', iconComponent: Crown, color: '#AF52DE', category: 'retirement' },
+  { label: 'Cash & Emergency', formula: 'Cash + Savings + Emergency', description: 'Liquid cash reserves buffer', unit: 'currency', operator: '>=', icon: 'shield', iconComponent: ShieldCheck, color: '#00C9A7', category: 'savings' },
+  { label: 'Stock Portfolio', formula: 'HoldingsValue', description: 'Direct stock & ETF holding value', unit: 'currency', operator: '>=', icon: 'investments', iconComponent: TrendingUp, color: '#34C759', category: 'investments' },
+  { label: 'Total Liquid Assets', formula: 'LiquidCash', description: 'Combined cash, savings & emergency funds', unit: 'currency', operator: '>=', icon: 'coin', iconComponent: Coins, color: '#34C759', category: 'savings' },
+  { label: 'Pay Off All Debts', formula: 'TotalDebt', description: 'Total outstanding loans & card debt', unit: 'currency', operator: '<=', icon: 'credit_card', iconComponent: CreditCard, color: '#007AFF', category: 'debt' },
+  { label: 'Credit Card Debt (Excl. Blocked)', formula: 'CreditCardDebt', description: 'Active credit card spend balance', unit: 'currency', operator: '<=', icon: 'credit_card', iconComponent: CreditCard, color: '#FF9500', category: 'debt' },
+  { label: 'Blocked CC Loan Amount', formula: 'BlockedCCDebt', description: 'Principal balance blocked for loan EMIs', unit: 'currency', operator: '<=', icon: 'credit_card', iconComponent: CreditCard, color: '#FF3B30', category: 'debt' },
+  { label: 'Total CC Debt (Incl. Blocked)', formula: 'TotalCCDebt', description: 'Combined card spent balance + EMI loan debt', unit: 'currency', operator: '<=', icon: 'credit_card', iconComponent: CreditCard, color: '#FF3B30', category: 'debt' },
+  { label: 'Loan Outstanding', formula: 'LoanOutstanding', description: 'Unpaid active loan balances', unit: 'currency', operator: '<=', icon: 'loan', iconComponent: TrendingDown, color: '#FF3B30', category: 'debt' },
+  { label: 'Portfolio XIRR', formula: 'PortfolioXIRR', description: 'Annualized investment compounding rate', unit: 'percentage', operator: '>=', icon: 'rocket', iconComponent: Activity, color: '#FF9500', category: 'investments' },
+  { label: 'Monthly Savings Rate', formula: 'MonthlySavingsRate', description: 'Savings as percentage of monthly income', unit: 'percentage', operator: '>=', icon: 'money', iconComponent: Percent, color: '#00C9A7', category: 'savings' },
+  { label: 'Debt-to-Income (DTI)', formula: 'DebtToIncome', description: 'Monthly EMI burden relative to income', unit: 'percentage', operator: '<=', icon: 'receipt', iconComponent: Percent, color: '#FF3B30', category: 'debt' },
+  { label: 'Daily Safe-to-Spend', formula: 'SafeToSpend', description: 'Remaining daily disposable run-rate', unit: 'currency', operator: '>=', icon: 'sparkles', iconComponent: Sparkles, color: '#00C9A7', category: 'savings' },
 ];
 
 const DIRECTIONS: {
@@ -180,20 +148,21 @@ export default function CreateGoalScreen() {
   // Form States
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<GoalCategory>('savings');
-  const [formula, setFormula] = useState('Cash + Savings + Emergency');
+  const [category, setCategory] = useState<GoalCategory | null>(null);
+  const [formula, setFormula] = useState('');
   const [targetsList, setTargetsList] = useState<string[]>(['']);
   const [unit, setUnit] = useState<GoalUnit>('currency');
   const [operator, setOperator] = useState<GoalOperator>('>=');
-  const [icon, setIcon] = useState('ShieldCheck');
+  const [icon, setIcon] = useState('target');
   const [color, setColor] = useState('#00C9A7');
   const [targetDate, setTargetDate] = useState<Date | undefined>(undefined);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showTrackModal, setShowTrackModal] = useState(false);
   const [showDirectionModal, setShowDirectionModal] = useState(false);
-  const [showColorModal, setShowColorModal] = useState(false);
+  const [showIconModal, setShowIconModal] = useState(false);
   const [trackSearchQuery, setTrackSearchQuery] = useState('');
+  const [iconSearchQuery, setIconSearchQuery] = useState('');
 
   // AI Assistant States
   const [aiPrompt, setAiPrompt] = useState('');
@@ -221,7 +190,7 @@ export default function CreateGoalScreen() {
     if (editingGoal) {
       setName(editingGoal.name);
       setDescription(editingGoal.description || '');
-      setCategory(editingGoal.category);
+      setCategory(editingGoal.category || null);
       setFormula(editingGoal.formula);
       if (editingGoal.targets && editingGoal.targets.length > 0) {
         setTargetsList(editingGoal.targets.map((t) => formatInputAmount(t.toString(), editingGoal.unit)));
@@ -231,7 +200,7 @@ export default function CreateGoalScreen() {
       setUnit(editingGoal.unit);
       setOperator(editingGoal.operator || (editingGoal.targetValue === 0 || editingGoal.category === 'debt' ? '<=' : '>='));
       setIcon(editingGoal.icon);
-      setColor(editingGoal.color);
+      setColor(editingGoal.color || '#00C9A7');
       setTargetDate(editingGoal.targetDate ? new Date(editingGoal.targetDate) : undefined);
     }
   }, [editingGoal]);
@@ -241,18 +210,16 @@ export default function CreateGoalScreen() {
   };
 
   const selectedCategoryObj = useMemo(() => {
-    return CATEGORIES.find((c) => c.key === category) || CATEGORIES[0];
+    if (!category) return null;
+    return CATEGORIES.find((c) => c.key === category) || null;
   }, [category]);
 
   const selectedDirectionObj = useMemo(() => {
     return DIRECTIONS.find((d) => d.key === operator) || DIRECTIONS[0];
   }, [operator]);
 
-  const selectedColorObj = useMemo(() => {
-    return GOAL_COLOR_PALETTE.find((c) => c.hex.toLowerCase() === color.toLowerCase()) || GOAL_COLOR_PALETTE[0];
-  }, [color]);
-
   const selectedTrackPreset = useMemo(() => {
+    if (!formula) return null;
     return QUICK_TRACK_PRESETS.find((p) => p.formula === formula) || null;
   }, [formula]);
 
@@ -266,6 +233,18 @@ export default function CreateGoalScreen() {
         p.description.toLowerCase().includes(query)
     );
   }, [trackSearchQuery]);
+
+  const filteredIcons = useMemo(() => {
+    if (!iconSearchQuery.trim()) return CATEGORY_3D_ICONS_LIST;
+    const q = iconSearchQuery.trim().toLowerCase();
+    return CATEGORY_3D_ICONS_LIST.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q) ||
+        item.group.toLowerCase().includes(q) ||
+        item.keywords.some((k) => k.toLowerCase().includes(q))
+    );
+  }, [iconSearchQuery]);
 
   const handleGenerateAiGoal = async (customPrompt?: string) => {
     const textToParse = (customPrompt || aiPrompt).trim();
@@ -352,7 +331,7 @@ export default function CreateGoalScreen() {
       id: editingGoal ? editingGoal.id : 'preview-goal',
       name: name.trim() || 'My Financial Goal',
       description: description.trim() || undefined,
-      category,
+      category: category || 'custom',
       icon,
       color,
       formula: formula.trim() || '0',
@@ -427,7 +406,7 @@ export default function CreateGoalScreen() {
       updateGoal(editingGoal.id, {
         name: name.trim(),
         description: description.trim() || undefined,
-        category,
+        category: category || 'custom',
         formula: formula.trim(),
         targetValue: primaryTarget,
         targets: parsedTargets,
@@ -441,7 +420,7 @@ export default function CreateGoalScreen() {
       addGoal({
         name: name.trim(),
         description: description.trim() || undefined,
-        category,
+        category: category || 'custom',
         formula: formula.trim(),
         targetValue: primaryTarget,
         targets: parsedTargets,
@@ -456,39 +435,44 @@ export default function CreateGoalScreen() {
     router.back();
   };
 
-  const SelectedIconComp = (LucideIcons as any)[icon] || Target;
+  const insets = useSafeAreaInsets();
+  const headerTopPadding = Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24);
 
   return (
     <View style={[styles.mainContainer, { backgroundColor: currColors.background }]}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <StatusBar style={theme === 'light' ? 'dark' : 'light'} />
+      <StatusBar style={theme === 'light' ? 'dark' : 'light'} />
 
-        {/* Top iOS Navigation Header */}
-        <View style={[styles.header, { borderBottomColor: currColors.border }]}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.cancelButton}
-            activeOpacity={0.7}
-          >
-            <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary }]}>
-              Cancel
-            </ThemedText>
-          </TouchableOpacity>
-
-          <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
-            {editingGoal ? 'Edit Goal' : 'New Goal'}
+      {/* Top iOS Navigation Header */}
+      <View style={[styles.header, { paddingTop: headerTopPadding, backgroundColor: currColors.background, borderBottomColor: currColors.border }]}>
+        <TouchableOpacity
+          onPress={() => {
+            handleHaptic();
+            router.back();
+          }}
+          style={styles.cancelButton}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+            Cancel
           </ThemedText>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={handleSave}
-            style={styles.saveButton}
-            activeOpacity={0.7}
-          >
-            <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7' }]}>
-              Save
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
+        <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+          {editingGoal ? 'Edit Goal' : 'New Goal'}
+        </ThemedText>
+
+        <TouchableOpacity
+          onPress={handleSave}
+          style={styles.saveButton}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+            Save
+          </ThemedText>
+        </TouchableOpacity>
+      </View>
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -567,77 +551,6 @@ export default function CreateGoalScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Live Progress Preview Card */}
-            <View style={[styles.previewCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-              <View style={styles.previewTopRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  <View style={[styles.previewIconCircle, { backgroundColor: `${color}18` }]}>
-                    <SelectedIconComp size={20} color={color} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText style={[styles.previewGoalTitle, { color: currColors.text }]} numberOfLines={1}>
-                      {name || 'My Financial Goal'}
-                    </ThemedText>
-                    <ThemedText style={[styles.previewGoalSub, { color: currColors.textSecondary }]} numberOfLines={1}>
-                      {selectedTrackPreset ? selectedTrackPreset.label : 'Custom Formula'} • {selectedCategoryObj.label}
-                    </ThemedText>
-                  </View>
-                </View>
-
-                <View style={{ alignItems: 'flex-end' }}>
-                  <ThemedText style={[styles.previewValues, { color }]}>
-                    {formatValue(previewEvaluatedGoal.currentValue, unit)} / {formatValue(previewEvaluatedGoal.targetValue, unit)}
-                  </ThemedText>
-                  <View style={[styles.progressPercentPill, { backgroundColor: `${color}18` }]}>
-                    <ThemedText style={[styles.progressPercentText, { color }]}>
-                      {previewEvaluatedGoal.isAchieved ? 'ACHIEVED' : `${Math.min(100, previewEvaluatedGoal.progressPercentage).toFixed(0)}%`}
-                    </ThemedText>
-                  </View>
-                </View>
-              </View>
-
-              {/* Progress Track */}
-              {previewEvaluatedGoal.milestoneSegments && previewEvaluatedGoal.milestoneSegments.length > 1 ? (
-                <View style={styles.segmentedProgressRow}>
-                  {previewEvaluatedGoal.milestoneSegments.map((seg, sIdx) => (
-                    <View
-                      key={`prev-seg-${sIdx}`}
-                      style={[
-                        styles.segmentTrack,
-                        {
-                          flex: Math.max(0.04, seg.spanRatio ?? 1),
-                          backgroundColor: `${color}20`,
-                          borderColor: seg.isAchieved ? color : 'transparent',
-                        },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.segmentFill,
-                          {
-                            width: `${seg.fillPercentage}%`,
-                            backgroundColor: color,
-                          },
-                        ]}
-                      />
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <View style={[styles.minimalProgressTrack, { backgroundColor: `${color}20` }]}>
-                  <View
-                    style={[
-                      styles.minimalProgressFill,
-                      {
-                        width: `${Math.min(100, previewEvaluatedGoal.progressPercentage)}%`,
-                        backgroundColor: color,
-                      },
-                    ]}
-                  />
-                </View>
-              )}
-            </View>
-
             {/* GROUP 1: GOAL BASICS */}
             <ThemedText style={[styles.groupLabel, { color: currColors.textSecondary }]}>
               GOAL DETAILS
@@ -667,14 +580,20 @@ export default function CreateGoalScreen() {
               >
                 <ThemedText style={[styles.label, { color: currColors.text }]}>Category</ThemedText>
                 <View style={styles.valueContainer}>
-                  <View style={styles.categoryBadge}>
-                    <View style={[styles.categoryIconWrap, { backgroundColor: `${selectedCategoryObj.color}15` }]}>
-                      {React.createElement(selectedCategoryObj.icon, { size: 14, color: selectedCategoryObj.color })}
+                  {selectedCategoryObj ? (
+                    <View style={styles.categoryBadge}>
+                      <View style={[styles.categoryIconWrap, { backgroundColor: `${selectedCategoryObj.color}15` }]}>
+                        {React.createElement(selectedCategoryObj.icon, { size: 14, color: selectedCategoryObj.color })}
+                      </View>
+                      <ThemedText style={[styles.valueText, { color: currColors.text }]}>
+                        {selectedCategoryObj.label}
+                      </ThemedText>
                     </View>
-                    <ThemedText style={[styles.valueText, { color: currColors.text }]}>
-                      {selectedCategoryObj.label}
+                  ) : (
+                    <ThemedText style={[styles.valueText, { color: currColors.textSecondary }]}>
+                      Select Category
                     </ThemedText>
-                  </View>
+                  )}
                   <ChevronRight size={14} color={currColors.textSecondary} />
                 </View>
               </TouchableOpacity>
@@ -690,21 +609,27 @@ export default function CreateGoalScreen() {
               >
                 <ThemedText style={[styles.label, { color: currColors.text }]}>What to Track</ThemedText>
                 <View style={styles.valueContainer}>
-                  <View style={styles.categoryBadge}>
-                    <View style={[styles.categoryIconWrap, { backgroundColor: `${selectedTrackPreset?.color || color}15` }]}>
-                      {selectedTrackPreset ? (
-                        React.createElement(selectedTrackPreset.iconComponent, { size: 14, color: selectedTrackPreset.color })
-                      ) : (
-                        <SlidersHorizontal size={14} color={color} />
-                      )}
+                  {formula ? (
+                    <View style={styles.categoryBadge}>
+                      <View style={[styles.categoryIconWrap, { backgroundColor: `${selectedTrackPreset?.color || color}15` }]}>
+                        {selectedTrackPreset ? (
+                          React.createElement(selectedTrackPreset.iconComponent, { size: 14, color: selectedTrackPreset.color })
+                        ) : (
+                          <SlidersHorizontal size={14} color={color} />
+                        )}
+                      </View>
+                      <ThemedText style={[styles.valueText, { color: currColors.text }]} numberOfLines={1}>
+                        {selectedTrackPreset ? selectedTrackPreset.label : 'Custom Formula'}
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_600SemiBold', color: '#00C9A7', marginLeft: 4 }}>
+                        ({formatValue(previewEvaluatedGoal.currentValue, unit)})
+                      </ThemedText>
                     </View>
-                    <ThemedText style={[styles.valueText, { color: currColors.text }]} numberOfLines={1}>
-                      {selectedTrackPreset ? selectedTrackPreset.label : 'Custom Formula'}
+                  ) : (
+                    <ThemedText style={[styles.valueText, { color: currColors.textSecondary }]}>
+                      Select Metric to Track
                     </ThemedText>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_600SemiBold', color: '#00C9A7', marginLeft: 4 }}>
-                      ({formatValue(previewEvaluatedGoal.currentValue, unit)})
-                    </ThemedText>
-                  </View>
+                  )}
                   <ChevronRight size={14} color={currColors.textSecondary} />
                 </View>
               </TouchableOpacity>
@@ -854,123 +779,182 @@ export default function CreateGoalScreen() {
               </TouchableOpacity>
 
               {/* Target Deadline Date */}
-              <View style={[styles.formRow, { borderBottomColor: currColors.border }]}>
-                <ThemedText style={[styles.label, { color: currColors.text }]}>Target Deadline</ThemedText>
-                <View style={{ flex: 1 }}>
-                  {Platform.OS === 'ios' ? (
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <DateTimePicker
-                        value={targetDate || new Date()}
-                        mode="date"
-                        display="default"
-                        onChange={onDateChange}
-                        themeVariant={theme}
-                      />
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      onPress={() => setShowDatePicker(true)}
-                      style={{ alignItems: 'flex-end' }}
-                    >
-                      <ThemedText style={[styles.valueText, { color: currColors.text }]}>
-                        {targetDate
-                          ? targetDate.toLocaleDateString('en-IN', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                          : 'No deadline set'}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-
-              {showDatePicker && Platform.OS !== 'ios' && (
-                <DateTimePicker
-                  value={targetDate || new Date()}
-                  mode="date"
-                  display="default"
-                  onChange={onDateChange}
-                />
-              )}
-
-              {/* Color Theme Selector */}
               <TouchableOpacity
                 style={[styles.formRow, { borderBottomColor: currColors.border }]}
                 onPress={() => {
                   handleHaptic();
-                  setShowColorModal(true);
+                  setShowDatePicker((prev) => !prev);
                 }}
                 activeOpacity={0.7}
               >
-                <ThemedText style={[styles.label, { color: currColors.text }]}>Color Theme</ThemedText>
+                <ThemedText style={[styles.label, { color: currColors.text }]}>Target Deadline</ThemedText>
+                <View style={styles.valueContainer}>
+                  {targetDate ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <ThemedText style={[styles.valueText, { color: currColors.text }]}>
+                        {targetDate.toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </ThemedText>
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleHaptic();
+                          setTargetDate(undefined);
+                          setShowDatePicker(false);
+                        }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={{ padding: 2 }}
+                      >
+                        <X size={14} color={currColors.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <ThemedText style={[styles.valueText, { color: currColors.textSecondary }]}>
+                      No deadline set (Optional)
+                    </ThemedText>
+                  )}
+                  <ChevronRight size={14} color={currColors.textSecondary} />
+                </View>
+              </TouchableOpacity>
+
+              {/* iOS & Android Inline / Toggle Date Picker */}
+              {showDatePicker && (
+                <View style={{ padding: 12, alignItems: 'center', backgroundColor: currColors.cardSecondary, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: currColors.border }}>
+                  <DateTimePicker
+                    value={targetDate || new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                    onChange={(event: DateTimePickerEvent, selected?: Date) => {
+                      if (Platform.OS === 'android') {
+                        setShowDatePicker(false);
+                      }
+                      if (event.type === 'set' && selected) {
+                        setTargetDate(selected);
+                      }
+                    }}
+                    themeVariant={theme}
+                  />
+                  {Platform.OS === 'ios' && (
+                    <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          handleHaptic();
+                          setTargetDate(undefined);
+                          setShowDatePicker(false);
+                        }}
+                        style={{
+                          paddingVertical: 6,
+                          paddingHorizontal: 14,
+                          borderRadius: 8,
+                          backgroundColor: currColors.card,
+                          borderWidth: 1,
+                          borderColor: currColors.border,
+                        }}
+                      >
+                        <ThemedText style={{ color: currColors.textSecondary, fontFamily: 'Outfit_500Medium', fontSize: 13 }}>Clear</ThemedText>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => {
+                          handleHaptic();
+                          if (!targetDate) setTargetDate(new Date());
+                          setShowDatePicker(false);
+                        }}
+                        style={{
+                          paddingVertical: 6,
+                          paddingHorizontal: 16,
+                          borderRadius: 8,
+                          backgroundColor: '#00C9A7',
+                        }}
+                      >
+                        <ThemedText style={{ color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 13 }}>Done</ThemedText>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Goal Icon Drop-down Row (Opens separate full-page selector) */}
+              <TouchableOpacity
+                style={[styles.formRow, styles.formRowLast]}
+                onPress={() => {
+                  handleHaptic();
+                  setShowIconModal(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <ThemedText style={[styles.label, { color: currColors.text }]}>Goal Icon</ThemedText>
                 <View style={styles.valueContainer}>
                   <View style={styles.categoryBadge}>
-                    <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: selectedColorObj.hex, marginRight: 6 }} />
+                    <Category3DIcon name={icon} icon={icon} size={22} />
                     <ThemedText style={[styles.valueText, { color: currColors.text }]}>
-                      {selectedColorObj.name}
+                      {CATEGORY_3D_ICONS_LIST.find((item) => item.id === icon)?.name || icon}
                     </ThemedText>
                   </View>
                   <ChevronRight size={14} color={currColors.textSecondary} />
                 </View>
               </TouchableOpacity>
-
-              {/* Icon Selector Grid */}
-              <View style={[styles.formRow, styles.formRowLast, { flexDirection: 'column', alignItems: 'stretch', paddingVertical: 12, gap: 8 }]}>
-                <ThemedText style={[styles.label, { color: currColors.text, marginBottom: 4 }]}>
-                  Goal Icon
-                </ThemedText>
-                <View style={styles.iconSelectorGrid}>
-                  {GOAL_ICONS.map((icName) => {
-                    const Ic = (LucideIcons as any)[icName] || Target;
-                    const isSel = icon === icName;
-                    return (
-                      <TouchableOpacity
-                        key={icName}
-                        style={[
-                          styles.iconTile,
-                          { backgroundColor: currColors.cardSecondary, borderColor: currColors.border },
-                          isSel && { borderColor: color, backgroundColor: `${color}20`, borderWidth: 1.5 },
-                        ]}
-                        onPress={() => {
-                          handleHaptic();
-                          setIcon(icName);
-                        }}
-                      >
-                        <Ic size={18} color={isSel ? color : currColors.text} />
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
 
-        {/* Category Picker Modal (Matches Account Type Modal) */}
-        <Modal visible={showCategoryModal} animationType="slide" presentationStyle="pageSheet">
+        {/* 1. FULL PAGE CATEGORY PICKER MODAL */}
+        <Modal
+          visible={showCategoryModal}
+          animationType="slide"
+          presentationStyle="fullScreen"
+          statusBarTranslucent={true}
+          onRequestClose={() => setShowCategoryModal(false)}
+        >
           <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
+            <View style={[styles.modalHeader, { paddingTop: headerTopPadding, borderBottomColor: currColors.border, backgroundColor: currColors.background }]}>
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  setShowCategoryModal(false);
+                }}
+                style={styles.cancelButton}
+                activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+                  Cancel
+                </ThemedText>
+              </TouchableOpacity>
+
               <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Goal Category</ThemedText>
-              <TouchableOpacity onPress={() => setShowCategoryModal(false)} style={styles.modalCloseButton}>
-                <X size={20} color={currColors.text} />
+
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  setShowCategoryModal(false);
+                }}
+                style={styles.saveButton}
+                activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+                  Done
+                </ThemedText>
               </TouchableOpacity>
             </View>
 
             <FlatList
               data={CATEGORIES}
               keyExtractor={(item) => item.key}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={[styles.listContent, { paddingHorizontal: 16 }]}
               renderItem={({ item }) => {
                 const isSelected = category === item.key;
                 const IconComponent = item.icon;
                 return (
                   <TouchableOpacity
-                    style={[styles.listItem, { borderBottomColor: currColors.border }]}
+                    style={[styles.listItem, { borderBottomColor: currColors.border, paddingHorizontal: 0 }]}
                     onPress={() => {
                       handleHaptic();
                       setCategory(item.key);
+                      setColor(item.color);
                       setShowCategoryModal(false);
                     }}
                   >
@@ -990,108 +974,48 @@ export default function CreateGoalScreen() {
           </View>
         </Modal>
 
-        {/* Direction Picker Modal (Matches Account Type Modal with detailed description) */}
-        <Modal visible={showDirectionModal} animationType="slide" presentationStyle="pageSheet">
+        {/* 2. FULL PAGE WHAT TO TRACK MODAL */}
+        <Modal
+          visible={showTrackModal}
+          animationType="slide"
+          presentationStyle="fullScreen"
+          statusBarTranslucent={true}
+          onRequestClose={() => setShowTrackModal(false)}
+        >
           <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
-              <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Goal Direction</ThemedText>
-              <TouchableOpacity onPress={() => setShowDirectionModal(false)} style={styles.modalCloseButton}>
-                <X size={20} color={currColors.text} />
+            <View style={[styles.modalHeader, { paddingTop: headerTopPadding, borderBottomColor: currColors.border, backgroundColor: currColors.background }]}>
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  setShowTrackModal(false);
+                  setTrackSearchQuery('');
+                }}
+                style={styles.cancelButton}
+                activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+                  Cancel
+                </ThemedText>
               </TouchableOpacity>
-            </View>
 
-            <FlatList
-              data={DIRECTIONS}
-              keyExtractor={(item) => item.key}
-              contentContainerStyle={styles.listContent}
-              renderItem={({ item }) => {
-                const isSelected = operator === item.key;
-                const IconComponent = item.icon;
-                return (
-                  <TouchableOpacity
-                    style={[styles.listItem, { borderBottomColor: currColors.border, paddingVertical: 14 }]}
-                    onPress={() => {
-                      handleHaptic();
-                      setOperator(item.key);
-                      setShowDirectionModal(false);
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1, marginRight: 8 }}>
-                      <View style={[styles.typeIconCircle, { backgroundColor: `${item.color}15`, marginTop: 2 }]}>
-                        <IconComponent size={18} color={item.color} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <ThemedText style={[styles.itemTitle, { color: currColors.text }]}>
-                          {item.label}
-                        </ThemedText>
-                        <ThemedText style={[styles.itemSub, { color: currColors.textSecondary }]}>
-                          {item.subtitle}
-                        </ThemedText>
-                      </View>
-                    </View>
-                    {isSelected && <Check size={18} color="#00C9A7" strokeWidth={2.5} style={{ marginTop: 6 }} />}
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          </View>
-        </Modal>
-
-        {/* Color Theme Modal (Presentation pageSheet matching Category, Direction & Account Type Selection) */}
-        <Modal visible={showColorModal} animationType="slide" presentationStyle="pageSheet">
-          <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
-              <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Goal Color Theme</ThemedText>
-              <TouchableOpacity onPress={() => setShowColorModal(false)} style={styles.modalCloseButton}>
-                <X size={20} color={currColors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <FlatList
-              data={GOAL_COLOR_PALETTE}
-              keyExtractor={(item) => item.hex}
-              contentContainerStyle={styles.listContent}
-              renderItem={({ item }) => {
-                const isSelected = color.toLowerCase() === item.hex.toLowerCase();
-                return (
-                  <TouchableOpacity
-                    style={[styles.listItem, { borderBottomColor: currColors.border, paddingVertical: 14 }]}
-                    onPress={() => {
-                      handleHaptic();
-                      setColor(item.hex);
-                      setShowColorModal(false);
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
-                      <View style={[styles.typeIconCircle, { backgroundColor: item.hex }]}>
-                        {isSelected && <Check size={18} color="#FFFFFF" strokeWidth={3} />}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <ThemedText style={[styles.itemTitle, { color: currColors.text }]}>
-                          {item.name}
-                        </ThemedText>
-                        <ThemedText style={[styles.itemSub, { color: currColors.textSecondary }]}>
-                          {item.description}
-                        </ThemedText>
-                      </View>
-                    </View>
-                    {isSelected && <Check size={18} color="#00C9A7" strokeWidth={2.5} />}
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          </View>
-        </Modal>
-
-        {/* What to Track Modal (Presentation pageSheet matching Category & Account Type Selection) */}
-        <Modal visible={showTrackModal} animationType="slide" presentationStyle="pageSheet">
-          <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
               <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
                 What to Track
               </ThemedText>
-              <TouchableOpacity onPress={() => setShowTrackModal(false)} style={styles.modalCloseButton}>
-                <X size={20} color={currColors.text} />
+
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  setShowTrackModal(false);
+                  setTrackSearchQuery('');
+                }}
+                style={styles.saveButton}
+                activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+                  Done
+                </ThemedText>
               </TouchableOpacity>
             </View>
 
@@ -1112,7 +1036,7 @@ export default function CreateGoalScreen() {
             <FlatList
               data={filteredTrackPresets}
               keyExtractor={(item) => item.formula}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={[styles.listContent, { paddingHorizontal: 16 }]}
               showsVerticalScrollIndicator={false}
               renderItem={({ item }) => {
                 const isSelected = formula === item.formula;
@@ -1122,7 +1046,7 @@ export default function CreateGoalScreen() {
 
                 return (
                   <TouchableOpacity
-                    style={[styles.listItem, { borderBottomColor: currColors.border }]}
+                    style={[styles.listItem, { borderBottomColor: currColors.border, paddingHorizontal: 0 }]}
                     onPress={() => {
                       handleHaptic();
                       setFormula(item.formula);
@@ -1187,7 +1111,200 @@ export default function CreateGoalScreen() {
             </TouchableOpacity>
           </View>
         </Modal>
-      </SafeAreaView>
+
+        {/* 3. FULL PAGE GOAL DIRECTION MODAL */}
+        <Modal
+          visible={showDirectionModal}
+          animationType="slide"
+          presentationStyle="fullScreen"
+          statusBarTranslucent={true}
+          onRequestClose={() => setShowDirectionModal(false)}
+        >
+          <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
+            <View style={[styles.modalHeader, { paddingTop: headerTopPadding, borderBottomColor: currColors.border, backgroundColor: currColors.background }]}>
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  setShowDirectionModal(false);
+                }}
+                style={styles.cancelButton}
+                activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+                  Cancel
+                </ThemedText>
+              </TouchableOpacity>
+
+              <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Goal Direction</ThemedText>
+
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  setShowDirectionModal(false);
+                }}
+                style={styles.saveButton}
+                activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+                  Done
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={DIRECTIONS}
+              keyExtractor={(item) => item.key}
+              contentContainerStyle={[styles.listContent, { paddingHorizontal: 16 }]}
+              renderItem={({ item }) => {
+                const isSelected = operator === item.key;
+                const IconComponent = item.icon;
+                return (
+                  <TouchableOpacity
+                    style={[styles.listItem, { borderBottomColor: currColors.border, paddingVertical: 14, paddingHorizontal: 0 }]}
+                    onPress={() => {
+                      handleHaptic();
+                      setOperator(item.key);
+                      setShowDirectionModal(false);
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1, marginRight: 8 }}>
+                      <View style={[styles.typeIconCircle, { backgroundColor: `${item.color}15`, marginTop: 2 }]}>
+                        <IconComponent size={18} color={item.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={[styles.itemTitle, { color: currColors.text }]}>
+                          {item.label}
+                        </ThemedText>
+                        <ThemedText style={[styles.itemSub, { color: currColors.textSecondary }]}>
+                          {item.subtitle}
+                        </ThemedText>
+                      </View>
+                    </View>
+                    {isSelected && <Check size={18} color="#00C9A7" strokeWidth={2.5} style={{ marginTop: 6 }} />}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </Modal>
+
+        {/* 4. FULL PAGE GOAL ICON PICKER MODAL */}
+        <Modal
+          visible={showIconModal}
+          animationType="slide"
+          presentationStyle="fullScreen"
+          statusBarTranslucent={true}
+          onRequestClose={() => setShowIconModal(false)}
+        >
+          <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
+            <View style={[styles.modalHeader, { paddingTop: headerTopPadding, borderBottomColor: currColors.border, backgroundColor: currColors.background }]}>
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  setShowIconModal(false);
+                  setIconSearchQuery('');
+                }}
+                style={styles.cancelButton}
+                activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+                  Cancel
+                </ThemedText>
+              </TouchableOpacity>
+
+              <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Goal Icon</ThemedText>
+
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  setShowIconModal(false);
+                  setIconSearchQuery('');
+                }}
+                style={styles.saveButton}
+                activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+                  Done
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Bar */}
+            <View style={[styles.searchBarContainer, { backgroundColor: currColors.cardSecondary }]}>
+              <Search size={16} color={currColors.textSecondary} />
+              <TextInput
+                style={[styles.searchInput, { color: currColors.text }]}
+                placeholder="Search icons (target, rocket, gold, house)..."
+                placeholderTextColor={currColors.textSecondary}
+                value={iconSearchQuery}
+                onChangeText={setIconSearchQuery}
+                clearButtonMode="while-editing"
+                autoCorrect={false}
+              />
+            </View>
+
+            {/* 3D Icons Grid */}
+            <ScrollView
+              contentContainerStyle={[styles.iconsGridContent, { paddingBottom: Math.max(insets.bottom, 24) + 20 }]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {filteredIcons.length === 0 ? (
+                <View style={styles.emptyWrap}>
+                  <ThemedText style={{ color: currColors.textSecondary, fontSize: 14, fontFamily: 'Outfit_400Regular' }}>
+                    No icons found for "{iconSearchQuery}"
+                  </ThemedText>
+                </View>
+              ) : (
+                <View style={styles.gridRowWrap}>
+                  {filteredIcons.map((item) => {
+                    const isSelected = icon === item.id;
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={[
+                          styles.iconTile,
+                          { backgroundColor: currColors.card, borderColor: currColors.border },
+                          isSelected && [
+                            styles.iconTileSelected,
+                            { borderColor: '#00C9A7', backgroundColor: theme === 'dark' ? '#00C9A722' : '#00C9A714' },
+                          ],
+                        ]}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          handleHaptic();
+                          setIcon(item.id);
+                          setShowIconModal(false);
+                          setIconSearchQuery('');
+                        }}
+                      >
+                        <Category3DIcon name={item.id} icon={item.id} size={36} />
+                        <ThemedText
+                          style={[
+                            styles.iconTileLabel,
+                            { color: isSelected ? '#00C9A7' : currColors.textSecondary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {item.name}
+                        </ThemedText>
+                        {isSelected && (
+                          <View style={styles.checkBadge}>
+                            <Check size={10} color="#FFFFFF" strokeWidth={3} />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </Modal>
     </View>
   );
 }
@@ -1204,7 +1321,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerTitle: {
@@ -1478,19 +1595,49 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconSelectorGrid: {
+  // 3D Icon Grid & Tiles
+  iconsGridContent: {
+    paddingHorizontal: 14,
+    paddingBottom: 40,
+  },
+  gridRowWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 8,
-    width: '100%',
+    justifyContent: 'flex-start',
+    gap: 10,
   },
   iconTile: {
-    width: '15%',
-    height: 40,
-    borderRadius: 10,
+    width: '22.5%',
+    aspectRatio: 1,
+    borderRadius: 14,
     borderWidth: 1,
+    alignItems: 'center',
     justifyContent: 'center',
+    padding: 6,
+    position: 'relative',
+  },
+  iconTileSelected: {
+    borderWidth: 1.5,
+  },
+  iconTileLabel: {
+    fontSize: 10,
+    fontFamily: 'Outfit_500Medium',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  checkBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#00C9A7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyWrap: {
+    paddingVertical: 40,
     alignItems: 'center',
   },
 

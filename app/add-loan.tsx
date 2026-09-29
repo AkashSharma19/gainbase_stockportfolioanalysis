@@ -13,17 +13,14 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Haptics from 'expo-haptics';
 import {
   ChevronRight,
   X,
   Check,
-  Home,
-  Car,
-  User,
-  GraduationCap,
-  Landmark,
+  Search,
 } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -32,15 +29,13 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { Loan, Account } from '@/types/money';
 import { BankLogo } from '@/components/BankLogo';
+import { Category3DIcon } from '@/components/Category3DIcon';
+import {
+  CATEGORY_3D_ICONS_LIST,
+  findBest3DIconForText,
+  LOAN_3D_ICON_MAP,
+} from '@/constants/Category3DIcons';
 import { formatCurrencyINR, formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
-
-const LOAN_TYPES = [
-  { type: 'home', label: 'Home Loan', icon: Home, color: '#007AFF' },
-  { type: 'car', label: 'Car Loan', icon: Car, color: '#34C759' },
-  { type: 'personal', label: 'Personal Loan', icon: User, color: '#FF9500' },
-  { type: 'education', label: 'Education Loan', icon: GraduationCap, color: '#AF52DE' },
-  { type: 'other', label: 'Other Loan', icon: Landmark, color: '#8E8E93' },
-] as const;
 
 function AccountLogoOrInitials({ account, size = 24 }: { account: Account; size?: number }) {
   if (account.logo) {
@@ -68,8 +63,10 @@ function AccountLogoOrInitials({ account, size = 24 }: { account: Account; size?
 export default function AddLoanScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
 
   const { loans, accounts, addLoan, updateLoan, emiPayments } = useMoneyStore();
 
@@ -87,17 +84,15 @@ export default function AddLoanScreen() {
   const [paidEmis, setPaidEmis] = useState('0');
   const [startDate, setStartDate] = useState(new Date());
   const [linkedAccountId, setLinkedAccountId] = useState('');
-  const [type, setType] = useState<Loan['type']>('home');
+  const [icon, setIcon] = useState('house');
+  const [isIconManuallyChosen, setIsIconManuallyChosen] = useState(false);
   const [customEmi, setCustomEmi] = useState('');
 
   // Modal State
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTypeModal, setShowTypeModal] = useState(false);
+  const [showIconModal, setShowIconModal] = useState(false);
+  const [iconSearch, setIconSearch] = useState('');
   const [showAccountModal, setShowAccountModal] = useState(false);
-
-  const selectedTypeObj = useMemo(() => {
-    return LOAN_TYPES.find((t) => t.type === type) || LOAN_TYPES[0];
-  }, [type]);
 
   const activeAccounts = useMemo(() => {
     return accounts.filter((a) => !a.isArchived);
@@ -106,6 +101,26 @@ export default function AddLoanScreen() {
   const linkedAccount = useMemo(() => {
     return accounts.find((a) => a.id === linkedAccountId);
   }, [accounts, linkedAccountId]);
+
+  const selectedIconItem = useMemo(() => {
+    return CATEGORY_3D_ICONS_LIST.find((item) => item.id === icon);
+  }, [icon]);
+
+  // Filter 3D icons for Choose Icon Modal
+  const filteredIcons = useMemo(() => {
+    const q = iconSearch.trim().toLowerCase();
+    if (!q) return CATEGORY_3D_ICONS_LIST;
+    return CATEGORY_3D_ICONS_LIST.filter((item) => {
+      const matchName = item.name.toLowerCase().includes(q);
+      const matchGroup = item.group.toLowerCase().includes(q);
+      const matchKeywords = item.keywords.some((kw) => kw.toLowerCase().includes(q));
+      return matchName || matchGroup || matchKeywords;
+    });
+  }, [iconSearch]);
+
+  const handleHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
 
   useEffect(() => {
     if (editingLoan) {
@@ -117,7 +132,8 @@ export default function AddLoanScreen() {
       setTenureMonths(editingLoan.tenureMonths.toString());
       setStartDate(new Date(editingLoan.startDate));
       setLinkedAccountId(editingLoan.linkedAccountId || '');
-      setType(editingLoan.type);
+      setIcon(editingLoan.icon || LOAN_3D_ICON_MAP[editingLoan.type] || 'house');
+      setIsIconManuallyChosen(true);
       setCustomEmi(editingLoan.emiAmount ? formatIndianAmount(editingLoan.emiAmount.toString()) : '');
 
       const existingPaid = emiPayments.filter(
@@ -130,6 +146,19 @@ export default function AddLoanScreen() {
       setLinkedAccountId(activeAccounts[0].id);
     }
   }, [editingLoan]);
+
+  // Auto-predict 3D icon when loan name is typed (unless manually chosen)
+  const handleNameChange = (text: string) => {
+    setName(text);
+    if (!isIconManuallyChosen) {
+      if (text.trim().length > 0) {
+        const predicted = findBest3DIconForText(text);
+        setIcon(predicted);
+      } else {
+        setIcon('house');
+      }
+    }
+  };
 
   // Standard amortization EMI calculation
   const calculatedEMI = useMemo(() => {
@@ -172,6 +201,7 @@ export default function AddLoanScreen() {
   }, [principalAmount, interestRate, tenureMonths, paidEmis, customEmi, calculatedEMI, editingLoan]);
 
   const handleSave = () => {
+    handleHaptic();
     if (!name.trim()) {
       Alert.alert('Required Field', 'Please enter a loan name.');
       return;
@@ -212,6 +242,13 @@ export default function AddLoanScreen() {
     const maxDays = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0).getDate();
     endDate.setDate(Math.min(startDay, maxDays));
 
+    // Determine type from icon if not existing
+    let loanType: Loan['type'] = editingLoan?.type || 'other';
+    if (['house', 'home_garden'].includes(icon)) loanType = 'home';
+    else if (['car', 'bus', 'fuel'].includes(icon)) loanType = 'car';
+    else if (['salary', 'banknote', 'money', 'personal', 'coin', 'credit_card'].includes(icon)) loanType = 'personal';
+    else if (['education', 'books'].includes(icon)) loanType = 'education';
+
     const loanData: Loan = {
       id: editingLoan ? editingLoan.id : Math.random().toString(36).substring(2, 9),
       name: name.trim(),
@@ -224,7 +261,8 @@ export default function AddLoanScreen() {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
       linkedAccountId: linkedAccountId || undefined,
-      type,
+      type: loanType,
+      icon: icon,
       isActive: outstanding > 0,
       updatedAt: new Date().toISOString(),
     };
@@ -245,232 +283,195 @@ export default function AddLoanScreen() {
     }
   };
 
+  const headerTopPadding = Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24);
+
   return (
     <View style={[styles.mainContainer, { backgroundColor: currColors.background }]}>
       <StatusBar style={colorScheme === 'light' ? 'dark' : 'light'} />
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: currColors.background }]} edges={['top']}>
-        {/* iOS Clean Header */}
-        <View style={[styles.header, { backgroundColor: currColors.background, borderBottomColor: currColors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.cancelButton} activeOpacity={0.7}>
-            <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
-              Cancel
-            </ThemedText>
-          </TouchableOpacity>
-          <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
-            {editingLoan ? 'Edit Loan & EMI' : 'Add Loan & EMI'}
+      
+      {/* iOS Full Page Clean Header with dynamic top safe padding */}
+      <View style={[styles.header, { paddingTop: headerTopPadding, backgroundColor: currColors.background, borderBottomColor: currColors.border }]}>
+        <TouchableOpacity
+          onPress={() => {
+            handleHaptic();
+            router.back();
+          }}
+          style={styles.headerButton}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+            Cancel
           </ThemedText>
-          <TouchableOpacity onPress={handleSave} style={styles.saveButton} activeOpacity={0.7}>
-            <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
-              Save
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
+        
+        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+          {editingLoan ? 'Edit Loan & EMI' : 'Add Loan & EMI'}
+        </ThemedText>
 
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            {/* GROUP 1: LOAN DETAILS */}
-            <ThemedText style={[styles.groupLabel, { color: currColors.textSecondary }]}>
-              LOAN DETAILS
-            </ThemedText>
-            <View style={[styles.formGroup, { backgroundColor: currColors.card }]}>
-              {/* Name Row */}
-              <View style={[styles.formRow, styles.formRowFirst, { borderBottomColor: currColors.border }]}>
-                <ThemedText style={[styles.label, { color: currColors.text }]}>Loan Name</ThemedText>
-                <TextInput
-                  style={[styles.input, { color: currColors.text }]}
-                  placeholder="e.g. HDFC Home Loan, Car Loan"
-                  placeholderTextColor={currColors.textSecondary}
-                  value={name}
-                  onChangeText={setName}
-                  textAlign="right"
-                />
-              </View>
+        <TouchableOpacity
+          onPress={handleSave}
+          style={styles.headerButton}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+            Save
+          </ThemedText>
+        </TouchableOpacity>
+      </View>
 
-              {/* Loan Type Row */}
-              <TouchableOpacity
-                style={[styles.formRow, { borderBottomColor: currColors.border }]}
-                onPress={() => setShowTypeModal(true)}
-                activeOpacity={0.7}
-              >
-                <ThemedText style={[styles.label, { color: currColors.text }]}>Category</ThemedText>
-                <View style={styles.valueContainer}>
-                  {(() => {
-                    const IconComp = selectedTypeObj.icon;
-                    return (
-                      <View style={styles.typeBadge}>
-                        <View style={[styles.typeIconWrap, { backgroundColor: `${selectedTypeObj.color}15` }]}>
-                          <IconComp size={15} color={selectedTypeObj.color} />
-                        </View>
-                        <ThemedText style={[styles.valueText, { color: currColors.text }]}>
-                          {selectedTypeObj.label}
-                        </ThemedText>
-                      </View>
-                    );
-                  })()}
-                  <ChevronRight size={16} color={currColors.border} style={{ marginLeft: 6 }} />
-                </View>
-              </TouchableOpacity>
-
-              {/* Lender Name Row */}
-              <View style={[styles.formRow, styles.formRowLast]}>
-                <ThemedText style={[styles.label, { color: currColors.text }]}>Lender / Bank</ThemedText>
-                <TextInput
-                  style={[styles.input, { color: currColors.text }]}
-                  placeholder="e.g. SBI, HDFC, Axis"
-                  placeholderTextColor={currColors.textSecondary}
-                  value={lenderName}
-                  onChangeText={setLenderName}
-                  textAlign="right"
-                />
-              </View>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {/* GROUP 1: LOAN DETAILS */}
+          <ThemedText style={[styles.groupLabel, { color: currColors.textSecondary }]}>
+            LOAN DETAILS
+          </ThemedText>
+          <View style={[styles.formGroup, { backgroundColor: currColors.card }]}>
+            {/* Name Row */}
+            <View style={[styles.formRow, styles.formRowFirst, { borderBottomColor: currColors.border }]}>
+              <ThemedText style={[styles.label, { color: currColors.text }]}>Loan Name</ThemedText>
+              <TextInput
+                style={[styles.input, { color: currColors.text }]}
+                placeholder="e.g. HDFC Home Loan, Car Loan"
+                placeholderTextColor={currColors.textSecondary}
+                value={name}
+                onChangeText={handleNameChange}
+                textAlign="right"
+              />
             </View>
 
-            {/* GROUP 2: FINANCIAL TERMS */}
-            <ThemedText style={[styles.groupLabel, { color: currColors.textSecondary }]}>
-              FINANCIAL TERMS
-            </ThemedText>
-            <View style={[styles.formGroup, { backgroundColor: currColors.card }]}>
-              {/* Principal Amount Row */}
-              <View style={[styles.formRow, styles.formRowFirst, { borderBottomColor: currColors.border }]}>
-                <ThemedText style={[styles.label, { color: currColors.text }]}>Principal Amount</ThemedText>
-                <View style={styles.amountInputRow}>
-                  <ThemedText style={[styles.currencyPrefix, { color: currColors.text }]}>₹</ThemedText>
-                  <TextInput
-                    style={[styles.input, { color: currColors.text }]}
-                    placeholder="0"
-                    placeholderTextColor={currColors.textSecondary}
-                    value={principalAmount}
-                    onChangeText={(val) => {
-                      const formatted = formatIndianAmount(val);
-                      setPrincipalAmount(formatted);
-                      if (!paidEmis || paidEmis === '0') {
-                        setOutstandingAmount(formatted);
-                      }
-                    }}
-                    keyboardType="decimal-pad"
-                    textAlign="right"
+            {/* Choose Icon Row (Replaced Category with Full Page 3D Icon Picker) */}
+            <TouchableOpacity
+              style={[styles.formRow, { borderBottomColor: currColors.border }]}
+              onPress={() => {
+                handleHaptic();
+                setIconSearch('');
+                setShowIconModal(true);
+              }}
+              activeOpacity={0.7}
+            >
+              <ThemedText style={[styles.label, { color: currColors.text }]}>Choose Icon</ThemedText>
+              <View style={styles.valueContainer}>
+                <View style={styles.typeBadge}>
+                  <Category3DIcon
+                    name={icon}
+                    size={26}
+                    style={{ marginRight: 8 }}
                   />
+                  <ThemedText style={[styles.valueText, { color: currColors.text }]}>
+                    {selectedIconItem?.name || icon.charAt(0).toUpperCase() + icon.slice(1)}
+                  </ThemedText>
                 </View>
+                <ChevronRight size={16} color={currColors.border} style={{ marginLeft: 6 }} />
               </View>
+            </TouchableOpacity>
 
-              {/* Interest Rate Row */}
-              <View style={[styles.formRow, { borderBottomColor: currColors.border }]}>
-                <ThemedText style={[styles.label, { color: currColors.text }]}>Annual Interest (%)</ThemedText>
-                <TextInput
-                  style={[styles.input, { color: currColors.text }]}
-                  placeholder="8.5"
-                  placeholderTextColor={currColors.textSecondary}
-                  value={interestRate}
-                  onChangeText={setInterestRate}
-                  keyboardType="numeric"
-                  textAlign="right"
-                />
-              </View>
+            {/* Lender Name Row */}
+            <View style={[styles.formRow, styles.formRowLast]}>
+              <ThemedText style={[styles.label, { color: currColors.text }]}>Lender / Bank</ThemedText>
+              <TextInput
+                style={[styles.input, { color: currColors.text }]}
+                placeholder="e.g. SBI, HDFC, Axis"
+                placeholderTextColor={currColors.textSecondary}
+                value={lenderName}
+                onChangeText={setLenderName}
+                textAlign="right"
+              />
+            </View>
+          </View>
 
-              {/* Tenure Months Row */}
-              <View style={[styles.formRow, styles.formRowLast]}>
-                <ThemedText style={[styles.label, { color: currColors.text }]}>Tenure (Months)</ThemedText>
-                <TextInput
-                  style={[styles.input, { color: currColors.text }]}
-                  placeholder="240 (20 Years)"
-                  placeholderTextColor={currColors.textSecondary}
-                  value={tenureMonths}
-                  onChangeText={setTenureMonths}
-                  keyboardType="numeric"
-                  textAlign="right"
-                />
-              </View>
+          {/* GROUP 2: FINANCIAL TERMS */}
+          <ThemedText style={[styles.groupLabel, { color: currColors.textSecondary }]}>
+            FINANCIAL TERMS
+          </ThemedText>
+          <View style={[styles.formGroup, { backgroundColor: currColors.card }]}>
+            {/* Principal Amount Row */}
+            <View style={[styles.formRow, styles.formRowFirst, { borderBottomColor: currColors.border }]}>
+              <ThemedText style={[styles.label, { color: currColors.text }]}>Principal Amount</ThemedText>
+              <TextInput
+                style={[styles.input, { color: currColors.text }]}
+                placeholder="₹ 0"
+                placeholderTextColor={currColors.textSecondary}
+                value={principalAmount ? `₹ ${principalAmount}` : ''}
+                onChangeText={(val) => {
+                  const clean = val.replace(/[^0-9.]/g, '');
+                  const formatted = formatIndianAmount(clean);
+                  setPrincipalAmount(formatted);
+                  if (!paidEmis || paidEmis === '0') {
+                    setOutstandingAmount(formatted);
+                  }
+                }}
+                keyboardType="decimal-pad"
+                textAlign="right"
+              />
             </View>
 
-            {/* GROUP 3: REPAYMENT & RECURRENCE */}
-            <ThemedText style={[styles.groupLabel, { color: currColors.textSecondary }]}>
-              REPAYMENT & SCHEDULE
-            </ThemedText>
-            <View style={[styles.formGroup, { backgroundColor: currColors.card }]}>
-              {/* EMI Amount Row */}
-              <View style={[styles.formRow, styles.formRowFirst, { borderBottomColor: currColors.border }]}>
-                <View>
-                  <ThemedText style={[styles.label, { color: currColors.text }]}>Monthly EMI</ThemedText>
-                  {calculatedEMI > 0 && (
-                    <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, marginTop: 1, fontFamily: 'Outfit_400Regular' }}>
-                      Standard: {formatCurrencyINR(Math.round(calculatedEMI), true, 0)}
-                    </ThemedText>
-                  )}
-                </View>
-                <View style={styles.amountInputRow}>
-                  <ThemedText style={[styles.currencyPrefix, { color: currColors.text }]}>₹</ThemedText>
-                  <TextInput
-                    style={[styles.input, { color: currColors.text }]}
-                    placeholder={calculatedEMI > 0 ? formatIndianAmount(Math.round(calculatedEMI).toString()) : '0'}
-                    placeholderTextColor={currColors.textSecondary}
-                    value={customEmi}
-                    onChangeText={(val) => setCustomEmi(formatIndianAmount(val))}
-                    keyboardType="decimal-pad"
-                    textAlign="right"
-                  />
-                </View>
-              </View>
-
-              {/* Start Date Row */}
-              <View style={[styles.formRow, { borderBottomColor: currColors.border }]}>
-                <ThemedText style={[styles.label, { color: currColors.text }]}>Start Date</ThemedText>
-                <View style={{ flex: 1 }}>
-                  {Platform.OS === 'ios' ? (
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <DateTimePicker
-                        value={startDate}
-                        mode="date"
-                        display="default"
-                        onChange={onDateChange}
-                        themeVariant={colorScheme}
-                      />
-                    </View>
-                  ) : (
-                    <TouchableOpacity onPress={() => setShowDatePicker(true)} style={{ alignItems: 'flex-end' }}>
-                      <ThemedText style={[styles.valueText, { color: currColors.text }]}>
-                        {startDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-
-              {showDatePicker && Platform.OS !== 'ios' && (
-                <DateTimePicker value={startDate} mode="date" display="default" onChange={onDateChange} />
-              )}
-
-              {/* Linked Payment Account Row */}
-              <TouchableOpacity
-                style={[styles.formRow, styles.formRowLast]}
-                onPress={() => setShowAccountModal(true)}
-                activeOpacity={0.7}
-              >
-                <ThemedText style={[styles.label, { color: currColors.text }]}>Debit Account</ThemedText>
-                <View style={styles.valueContainer}>
-                  {linkedAccount ? (
-                    <View style={styles.accountBadge}>
-                      <AccountLogoOrInitials account={linkedAccount} size={20} />
-                      <ThemedText style={[styles.valueText, { color: currColors.text }]}>
-                        {linkedAccount.name}
-                      </ThemedText>
-                    </View>
-                  ) : (
-                    <ThemedText style={[styles.valueText, styles.placeholderText, { color: currColors.textSecondary }]}>
-                      Select Account
-                    </ThemedText>
-                  )}
-                  <ChevronRight size={16} color={currColors.border} style={{ marginLeft: 6 }} />
-                </View>
-              </TouchableOpacity>
+            {/* Interest Rate Row */}
+            <View style={[styles.formRow, { borderBottomColor: currColors.border }]}>
+              <ThemedText style={[styles.label, { color: currColors.text }]}>Interest Rate (Annual %)</ThemedText>
+              <TextInput
+                style={[styles.input, { color: currColors.text }]}
+                placeholder="0%"
+                placeholderTextColor={currColors.textSecondary}
+                value={interestRate ? `${interestRate}%` : ''}
+                onChangeText={(val) => {
+                  const clean = val.replace(/[^0-9.]/g, '');
+                  setInterestRate(clean);
+                }}
+                keyboardType="decimal-pad"
+                textAlign="right"
+              />
             </View>
 
-            {/* GROUP 4: PROGRESS & OUTSTANDING */}
-            <ThemedText style={[styles.groupLabel, { color: currColors.textSecondary }]}>
-              PROGRESS & OUTSTANDING
-            </ThemedText>
-            <View style={[styles.formGroup, { backgroundColor: currColors.card }]}>
-              {/* EMIs Paid Count Row */}
-              <View style={[styles.formRow, styles.formRowFirst, { borderBottomColor: currColors.border }]}>
+            {/* Tenure in Months Row */}
+            <View style={[styles.formRow, styles.formRowLast]}>
+              <ThemedText style={[styles.label, { color: currColors.text }]}>Tenure (Months)</ThemedText>
+              <TextInput
+                style={[styles.input, { color: currColors.text }]}
+                placeholder="e.g. 240 (20 Years)"
+                placeholderTextColor={currColors.textSecondary}
+                value={tenureMonths}
+                onChangeText={setTenureMonths}
+                keyboardType="number-pad"
+                textAlign="right"
+              />
+            </View>
+          </View>
+
+          {/* GROUP 3: EMI & REPAYMENT */}
+          <ThemedText style={[styles.groupLabel, { color: currColors.textSecondary }]}>
+            EMI & REPAYMENT
+          </ThemedText>
+          <View style={[styles.formGroup, { backgroundColor: currColors.card }]}>
+            {/* Calculated EMI Display Row */}
+            <View style={[styles.formRow, styles.formRowFirst, { borderBottomColor: currColors.border }]}>
+              <ThemedText style={[styles.label, { color: currColors.text }]}>Standard Calculated EMI</ThemedText>
+              <ThemedText style={[styles.valueText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+                {formatCurrencyINR(Math.round(calculatedEMI), true, 0)}/mo
+              </ThemedText>
+            </View>
+
+            {/* Custom EMI Override Row */}
+            <View style={[styles.formRow, { borderBottomColor: currColors.border }]}>
+              <ThemedText style={[styles.label, { color: currColors.text }]}>Custom EMI (Optional)</ThemedText>
+              <TextInput
+                style={[styles.input, { color: currColors.text }]}
+                placeholder={calculatedEMI > 0 ? `₹ ${Math.round(calculatedEMI).toLocaleString('en-IN')}` : '₹ 0'}
+                placeholderTextColor={currColors.textSecondary}
+                value={customEmi ? `₹ ${customEmi}` : ''}
+                onChangeText={(val) => {
+                  const clean = val.replace(/[^0-9.]/g, '');
+                  setCustomEmi(formatIndianAmount(clean));
+                }}
+                keyboardType="decimal-pad"
+                textAlign="right"
+              />
+            </View>
+
+            {/* EMIs Already Paid Row */}
+            {!editingLoan && (
+              <View style={[styles.formRow, { borderBottomColor: currColors.border }]}>
                 <ThemedText style={[styles.label, { color: currColors.text }]}>EMIs Already Paid</ThemedText>
                 <TextInput
                   style={[styles.input, { color: currColors.text }]}
@@ -478,101 +479,287 @@ export default function AddLoanScreen() {
                   placeholderTextColor={currColors.textSecondary}
                   value={paidEmis}
                   onChangeText={setPaidEmis}
-                  keyboardType="numeric"
+                  keyboardType="number-pad"
                   textAlign="right"
                 />
               </View>
+            )}
 
-              {/* Outstanding Principal Row */}
-              <View style={[styles.formRow, styles.formRowLast]}>
-                <ThemedText style={[styles.label, { color: currColors.text }]}>Current Outstanding</ThemedText>
-                <View style={styles.amountInputRow}>
-                  <ThemedText style={[styles.currencyPrefix, { color: currColors.text }]}>₹</ThemedText>
-                  <TextInput
-                    style={[styles.input, { color: currColors.text }]}
-                    placeholder="0"
-                    placeholderTextColor={currColors.textSecondary}
-                    value={outstandingAmount}
-                    onChangeText={(val) => setOutstandingAmount(formatIndianAmount(val))}
-                    keyboardType="decimal-pad"
-                    textAlign="right"
-                  />
-                </View>
-              </View>
+            {/* Current Outstanding Balance Row */}
+            <View style={[styles.formRow, styles.formRowLast]}>
+              <ThemedText style={[styles.label, { color: currColors.text }]}>Current Outstanding</ThemedText>
+              <TextInput
+                style={[styles.input, { color: currColors.text }]}
+                placeholder="₹ 0"
+                placeholderTextColor={currColors.textSecondary}
+                value={outstandingAmount ? `₹ ${outstandingAmount}` : ''}
+                onChangeText={(val) => {
+                  const clean = val.replace(/[^0-9.]/g, '');
+                  setOutstandingAmount(formatIndianAmount(clean));
+                }}
+                keyboardType="decimal-pad"
+                textAlign="right"
+              />
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+          </View>
 
-      {/* LOAN CATEGORY MODAL */}
-      <Modal visible={showTypeModal} animationType="slide" presentationStyle="pageSheet">
-        <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
-            <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Loan Category</ThemedText>
-            <TouchableOpacity onPress={() => setShowTypeModal(false)} style={styles.modalCloseButton}>
-              <X size={20} color={currColors.text} />
+          {/* GROUP 4: SCHEDULE & LINKED ACCOUNT */}
+          <ThemedText style={[styles.groupLabel, { color: currColors.textSecondary }]}>
+            SCHEDULE & ACCOUNT
+          </ThemedText>
+          <View style={[styles.formGroup, { backgroundColor: currColors.card }]}>
+            {/* Start Date Row */}
+            <TouchableOpacity
+              style={[styles.formRow, styles.formRowFirst, { borderBottomColor: currColors.border }]}
+              onPress={() => setShowDatePicker(true)}
+              activeOpacity={0.7}
+            >
+              <ThemedText style={[styles.label, { color: currColors.text }]}>First EMI / Start Date</ThemedText>
+              <View style={styles.valueContainer}>
+                <ThemedText style={[styles.valueText, { color: currColors.text }]}>
+                  {startDate.toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </ThemedText>
+                <ChevronRight size={16} color={currColors.border} style={{ marginLeft: 6 }} />
+              </View>
+            </TouchableOpacity>
+
+            {/* iOS Inline / Modal Date Picker */}
+            {showDatePicker && (
+              <View style={{ padding: 12, alignItems: 'center', backgroundColor: currColors.cardSecondary }}>
+                <DateTimePicker
+                  value={startDate}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  onChange={onDateChange}
+                  themeVariant={colorScheme === 'dark' ? 'dark' : 'light'}
+                />
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity
+                    onPress={() => setShowDatePicker(false)}
+                    style={{
+                      marginTop: 8,
+                      paddingVertical: 6,
+                      paddingHorizontal: 16,
+                      borderRadius: 8,
+                      backgroundColor: '#00C9A7',
+                    }}
+                  >
+                    <ThemedText style={{ color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold', fontSize: 13 }}>Done</ThemedText>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {/* Debit Account Row */}
+            <TouchableOpacity
+              style={[styles.formRow, styles.formRowLast]}
+              onPress={() => setShowAccountModal(true)}
+              activeOpacity={0.7}
+            >
+              <ThemedText style={[styles.label, { color: currColors.text }]}>Debit Account</ThemedText>
+              <View style={styles.valueContainer}>
+                {linkedAccount ? (
+                  <View style={styles.accountBadge}>
+                    <AccountLogoOrInitials account={linkedAccount} size={20} />
+                    <ThemedText style={[styles.valueText, { color: currColors.text }]}>
+                      {linkedAccount.name}
+                    </ThemedText>
+                  </View>
+                ) : (
+                  <ThemedText style={[styles.valueText, styles.placeholderText, { color: currColors.textSecondary }]}>
+                    Select Account
+                  </ThemedText>
+                )}
+                <ChevronRight size={16} color={currColors.border} style={{ marginLeft: 6 }} />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* FULL PAGE 3D ICON PICKER MODAL */}
+      <Modal
+        visible={showIconModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
+        onRequestClose={() => setShowIconModal(false)}
+      >
+        <View style={[styles.modalMainContainer, { backgroundColor: currColors.background }]}>
+          {/* Modal Header with safe top insets avoiding notch / Dynamic Island */}
+          <View
+            style={[
+              styles.iconModalHeader,
+              {
+                paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24),
+                borderBottomColor: currColors.border,
+                backgroundColor: currColors.background,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                setShowIconModal(false);
+              }}
+              style={styles.headerButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+                Cancel
+              </ThemedText>
+            </TouchableOpacity>
+
+            <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+              Choose Icon
+            </ThemedText>
+
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                setShowIconModal(false);
+              }}
+              style={styles.headerButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ThemedText style={[styles.headerButtonText, styles.saveButtonText, { color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }]}>
+                Done
+              </ThemedText>
             </TouchableOpacity>
           </View>
 
-          <FlatList
-            data={LOAN_TYPES}
-            keyExtractor={(item) => item.type}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => {
-              const isSelected = type === item.type;
-              const IconComp = item.icon;
-              return (
-                <TouchableOpacity
-                  style={[styles.listItem, { borderBottomColor: currColors.border }]}
-                  onPress={() => {
-                    setType(item.type);
-                    setShowTypeModal(false);
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <View
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 10,
-                        backgroundColor: `${item.color}15`,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        marginRight: 12,
+          {/* Search Bar in Modal */}
+          <View style={styles.searchWrap}>
+            <View style={[styles.searchBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+              <Search size={16} color={currColors.textSecondary} style={{ marginRight: 8 }} />
+              <TextInput
+                style={[styles.searchInput, { color: currColors.text }]}
+                placeholder="Search icons (house, car, cash, book, education)..."
+                placeholderTextColor={currColors.textSecondary}
+                value={iconSearch}
+                onChangeText={setIconSearch}
+                clearButtonMode="while-editing"
+                autoCorrect={false}
+              />
+            </View>
+          </View>
+
+          {/* 3D Icons Grid */}
+          <ScrollView
+            contentContainerStyle={[styles.iconsGridContent, { paddingBottom: Math.max(insets.bottom, 24) + 20 }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {filteredIcons.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <ThemedText style={{ color: currColors.textSecondary, fontSize: 14, fontFamily: 'Outfit_400Regular' }}>
+                  No icons found for "{iconSearch}"
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={styles.gridRowWrap}>
+                {filteredIcons.map((item) => {
+                  const isSelected = icon === item.id;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[
+                        styles.iconTile,
+                        { backgroundColor: currColors.card, borderColor: currColors.border },
+                        isSelected && [
+                          styles.iconTileSelected,
+                          { borderColor: '#00C9A7', backgroundColor: isDark ? '#00C9A722' : '#00C9A714' },
+                        ],
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        handleHaptic();
+                        setIcon(item.id);
+                        setIsIconManuallyChosen(true);
+                        setShowIconModal(false);
                       }}
                     >
-                      <IconComp size={18} color={item.color} />
-                    </View>
-                    <ThemedText style={[styles.itemTitle, { color: currColors.text }]}>{item.label}</ThemedText>
-                  </View>
-                  {isSelected && <Check size={18} color="#00C9A7" strokeWidth={2.5} />}
-                </TouchableOpacity>
-              );
-            }}
-          />
+                      <Category3DIcon name={item.id} size={38} />
+                      <ThemedText
+                        style={[
+                          styles.iconTileLabel,
+                          { color: isSelected ? '#00C9A7' : currColors.textSecondary },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.name}
+                      </ThemedText>
+                      {isSelected && (
+                        <View style={styles.checkBadge}>
+                          <Check size={10} color="#FFFFFF" strokeWidth={3} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </ScrollView>
         </View>
       </Modal>
 
       {/* ACCOUNT SELECTION MODAL */}
-      <Modal visible={showAccountModal} animationType="slide" presentationStyle="pageSheet">
-        <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
-            <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Select Debit Account</ThemedText>
-            <TouchableOpacity onPress={() => setShowAccountModal(false)} style={styles.modalCloseButton}>
-              <X size={20} color={currColors.text} />
+      <Modal
+        visible={showAccountModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
+        onRequestClose={() => setShowAccountModal(false)}
+      >
+        <View style={[styles.modalMainContainer, { backgroundColor: currColors.background }]}>
+          <View
+            style={[
+              styles.iconModalHeader,
+              {
+                paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24),
+                borderBottomColor: currColors.border,
+                backgroundColor: currColors.background,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                setShowAccountModal(false);
+              }}
+              style={styles.headerButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
+                Cancel
+              </ThemedText>
             </TouchableOpacity>
+
+            <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+              Select Debit Account
+            </ThemedText>
+
+            <View style={{ width: 50 }} />
           </View>
 
           <FlatList
             data={activeAccounts}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: Math.max(insets.bottom, 24) + 20 }]}
             renderItem={({ item }) => {
               const isSelected = linkedAccountId === item.id;
               return (
                 <TouchableOpacity
                   style={[styles.listItem, { borderBottomColor: currColors.border }]}
                   onPress={() => {
+                    handleHaptic();
                     setLinkedAccountId(item.id);
                     setShowAccountModal(false);
                   }}
@@ -601,30 +788,25 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
   },
-  safeArea: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: 14,
     borderBottomWidth: 0.5,
   },
   headerTitle: {
     fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
   },
+  headerButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
   headerButtonText: {
     fontSize: 17,
     fontFamily: 'Outfit_400Regular',
-  },
-  cancelButton: {
-    padding: 4,
-  },
-  saveButton: {
-    padding: 4,
   },
   saveButtonText: {
     fontFamily: 'Outfit_600SemiBold',
@@ -674,14 +856,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  typeIconWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
   accountBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -693,39 +867,96 @@ const styles = StyleSheet.create({
   placeholderText: {
     opacity: 0.6,
   },
-  amountInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  currencyPrefix: {
-    fontSize: 16,
-    fontFamily: 'Outfit_600SemiBold',
-    marginRight: 4,
-  },
   input: {
     flex: 1,
     fontSize: 16,
     padding: 0,
     fontFamily: 'Outfit_400Regular',
   },
-  modalContainer: {
+  modalMainContainer: {
     flex: 1,
   },
-  modalHeader: {
+  iconModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
     borderBottomWidth: 0.5,
   },
-  modalTitle: {
-    fontSize: 17,
+  iconModalTitle: {
+    fontSize: 18,
     fontFamily: 'Outfit_600SemiBold',
   },
-  modalCloseButton: {
-    padding: 4,
+  modalCloseBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchWrap: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Outfit_400Regular',
+    paddingVertical: 0,
+  },
+  iconsGridContent: {
+    paddingHorizontal: 14,
+    paddingBottom: 40,
+  },
+  gridRowWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    gap: 10,
+  },
+  iconTile: {
+    width: '22.5%',
+    aspectRatio: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 6,
+    position: 'relative',
+  },
+  iconTileSelected: {
+    borderWidth: 1.5,
+  },
+  iconTileLabel: {
+    fontSize: 10,
+    fontFamily: 'Outfit_500Medium',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  checkBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#00C9A7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyWrap: {
+    paddingVertical: 40,
+    alignItems: 'center',
   },
   listContent: {
     paddingBottom: 30,

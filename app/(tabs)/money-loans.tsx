@@ -36,6 +36,8 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Loan, Subscription } from '@/types/money';
+import { Category3DIcon } from '@/components/Category3DIcon';
+import { LOAN_3D_ICON_MAP } from '@/constants/Category3DIcons';
 
 const getSubscriptionIcon = (logoName: string | undefined) => {
   switch (logoName) {
@@ -164,9 +166,11 @@ export default function LoansScreen() {
       >
         <View style={styles.cardMainRow}>
           <View style={styles.cardLeft}>
-            <View style={[styles.iconWrapper, { backgroundColor: `${config.color}15` }]}>
-              <IconComponent size={18} color={config.color} />
-            </View>
+            <Category3DIcon
+              name={item.icon || LOAN_3D_ICON_MAP[item.type] || 'loan'}
+              size={36}
+              style={{ marginRight: 12 }}
+            />
             <View style={styles.accountInfo}>
               <ThemedText type="semiBold" style={[styles.accountName, { color: currColors.text }]} numberOfLines={1}>
                 {item.name}
@@ -219,14 +223,12 @@ export default function LoansScreen() {
       >
         <View style={styles.cardMainRow}>
           <View style={styles.cardLeft}>
-            {(() => {
-              const IconComponent = getSubscriptionIcon(item.logo);
-              return (
-                <View style={[styles.iconWrapper, { backgroundColor: `${item.color}15` }]}>
-                  <IconComponent size={18} color={item.color || '#00C9A7'} />
-                </View>
-              );
-            })()}
+            <Category3DIcon
+              name={item.category || item.name}
+              icon={item.logo}
+              size={36}
+              style={{ marginRight: 12 }}
+            />
             <View style={styles.accountInfo}>
               <ThemedText type="semiBold" style={[styles.accountName, { color: currColors.text }]} numberOfLines={1}>
                 {item.name}

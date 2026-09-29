@@ -121,7 +121,7 @@ function RootLayoutNav() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="add-transaction"
-            options={{ presentation: 'modal', headerShown: false }}
+            options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', headerShown: false }}
           />
           <Stack.Screen
             name="monthly-analysis"
@@ -174,7 +174,11 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="add-account"
-            options={{ presentation: 'modal', headerShown: false }}
+            options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', headerShown: false }}
+          />
+          <Stack.Screen
+            name="reorder-accounts"
+            options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', headerShown: false }}
           />
           <Stack.Screen
             name="account-details/[id]"
@@ -182,7 +186,7 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="add-money-transaction"
-            options={{ presentation: 'modal', headerShown: false }}
+            options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', headerShown: false }}
           />
           <Stack.Screen
             name="all-money-transactions"
@@ -198,11 +202,11 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="add-loan"
-            options={{ presentation: 'modal', headerShown: false }}
+            options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', headerShown: false }}
           />
           <Stack.Screen
             name="add-subscription"
-            options={{ presentation: 'modal', headerShown: false }}
+            options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', headerShown: false }}
           />
           <Stack.Screen
             name="subscription-details/[id]"
@@ -234,7 +238,7 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="create-goal"
-            options={{ presentation: 'modal', headerShown: false }}
+            options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', headerShown: false }}
           />
           <Stack.Screen
             name="custom-goal-formula"
@@ -242,7 +246,7 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="manage-categories"
-            options={{ animation: 'slide_from_right', headerShown: false }}
+            options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', headerShown: false }}
           />
           <Stack.Screen
             name="ai-chat"

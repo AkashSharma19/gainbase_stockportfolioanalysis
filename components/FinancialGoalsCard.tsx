@@ -10,6 +10,7 @@ import { Target, ArrowRight } from 'lucide-react-native';
 
 import { ThemedText } from './ThemedText';
 import { useColorScheme } from './useColorScheme';
+import { Category3DIcon } from './Category3DIcon';
 import Colors from '../constants/Colors';
 import { useGoalStore } from '../store/useGoalStore';
 import { useMoneyStore } from '../store/useMoneyStore';
@@ -171,13 +172,18 @@ export function FinancialGoalsCard() {
       {/* Main Content */}
       <View style={styles.content}>
         <View style={styles.mainRow}>
-          <View style={{ flex: 1, marginRight: 12 }}>
-            <ThemedText style={[styles.goalName, { color: currColors.text }]} numberOfLines={1}>
-              {featuredGoal.name}
-            </ThemedText>
-            <ThemedText style={[styles.subValue, { color: currColors.textSecondary }]}>
-              {formatValue(featuredGoal.currentValue, featuredGoal.unit)} of {formatValue(featuredGoal.targetValue, featuredGoal.unit)}
-            </ThemedText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 }}>
+            <View style={[styles.featuredIconWrap, { backgroundColor: `${goalColor}15` }]}>
+              <Category3DIcon name={featuredGoal.icon} icon={featuredGoal.icon} size={22} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText style={[styles.goalName, { color: currColors.text }]} numberOfLines={1}>
+                {featuredGoal.name}
+              </ThemedText>
+              <ThemedText style={[styles.subValue, { color: currColors.textSecondary }]}>
+                {formatValue(featuredGoal.currentValue, featuredGoal.unit)} of {formatValue(featuredGoal.targetValue, featuredGoal.unit)}
+              </ThemedText>
+            </View>
           </View>
 
           <View style={[styles.progressBadge, { backgroundColor: `${goalColor}18` }]}>
@@ -264,6 +270,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  featuredIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
   },
   goalName: {
     fontSize: 15,

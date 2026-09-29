@@ -1042,7 +1042,6 @@ export default function StockDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
   },
   header: {
     flexDirection: 'row',
@@ -1063,7 +1062,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   companyNameText: {
-    color: '#FFF',
     fontSize: 17,
     textAlign: 'center',
   },
@@ -1077,15 +1075,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    color: '#FFF',
     fontSize: 16,
   },
   priceCard: {
-    backgroundColor: '#1C1C1E',
     borderRadius: 24,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#2C2C2E',
   },
   priceHeader: {
     marginBottom: 16,
@@ -1098,13 +1093,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   currentPrice: {
-    color: '#FFF',
     fontSize: 32,
     fontWeight: '600',
   },
   divider: {
     height: 1,
-    backgroundColor: '#2C2C2E',
     marginBottom: 16,
   },
   pnlRow: {
@@ -1136,18 +1129,15 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   historyList: {
-    backgroundColor: '#1C1C1E',
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#2C2C2E',
   },
   historyItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#2C2C2E',
   },
   iconContainer: {
     width: 40,
@@ -1161,7 +1151,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   historyType: {
-    color: '#FFF',
     fontSize: 14,
     fontWeight: '500',
     marginBottom: 2,
@@ -1174,7 +1163,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   historyValue: {
-    color: '#FFF',
     fontSize: 14,
     fontWeight: '500',
     marginBottom: 2,
@@ -1199,13 +1187,11 @@ const styles = StyleSheet.create({
   heroValue: {
     fontSize: 24,
     fontWeight: '400',
-    color: '#FFF',
     marginBottom: 16,
   },
   dashedDivider: {
     height: 1,
     borderWidth: 1,
-    borderColor: '#333',
     borderStyle: 'dashed',
     borderRadius: 1,
     marginBottom: 16,
@@ -1227,15 +1213,12 @@ const styles = StyleSheet.create({
   heroRowValueWhite: {
     fontSize: 14,
     fontWeight: '400',
-    color: '#FFF',
   },
   rangeCard: {
-    backgroundColor: '#1C1C1E',
     borderRadius: 24,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#2C2C2E',
   },
   rangeRowContainer: {
     flexDirection: 'row',
@@ -1298,12 +1281,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#2C2C2E',
   },
   newsItem: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#2C2C2E',
   },
   newsSourceRow: {
     flexDirection: 'row',
@@ -1332,7 +1313,6 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#2C2C2E',
     alignItems: 'center',
   },
   analyticsCard: {

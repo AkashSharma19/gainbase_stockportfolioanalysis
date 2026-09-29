@@ -1,4 +1,4 @@
-const tintColorLight = '#2f95dc';
+const tintColorLight = '#0A84FF';
 const tintColorDark = '#fff';
 const moneyColor = '#00C9A7'; // Teal/Green accent for Money Manager
 
@@ -8,7 +8,7 @@ export default {
     textSecondary: '#8E8E93',
     background: '#F2F2F7',
     card: '#FFFFFF',
-    cardSecondary: '#F2F2F7',
+    cardSecondary: '#E5E5EA',
     border: '#E5E5EA',
     tint: tintColorLight,
     tintMoney: moneyColor,

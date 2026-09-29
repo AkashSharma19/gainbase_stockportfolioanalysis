@@ -227,13 +227,14 @@ export default function YearlyAnalysisScreen() {
                           styles.tooltip,
                           {
                             backgroundColor: currColors.card,
+                            borderColor: currColors.border,
                             marginBottom: -10,
                           },
                         ]}
                       >
                         <ThemedText
                           style={{
-                            color: '#FFF',
+                            color: currColors.text,
                             fontSize: 12,
                             fontWeight: '600',
                           }}

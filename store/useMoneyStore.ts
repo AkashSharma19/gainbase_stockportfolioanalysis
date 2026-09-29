@@ -66,6 +66,7 @@ interface MoneyState {
   addCategory: (type: 'income' | 'expense', name: string, icon?: string, color?: string) => void;
   updateCategory: (type: 'income' | 'expense', oldName: string, newName: string, icon?: string, color?: string) => void;
   removeCategory: (type: 'income' | 'expense', name: string) => void;
+  reorderCategories: (type: 'income' | 'expense', categories: string[]) => void;
 
   
   importMoneyData: (transactions: MoneyTransaction[], accounts: Account[]) => void;
@@ -111,32 +112,28 @@ export const useMoneyStore = create<MoneyState>()(
       deletedSubscriptionIds: [],
       deletedSubscriptionPaymentIds: [],
       categories: {
-        income: ['Salary', 'Investments', 'Business', 'Gift', 'Refund', 'Other'],
+        income: ['Salary', 'Investments', 'Business', 'Freelance', 'Gift', 'Refund', 'Other'],
         expense: [
-          'Food & Dining',
+          'Holiday',
+          'Grocery',
           'Food',
-          'Junk',
-          'Rent & Bills',
-          'House',
-          'Electricity Bill',
+          'Beverage',
+          'Transport',
+          'Internet',
+          'Electric',
+          'Water',
+          'Gas',
+          'Gym',
+          'Books',
           'Shopping',
-          'Shopping - Electronics',
-          'Shopping - Clothes',
-          'Entertainment',
-          'Subscriptions - OTT',
-          'Subscriptions - WiFi',
-          'Travel',
-          'Travel/ Trips',
-          'Transport - Fuel',
-          'Transport - Cab',
           'Medical',
+          'Entertainment',
+          'House',
           'Education',
-          'Maintainance',
-          'Family',
           'Gifts',
           'EMI Payments',
-          'Others'
-        ]
+          'Others',
+        ],
       },
 
 
@@ -592,6 +589,16 @@ export const useMoneyStore = create<MoneyState>()(
             moneyTransactions: updatedTransactions,
           };
         }),
+      reorderCategories: (type, newCategories) =>
+        set((state) => ({
+          categories: {
+            ...(state.categories || {
+              income: [],
+              expense: []
+            }),
+            [type]: newCategories,
+          },
+        })),
 
 
       importMoneyData: (transactions, accounts) =>

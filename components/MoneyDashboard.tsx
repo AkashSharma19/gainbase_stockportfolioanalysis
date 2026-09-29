@@ -35,11 +35,12 @@ import {
   Sparkles,
   TrendingUp,
   Target,
-  Plus,
 } from 'lucide-react-native';
 
 import { ThemedText } from './ThemedText';
 import { CategoryIcon } from './CategoryIcon';
+import { Category3DIcon } from './Category3DIcon';
+import { LOAN_3D_ICON_MAP } from '../constants/Category3DIcons';
 import { useColorScheme } from './useColorScheme';
 import Colors from '../constants/Colors';
 import { useMoneyStore } from '../store/useMoneyStore';
@@ -309,6 +310,9 @@ export function MoneyDashboard() {
       type: 'emi' | 'subscription';
       color: string;
       logo?: string;
+      loanType?: string;
+      category?: string;
+      icon?: string;
     }> = [];
 
     // 1. Process active loans for EMIs
@@ -323,6 +327,8 @@ export function MoneyDashboard() {
             amount: loan.emiAmount,
             date: nextDue,
             type: 'emi',
+            loanType: loan.type,
+            icon: loan.icon,
             color: loan.type === 'home' ? '#FF9500' : loan.type === 'car' ? '#007AFF' : '#AF52DE',
           });
         }
@@ -338,6 +344,7 @@ export function MoneyDashboard() {
             id: `sub-${sub.id}`,
             targetId: sub.id,
             name: sub.name,
+            category: sub.category,
             amount: sub.amount,
             date: nextDue,
             type: 'subscription',
@@ -655,18 +662,6 @@ export function MoneyDashboard() {
               >
                 <PieChart size={16} color={currColors.text} />
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  handleHaptic();
-                  router.push('/add-money-transaction');
-                }}
-                style={[
-                  styles.iconButton,
-                  { backgroundColor: currColors.cardSecondary },
-                ]}
-              >
-                <Plus size={16} color={currColors.text} />
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -951,7 +946,9 @@ export function MoneyDashboard() {
                 dueColor = '#FF3B30';
               }
 
-              const IconComponent = payment.type === 'emi' ? Landmark : getSubscriptionIcon(payment.logo);
+              const iconName = payment.type === 'emi'
+                ? (payment.icon || LOAN_3D_ICON_MAP[payment.loanType || ''] || 'loan')
+                : (payment.category || payment.name);
 
               return (
                 <TouchableOpacity
@@ -972,10 +969,13 @@ export function MoneyDashboard() {
                   }}
                 >
                   <View style={[styles.accountRowLeft, { flex: 1, marginRight: 16 }]}>
-                    <View style={[styles.accountIconBox, { backgroundColor: `${payment.color}15` }]}>
-                      <IconComponent size={16} color={payment.color} />
-                    </View>
-                    <View style={{ flex: 1, gap: 2, marginLeft: 12 }}>
+                    <Category3DIcon
+                      name={iconName}
+                      icon={payment.type === 'emi' ? payment.icon : payment.logo}
+                      size={36}
+                      style={{ marginRight: 12 }}
+                    />
+                    <View style={{ flex: 1, gap: 2 }}>
                       <ThemedText style={{ color: currColors.text, fontSize: 14, fontFamily: 'Outfit_500Medium' }} numberOfLines={1}>
                         {payment.name}
                       </ThemedText>
@@ -1078,29 +1078,26 @@ export function MoneyDashboard() {
                   }}
                 >
                   <View style={styles.txLeft}>
-                    <View
-                      style={[
-                        styles.txIconBox,
-                        {
-                          backgroundColor:
-                            tx.type === 'income'
-                              ? 'rgba(52, 199, 89, 0.1)'
-                              : tx.type === 'expense'
-                              ? 'rgba(255, 59, 48, 0.1)'
-                              : 'rgba(142, 142, 147, 0.1)',
-                        },
-                      ]}
-                    >
-                      {tx.type === 'transfer' ? (
+                    {tx.type === 'transfer' ? (
+                      <View
+                        style={[
+                          styles.txIconBox,
+                          {
+                            backgroundColor: isDark
+                              ? 'rgba(255, 255, 255, 0.08)'
+                              : 'rgba(0, 0, 0, 0.05)',
+                          },
+                        ]}
+                      >
                         <ArrowRightLeft size={18} color="#8E8E93" />
-                      ) : (
-                        <CategoryIcon
-                          name={tx.category}
-                          size={18}
-                          color={tx.type === 'income' ? '#34C759' : '#FF3B30'}
-                        />
-                      )}
-                    </View>
+                      </View>
+                    ) : (
+                      <Category3DIcon
+                        name={tx.category}
+                        size={36}
+                        style={{ marginRight: 12 }}
+                      />
+                    )}
                     <View style={styles.txInfo}>
                       <ThemedText style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
                         {tx.type === 'transfer' ? `Transfer: ${account?.name} → ${toAccount?.name}` : tx.category}

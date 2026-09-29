@@ -33,6 +33,8 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { EMIPayment } from '@/types/money';
+import { Category3DIcon } from '@/components/Category3DIcon';
+import { LOAN_3D_ICON_MAP } from '@/constants/Category3DIcons';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 import { getNextLoanDuePayment } from '@/lib/finance';
 
@@ -485,9 +487,15 @@ export default function LoanDetailsScreen() {
         <View style={[styles.outstandingCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
           {/* Header & Lender */}
           <View style={styles.heroHeaderRow}>
-            <ThemedText style={[styles.heroLabel, { color: currColors.textSecondary }]}>
-              OUTSTANDING BALANCE
-            </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Category3DIcon
+                name={loan.icon || LOAN_3D_ICON_MAP[loan.type] || 'loan'}
+                size={24}
+              />
+              <ThemedText style={[styles.heroLabel, { color: currColors.textSecondary }]}>
+                OUTSTANDING BALANCE
+              </ThemedText>
+            </View>
             <View style={[styles.indicatorPill, { backgroundColor: `${config.color}15` }]}>
               <ThemedText style={[styles.indicatorText, { color: config.color }]}>
                 {loan.lenderName.toUpperCase()}
@@ -807,7 +815,10 @@ export default function LoanDetailsScreen() {
                           setShowCategorySelector(false);
                         }}
                       >
-                        <ThemedText style={{ color: currColors.text, fontSize: 15, fontFamily: 'Outfit_400Regular' }}>{item}</ThemedText>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Category3DIcon name={item} size={28} style={{ marginRight: 10 }} />
+                          <ThemedText style={{ color: currColors.text, fontSize: 15, fontFamily: 'Outfit_400Regular' }}>{item}</ThemedText>
+                        </View>
                       </TouchableOpacity>
                     )}
                   />

@@ -831,11 +831,9 @@ export default function AnalyticsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000',
   },
   container: {
     flex: 1,
-    backgroundColor: '#000',
   },
   header: {
     flexDirection: 'row',
@@ -843,19 +841,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#000',
   },
   headerTitle: {
-    color: '#FFF',
     fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
   },
   selectorBar: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#000',
     borderBottomWidth: 1,
-    borderBottomColor: '#1C1C1E',
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 10,
@@ -868,9 +862,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 4,
     borderRadius: 12,
-    backgroundColor: '#1C1C1E',
     borderWidth: 1,
-    borderColor: '#2C2C2E',
     gap: 4,
   },
   selectorButtonActive: {
@@ -881,7 +873,6 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   selectorText: {
-    color: '#8E8E93',
     fontSize: 10,
     fontFamily: 'Outfit_500Medium',
     textAlign: 'center',
@@ -900,7 +891,6 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#2C2C2E',
   },
   pieWrapper: {
     alignItems: 'center',
@@ -918,7 +908,6 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyText: {
-    color: '#FFF',
     fontSize: 18,
     fontFamily: 'Outfit_400Regular',
     marginBottom: 8,
@@ -938,35 +927,28 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#2C2C2E',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#3C3C3E',
   },
   viewModeToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#2C2C2E',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     height: 36,
     borderWidth: 1,
-    borderColor: '#3C3C3E',
   },
   viewModeText: {
-    color: '#FFF',
     fontSize: 12,
     fontFamily: 'Outfit_500Medium',
   },
   holdingsList: {
-    backgroundColor: '#1C1C1E',
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#2C2C2E',
   },
   holdingItem: {
     padding: 18,
@@ -974,7 +956,6 @@ const styles = StyleSheet.create({
   },
   holdingItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#2C2C2E',
   },
   holdingRow: {
     flexDirection: 'row',
@@ -992,12 +973,10 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: '#2C2C2E',
     justifyContent: 'center',
     alignItems: 'center',
   },
   iconLetter: {
-    color: '#FFF',
     fontSize: 18,
     fontFamily: 'Outfit_500Medium',
   },
@@ -1007,7 +986,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   holdingSymbol: {
-    color: '#FFF',
     fontSize: 15,
     fontFamily: 'Outfit_400Regular',
     flexShrink: 1,
@@ -1023,7 +1001,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   primaryValue: {
-    color: '#FFF',
     fontSize: 15,
     fontFamily: 'Outfit_400Regular',
   },
@@ -1034,7 +1011,6 @@ const styles = StyleSheet.create({
   },
   contributionProgressBarContainer: {
     height: 5,
-    backgroundColor: '#2C2C2E',
     borderRadius: 2.5,
     marginTop: 14,
     marginHorizontal: 0,

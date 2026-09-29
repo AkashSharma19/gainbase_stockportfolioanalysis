@@ -48,6 +48,7 @@ export interface Loan {
   endDate: string;           // ISO Date String
   linkedAccountId?: string;  // Account ID from which EMIs are debited
   type: 'home' | 'car' | 'personal' | 'education' | 'other';
+  icon?: string;             // Custom 3D icon ID
   isActive: boolean;
   updatedAt?: string;
 }

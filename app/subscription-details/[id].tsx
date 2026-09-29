@@ -35,6 +35,7 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Subscription, SubscriptionPayment } from '@/types/money';
+import { Category3DIcon } from '@/components/Category3DIcon';
 import { advanceDateByCycle } from '@/lib/finance';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
@@ -394,9 +395,16 @@ interface ScheduleRow {
         {/* ─── 1. Unified Hero Card ─── */}
         <View style={[styles.heroCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
           <View style={styles.heroHeaderRow}>
-            <ThemedText style={[styles.heroLabel, { color: currColors.textSecondary }]}>
-              SUBSCRIPTION COST
-            </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Category3DIcon
+                name={subscription.category || subscription.name}
+                icon={subscription.logo}
+                size={24}
+              />
+              <ThemedText style={[styles.heroLabel, { color: currColors.textSecondary }]}>
+                SUBSCRIPTION COST
+              </ThemedText>
+            </View>
             <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
               <View style={[styles.indicatorPill, { backgroundColor: `${themeColor}15` }]}>
                 <ThemedText style={[styles.indicatorText, { color: themeColor }]}>
