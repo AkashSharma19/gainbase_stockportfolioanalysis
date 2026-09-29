@@ -101,6 +101,14 @@ const LOCAL_3D_ICON_MAP: Record<string, any> = {
   users:          require('../assets/icons3d/users.png'),
   loan:           require('../assets/icons3d/loan.png'),
   pot_of_food:    require('../assets/icons3d/pot_of_food.png'),
+
+  // Appliances
+  ac:             require('../assets/icons3d/ac.png'),
+  refrigerator:   require('../assets/icons3d/refrigerator.png'),
+
+  // Peer Finance
+  payable:        require('../assets/icons3d/payable.png'),
+  receivable:     require('../assets/icons3d/receivable.png'),
 };
 
 export default LOCAL_3D_ICON_MAP;

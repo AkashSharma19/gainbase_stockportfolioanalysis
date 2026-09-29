@@ -65,6 +65,12 @@ const KEYWORD_TO_ID: Record<string, string> = {
   // Special
   users: 'users', people: 'users', person: 'users',
   loan: 'loan',
+  // Appliances
+  ac: 'ac', 'air conditioner': 'ac', aircon: 'ac', cooling: 'ac', snowflake: 'ac',
+  refrigerator: 'refrigerator', fridge: 'refrigerator', freezer: 'refrigerator',
+  // Peer finance
+  payable: 'payable', owe: 'payable', borrowed: 'payable',
+  receivable: 'receivable', lent: 'receivable', iou: 'receivable',
 };
 
 /**

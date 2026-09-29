@@ -572,6 +572,38 @@ export const CATEGORY_3D_ICONS_LIST: Category3DItem[] = [
     path: 'Locked/3D/locked_3d.png',
     keywords: ['lock', 'locked', 'fd', 'fixed deposit', 'security', 'safe', 'vault', 'bond']
   },
+
+  // 8. Appliances
+  {
+    id: 'ac',
+    name: 'Air Conditioner',
+    group: 'Appliances',
+    path: 'Snowflake/3D/snowflake_3d.png',
+    keywords: ['ac', 'air conditioner', 'aircon', 'cooling', 'hvac', 'split ac', 'window ac', 'inverter ac', 'daikin', 'voltas', 'lg', 'samsung', 'carrier', 'blue star', 'cold', 'snowflake']
+  },
+  {
+    id: 'refrigerator',
+    name: 'Refrigerator',
+    group: 'Appliances',
+    path: 'Ice/3D/ice_3d.png',
+    keywords: ['refrigerator', 'fridge', 'freezer', 'ice', 'cold storage', 'lg', 'samsung', 'whirlpool', 'godrej', 'haier', 'double door', 'single door']
+  },
+
+  // 9. Peer Finance
+  {
+    id: 'payable',
+    name: 'Accounts Payable',
+    group: 'Peer Finance',
+    path: 'Money%20with%20wings/3D/money_with_wings_3d.png',
+    keywords: ['payable', 'pay', 'owe', 'debt', 'borrowed', 'due', 'payment', 'peer', 'friend', 'settle', 'repay', 'return']
+  },
+  {
+    id: 'receivable',
+    name: 'Accounts Receivable',
+    group: 'Peer Finance',
+    path: 'Handshake/3D/handshake_3d.png',
+    keywords: ['receivable', 'receive', 'owed', 'lent', 'loan given', 'iou', 'collect', 'peer', 'friend', 'borrowed by', 'due from']
+  },
 ];
 
 /**
