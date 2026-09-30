@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS public.loans (
     end_date TIMESTAMPTZ NOT NULL,
     linked_account_id TEXT REFERENCES public.accounts(id) ON DELETE SET NULL,
     type TEXT NOT NULL,
+    icon TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
     is_deleted BOOLEAN NOT NULL DEFAULT false,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

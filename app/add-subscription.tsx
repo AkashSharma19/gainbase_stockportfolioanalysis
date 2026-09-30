@@ -182,6 +182,7 @@ export default function AddSubscriptionScreen() {
       category: category.trim() || 'Entertainment',
       color,
       logo: icon,
+      icon: icon,
       isActive: true,
       createdAt: editingSubscription ? editingSubscription.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),

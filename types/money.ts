@@ -102,6 +102,7 @@ export interface Subscription {
   createdAt: string;
   updatedAt: string;
   logo?: string;
+  icon?: string;
   color: string;
 }
 

@@ -31,26 +31,31 @@ export const ForecastCard = ({
   const sipStepUp = usePortfolioStore((state) => state.sipStepUp);
   const manualMonthlySIP = usePortfolioStore((state) => state.manualMonthlySIP);
 
-  // Derived values from user data
+  // Derived values from user data with safe financial bounds
   const annualReturn = useMemo(() => {
-    return (summary.xirr || 0) / 100;
-  }, [summary.xirr]);
+    const rawXirr = summary?.xirr;
+    if (typeof rawXirr !== 'number' || isNaN(rawXirr) || rawXirr <= 0 || !isFinite(rawXirr)) {
+      return 0.12; // 12% default benchmark annual return
+    }
+    const rate = rawXirr / 100;
+    return Math.min(Math.max(rate, 0.04), 0.25); // Cap between 4% and 25% for multi-year compounding
+  }, [summary?.xirr]);
 
   const monthlySIP = useMemo(() => {
-    if (manualMonthlySIP !== null) return manualMonthlySIP;
-    if (yearlyAnalysis.length === 0) return 0;
-    return yearlyAnalysis[0].averageMonthlyInvestment || 0;
+    if (manualMonthlySIP !== null && typeof manualMonthlySIP === 'number') return manualMonthlySIP;
+    if (!yearlyAnalysis || yearlyAnalysis.length === 0) return 0;
+    return yearlyAnalysis[0]?.averageMonthlyInvestment || 0;
   }, [yearlyAnalysis, manualMonthlySIP]);
 
   const projection = useMemo(() => {
     return calculateProjection(
-      summary.totalValue,
+      summary?.totalValue || 0,
       annualReturn,
       monthlySIP,
-      years,
-      sipStepUp
+      years || 15,
+      sipStepUp || 0
     );
-  }, [summary.totalValue, annualReturn, monthlySIP, years, sipStepUp]);
+  }, [summary?.totalValue, annualReturn, monthlySIP, years, sipStepUp]);
 
   return (
     <TouchableOpacity
@@ -66,14 +71,19 @@ export const ForecastCard = ({
           FORECAST ({years}Y)
         </ThemedText>
         <View style={styles.content}>
-          <View>
-            <ThemedText style={[styles.mainValue, { color: currColors.text }]}>
+          <View style={styles.leftContent}>
+            <ThemedText 
+              style={[styles.mainValue, { color: currColors.text }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
               {isPrivacyMode
                 ? '••••••'
                 : `${showCurrencySymbol ? '₹' : ''}${formatIndianNumber(projection.totalFutureValue)}`}
             </ThemedText>
             <ThemedText
               style={[styles.subValue, { color: currColors.textSecondary }]}
+              numberOfLines={1}
             >
               Worth {showCurrencySymbol ? '₹' : ''}
               {formatIndianNumber(projection.presentValue)} today
@@ -86,7 +96,10 @@ export const ForecastCard = ({
                 { backgroundColor: 'rgba(0, 122, 255, 0.1)' },
               ]}
             >
-              <ThemedText style={[styles.badgeText, { color: currColors.tint }]}>
+              <ThemedText 
+                style={[styles.badgeText, { color: currColors.tint }]}
+                numberOfLines={1}
+              >
                 {projection.multiplier.toFixed(1)}x
               </ThemedText>
             </View>
@@ -116,23 +129,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12, // Space between title and content
+    marginTop: 12,
+  },
+  leftContent: {
+    flex: 1,
+    marginRight: 12,
+    minWidth: 0,
   },
   title: {
     fontSize: 10,
-    fontWeight: '700', // Standardized Section Weight
-    letterSpacing: 1, // Tracking wide
-    textTransform: 'uppercase', // Uppercase
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   rightContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
+    flexShrink: 0,
   },
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
+    maxWidth: 75,
   },
   badgeText: {
     fontSize: 12,

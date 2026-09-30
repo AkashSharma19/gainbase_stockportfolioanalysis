@@ -302,15 +302,33 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
     const forcePull = mode === 'force_pull';
 
     // ----------------------------------------------------
-    // CATEGORY CUSTOMIZATIONS & METADATA SYNC (USER METADATA)
+    // CATEGORY, LOAN & SUBSCRIPTION ICON METADATA SYNC (USER METADATA)
     // ----------------------------------------------------
     const remoteCategoryMeta = (session.user.user_metadata?.category_metadata || {}) as Record<string, { icon: string; color: string }>;
     const remoteCustomCategories = session.user.user_metadata?.custom_categories as { income?: string[]; expense?: string[] } | undefined;
+    const remoteLoanIcons = (session.user.user_metadata?.loan_icons || {}) as Record<string, string>;
+    const remoteSubIcons = (session.user.user_metadata?.subscription_icons || {}) as Record<string, string>;
+
     const localCategoryMeta = (useMoneyStore.getState().categoryMetadata || {}) as Record<string, { icon: string; color: string }>;
     const localGlobalCategories = useMoneyStore.getState().categories || { income: [], expense: [] };
+    const localLoansList = useMoneyStore.getState().loans || [];
+    const localSubsList = useMoneyStore.getState().subscriptions || [];
+
+    const localLoanIcons: Record<string, string> = {};
+    localLoansList.forEach((l) => {
+      if (l.icon) localLoanIcons[l.id] = l.icon;
+    });
+
+    const localSubIcons: Record<string, string> = {};
+    localSubsList.forEach((s) => {
+      const ic = s.icon || s.logo;
+      if (ic) localSubIcons[s.id] = ic;
+    });
 
     let mergedCategoryMeta: Record<string, { icon: string; color: string }>;
     let mergedCategories: { income: string[]; expense: string[] };
+    let mergedLoanIcons: Record<string, string>;
+    let mergedSubIcons: Record<string, string>;
 
     if (forcePull) {
       mergedCategoryMeta = session.user.user_metadata?.category_metadata ? remoteCategoryMeta : localCategoryMeta;
@@ -320,9 +338,13 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
             expense: remoteCustomCategories.expense || localGlobalCategories.expense || [],
           }
         : localGlobalCategories;
+      mergedLoanIcons = session.user.user_metadata?.loan_icons ? remoteLoanIcons : localLoanIcons;
+      mergedSubIcons = session.user.user_metadata?.subscription_icons ? remoteSubIcons : localSubIcons;
     } else if (mode === 'force_push') {
       mergedCategoryMeta = localCategoryMeta;
       mergedCategories = localGlobalCategories;
+      mergedLoanIcons = localLoanIcons;
+      mergedSubIcons = localSubIcons;
     } else {
       mergedCategoryMeta = { ...remoteCategoryMeta, ...localCategoryMeta };
       const mergedIncome = Array.from(new Set([...(localGlobalCategories.income || []), ...(remoteCustomCategories?.income || [])]));
@@ -331,18 +353,22 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
         income: mergedIncome,
         expense: mergedExpense,
       };
+      mergedLoanIcons = { ...remoteLoanIcons, ...localLoanIcons };
+      mergedSubIcons = { ...remoteSubIcons, ...localSubIcons };
     }
 
-    // Push merged category definitions back to Supabase auth user_metadata
+    // Push merged category, loan and subscription metadata back to Supabase auth user_metadata
     try {
       await supabase.auth.updateUser({
         data: {
           category_metadata: mergedCategoryMeta,
           custom_categories: mergedCategories,
+          loan_icons: mergedLoanIcons,
+          subscription_icons: mergedSubIcons,
         },
       });
     } catch (metaErr) {
-      console.warn('Sync user category metadata warning:', metaErr);
+      console.warn('Sync user category/icon metadata warning:', metaErr);
     }
 
     // ----------------------------------------------------
@@ -532,6 +558,7 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
           end_date: ensureTimestamp(l.endDate, nowStr),
           linked_account_id: linkedAccId,
           type: l.type || 'borrowed',
+          icon: l.icon || mergedLoanIcons[l.id] || null,
           is_active: l.isActive !== false,
           is_deleted: false,
           updated_at: ensureTimestamp(l.updatedAt, nowStr),
@@ -559,6 +586,7 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
           endDate: r.end_date,
           linkedAccountId: linkedAccId,
           type: r.type as any,
+          icon: r.icon || mergedLoanIcons[r.id] || undefined,
           isActive: r.is_active,
           updatedAt: r.updated_at,
         };
@@ -798,7 +826,7 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
           linked_account_id: linkedAccId,
           category: l.category || 'Entertainment',
           is_active: l.isActive !== false,
-          logo: l.logo || null,
+          logo: l.icon || l.logo || mergedSubIcons[l.id] || null,
           color: l.color || '#007AFF',
           is_deleted: false,
           updated_at: ensureTimestamp(l.updatedAt, nowStr),
@@ -823,7 +851,8 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
           linkedAccountId: linkedAccId,
           category: r.category,
           isActive: r.is_active,
-          logo: r.logo || undefined,
+          logo: r.logo || r.icon || mergedSubIcons[r.id] || undefined,
+          icon: r.icon || r.logo || mergedSubIcons[r.id] || undefined,
           color: r.color,
           createdAt: r.created_at,
           updatedAt: r.updated_at,
@@ -995,10 +1024,17 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
 
     for (const task of pushTasks) {
       if (task.data.length > 0) {
-        const { error: upsertError } = await supabase
+        let { error: upsertError } = await supabase
           .from(task.name)
           .upsert(task.data);
           
+        if (upsertError && task.name === 'loans' && upsertError.message?.toLowerCase().includes('icon')) {
+          // If remote loans table doesn't have icon column yet, retry without icon column (icon is safely preserved in user_metadata)
+          const fallbackData = task.data.map(({ icon: _icon, ...rest }: any) => rest);
+          const retryRes = await supabase.from(task.name).upsert(fallbackData);
+          upsertError = retryRes.error;
+        }
+
         if (upsertError) {
           console.error(`Error syncing table ${task.name}:`, upsertError);
           throw upsertError;

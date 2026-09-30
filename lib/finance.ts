@@ -52,8 +52,8 @@ export function calculateXIRR(cashFlows: CashFlow[]): number {
     return 0;
   }
 
-  // If all cash flows occurred within less than 2 days, return simple percentage return
-  if (totalDays < 2) {
+  // If all cash flows occurred within less than 30 days, annualizing returns leads to extreme volatility. Return simple return.
+  if (totalDays < 30) {
     return totalInvested > 0
       ? ((totalReturned - totalInvested) / totalInvested) * 100
       : 0;
@@ -106,7 +106,7 @@ export function calculateXIRR(cashFlows: CashFlow[]): number {
       const step = fVal / dfVal;
       const nextRate = rate - step;
 
-      if (nextRate <= -0.9999 || nextRate > 100.0) break; // Keep within realistic bounds (-99.99% to +10,000%)
+      if (nextRate <= -0.9999 || nextRate > 5.0) break; // Keep within realistic bounds (-99.99% to +500%)
 
       if (Math.abs(nextRate - rate) < precision && Math.abs(fVal) < 1.0) {
         rate = nextRate;
@@ -122,15 +122,15 @@ export function calculateXIRR(cashFlows: CashFlow[]): number {
       !isNaN(rate) &&
       isFinite(rate) &&
       rate > -0.9999 &&
-      rate < 100.0
+      rate <= 5.0
     ) {
       return rate * 100;
     }
   }
 
-  // 2. Fallback: Bisection Method between [-0.99, 10.0]
+  // 2. Fallback: Bisection Method between [-0.99, 5.0]
   let low = -0.99;
-  let high = 10.0;
+  let high = 5.0;
   const fLow = npv(low);
   const fHigh = npv(high);
 
@@ -158,7 +158,7 @@ export function calculateXIRR(cashFlows: CashFlow[]): number {
     if (totalDays > 30) {
       const annualized =
         Math.pow(1 + Math.max(-0.99, simpleReturn), 365 / totalDays) - 1;
-      if (isFinite(annualized) && Math.abs(annualized) < 50) {
+      if (isFinite(annualized) && Math.abs(annualized) < 5) {
         return annualized * 100;
       }
     }
@@ -177,35 +177,47 @@ export function calculateProjection(
   inflationRate: number = 0.06,
   isInflationAdjusted: boolean = false,
 ) {
-  let totalFutureValue = currentVal;
-  let totalInvested = currentVal;
-  let currentMonthlySIP = monthlySIP;
+  const safeCurrentVal = typeof currentVal === 'number' && isFinite(currentVal) && currentVal > 0 ? currentVal : 0;
+  const safeMonthlySIP = typeof monthlySIP === 'number' && isFinite(monthlySIP) && monthlySIP > 0 ? monthlySIP : 0;
+  const safeYears = typeof years === 'number' && isFinite(years) && years > 0 ? Math.min(Math.round(years), 50) : 15;
+  const safeStepUp = typeof stepUpPercent === 'number' && isFinite(stepUpPercent) ? Math.max(0, Math.min(stepUpPercent, 50)) : 0;
+  const safeInflation = typeof inflationRate === 'number' && isFinite(inflationRate) ? inflationRate : 0.06;
 
-  for (let year = 1; year <= years; year++) {
+  // For long-term multi-year projection, expected annual return is bounded within realistic market ranges (default 12%, max 30%)
+  let effectiveReturn = 0.12;
+  if (typeof annualReturn === 'number' && isFinite(annualReturn) && !isNaN(annualReturn) && annualReturn > 0) {
+    effectiveReturn = Math.min(Math.max(annualReturn, 0.01), 0.30);
+  }
+
+  let totalFutureValue = safeCurrentVal;
+  let totalInvested = safeCurrentVal;
+  let currentMonthlySIP = safeMonthlySIP;
+
+  for (let year = 1; year <= safeYears; year++) {
     // Apply returns and SIP for 12 months
     for (let month = 1; month <= 12; month++) {
-      totalFutureValue = totalFutureValue * Math.pow(1 + annualReturn, 1 / 12) + currentMonthlySIP;
+      totalFutureValue = totalFutureValue * Math.pow(1 + effectiveReturn, 1 / 12) + currentMonthlySIP;
       totalInvested += currentMonthlySIP;
     }
     // Apply step-up at the end of each year
-    currentMonthlySIP = currentMonthlySIP * (1 + stepUpPercent / 100);
+    currentMonthlySIP = currentMonthlySIP * (1 + safeStepUp / 100);
   }
 
-  const estimatedGains = totalFutureValue - totalInvested;
-  const multiplier = totalFutureValue / totalInvested;
+  const estimatedGains = Math.max(0, totalFutureValue - totalInvested);
+  const multiplier = totalInvested > 0 ? Math.max(1, totalFutureValue / totalInvested) : 1;
   
-  // If not already adjusted in the loop, we can do it at the end for simple "current value today"
-  const presentValue = totalFutureValue / Math.pow(1 + inflationRate, years);
+  // Present value discounted by inflation
+  const presentValue = totalFutureValue / Math.pow(1 + safeInflation, safeYears);
 
   // If inflation adjusted mode is ON, we return the discounted future value as the primary value
   const displayValue = isInflationAdjusted ? presentValue : totalFutureValue;
 
   return {
-    totalFutureValue: displayValue,
-    totalInvested,
-    estimatedGains: isInflationAdjusted ? presentValue - totalInvested : estimatedGains,
-    multiplier: isInflationAdjusted ? presentValue / totalInvested : multiplier,
-    presentValue,
+    totalFutureValue: isFinite(displayValue) ? displayValue : 0,
+    totalInvested: isFinite(totalInvested) ? totalInvested : 0,
+    estimatedGains: isFinite(estimatedGains) ? (isInflationAdjusted ? Math.max(0, presentValue - totalInvested) : estimatedGains) : 0,
+    multiplier: isFinite(multiplier) ? multiplier : 1,
+    presentValue: isFinite(presentValue) ? presentValue : 0,
   };
 }
 
@@ -218,40 +230,54 @@ export function calculateProjectionSeries(
   inflationRate: number = 0.06,
   isInflationAdjusted: boolean = false,
 ) {
+  const safeCurrentVal = typeof currentVal === 'number' && isFinite(currentVal) && currentVal > 0 ? currentVal : 0;
+  const safeMonthlySIP = typeof monthlySIP === 'number' && isFinite(monthlySIP) && monthlySIP > 0 ? monthlySIP : 0;
+  const safeYears = typeof years === 'number' && isFinite(years) && years > 0 ? Math.min(Math.round(years), 50) : 15;
+  const safeStepUp = typeof stepUpPercent === 'number' && isFinite(stepUpPercent) ? Math.max(0, Math.min(stepUpPercent, 50)) : 0;
+  const safeInflation = typeof inflationRate === 'number' && isFinite(inflationRate) ? inflationRate : 0.06;
+
+  let effectiveReturn = 0.12;
+  if (typeof annualReturn === 'number' && isFinite(annualReturn) && !isNaN(annualReturn) && annualReturn > 0) {
+    effectiveReturn = Math.min(Math.max(annualReturn, 0.01), 0.30);
+  }
+
   const dataPoints = [];
-  let totalFutureValue = currentVal;
-  let currentMonthlySIP = monthlySIP;
-  let totalInvested = currentVal;
+  let totalFutureValue = safeCurrentVal;
+  let currentMonthlySIP = safeMonthlySIP;
+  let totalInvested = safeCurrentVal;
 
   dataPoints.push({
     year: 0,
-    value: currentVal,
+    value: safeCurrentVal,
     label: 'Now',
-    totalInvested: currentVal,
+    totalInvested: safeCurrentVal,
     estimatedGains: 0,
     multiplier: 1,
   });
 
-  for (let year = 1; year <= years; year++) {
+  for (let year = 1; year <= safeYears; year++) {
     for (let month = 1; month <= 12; month++) {
-      totalFutureValue = totalFutureValue * Math.pow(1 + annualReturn, 1 / 12) + currentMonthlySIP;
+      totalFutureValue = totalFutureValue * Math.pow(1 + effectiveReturn, 1 / 12) + currentMonthlySIP;
       totalInvested += currentMonthlySIP;
     }
     
     // Apply step-up for NEXT year
-    currentMonthlySIP = currentMonthlySIP * (1 + stepUpPercent / 100);
+    currentMonthlySIP = currentMonthlySIP * (1 + safeStepUp / 100);
 
     const valToPush = isInflationAdjusted 
-      ? totalFutureValue / Math.pow(1 + inflationRate, year)
+      ? totalFutureValue / Math.pow(1 + safeInflation, year)
       : totalFutureValue;
+
+    const currentGains = Math.max(0, valToPush - totalInvested);
+    const currentMult = totalInvested > 0 ? Math.max(1, valToPush / totalInvested) : 1;
 
     dataPoints.push({
       year,
-      value: valToPush,
+      value: isFinite(valToPush) ? valToPush : 0,
       label: `+${year}y`,
-      totalInvested,
-      estimatedGains: valToPush - totalInvested,
-      multiplier: valToPush / totalInvested,
+      totalInvested: isFinite(totalInvested) ? totalInvested : 0,
+      estimatedGains: isFinite(currentGains) ? currentGains : 0,
+      multiplier: isFinite(currentMult) ? currentMult : 1,
     });
   }
   return dataPoints;
@@ -261,9 +287,13 @@ export function formatIndianNumber(num: number | string | undefined | null): str
   if (num === null || num === undefined) return 'N/A';
   const val = typeof num === 'string' ? parseFloat(num.replace(/,/g, '')) : num;
   if (isNaN(val)) return String(num);
+  if (!isFinite(val)) return '0.00';
 
   if (val >= 10000000) {
-    return (val / 10000000).toFixed(2) + ' Cr';
+    const cr = val / 10000000;
+    return cr >= 100000
+      ? cr.toLocaleString('en-IN', { maximumFractionDigits: 2 }) + ' Cr'
+      : cr.toFixed(2) + ' Cr';
   } else if (val >= 100000) {
     return (val / 100000).toFixed(2) + ' L';
   } else if (val >= 1000) {

@@ -72,7 +72,14 @@ export default function ForecastDetailsScreen() {
   const summary = useMemo(() => calculateSummary(), [transactions, tickers]);
   const yearlyAnalysis = useMemo(() => getYearlyAnalysis(), [transactions, tickers]);
 
-  const xirr = useMemo(() => (summary.xirr || 0) / 100, [summary.xirr]);
+  const xirr = useMemo(() => {
+    const rawXirr = summary.xirr;
+    if (typeof rawXirr !== 'number' || isNaN(rawXirr) || rawXirr <= 0 || !isFinite(rawXirr)) {
+      return 0.12; // 12% default benchmark annual return
+    }
+    const rate = rawXirr / 100;
+    return Math.min(Math.max(rate, 0.04), 0.25); // Cap between 4% and 25% for multi-year forecasting
+  }, [summary.xirr]);
   
   const calculatedMonthlySIP = useMemo(() => {
     const currentYear = new Date().getFullYear();

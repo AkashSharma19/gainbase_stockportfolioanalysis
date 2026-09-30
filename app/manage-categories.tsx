@@ -9,10 +9,16 @@ import {
   Alert,
   Platform,
   Keyboard,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DraggableFlatList, {
+  RenderItemParams,
+  ScaleDecorator,
+} from 'react-native-draggable-flatlist';
+import { Swipeable } from 'react-native-gesture-handler';
 import {
   Plus,
   Search,
@@ -22,8 +28,7 @@ import {
   X,
   ChevronDown,
   ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
+  GripVertical,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -36,6 +41,126 @@ import {
   CATEGORY_3D_ICONS_LIST,
   findBest3DIconForText,
 } from '@/constants/Category3DIcons';
+
+interface CategoryRowItemProps {
+  catName: string;
+  index: number;
+  isLast: boolean;
+  isReorderMode: boolean;
+  isDark: boolean;
+  currColors: any;
+  count: number;
+  categorySearch: string;
+  isInlineAdding: boolean;
+  editingCatName: string | null;
+  drag: () => void;
+  isActive: boolean;
+  startEditCategory: (name: string) => void;
+  handleDelete: (name: string) => void;
+}
+
+function CategoryRowItem({
+  catName,
+  index,
+  isLast,
+  isReorderMode,
+  isDark,
+  currColors,
+  count,
+  categorySearch,
+  isInlineAdding,
+  editingCatName,
+  drag,
+  isActive,
+  startEditCategory,
+  handleDelete,
+}: CategoryRowItemProps) {
+  const swipeableRef = useRef<Swipeable>(null);
+
+  const renderRightActions = () => (
+    <View style={styles.swipeRightActionsContainer}>
+      <TouchableOpacity
+        style={styles.swipeDeleteBtn}
+        onPress={() => {
+          swipeableRef.current?.close();
+          handleDelete(catName);
+        }}
+        activeOpacity={0.8}
+      >
+        <Trash2 size={17} color="#FFFFFF" strokeWidth={2.2} />
+        <ThemedText style={styles.swipeDeleteText}>Delete</ThemedText>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <ScaleDecorator activeScale={1.03}>
+      <Swipeable
+        ref={swipeableRef}
+        renderRightActions={renderRightActions}
+        enabled={!isReorderMode && !Boolean(categorySearch.trim())}
+        friction={2}
+        rightThreshold={30}
+        overshootRight={false}
+      >
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => {
+            if (!isReorderMode) startEditCategory(catName);
+          }}
+          onLongPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            drag();
+          }}
+          disabled={Boolean(categorySearch.trim()) || isInlineAdding || Boolean(editingCatName)}
+          style={[
+            styles.categoryRow,
+            { backgroundColor: currColors.card },
+            !isLast && [styles.rowBorder, { borderBottomColor: currColors.border }],
+            isActive && [
+              styles.activeDraggingRow,
+              {
+                backgroundColor: isDark ? '#00C9A726' : '#E6FAF6',
+                borderColor: currColors.tintMoney,
+              },
+            ],
+          ]}
+        >
+          <View style={styles.categoryLeft}>
+            <View style={styles.category3DWrap}>
+              <Category3DIcon name={catName} size={36} />
+            </View>
+            <View style={styles.categoryInfo}>
+              <ThemedText style={[styles.categoryTitle, { color: currColors.text }]} numberOfLines={1}>
+                {catName}
+              </ThemedText>
+              <ThemedText style={[styles.categorySubtitle, { color: currColors.textSecondary }]}>
+                {isReorderMode ? `Position #${index + 1}` : `${count} ${count === 1 ? 'transaction' : 'transactions'}`}
+              </ThemedText>
+            </View>
+          </View>
+
+          {isReorderMode && (
+            <TouchableOpacity
+              onPressIn={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                drag();
+              }}
+              style={[
+                styles.dragHandleBtn,
+                { backgroundColor: currColors.cardSecondary },
+                isActive && { backgroundColor: currColors.tintMoney },
+              ]}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <GripVertical size={18} color={isActive ? '#FFFFFF' : currColors.tintMoney} strokeWidth={2.2} />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      </Swipeable>
+    </ScaleDecorator>
+  );
+}
 
 export default function ManageCategoriesScreen() {
   const insets = useSafeAreaInsets();
@@ -98,26 +223,13 @@ export default function ManageCategoriesScreen() {
   const [iconPickerTarget, setIconPickerTarget] = useState<'add' | 'edit'>('add');
   const [iconPickerSearch, setIconPickerSearch] = useState('');
 
-  const scrollViewRef = useRef<ScrollView>(null);
+  const flatListRef = useRef<any>(null);
   const addInputRef = useRef<TextInput>(null);
   const editInputRef = useRef<TextInput>(null);
 
   const handleHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
-
-  // Keyboard scroll listener to keep inline input cleanly visible
-  useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => {
-        if (isInlineAdding || editingCatName) {
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }
-      }
-    );
-    return () => showSub.remove();
-  }, [isInlineAdding, editingCatName]);
 
   // Transaction counts
   const categoryCounts = useMemo(() => {
@@ -175,8 +287,11 @@ export default function ManageCategoriesScreen() {
     setNewCatIcon(activeTab === 'income' ? 'banknote' : 'food');
 
     setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 150);
+
+    setTimeout(() => {
       addInputRef.current?.focus();
-      scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 50);
   };
 
@@ -191,22 +306,24 @@ export default function ManageCategoriesScreen() {
     setEditFormIcon(meta?.icon || catName.toLowerCase());
     setIsIconManuallyOverridden(false);
 
+    const index = displayedCategories.findIndex((c) => c === catName);
+    if (index >= 0) {
+      setTimeout(() => {
+        try {
+          flatListRef.current?.scrollToIndex({
+            index,
+            viewPosition: 1,
+            animated: true,
+          });
+        } catch {
+          flatListRef.current?.scrollToOffset({ offset: index * 56, animated: true });
+        }
+      }, 150);
+    }
+
     setTimeout(() => {
       editInputRef.current?.focus();
     }, 100);
-  };
-
-  // Move Category Up / Down
-  const moveCategory = (index: number, direction: 'up' | 'down') => {
-    const targetIdx = direction === 'up' ? index - 1 : index + 1;
-    if (targetIdx < 0 || targetIdx >= currentTabCategories.length) return;
-
-    const newOrder = [...currentTabCategories];
-    const temp = newOrder[index];
-    newOrder[index] = newOrder[targetIdx];
-    newOrder[targetIdx] = temp;
-    reorderCategories(activeTab, newOrder);
-    handleHaptic();
   };
 
   // Submit New Category
@@ -324,6 +441,88 @@ export default function ManageCategoriesScreen() {
     );
   }, [iconPickerSearch]);
 
+  // Render individual Category Item with Drag capability
+  const renderCategoryItem = ({ item: catName, getIndex, drag, isActive }: RenderItemParams<string>) => {
+    const index = getIndex() ?? 0;
+    const count = categoryCounts[catName] || 0;
+    const isEditingThis = editingCatName === catName;
+    const isLast = index === displayedCategories.length - 1 && !isInlineAdding;
+
+    if (isEditingThis) {
+      // Inline Edit Row
+      return (
+        <View
+          style={[
+            styles.inlineEditRow,
+            { backgroundColor: isDark ? '#00C9A714' : '#00C9A70A', borderColor: currColors.tintMoney },
+            !isLast && [styles.rowBorder, { borderBottomColor: currColors.border }],
+          ]}
+        >
+          {/* 3D Icon Button (Tap to pick) */}
+          <TouchableOpacity
+            style={[styles.inlineIconButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.tintMoney }]}
+            onPress={() => openIconPicker('edit')}
+            activeOpacity={0.7}
+          >
+            <Category3DIcon name={editFormName} icon={editFormIcon} size={34} />
+            <View style={[styles.iconEditBadge, { backgroundColor: currColors.tintMoney }]}>
+              <Pencil size={8} color="#FFFFFF" strokeWidth={2.5} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Category Name Input */}
+          <View style={styles.inlineInputWrap}>
+            <TextInput
+              ref={editInputRef}
+              style={[styles.inlineInput, { color: currColors.text }]}
+              value={editFormName}
+              onChangeText={handleEditNameChange}
+              placeholder="Category name"
+              placeholderTextColor={currColors.textSecondary}
+              returnKeyType="done"
+              onSubmitEditing={handleSaveEditedCategory}
+            />
+          </View>
+
+          {/* Actions: Cancel & Save */}
+          <View style={styles.inlineActionButtons}>
+            <TouchableOpacity
+              style={[styles.inlineSmallBtn, { backgroundColor: currColors.cardSecondary }]}
+              onPress={() => setEditingCatName(null)}
+            >
+              <X size={15} color={currColors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.inlineSmallBtn, { backgroundColor: currColors.tintMoney }]}
+              onPress={handleSaveEditedCategory}
+            >
+              <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <CategoryRowItem
+        catName={catName}
+        index={index}
+        isLast={isLast}
+        isReorderMode={isReorderMode}
+        isDark={isDark}
+        currColors={currColors}
+        count={count}
+        categorySearch={categorySearch}
+        isInlineAdding={isInlineAdding}
+        editingCatName={editingCatName}
+        drag={drag}
+        isActive={isActive}
+        startEditCategory={startEditCategory}
+        handleDelete={handleDelete}
+      />
+    );
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: currColors.background, paddingTop: headerTopPadding }]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -360,326 +559,190 @@ export default function ManageCategoriesScreen() {
         </View>
       </View>
 
-      {/* Minimal Segmented Tab Switcher (Expense / Income) */}
-      <View style={[styles.tabContainer, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
-        <TouchableOpacity
-          style={[
-            styles.tabBtn,
-            activeTab === 'expense' && [styles.tabBtnActive, { backgroundColor: currColors.card, borderColor: currColors.border }],
-          ]}
-          onPress={() => {
-            handleHaptic();
-            setActiveTab('expense');
-            setIsInlineAdding(false);
-            setEditingCatName(null);
-          }}
-          activeOpacity={0.8}
-        >
-          <ThemedText
-            style={[
-              styles.tabBtnText,
-              { color: activeTab === 'expense' ? '#FF3B30' : currColors.textSecondary },
-              activeTab === 'expense' && styles.tabBtnTextActive,
-            ]}
-          >
-            Expense ({storeCategories.expense?.length || 0})
-          </ThemedText>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.tabBtn,
-            activeTab === 'income' && [styles.tabBtnActive, { backgroundColor: currColors.card, borderColor: currColors.border }],
-          ]}
-          onPress={() => {
-            handleHaptic();
-            setActiveTab('income');
-            setIsInlineAdding(false);
-            setEditingCatName(null);
-          }}
-          activeOpacity={0.8}
-        >
-          <ThemedText
-            style={[
-              styles.tabBtnText,
-              { color: activeTab === 'income' ? '#34C759' : currColors.textSecondary },
-              activeTab === 'income' && styles.tabBtnTextActive,
-            ]}
-          >
-            Income ({storeCategories.income?.length || 0})
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
-
-      {/* Search Categories Bar */}
-      {!isReorderMode && (
-        <View style={styles.searchBarWrapper}>
-          <View style={[styles.searchBarBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            <Search size={15} color={currColors.textSecondary} style={{ marginRight: 8 }} />
-            <TextInput
-              style={[styles.searchBarInput, { color: currColors.text }]}
-              placeholder={`Search ${activeTab} categories...`}
-              placeholderTextColor={currColors.textSecondary}
-              value={categorySearch}
-              onChangeText={setCategorySearch}
-              clearButtonMode="while-editing"
-            />
-            {Boolean(categorySearch) && (
-              <TouchableOpacity onPress={() => setCategorySearch('')} style={{ padding: 4 }}>
-                <X size={14} color={currColors.textSecondary} />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      )}
-
-      {/* Scrollable Categories List */}
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.scrollList}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom + 24, 40) },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets={true}
+      {/* Content wrapped in KeyboardAvoidingView */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
       >
-        <View style={[styles.cardContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-          {displayedCategories.length === 0 && !isInlineAdding ? (
-            <View style={styles.emptyWrap}>
-              <ThemedText style={{ color: currColors.textSecondary, fontSize: 13 }}>
-                No categories found for "{categorySearch}"
+        {/* Minimal Segmented Tab Switcher (Expense / Income) */}
+        <View style={[styles.tabContainer, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
+          <TouchableOpacity
+            style={[
+              styles.tabBtn,
+              activeTab === 'expense' && [styles.tabBtnActive, { backgroundColor: currColors.card, borderColor: currColors.border }],
+            ]}
+            onPress={() => {
+              handleHaptic();
+              setActiveTab('expense');
+              setIsInlineAdding(false);
+              setEditingCatName(null);
+            }}
+            activeOpacity={0.8}
+          >
+            <ThemedText
+              style={[
+                styles.tabBtnText,
+                { color: activeTab === 'expense' ? '#FF3B30' : currColors.textSecondary },
+                activeTab === 'expense' && styles.tabBtnTextActive,
+              ]}
+            >
+              Expense ({storeCategories.expense?.length || 0})
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.tabBtn,
+              activeTab === 'income' && [styles.tabBtnActive, { backgroundColor: currColors.card, borderColor: currColors.border }],
+            ]}
+            onPress={() => {
+              handleHaptic();
+              setActiveTab('income');
+              setIsInlineAdding(false);
+              setEditingCatName(null);
+            }}
+            activeOpacity={0.8}
+          >
+            <ThemedText
+              style={[
+                styles.tabBtnText,
+                { color: activeTab === 'income' ? '#34C759' : currColors.textSecondary },
+                activeTab === 'income' && styles.tabBtnTextActive,
+              ]}
+            >
+              Income ({storeCategories.income?.length || 0})
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+
+        {/* Search Categories Bar or Reorder Hint Banner */}
+        {isReorderMode ? (
+          <View style={styles.reorderHintWrapper}>
+            <View style={[styles.reorderHintBanner, { backgroundColor: isDark ? '#00C9A718' : '#00C9A70F', borderColor: currColors.tintMoney }]}>
+              <GripVertical size={16} color={currColors.tintMoney} />
+              <ThemedText style={[styles.reorderHintText, { color: currColors.tintMoney }]}>
+                Drag the handles to reorder categories
               </ThemedText>
             </View>
-          ) : (
-            displayedCategories.map((catName, index) => {
-              const isLast = index === displayedCategories.length - 1 && !isInlineAdding;
-              const count = categoryCounts[catName] || 0;
-              const isEditingThis = editingCatName === catName;
-              const isFirstItem = index === 0;
-              const isLastItem = index === displayedCategories.length - 1;
+          </View>
+        ) : (
+          <View style={styles.searchBarWrapper}>
+            <View style={[styles.searchBarBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+              <Search size={15} color={currColors.textSecondary} style={{ marginRight: 8 }} />
+              <TextInput
+                style={[styles.searchBarInput, { color: currColors.text }]}
+                placeholder={`Search ${activeTab} categories...`}
+                placeholderTextColor={currColors.textSecondary}
+                value={categorySearch}
+                onChangeText={setCategorySearch}
+                clearButtonMode="while-editing"
+              />
+              {Boolean(categorySearch) && (
+                <TouchableOpacity onPress={() => setCategorySearch('')} style={{ padding: 4 }}>
+                  <X size={14} color={currColors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
 
-              if (isEditingThis) {
-                // Inline Edit Row
-                return (
+        {/* Draggable Categories FlatList */}
+        <View style={styles.listWrapper}>
+          <View style={[styles.cardContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            <DraggableFlatList
+              ref={flatListRef}
+              data={displayedCategories}
+              onDragEnd={({ data }) => {
+                if (!categorySearch.trim()) {
+                  reorderCategories(activeTab, data);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }}
+              keyExtractor={(item) => item}
+              renderItem={renderCategoryItem}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              onScrollToIndexFailed={(info) => {
+                setTimeout(() => {
+                  flatListRef.current?.scrollToOffset({
+                    offset: info.averageItemLength * info.index,
+                    animated: true,
+                  });
+                }, 100);
+              }}
+              contentContainerStyle={{
+                paddingBottom: isInlineAdding ? 16 : Math.max(insets.bottom, 16),
+              }}
+              ListEmptyComponent={
+                !isInlineAdding ? (
+                  <View style={styles.emptyWrap}>
+                    <ThemedText style={{ color: currColors.textSecondary, fontSize: 13 }}>
+                      No categories found for "{categorySearch}"
+                    </ThemedText>
+                  </View>
+                ) : null
+              }
+              ListFooterComponent={
+                isInlineAdding ? (
                   <View
-                    key={`edit_${catName}`}
                     style={[
-                      styles.inlineEditRow,
-                      { backgroundColor: isDark ? '#00C9A714' : '#00C9A70A', borderColor: currColors.tintMoney },
-                      !isLast && [styles.rowBorder, { borderBottomColor: currColors.border }],
+                      styles.inlineAddRow,
+                      { backgroundColor: isDark ? '#00C9A718' : '#00C9A70D', borderColor: currColors.tintMoney },
                     ]}
                   >
-                    {/* 3D Icon Button (Tap to pick) */}
+                    {/* Tap to Pick 3D Icon */}
                     <TouchableOpacity
                       style={[styles.inlineIconButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.tintMoney }]}
-                      onPress={() => openIconPicker('edit')}
+                      onPress={() => openIconPicker('add')}
                       activeOpacity={0.7}
                     >
-                      <Category3DIcon name={editFormName} icon={editFormIcon} size={34} />
+                      <Category3DIcon name={newCatName} icon={newCatIcon} size={34} />
                       <View style={[styles.iconEditBadge, { backgroundColor: currColors.tintMoney }]}>
-                        <Pencil size={8} color="#FFFFFF" strokeWidth={2.5} />
+                        <ChevronDown size={8} color="#FFFFFF" strokeWidth={3} />
                       </View>
                     </TouchableOpacity>
 
-                    {/* Category Name Input */}
+                    {/* Inline Text Input */}
                     <View style={styles.inlineInputWrap}>
                       <TextInput
-                        ref={editInputRef}
+                        ref={addInputRef}
                         style={[styles.inlineInput, { color: currColors.text }]}
-                        value={editFormName}
-                        onChangeText={handleEditNameChange}
-                        placeholder="Category name"
+                        placeholder="New category name (e.g. Fuel, Pet)..."
                         placeholderTextColor={currColors.textSecondary}
+                        value={newCatName}
+                        onChangeText={handleNewNameChange}
                         returnKeyType="done"
-                        onSubmitEditing={handleSaveEditedCategory}
+                        onSubmitEditing={handleSaveNewCategory}
+                        autoCapitalize="words"
                       />
+                      <ThemedText style={[styles.inlineHint, { color: currColors.tintMoney }]}>
+                        Auto-suggesting icon • Tap icon to choose
+                      </ThemedText>
                     </View>
 
-                    {/* Actions: Cancel & Save */}
+                    {/* Inline Actions */}
                     <View style={styles.inlineActionButtons}>
                       <TouchableOpacity
                         style={[styles.inlineSmallBtn, { backgroundColor: currColors.cardSecondary }]}
-                        onPress={() => setEditingCatName(null)}
+                        onPress={() => setIsInlineAdding(false)}
                       >
                         <X size={15} color={currColors.textSecondary} />
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.inlineSmallBtn, { backgroundColor: currColors.tintMoney }]}
-                        onPress={handleSaveEditedCategory}
+                        onPress={handleSaveNewCategory}
                       >
                         <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
                       </TouchableOpacity>
                     </View>
                   </View>
-                );
+                ) : null
               }
-
-              // Reorder Mode Category Row
-              if (isReorderMode) {
-                return (
-                  <View
-                    key={catName}
-                    style={[
-                      styles.categoryRow,
-                      !isLast && [styles.rowBorder, { borderBottomColor: currColors.border }],
-                    ]}
-                  >
-                    <View style={styles.categoryLeft}>
-                      <View style={styles.category3DWrap}>
-                        <Category3DIcon name={catName} size={34} />
-                      </View>
-                      <View style={styles.categoryInfo}>
-                        <ThemedText style={[styles.categoryTitle, { color: currColors.text }]} numberOfLines={1}>
-                          {catName}
-                        </ThemedText>
-                        <ThemedText style={[styles.categorySubtitle, { color: currColors.textSecondary }]}>
-                          Position #{index + 1}
-                        </ThemedText>
-                      </View>
-                    </View>
-
-                    <View style={styles.reorderButtonGroup}>
-                      <TouchableOpacity
-                        style={[
-                          styles.reorderArrowBtn,
-                          { backgroundColor: currColors.cardSecondary },
-                          isFirstItem && { opacity: 0.25 },
-                        ]}
-                        disabled={isFirstItem}
-                        onPress={() => moveCategory(index, 'up')}
-                        activeOpacity={0.7}
-                      >
-                        <ArrowUp size={14} color={currColors.text} strokeWidth={2.2} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          styles.reorderArrowBtn,
-                          { backgroundColor: currColors.cardSecondary },
-                          isLastItem && { opacity: 0.25 },
-                        ]}
-                        disabled={isLastItem}
-                        onPress={() => moveCategory(index, 'down')}
-                        activeOpacity={0.7}
-                      >
-                        <ArrowDown size={14} color={currColors.text} strokeWidth={2.2} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
-              }
-
-              // Standard Category Row
-              return (
-                <View
-                  key={catName}
-                  style={[
-                    styles.categoryRow,
-                    !isLast && [styles.rowBorder, { borderBottomColor: currColors.border }],
-                  ]}
-                >
-                  <TouchableOpacity
-                    style={styles.categoryLeft}
-                    activeOpacity={0.7}
-                    onPress={() => startEditCategory(catName)}
-                  >
-                    <View style={styles.category3DWrap}>
-                      <Category3DIcon name={catName} size={36} />
-                    </View>
-                    <View style={styles.categoryInfo}>
-                      <ThemedText style={[styles.categoryTitle, { color: currColors.text }]} numberOfLines={1}>
-                        {catName}
-                      </ThemedText>
-                      <ThemedText style={[styles.categorySubtitle, { color: currColors.textSecondary }]}>
-                        {count} {count === 1 ? 'transaction' : 'transactions'}
-                      </ThemedText>
-                    </View>
-                  </TouchableOpacity>
-
-                  <View style={styles.categoryActions}>
-                    <TouchableOpacity
-                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                      style={[styles.iconActionBtn, { backgroundColor: currColors.cardSecondary }]}
-                      onPress={() => startEditCategory(catName)}
-                    >
-                      <Pencil size={14} color={currColors.text} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                      style={[styles.iconActionBtn, { backgroundColor: currColors.cardSecondary }]}
-                      onPress={() => handleDelete(catName)}
-                    >
-                      <Trash2 size={14} color="#FF3B30" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            })
-          )}
-
-          {/* INLINE ADD ROW AT BOTTOM */}
-          {isInlineAdding && (
-            <View
-              style={[
-                styles.inlineAddRow,
-                { backgroundColor: isDark ? '#00C9A718' : '#00C9A70D', borderColor: currColors.tintMoney },
-              ]}
-            >
-              {/* Tap to Pick 3D Icon */}
-              <TouchableOpacity
-                style={[styles.inlineIconButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.tintMoney }]}
-                onPress={() => openIconPicker('add')}
-                activeOpacity={0.7}
-              >
-                <Category3DIcon name={newCatName} icon={newCatIcon} size={34} />
-                <View style={[styles.iconEditBadge, { backgroundColor: currColors.tintMoney }]}>
-                  <ChevronDown size={8} color="#FFFFFF" strokeWidth={3} />
-                </View>
-              </TouchableOpacity>
-
-              {/* Inline Text Input */}
-              <View style={styles.inlineInputWrap}>
-                <TextInput
-                  ref={addInputRef}
-                  style={[styles.inlineInput, { color: currColors.text }]}
-                  placeholder="New category name (e.g. Fuel, Pet)..."
-                  placeholderTextColor={currColors.textSecondary}
-                  value={newCatName}
-                  onChangeText={handleNewNameChange}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSaveNewCategory}
-                  autoCapitalize="words"
-                  onFocus={() => {
-                    setTimeout(() => {
-                      scrollViewRef.current?.scrollToEnd({ animated: true });
-                    }, 200);
-                  }}
-                />
-                <ThemedText style={[styles.inlineHint, { color: currColors.tintMoney }]}>
-                  Auto-suggesting icon • Tap icon to choose
-                </ThemedText>
-              </View>
-
-              {/* Inline Actions */}
-              <View style={styles.inlineActionButtons}>
-                <TouchableOpacity
-                  style={[styles.inlineSmallBtn, { backgroundColor: currColors.cardSecondary }]}
-                  onPress={() => setIsInlineAdding(false)}
-                >
-                  <X size={15} color={currColors.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.inlineSmallBtn, { backgroundColor: currColors.tintMoney }]}
-                  onPress={handleSaveNewCategory}
-                >
-                  <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
+            />
+          </View>
         </View>
-      </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* FULL-PAGE CHOOSE ICON MODAL */}
       <Modal
@@ -865,13 +928,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Outfit_400Regular',
   },
-  scrollList: {
-    flex: 1,
+  reorderHintWrapper: {
+    paddingHorizontal: 16,
+    marginBottom: 10,
   },
-  scrollContent: {
+  reorderHintBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  reorderHintText: {
+    fontSize: 12,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.1,
+  },
+  listWrapper: {
+    flex: 1,
     paddingHorizontal: 16,
   },
   cardContainer: {
+    flex: 1,
     borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
@@ -887,6 +968,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  activeDraggingRow: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -928,17 +1018,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  reorderButtonGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  reorderArrowBtn: {
-    width: 30,
-    height: 30,
+  dragHandleBtn: {
+    width: 34,
+    height: 34,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  swipeRightActionsContainer: {
+    width: 78,
+    height: '100%',
+    flexDirection: 'row',
+  },
+  swipeDeleteBtn: {
+    flex: 1,
+    backgroundColor: '#FF3B30',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+  },
+  swipeDeleteText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontFamily: 'Outfit_600SemiBold',
   },
   inlineEditRow: {
     flexDirection: 'row',
