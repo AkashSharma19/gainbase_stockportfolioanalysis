@@ -1,6 +1,8 @@
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { useMoneyStore } from '@/store/useMoneyStore';
+import { BankLogo, resolveBrokerBrandLogo } from '@/components/BankLogo';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -35,6 +37,7 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
+import { Category3DIcon } from '@/components/Category3DIcon';
 import { PieChart } from 'react-native-gifted-charts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -59,6 +62,7 @@ export default function AnalyticsScreen() {
   const showCurrencySymbol = usePortfolioStore(
     (state) => state.showCurrencySymbol,
   );
+  const accounts = useMoneyStore((state) => state.accounts);
 
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
@@ -612,11 +616,15 @@ export default function AnalyticsScreen() {
                         );
                         const categoryColor =
                           CHART_COLORS[index % CHART_COLORS.length];
+                        const brokerLogoId =
+                          selectedDimension === 'Broker'
+                            ? resolveBrokerBrandLogo(item.name, accounts)
+                            : null;
                         return (
                           <View
                             style={[
                               styles.holdingIcon,
-                              { backgroundColor: categoryColor + '22' },
+                              { backgroundColor: brokerLogoId ? 'transparent' : categoryColor + '22' },
                             ]}
                           >
                             {selectedDimension === 'Company Name' &&
@@ -638,8 +646,10 @@ export default function AnalyticsScreen() {
                                   resizeMode="contain"
                                 />
                               </View>
+                            ) : brokerLogoId ? (
+                              <BankLogo logo={brokerLogoId} size={26} />
                             ) : (
-                              <CategoryIcon size={20} color={categoryColor} />
+                              <Category3DIcon name={item.name} size={30} />
                             )}
                           </View>
                         );

@@ -192,8 +192,8 @@ export default function WinLossCard({
               winners={stats.winners}
               losers={stats.losers}
               size={containerWidth * 0.85}
-              colorWin="#4CAF50"
-              colorLoss="#F44336"
+              colorWin="#34C759"
+              colorLoss="#FF3B30"
               trackColor={theme === 'dark' ? '#2C2C2E' : '#E5E5EA'}
               winRate={stats.winRate}
               isPrivacyMode={isPrivacyMode}
@@ -241,7 +241,7 @@ export default function WinLossCard({
                   styles.barsection,
                   {
                     flex: stats.winners,
-                    backgroundColor: '#4CAF50',
+                    backgroundColor: '#34C759',
                     borderTopLeftRadius: 4,
                     borderBottomLeftRadius: 4,
                     marginRight: 2,
@@ -253,7 +253,7 @@ export default function WinLossCard({
                   styles.barsection,
                   {
                     flex: stats.losers,
-                    backgroundColor: '#F44336',
+                    backgroundColor: '#FF3B30',
                     borderTopRightRadius: 4,
                     borderBottomRightRadius: 4,
                   },
@@ -277,18 +277,18 @@ export default function WinLossCard({
                   <View
                     style={[
                       styles.statBadge,
-                      { backgroundColor: 'rgba(76, 175, 80, 0.1)' },
+                      { backgroundColor: 'rgba(52, 199, 89, 0.12)' },
                     ]}
                   >
-                    <ArrowUpRight size={14} color="#4CAF50" />
-                    <ThemedText style={[styles.statValue, { color: '#4CAF50' }]}>
+                    <ArrowUpRight size={14} color="#34C759" />
+                    <ThemedText style={[styles.statValue, { color: '#34C759' }]}>
                       {isPrivacyMode ? '••••••' : stats.winners}
                     </ThemedText>
                   </View>
                   <ThemedText
                     style={[
                       styles.statAmount,
-                      { color: '#4CAF50', marginTop: 0 },
+                      { color: '#34C759', marginTop: 0 },
                     ]}
                     numberOfLines={1}
                     adjustsFontSizeToFit
@@ -315,18 +315,18 @@ export default function WinLossCard({
                   <View
                     style={[
                       styles.statBadge,
-                      { backgroundColor: 'rgba(244, 67, 54, 0.1)' },
+                      { backgroundColor: 'rgba(255, 59, 48, 0.12)' },
                     ]}
                   >
-                    <ArrowDownRight size={14} color="#F44336" />
-                    <ThemedText style={[styles.statValue, { color: '#F44336' }]}>
+                    <ArrowDownRight size={14} color="#FF3B30" />
+                    <ThemedText style={[styles.statValue, { color: '#FF3B30' }]}>
                       {isPrivacyMode ? '••••••' : stats.losers}
                     </ThemedText>
                   </View>
                   <ThemedText
                     style={[
                       styles.statAmount,
-                      { color: '#F44336', marginTop: 0 },
+                      { color: '#FF3B30', marginTop: 0 },
                     ]}
                     numberOfLines={1}
                     adjustsFontSizeToFit

@@ -25,6 +25,11 @@ export function AppSwitcher() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsTransitioning(true);
     setActiveMode(mode);
+    try {
+      router.replace('/(tabs)');
+    } catch {
+      // ignore
+    }
     setTimeout(() => {
       setIsTransitioning(false);
     }, 320);

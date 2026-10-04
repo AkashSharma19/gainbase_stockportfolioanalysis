@@ -2,6 +2,8 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 
 import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { useMoneyStore } from '@/store/useMoneyStore';
+import { BankLogo, resolveBrokerBrandLogo } from '@/components/BankLogo';
 import { Ticker, TransactionType } from '@/types';
 import { getCompanyLogoUrl } from '@/services/logoService';
 import {
@@ -38,7 +40,19 @@ import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 export default function AddTransactionScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const {
+    id,
+    symbol: initialSymbol,
+    type: initialType,
+    price: initialPrice,
+    broker: initialBroker,
+  } = useLocalSearchParams<{
+    id?: string;
+    symbol?: string;
+    type?: TransactionType;
+    price?: string;
+    broker?: string;
+  }>();
   const {
     addTransaction,
     updateTransaction,
@@ -106,12 +120,33 @@ export default function AddTransactionScreen() {
       setDate(new Date(editingTransaction.date));
       setCurrency(editingTransaction.currency || 'INR');
       setBroker(editingTransaction.broker || '');
+    } else {
+      if (initialSymbol) {
+        const cleanSym = String(initialSymbol).trim();
+        setSymbol(cleanSym);
+        fetchSingleTicker(cleanSym).catch(() => {});
+      }
+      if (initialType) {
+        setType(initialType);
+      }
+      if (initialPrice) {
+        setPrice(String(initialPrice));
+      }
+      if (initialBroker) {
+        setBroker(String(initialBroker));
+      }
     }
-  }, [editingTransaction]);
+  }, [editingTransaction, initialSymbol, initialType, initialPrice, initialBroker]);
 
   const selectedTicker = useMemo(() => {
-    const sym = symbol.toUpperCase();
-    return tickers.find((t) => t.Tickers.toUpperCase() === sym);
+    if (!symbol) return null;
+    const sym = symbol.toUpperCase().trim();
+    const cleanSym = sym.replace(/^(NSE|BOM|BSE|NASDAQ|NYSE|INDEX|INDEXNSE|INDEXBOM|INDEXSP|MUTF_IN|MUTF):/i, '');
+    return tickers.find((t) => {
+      const tSym = (t.Tickers || '').toUpperCase().trim();
+      const tClean = tSym.replace(/^(NSE|BOM|BSE|NASDAQ|NYSE|INDEX|INDEXNSE|INDEXBOM|INDEXSP|MUTF_IN|MUTF):/i, '');
+      return tSym === sym || tClean === cleanSym;
+    });
   }, [symbol, tickers]);
 
   const [remoteResults, setRemoteResults] = useState<TwelveDataSearchResultItem[]>([]);
@@ -170,10 +205,55 @@ export default function AddTransactionScreen() {
     return () => clearTimeout(timer);
   }, [searchQuery, showSymbolModal]);
 
+  const moneyAccounts = useMoneyStore((state) => state.accounts) || [];
+
+  const POPULAR_BROKERS = useMemo(
+    () => [
+      'Zerodha',
+      'Groww',
+      'Angel One',
+      'Upstox',
+      'ICICI Direct',
+      'HDFC Sky',
+      'Dhan',
+      'Kotak Securities',
+      'Motilal Oswal',
+      'Paytm Money',
+      'INDmoney',
+      '5paisa',
+      'Interactive Brokers',
+    ],
+    []
+  );
+
   const existingBrokers = useMemo(() => {
-    const brokers = new Set(transactions.map((t) => t.broker).filter(Boolean));
-    return Array.from(brokers);
-  }, [transactions]);
+    const list: string[] = [];
+    // 1. Existing portfolio transaction brokers
+    transactions.forEach((t) => {
+      if (t.broker && t.broker.trim() && !list.includes(t.broker.trim())) {
+        list.push(t.broker.trim());
+      }
+    });
+    // 2. Investment accounts from Money Manager
+    moneyAccounts.forEach((acc) => {
+      if (acc.linkedBroker && acc.linkedBroker.trim() && !list.includes(acc.linkedBroker.trim())) {
+        list.push(acc.linkedBroker.trim());
+      }
+      if (acc.institution && acc.institution.trim() && !list.includes(acc.institution.trim())) {
+        list.push(acc.institution.trim());
+      }
+      if (acc.type === 'investment' && acc.name && !list.includes(acc.name.trim())) {
+        list.push(acc.name.trim());
+      }
+    });
+    // 3. Add popular brokers
+    POPULAR_BROKERS.forEach((b) => {
+      if (!list.includes(b)) {
+        list.push(b);
+      }
+    });
+    return list;
+  }, [transactions, moneyAccounts, POPULAR_BROKERS]);
 
   const handleSave = () => {
     const q = parseFloat(quantity);
@@ -448,19 +528,32 @@ export default function AddTransactionScreen() {
                   { borderBottomColor: currColors.border },
                 ]}
               >
-                <View>
+                <View style={{ flex: 1, paddingRight: 8 }}>
                   <ThemedText style={[styles.label, { color: currColors.text }]}>
                     Quantity
                   </ThemedText>
                   {type === 'SELL' && (
-                    <ThemedText
-                      style={[
-                        styles.availableLabel,
-                        { color: isOverselling ? '#FF453A' : currColors.textSecondary },
-                      ]}
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (currentSymbolHolding > 0) {
+                          setQuantity(String(currentSymbolHolding));
+                        }
+                      }}
+                      activeOpacity={0.7}
+                      style={{ marginTop: 2 }}
                     >
-                      Available: {currentSymbolHolding}
-                    </ThemedText>
+                      <ThemedText
+                        style={[
+                          styles.availableLabel,
+                          {
+                            color: isOverselling ? '#FF453A' : currColors.tint,
+                            fontWeight: '600',
+                          },
+                        ]}
+                      >
+                        Available: {currentSymbolHolding} (Tap to Sell All)
+                      </ThemedText>
+                    </TouchableOpacity>
                   )}
                 </View>
                 <TextInput
@@ -638,9 +731,13 @@ export default function AddTransactionScreen() {
                         {
                           backgroundColor: broker === b ? currColors.tint : currColors.card,
                           borderColor: currColors.border,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
                         },
                       ]}
                     >
+                      <BankLogo logo={resolveBrokerBrandLogo(b, moneyAccounts) || b} size={18} />
                       <ThemedText
                         style={[
                           styles.chipText,
@@ -1137,7 +1234,7 @@ export default function AddTransactionScreen() {
               </TouchableOpacity>
             )}
 
-            {/* Existing Brokers List */}
+            {/* Existing & Suggested Brokers List */}
             {existingBrokers
               .filter((b) =>
                 b.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -1147,19 +1244,22 @@ export default function AddTransactionScreen() {
                   key={b}
                   style={[
                     styles.tickerItem,
-                    { borderBottomColor: currColors.border },
+                    { borderBottomColor: currColors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
                   ]}
                   onPress={() => {
                     setBroker(b);
                     setShowBrokerModal(false);
                   }}
                 >
-                  <ThemedText
-                    style={[styles.tickerSymbol, { color: currColors.text }]}
-                  >
-                    {b}
-                  </ThemedText>
-                  {broker === b && <Check size={16} color={currColors.tint} />}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <BankLogo logo={resolveBrokerBrandLogo(b, moneyAccounts) || b} size={28} />
+                    <ThemedText
+                      style={[styles.tickerSymbol, { color: currColors.text, fontSize: 16 }]}
+                    >
+                      {b}
+                    </ThemedText>
+                  </View>
+                  {broker === b && <Check size={18} color={currColors.tint} />}
                 </TouchableOpacity>
               ))}
           </ScrollView>

@@ -168,9 +168,9 @@ export default function ForecastDetailsScreen() {
                 </ThemedText>
               </View>
             </View>
-            <View style={[styles.etaBadge, { backgroundColor: goalYear ? '#4CAF5022' : c.cardSecondary }]}>
-              <Target size={14} color={goalYear ? '#4CAF50' : c.textSecondary} />
-              <ThemedText style={[styles.etaText, { color: goalYear ? '#4CAF50' : c.textSecondary }]}>
+            <View style={[styles.etaBadge, { backgroundColor: goalYear ? 'rgba(52, 199, 89, 0.12)' : c.cardSecondary }]}>
+              <Target size={14} color={goalYear ? '#34C759' : c.textSecondary} />
+              <ThemedText style={[styles.etaText, { color: goalYear ? '#34C759' : c.textSecondary }]}>
                 {goalYear ? `ETA: ${new Date().getFullYear() + goalYear}` : 'Out of Reach'}
               </ThemedText>
             </View>
@@ -299,7 +299,7 @@ export default function ForecastDetailsScreen() {
           </View>
           <View style={styles.dataRow}>
             <ThemedText style={[styles.dataLabel, { color: c.textSecondary }]}>Est. Capital Gains</ThemedText>
-            <ThemedText style={[styles.dataValue, { color: '#4CAF50' }]}>
+            <ThemedText style={[styles.dataValue, { color: '#34C759' }]}>
               {isPrivacyMode ? '••••••' : `+${formatIndianNumber(chartData[years]?.data?.estimatedGains || 0)}`}
             </ThemedText>
           </View>

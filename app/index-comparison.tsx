@@ -69,7 +69,7 @@ export default function IndexComparisonScreen() {
           <View style={{ width: 40, alignItems: 'center' }}>
             <ThemedText
               style={{
-                color: portfolioXIRR < 0 ? '#F44336' : currColors.text,
+                color: portfolioXIRR < 0 ? '#FF3B30' : currColors.text,
                 fontSize: 8,
                 marginBottom: 4,
               }}

@@ -12,7 +12,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Ionicons } from '@expo/vector-icons';
 import {
   ChevronRight,
   Sparkles,
@@ -23,6 +22,8 @@ import {
   Repeat,
   CreditCard,
   Wallet,
+  Search,
+  XCircle,
   Landmark,
   Zap,
   CheckCircle,
@@ -621,8 +622,7 @@ INSTRUCTIONS FOR EACH INSIGHT:
                 },
               ]}
             >
-              <Ionicons
-                name="search"
+              <Search
                 size={18}
                 color={currColors.textSecondary}
                 style={styles.searchIcon}
@@ -638,11 +638,14 @@ INSTRUCTIONS FOR EACH INSIGHT:
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity
-                  onPress={() => setSearchQuery('')}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSearchQuery('');
+                  }}
                   style={styles.clearButton}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons
-                    name="close-circle"
+                  <XCircle
                     size={18}
                     color={currColors.textSecondary}
                   />

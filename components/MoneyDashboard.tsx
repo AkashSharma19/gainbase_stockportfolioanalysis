@@ -918,10 +918,27 @@ export function MoneyDashboard() {
           </View>
 
           {upcomingPayments.length === 0 ? (
-            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-              <ThemedText style={{ color: currColors.textSecondary, fontSize: 13, fontFamily: 'Outfit_400Regular' }}>
+            <View style={{ paddingVertical: 18, alignItems: 'center' }}>
+              <ThemedText style={{ color: currColors.textSecondary, fontSize: 13, fontFamily: 'Outfit_400Regular', marginBottom: 10 }}>
                 No payments due in the next 14 days.
               </ThemedText>
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  router.push('/(tabs)/money-loans');
+                }}
+                style={{
+                  paddingVertical: 6,
+                  paddingHorizontal: 14,
+                  borderRadius: 16,
+                  backgroundColor: currColors.cardSecondary,
+                }}
+                activeOpacity={0.7}
+              >
+                <ThemedText style={{ fontSize: 12, color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }}>
+                  + Add Loan or Subscription
+                </ThemedText>
+              </TouchableOpacity>
             </View>
           ) : (
             upcomingPayments.map((payment, index, arr) => {
@@ -1032,10 +1049,27 @@ export function MoneyDashboard() {
           </View>
 
           {filteredRecentTxs.length === 0 ? (
-            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-              <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', fontSize: 13, lineHeight: 18, paddingHorizontal: 12 }}>
+            <View style={{ paddingVertical: 18, alignItems: 'center' }}>
+              <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', fontSize: 13, lineHeight: 18, paddingHorizontal: 12, marginBottom: 10 }}>
                 No transactions logged yet.
               </ThemedText>
+              <TouchableOpacity
+                onPress={() => {
+                  handleHaptic();
+                  router.push('/add-money-transaction');
+                }}
+                style={{
+                  paddingVertical: 6,
+                  paddingHorizontal: 14,
+                  borderRadius: 16,
+                  backgroundColor: currColors.cardSecondary,
+                }}
+                activeOpacity={0.7}
+              >
+                <ThemedText style={{ fontSize: 12, color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }}>
+                  + Log First Transaction
+                </ThemedText>
+              </TouchableOpacity>
             </View>
           ) : (
             filteredRecentTxs.map((tx, index) => {

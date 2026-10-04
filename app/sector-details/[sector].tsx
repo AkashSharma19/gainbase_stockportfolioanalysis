@@ -1,6 +1,6 @@
 import { useColorScheme } from '@/components/useColorScheme';
 import { getSectorIcon } from '@/constants/Icons';
-import { Ionicons } from '@expo/vector-icons';
+import { Category3DIcon } from '@/components/Category3DIcon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -181,14 +181,14 @@ export default function SectorDetailsScreen() {
               styles.changeBadge,
               {
                 backgroundColor: isPositive
-                  ? 'rgba(76, 175, 80, 0.1)'
-                  : 'rgba(244, 67, 54, 0.1)',
+                  ? 'rgba(52, 199, 89, 0.12)'
+                  : 'rgba(255, 59, 48, 0.12)',
               },
             ]}
           >
             <TrendingUp
               size={12}
-              color={isPositive ? '#4CAF50' : '#F44336'}
+              color={isPositive ? '#34C759' : '#FF3B30'}
               style={{
                 transform: [{ rotate: isPositive ? '0deg' : '180deg' }],
               }}
@@ -196,7 +196,7 @@ export default function SectorDetailsScreen() {
             <ThemedText
               style={[
                 styles.changeText,
-                { color: isPositive ? '#4CAF50' : '#F44336' },
+                { color: isPositive ? '#34C759' : '#FF3B30' },
               ]}
             >
               {Math.abs(changePercentage).toFixed(2)}%
@@ -233,17 +233,11 @@ export default function SectorDetailsScreen() {
                 style={[
                   styles.largeIconContainer,
                   {
-                    backgroundColor: currColors.background,
-                    shadowColor: sectorColor,
-                    shadowOffset: { width: 0, height: 10 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 20,
-                    elevation: 10,
-                    borderColor: sectorColor + '30',
+                    backgroundColor: 'transparent',
                   },
                 ]}
               >
-                <SectorIcon size={48} color={sectorColor} strokeWidth={1.5} />
+                <Category3DIcon name={sector || ''} size={68} />
               </View>
               <ThemedText style={[styles.sectorTitle, { color: currColors.text }]}>
                 {sector}

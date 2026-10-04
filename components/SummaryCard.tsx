@@ -41,14 +41,14 @@ export const SummaryCard = ({
       {trend !== undefined && (
         <View style={styles.trendContainer}>
           {isPositive ? (
-            <TrendingUp size={14} color="#4CAF50" />
+            <TrendingUp size={14} color="#34C759" />
           ) : (
-            <TrendingDown size={14} color="#F44336" />
+            <TrendingDown size={14} color="#FF3B30" />
           )}
           <ThemedText
             style={[
               styles.trendText,
-              { color: isPositive ? '#4CAF50' : '#F44336' },
+              { color: isPositive ? '#34C759' : '#FF3B30' },
             ]}
           >
             {Math.abs(trend).toFixed(1)}%

@@ -25,7 +25,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
-import { CategoryIcon } from '@/components/CategoryIcon';
+import { Category3DIcon } from '@/components/Category3DIcon';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -198,12 +198,14 @@ export default function BudgetDetailsScreen() {
               handleHaptic();
               router.push({ pathname: '/add-budget', params: { id: budget.id } });
             }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Edit2 size={18} color="#00C9A7" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.headerIconBtn, { backgroundColor: 'rgba(255, 59, 48, 0.1)' }]}
             onPress={handleDeleteBudget}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Trash2 size={18} color="#FF3B30" />
           </TouchableOpacity>
@@ -271,7 +273,7 @@ export default function BudgetDetailsScreen() {
                 >
                   <View style={styles.catRow}>
                     <View style={styles.catLeft}>
-                      <CategoryIcon name={cat.icon} color={cat.color} size={16} style={{ marginRight: 8 }} />
+                      <Category3DIcon name={cat.icon || cat.name} size={26} style={{ marginRight: 8 }} />
                       <ThemedText style={[styles.catName, { color: currColors.text }]} numberOfLines={1}>
                         {cat.name}
                       </ThemedText>

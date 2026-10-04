@@ -261,9 +261,13 @@ export default function LoansScreen() {
       {/* Header */}
       <View style={styles.header}>
         <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
-          Loans & EMIs
+          {isLoansView ? 'Loans & EMIs' : 'Subscriptions'}
         </ThemedText>
-        <TouchableOpacity style={[styles.addBtn, { backgroundColor: currColors.cardSecondary }]} onPress={handleAdd}>
+        <TouchableOpacity
+          style={[styles.addBtn, { backgroundColor: currColors.cardSecondary }]}
+          onPress={handleAdd}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Plus size={20} color="#00C9A7" />
         </TouchableOpacity>
       </View>

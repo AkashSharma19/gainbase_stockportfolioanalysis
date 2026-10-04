@@ -1,6 +1,8 @@
 import { useColorScheme } from '@/components/useColorScheme';
 import { getSectorIcon } from '@/constants/Sectors';
-import { Ionicons } from '@expo/vector-icons';
+import { Category3DIcon } from '@/components/Category3DIcon';
+import { BankLogo, resolveBrokerBrandLogo } from '@/components/BankLogo';
+import { useMoneyStore } from '@/store/useMoneyStore';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -46,6 +48,7 @@ export default function AnalyticsDetailsScreen() {
   );
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const addRecentSearch = usePortfolioStore((state) => state.addRecentSearch);
+  const accounts = useMoneyStore((state) => state.accounts);
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme as 'light' | 'dark'];
@@ -197,7 +200,7 @@ export default function AnalyticsDetailsScreen() {
               <ThemedText
                 style={[
                   styles.currentPrice,
-                  { color: item.pnl >= 0 ? '#4CAF50' : '#F44336' },
+                  { color: item.pnl >= 0 ? '#34C759' : '#FF3B30' },
                 ]}
               >
                 {isPrivacyMode
@@ -210,15 +213,15 @@ export default function AnalyticsDetailsScreen() {
                   {
                     backgroundColor:
                       item.pnl >= 0
-                        ? 'rgba(76, 175, 80, 0.1)'
-                        : 'rgba(244, 67, 54, 0.1)',
+                        ? 'rgba(52, 199, 89, 0.12)'
+                        : 'rgba(255, 59, 48, 0.12)',
                   },
                 ]}
               >
                 <ThemedText
                   style={[
                     styles.changeText,
-                    { color: item.pnl >= 0 ? '#4CAF50' : '#F44336' },
+                    { color: item.pnl >= 0 ? '#34C759' : '#FF3B30' },
                     { marginLeft: 0 },
                   ]}
                 >
@@ -266,22 +269,28 @@ export default function AnalyticsDetailsScreen() {
             </View>
 
             <View style={styles.headerCenter}>
-              <View
-                style={[
-                  styles.largeIconContainer,
-                  {
-                    backgroundColor: currColors.background,
-                    shadowColor: headerColor,
-                    shadowOffset: { width: 0, height: 10 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 20,
-                    elevation: 10,
-                    borderColor: headerColor + '30',
-                  },
-                ]}
-              >
-                <HeaderIcon size={48} color={headerColor} strokeWidth={1.5} />
-              </View>
+              {(() => {
+                const brokerLogoId =
+                  type === 'Broker'
+                    ? resolveBrokerBrandLogo(decodeURIComponent(value || ''), accounts)
+                    : null;
+                return (
+                  <View
+                    style={[
+                      styles.largeIconContainer,
+                      {
+                        backgroundColor: 'transparent',
+                      },
+                    ]}
+                  >
+                    {brokerLogoId ? (
+                      <BankLogo logo={brokerLogoId} size={44} />
+                    ) : (
+                      <Category3DIcon name={decodeURIComponent(value || '')} size={68} />
+                    )}
+                  </View>
+                );
+              })()}
               <ThemedText style={[styles.sectorTitle, { color: currColors.text }]}>
                 {decodeURIComponent(value || '')}
               </ThemedText>

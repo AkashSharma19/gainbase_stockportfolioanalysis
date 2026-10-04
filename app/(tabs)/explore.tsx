@@ -1,7 +1,7 @@
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 
-import { getSectorIcon } from '@/constants/Sectors';
+import { Category3DIcon } from '@/components/Category3DIcon';
 import { MASTER_STOCKS_LIST } from '@/constants/NSE_COMPANIES';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Ticker } from '@/types';
@@ -10,10 +10,9 @@ import {
   searchTwelveDataSymbols,
   TwelveDataSearchResultItem,
 } from '@/services/TwelveDataService';
-import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { TrendingUp, Globe } from 'lucide-react-native';
+import { TrendingUp, Globe, Star, SlidersHorizontal, Search, XCircle, Clock, LayoutGrid } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -321,7 +320,7 @@ export default function ExploreScreen() {
                   >
                     <TrendingUp
                       size={12}
-                      color={isPositive ? '#4CAF50' : '#F44336'}
+                      color={isPositive ? '#34C759' : '#FF3B30'}
                       style={{
                         transform: [{ rotate: isPositive ? '0deg' : '180deg' }],
                       }}
@@ -329,7 +328,7 @@ export default function ExploreScreen() {
                     <ThemedText
                       style={[
                         styles.changeText,
-                        { color: isPositive ? '#4CAF50' : '#F44336' },
+                        { color: isPositive ? '#34C759' : '#FF3B30' },
                       ]}
                     >
                       {Math.abs(changePercentage).toFixed(2)}%
@@ -364,16 +363,19 @@ export default function ExploreScreen() {
               }}
               style={styles.starButton}
             >
-              <Ionicons
-                name={
-                  watchlist.includes(item.Tickers) ? 'star' : 'star-outline'
-                }
-                size={22}
+              <Star
+                size={20}
                 color={
                   watchlist.includes(item.Tickers)
                     ? '#FFD700'
                     : currColors.textSecondary
                 }
+                fill={
+                  watchlist.includes(item.Tickers)
+                    ? '#FFD700'
+                    : 'transparent'
+                }
+                strokeWidth={1.8}
               />
             </TouchableOpacity>
           </View>
@@ -478,15 +480,15 @@ export default function ExploreScreen() {
                       styles.miniBadge,
                       {
                         backgroundColor: isPositive
-                          ? 'rgba(76, 175, 80, 0.1)'
-                          : 'rgba(244, 67, 54, 0.1)',
+                          ? 'rgba(52, 199, 89, 0.12)'
+                          : 'rgba(255, 59, 48, 0.12)',
                       },
                     ]}
                   >
                     <ThemedText
                       style={[
                         styles.miniBadgeText,
-                        { color: isPositive ? '#4CAF50' : '#F44336' },
+                        { color: isPositive ? '#34C759' : '#FF3B30' },
                       ]}
                     >
                       {isPositive ? '+' : ''}
@@ -536,7 +538,6 @@ export default function ExploreScreen() {
         </View>
         <View style={styles.sectorGrid}>
           {displaySectors.map((sName) => {
-            const { icon: SectorIcon, color } = getSectorIcon(sName);
             return (
               <TouchableOpacity
                 key={sName}
@@ -546,13 +547,8 @@ export default function ExploreScreen() {
                   router.push(`/sector-details/${encodeURIComponent(sName)}`);
                 }}
               >
-                <View
-                  style={[
-                    styles.iconContainer,
-                    { backgroundColor: color + '20' },
-                  ]}
-                >
-                  <SectorIcon size={20} color={color} />
+                <View style={styles.iconContainer}>
+                  <Category3DIcon name={sName} size={36} />
                 </View>
                 <ThemedText
                   style={[styles.sectorName, { color: currColors.text }]}
@@ -576,7 +572,7 @@ export default function ExploreScreen() {
                 { backgroundColor: currColors.tint + '15' },
               ]}
             >
-              <Ionicons name="apps-outline" size={20} color={currColors.tint} />
+              <LayoutGrid size={22} color={currColors.tint} />
             </View>
             <ThemedText style={[styles.sectorName, { color: currColors.tint }]}>
               More
@@ -624,8 +620,7 @@ export default function ExploreScreen() {
                   ]}
                   onPress={() => setSearchQuery(term)}
                 >
-                  <Ionicons
-                    name="time-outline"
+                  <Clock
                     size={14}
                     color={currColors.textSecondary}
                   />
@@ -661,9 +656,8 @@ export default function ExploreScreen() {
                 { backgroundColor: currColors.card },
               ]}
             >
-              <Ionicons
-                name="search"
-                size={20}
+              <Search
+                size={18}
                 color={currColors.textSecondary}
                 style={styles.searchIcon}
               />
@@ -682,11 +676,14 @@ export default function ExploreScreen() {
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity
-                  onPress={() => setSearchQuery('')}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSearchQuery('');
+                  }}
                   style={styles.clearButton}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons
-                    name="close-circle"
+                  <XCircle
                     size={18}
                     color={currColors.textSecondary}
                   />
@@ -703,9 +700,8 @@ export default function ExploreScreen() {
                 setShowFilters(!showFilters);
               }}
             >
-              <Ionicons
-                name="filter"
-                size={20}
+              <SlidersHorizontal
+                size={18}
                 color={showFilters ? currColors.tint : currColors.text}
               />
             </TouchableOpacity>
@@ -877,12 +873,21 @@ export default function ExploreScreen() {
                     </>
                   ) : remoteResults.length > 0 ? null : (
                     <>
-                      <Ionicons
-                        name={searchQuery ? 'search-outline' : 'star-outline'}
-                        size={48}
-                        color={currColors.textSecondary}
-                        style={{ marginBottom: 16 }}
-                      />
+                      {searchQuery ? (
+                        <Search
+                          size={40}
+                          color={currColors.textSecondary}
+                          strokeWidth={1.5}
+                          style={{ marginBottom: 14 }}
+                        />
+                      ) : (
+                        <Star
+                          size={40}
+                          color={currColors.textSecondary}
+                          strokeWidth={1.5}
+                          style={{ marginBottom: 14 }}
+                        />
+                      )}
                       <ThemedText
                         style={[
                           styles.emptyText,
@@ -1176,7 +1181,7 @@ const MarketRibbon = ({
                 <View style={styles.tickerChangeContainer}>
                   <TrendingUp
                     size={12}
-                    color={isPositive ? '#4CAF50' : '#F44336'}
+                    color={isPositive ? '#34C759' : '#FF3B30'}
                     style={{
                       marginRight: 2,
                       transform: [{ rotate: isPositive ? '0deg' : '180deg' }],
@@ -1185,7 +1190,7 @@ const MarketRibbon = ({
                   <ThemedText
                     style={[
                       styles.tickerChange,
-                      { color: isPositive ? '#4CAF50' : '#F44336' },
+                      { color: isPositive ? '#34C759' : '#FF3B30' },
                     ]}
                   >
                     {Math.abs(changePercentage).toFixed(2)}%

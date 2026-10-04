@@ -83,7 +83,7 @@ export default function MonthlyAnalysisScreen() {
     return limited.map((item, index) => {
       const prevItem = index > 0 ? limited[index - 1] : null;
       const hasIncreased = !prevItem || item.investment >= prevItem.investment;
-      const barColor = hasIncreased ? '#4CAF50' : '#F44336';
+      const barColor = hasIncreased ? '#34C759' : '#FF3B30';
 
       return {
         value: item.investment,
@@ -316,8 +316,8 @@ export default function MonthlyAnalysisScreen() {
                             {
                               backgroundColor:
                                 item.percentageIncrease >= 0
-                                  ? 'rgba(76, 175, 80, 0.1)'
-                                  : 'rgba(244, 67, 54, 0.1)',
+                                  ? 'rgba(52, 199, 89, 0.12)'
+                                  : 'rgba(255, 59, 48, 0.12)',
                             },
                           ]}
                         >
@@ -325,8 +325,8 @@ export default function MonthlyAnalysisScreen() {
                             size={12}
                             color={
                               item.percentageIncrease >= 0
-                                ? '#4CAF50'
-                                : '#F44336'
+                                ? '#34C759'
+                                : '#FF3B30'
                             }
                             style={{
                               transform: [
@@ -345,8 +345,8 @@ export default function MonthlyAnalysisScreen() {
                               {
                                 color:
                                   item.percentageIncrease >= 0
-                                    ? '#4CAF50'
-                                    : '#F44336',
+                                    ? '#34C759'
+                                    : '#FF3B30',
                               },
                             ]}
                           >

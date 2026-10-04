@@ -2,7 +2,6 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Ticker, Transaction } from '@/types';
-import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -12,6 +11,8 @@ import {
   Edit2,
   Trash2,
   Plus,
+  Search,
+  XCircle,
 } from 'lucide-react-native';
 import { BackButton } from '@/components/BackButton';
 import React, { memo, useMemo, useRef, useState } from 'react';
@@ -403,9 +404,8 @@ export default function HistoryScreen() {
               { backgroundColor: currColors.card, flex: 1 },
             ]}
           >
-            <Ionicons
-              name="search"
-              size={18}
+            <Search
+              size={16}
               color={currColors.textSecondary}
               style={styles.searchIcon}
             />
@@ -424,10 +424,10 @@ export default function HistoryScreen() {
               <TouchableOpacity
                 onPress={() => setSearchQuery('')}
                 style={styles.clearButton}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons
-                  name="close-circle"
-                  size={18}
+                <XCircle
+                  size={16}
                   color={currColors.textSecondary}
                 />
               </TouchableOpacity>
@@ -439,8 +439,9 @@ export default function HistoryScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.push('/add-transaction');
             }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Plus size={20} color="#007AFF" />
+            <Plus size={20} color="#00C9A7" />
           </TouchableOpacity>
         </View>
       </View>
@@ -539,9 +540,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   addBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -678,7 +679,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#00C9A7',
   },
   deleteButton: {
     backgroundColor: '#FF3B30',

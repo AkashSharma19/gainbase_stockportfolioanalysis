@@ -25,7 +25,7 @@ import {
 
 import { ThemedText } from '@/components/ThemedText';
 import { LineChart } from 'react-native-gifted-charts';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -46,6 +46,7 @@ export default function StockDetailsScreen() {
     country?: string;
   }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const getHoldingsData = usePortfolioStore((state) => state.getHoldingsData);
   const transactions = usePortfolioStore((state) => state.transactions);
   const tickers = usePortfolioStore((state) => state.tickers);
@@ -59,6 +60,7 @@ export default function StockDetailsScreen() {
 
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
 
   const [news, setNews] = React.useState<NewsItem[]>([]);
   const [loadingNews, setLoadingNews] = React.useState(true);
@@ -404,16 +406,16 @@ export default function StockDetailsScreen() {
                   data={chartData}
                   areaChart
                   curved
-                  color={isPositiveTrend ? '#4CAF50' : '#F44336'}
+                  color={isPositiveTrend ? '#34C759' : '#FF3B30'}
                   startFillColor={
                     isPositiveTrend
-                      ? 'rgba(76, 175, 80, 0.8)'
-                      : 'rgba(244, 67, 54, 0.8)'
+                      ? 'rgba(52, 199, 89, 0.8)'
+                      : 'rgba(255, 59, 48, 0.8)'
                   }
                   endFillColor={
                     isPositiveTrend
-                      ? 'rgba(76, 175, 80, 0.1)'
-                      : 'rgba(244, 67, 54, 0.1)'
+                      ? 'rgba(52, 199, 89, 0.1)'
+                      : 'rgba(255, 59, 48, 0.1)'
                   }
                   thickness={5}
                   hideDataPoints
@@ -498,8 +500,8 @@ export default function StockDetailsScreen() {
                     color: isPrivacyMode
                       ? currColors.text
                       : holding.dayChange >= 0
-                        ? '#4CAF50'
-                        : '#F44336',
+                        ? '#34C759'
+                        : '#FF3B30',
                   },
                 ]}
               >
@@ -526,8 +528,8 @@ export default function StockDetailsScreen() {
                       color: isPrivacyMode
                         ? currColors.text
                         : holding.pnl >= 0
-                          ? '#4CAF50'
-                          : '#F44336',
+                          ? '#34C759'
+                          : '#FF3B30',
                     },
                   ]}
                 >
@@ -736,6 +738,63 @@ export default function StockDetailsScreen() {
           </View>
         </View>
 
+        {/* ─── Quick Action Pills Bar (Matches Gainbase Unified Design) ─── */}
+        <View style={styles.actionPillRow}>
+          <TouchableOpacity
+            style={[
+              styles.primaryActionPill,
+              { backgroundColor: '#00C9A7', flex: holding.quantity > 0 ? 1.2 : 1 },
+            ]}
+            activeOpacity={0.8}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push({
+                pathname: '/add-transaction',
+                params: {
+                  symbol: holding.symbol || symbol || '',
+                  type: 'BUY',
+                  price: holding.currentPrice > 0 ? String(holding.currentPrice) : undefined,
+                  broker: holding.broker && holding.broker !== 'N/A' ? holding.broker : undefined,
+                },
+              });
+            }}
+          >
+            <ArrowUpRight size={16} color="#FFFFFF" />
+            <ThemedText style={styles.primaryActionText}>
+              {holding.quantity > 0 ? 'Buy More' : 'Buy'}
+            </ThemedText>
+          </TouchableOpacity>
+
+          {holding.quantity > 0 && (
+            <TouchableOpacity
+              style={[
+                styles.secondaryActionPill,
+                {
+                  backgroundColor: currColors.card,
+                  borderColor: isDark ? 'rgba(255, 59, 48, 0.35)' : 'rgba(255, 59, 48, 0.25)',
+                },
+              ]}
+              activeOpacity={0.8}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push({
+                  pathname: '/add-transaction',
+                  params: {
+                    symbol: holding.symbol || symbol || '',
+                    type: 'SELL',
+                    price: holding.currentPrice > 0 ? String(holding.currentPrice) : undefined,
+                    broker: holding.broker && holding.broker !== 'N/A' ? holding.broker : undefined,
+                  },
+                });
+              }}
+            >
+              <ArrowDownLeft size={16} color="#FF3B30" />
+              <ThemedText style={[styles.secondaryActionText, { color: '#FF3B30' }]}>
+                Sell
+              </ThemedText>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* 52 Week Range */}
         {typeof holding.high52 === 'number' &&
@@ -797,8 +856,8 @@ export default function StockDetailsScreen() {
                           (holding.currentPrice - holding.low52) /
                             (holding.high52 - holding.low52) >=
                           0.5
-                            ? '#4CAF50'
-                            : '#F44336',
+                            ? '#34C759'
+                            : '#FF3B30',
                         width: `${Math.min(100, Math.max(0, ((holding.currentPrice - holding.low52) / (holding.high52 - holding.low52)) * 100))}%`,
                       },
                     ]}
@@ -820,8 +879,8 @@ export default function StockDetailsScreen() {
                             (holding.currentPrice - holding.low52) /
                               (holding.high52 - holding.low52) >=
                             0.5
-                              ? '#4CAF50'
-                              : '#F44336',
+                              ? '#34C759'
+                              : '#FF3B30',
                         },
                       ]}
                     />
@@ -1350,5 +1409,37 @@ const styles = StyleSheet.create({
     width: 1,
     height: 40,
     marginHorizontal: 16,
+  },
+  actionPillRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  primaryActionPill: {
+    height: 44,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  primaryActionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  secondaryActionPill: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  secondaryActionText: {
+    fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
   },
 });

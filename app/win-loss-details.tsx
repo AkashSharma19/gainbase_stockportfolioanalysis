@@ -82,7 +82,7 @@ export default function WinLossDetailsScreen() {
   };
 
   const currentList = activeTab === 'winners' ? winners : losers;
-  const currentColor = activeTab === 'winners' ? '#4CAF50' : '#F44336';
+  const currentColor = activeTab === 'winners' ? '#34C759' : '#FF3B30';
   const currentTotal =
     activeTab === 'winners' ? stats.winnersProfit : Math.abs(stats.losersLoss);
   const currentIcon = activeTab === 'winners' ? ArrowUpRight : ArrowDownRight;
@@ -130,7 +130,7 @@ export default function WinLossDetailsScreen() {
                 styles.barsection,
                 {
                   flex: stats.winners,
-                  backgroundColor: '#4CAF50',
+                  backgroundColor: '#34C759',
                   borderTopLeftRadius: 4,
                   borderBottomLeftRadius: 4,
                   marginRight: 2,
@@ -142,7 +142,7 @@ export default function WinLossDetailsScreen() {
                 styles.barsection,
                 {
                   flex: stats.losers,
-                  backgroundColor: '#F44336',
+                  backgroundColor: '#FF3B30',
                   borderTopRightRadius: 4,
                   borderBottomRightRadius: 4,
                 },
@@ -160,10 +160,10 @@ export default function WinLossDetailsScreen() {
               >
                 Winners
               </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: '#4CAF50' }]}>
+              <ThemedText style={[styles.summaryValue, { color: '#34C759' }]}>
                 {isPrivacyMode ? '••••••' : stats.winners}
               </ThemedText>
-              <ThemedText style={[styles.summaryAmount, { color: '#4CAF50' }]}>
+              <ThemedText style={[styles.summaryAmount, { color: '#34C759' }]}>
                 {isPrivacyMode
                   ? '••••••'
                   : `+${showCurrencySymbol ? '₹' : ''}${formatCompactValue(stats.winnersProfit)}`}
@@ -184,10 +184,10 @@ export default function WinLossDetailsScreen() {
               >
                 Losers
               </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: '#F44336' }]}>
+              <ThemedText style={[styles.summaryValue, { color: '#FF3B30' }]}>
                 {isPrivacyMode ? '••••••' : stats.losers}
               </ThemedText>
-              <ThemedText style={[styles.summaryAmount, { color: '#F44336' }]}>
+              <ThemedText style={[styles.summaryAmount, { color: '#FF3B30' }]}>
                 {isPrivacyMode
                   ? '••••••'
                   : `-${showCurrencySymbol ? '₹' : ''}${formatCompactValue(Math.abs(stats.losersLoss))}`}
@@ -223,7 +223,7 @@ export default function WinLossDetailsScreen() {
                 {
                   color:
                     activeTab === 'winners'
-                      ? '#4CAF50'
+                      ? '#34C759'
                       : currColors.textSecondary,
                 },
               ]}
@@ -248,7 +248,7 @@ export default function WinLossDetailsScreen() {
                 {
                   color:
                     activeTab === 'losers'
-                      ? '#F44336'
+                      ? '#FF3B30'
                       : currColors.textSecondary,
                 },
               ]}
@@ -346,8 +346,8 @@ export default function WinLossDetailsScreen() {
                       {
                         backgroundColor:
                           activeTab === 'winners'
-                            ? 'rgba(76, 175, 80, 0.1)'
-                            : 'rgba(244, 67, 54, 0.1)',
+                            ? 'rgba(52, 199, 89, 0.12)'
+                            : 'rgba(255, 59, 48, 0.12)',
                       },
                     ]}
                   >

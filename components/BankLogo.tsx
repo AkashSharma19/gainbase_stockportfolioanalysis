@@ -129,6 +129,57 @@ export function getCustomBrandColor(text: string): string {
   return FALLBACK_PALETTE[index];
 }
 
+export function resolveBrokerBrandLogo(brokerName: string, accounts?: any[]): string | null {
+  if (!brokerName) return null;
+  const clean = brokerName.trim().toLowerCase();
+
+  // 1. Check if an account in Money Manager has a linked broker or matches this name
+  if (accounts && accounts.length > 0) {
+    const matchedAccount = accounts.find((acc) => {
+      if (acc.linkedBroker && acc.linkedBroker.toLowerCase() === clean) return true;
+      if (acc.institution && acc.institution.toLowerCase() === clean) return true;
+      if (acc.name && acc.name.toLowerCase() === clean) return true;
+      if (acc.name && acc.name.toLowerCase().includes(clean)) return true;
+      return false;
+    });
+    if (matchedAccount?.logo) {
+      return matchedAccount.logo;
+    }
+  }
+
+  // 2. Match directly with BANK_BRANDS
+  const brand = BANK_BRANDS.find(
+    (b) =>
+      b.id.toLowerCase() === clean ||
+      b.name.toLowerCase() === clean ||
+      clean.includes(b.id.toLowerCase()) ||
+      clean.includes(b.name.toLowerCase())
+  );
+  if (brand) return brand.id;
+
+  // 3. Normalized alias checks for Indian & Global brokers
+  if (clean.includes('zerodha') || clean.includes('kite')) return 'zerodha';
+  if (clean.includes('groww')) return 'groww';
+  if (clean.includes('upstox')) return 'upstox';
+  if (clean.includes('ind money') || clean.includes('indmoney')) return 'indmoney';
+  if (clean.includes('angel')) return 'angelone';
+  if (clean.includes('dhan')) return 'dhan';
+  if (clean.includes('5paisa')) return '5paisa';
+  if (clean.includes('motilal') || clean.includes('mosl')) return 'motilal';
+  if (clean.includes('sharekhan')) return 'sharekhan';
+  if (clean.includes('paytm')) return 'paytmmoney';
+  if (clean.includes('iifl')) return 'iifl';
+  if (clean.includes('kuvera')) return 'kuvera';
+  if (clean.includes('mirae') || clean.includes('mstock') || clean.includes('m.stock')) return 'mirae';
+  if (clean.includes('hdfc')) return 'hdfc';
+  if (clean.includes('icici')) return 'icici';
+  if (clean.includes('kotak')) return 'kotak';
+  if (clean.includes('sbi')) return 'sbi';
+  if (clean.includes('axis')) return 'axis';
+
+  return null;
+}
+
 export function BankLogo({ logo, size = 32, style }: { logo: string; size?: number; style?: any }) {
   if (!logo) return null;
 

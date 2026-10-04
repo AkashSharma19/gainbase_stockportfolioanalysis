@@ -424,8 +424,8 @@ export function PortfolioScreen() {
                       color: isPrivacyMode
                         ? currColors.text
                         : summary.dayChange >= 0
-                          ? '#4CAF50'
-                          : '#F44336',
+                          ? '#34C759'
+                          : '#FF3B30',
                     },
                   ]}
                 >
@@ -451,8 +451,8 @@ export function PortfolioScreen() {
                       color: isPrivacyMode
                         ? currColors.text
                         : summary.profitAmount >= 0
-                          ? '#4CAF50'
-                          : '#F44336',
+                          ? '#34C759'
+                          : '#FF3B30',
                     },
                   ]}
                 >
@@ -478,8 +478,8 @@ export function PortfolioScreen() {
                       color: isPrivacyMode
                         ? currColors.text
                         : summary.realizedReturn >= 0
-                          ? '#4CAF50'
-                          : '#F44336',
+                          ? '#34C759'
+                          : '#FF3B30',
                     },
                   ]}
                 >
@@ -505,8 +505,8 @@ export function PortfolioScreen() {
                       color: isPrivacyMode
                         ? currColors.text
                         : summary.unrealizedReturn >= 0
-                          ? '#4CAF50'
-                          : '#F44336',
+                          ? '#34C759'
+                          : '#FF3B30',
                     },
                   ]}
                 >
@@ -550,7 +550,7 @@ export function PortfolioScreen() {
                       color: isPrivacyMode
                         ? currColors.text
                         : summary.xirr < 0
-                          ? '#F44336'
+                          ? '#FF3B30'
                           : currColors.text,
                     },
                   ]}
@@ -605,7 +605,7 @@ export function PortfolioScreen() {
                         style={{
                           color:
                             summary.xirr < 0
-                              ? '#F44336'
+                              ? '#FF3B30'
                               : currColors.textSecondary,
                         }}
                       >
@@ -963,8 +963,8 @@ export function PortfolioScreen() {
                                 size={12}
                                 color={
                                   item.percentageIncrease >= 0
-                                    ? '#4CAF50'
-                                    : '#F44336'
+                                    ? '#34C759'
+                                    : '#FF3B30'
                                 }
                                 style={{
                                   transform: [
@@ -983,8 +983,8 @@ export function PortfolioScreen() {
                                   {
                                     color:
                                       item.percentageIncrease >= 0
-                                        ? '#4CAF50'
-                                        : '#F44336',
+                                        ? '#34C759'
+                                        : '#FF3B30',
                                   },
                                 ]}
                               >
@@ -1169,15 +1169,15 @@ export function PortfolioScreen() {
                           {
                             backgroundColor:
                               item.percentageIncrease >= 0
-                                ? 'rgba(76, 175, 80, 0.1)'
-                                : 'rgba(244, 67, 54, 0.1)',
+                                ? 'rgba(52, 199, 89, 0.12)'
+                                : 'rgba(255, 59, 48, 0.12)',
                           },
                         ]}
                       >
                         <TrendingUp
                           size={12}
                           color={
-                            item.percentageIncrease >= 0 ? '#4CAF50' : '#F44336'
+                            item.percentageIncrease >= 0 ? '#34C759' : '#FF3B30'
                           }
                           style={{
                             transform: [
@@ -1196,8 +1196,8 @@ export function PortfolioScreen() {
                             {
                               color:
                                 item.percentageIncrease >= 0
-                                  ? '#4CAF50'
-                                  : '#F44336',
+                                  ? '#34C759'
+                                  : '#FF3B30',
                             },
                           ]}
                         >

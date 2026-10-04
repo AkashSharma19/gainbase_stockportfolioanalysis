@@ -3,7 +3,6 @@ import Colors from '@/constants/Colors';
 import { InsightCategory } from '@/hooks/useInsights';
 import { useAiStore, AiInsight as Insight } from '@/store/useAiStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
-import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import {
@@ -17,6 +16,8 @@ import {
   Zap,
   Sparkles,
   ChevronRight,
+  Search,
+  XCircle,
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
@@ -540,9 +541,8 @@ INSTRUCTIONS:
                   { backgroundColor: currColors.card },
                 ]}
               >
-                <Ionicons
-                  name="search"
-                  size={20}
+                <Search
+                  size={18}
                   color={currColors.textSecondary}
                   style={styles.searchIcon}
                 />
@@ -557,11 +557,14 @@ INSTRUCTIONS:
                 />
                 {searchQuery.length > 0 && (
                   <TouchableOpacity
-                    onPress={() => setSearchQuery('')}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setSearchQuery('');
+                    }}
                     style={styles.clearButton}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons
-                      name="close-circle"
+                    <XCircle
                       size={18}
                       color={currColors.textSecondary}
                     />

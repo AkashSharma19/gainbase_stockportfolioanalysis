@@ -1,11 +1,10 @@
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { getSectorIcon } from '@/constants/Icons';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
-import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
 import { BackButton } from '@/components/BackButton';
+import { ChevronRight, Search, XCircle } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
   Dimensions,
@@ -18,6 +17,8 @@ import {
 
 import { ThemedText } from '@/components/ThemedText';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { Category3DIcon } from '@/components/Category3DIcon';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -42,7 +43,6 @@ export default function SectorsScreen() {
   }, [tickers, searchQuery]);
 
   const renderSectorItem = ({ item: sName }: { item: string }) => {
-    const { icon: SectorIcon, color } = getSectorIcon(sName);
     return (
       <TouchableOpacity
         style={[
@@ -55,14 +55,13 @@ export default function SectorsScreen() {
           router.push(`/sector-details/${encodeURIComponent(sName)}`);
         }}
       >
-        <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
-          <SectorIcon size={20} color={color} />
+        <View style={styles.iconContainer}>
+          <Category3DIcon name={sName} size={36} />
         </View>
         <ThemedText style={[styles.sectorName, { color: currColors.text }]}>
           {sName}
         </ThemedText>
-        <Ionicons
-          name="chevron-forward"
+        <ChevronRight
           size={18}
           color={currColors.textSecondary}
         />
@@ -82,14 +81,13 @@ export default function SectorsScreen() {
         <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
           All Sectors
         </ThemedText>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 38 }} />
       </View>
 
       <View style={styles.searchContainer}>
-        <View style={[styles.searchBar, { backgroundColor: currColors.card }]}>
-          <Ionicons
-            name="search"
-            size={20}
+        <View style={[styles.searchBar, { backgroundColor: currColors.card, borderColor: currColors.border, borderWidth: StyleSheet.hairlineWidth }]}>
+          <Search
+            size={18}
             color={currColors.textSecondary}
             style={styles.searchIcon}
           />
@@ -102,10 +100,15 @@ export default function SectorsScreen() {
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons
-                name="close-circle"
-                size={20}
+            <TouchableOpacity
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setSearchQuery('');
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <XCircle
+                size={18}
                 color={currColors.textSecondary}
               />
             </TouchableOpacity>

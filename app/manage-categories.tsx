@@ -98,7 +98,7 @@ function CategoryRowItem({
       <Swipeable
         ref={swipeableRef}
         renderRightActions={renderRightActions}
-        enabled={!isReorderMode && !Boolean(categorySearch.trim())}
+        enabled={!isReorderMode && !categorySearch.trim()}
         friction={2}
         rightThreshold={30}
         overshootRight={false}
