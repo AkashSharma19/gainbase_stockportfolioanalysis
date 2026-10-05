@@ -56,12 +56,21 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/21dd3f85-abe7-46ce-b0d1-a2005aa80148",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "plugins": [
       "expo-router",
       "@react-native-community/datetimepicker",
       "expo-background-task",
       "expo-font",
       "expo-web-browser",
+      "expo-updates",
       [
         "@react-native-google-signin/google-signin",
         {

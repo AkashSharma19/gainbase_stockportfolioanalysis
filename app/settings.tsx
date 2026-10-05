@@ -1,26 +1,27 @@
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors from '@/constants/Colors';
-import { usePortfolioStore } from '@/store/usePortfolioStore';
-import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { BackButton } from '@/components/BackButton';
-import { Moon, Smartphone, Sun } from 'lucide-react-native';
 import React from 'react';
 import {
   Platform,
-  SafeAreaView,
   StyleSheet,
   Switch,
   TouchableOpacity,
   View,
+  ScrollView,
 } from 'react-native';
+import { Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import { StatusBar } from 'expo-status-bar';
+import { Moon, Smartphone, Sun } from 'lucide-react-native';
 
+import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
+import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { BackButton } from '@/components/BackButton';
 import { ThemedText } from '@/components/ThemedText';
-import { ScrollView } from 'react-native';
+import { AppUpdateCard } from '@/components/AppUpdateCard';
 
 export default function SettingsScreen() {
-  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const theme = usePortfolioStore((state) => state.theme);
   const setTheme = usePortfolioStore((state) => state.setTheme);
   const showCurrencySymbol = usePortfolioStore(
@@ -32,28 +33,29 @@ export default function SettingsScreen() {
 
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
+  const headerTopPadding = Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24);
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: currColors.background }]}
-    >
+    <View style={[styles.container, { backgroundColor: currColors.background, paddingTop: headerTopPadding }]}>
+      <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <View style={styles.container}>
-        <View
-          style={[styles.header, { backgroundColor: currColors.background }]}
-        >
-          <BackButton />
-          <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
-            Settings
-          </ThemedText>
-          <View style={{ width: 40 }} />
-        </View>
 
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={{ paddingBottom: 40 }}
-          showsVerticalScrollIndicator={false}
-        >
+      <View style={styles.header}>
+        <BackButton />
+        <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+          Settings
+        </ThemedText>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 24, 40) }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Over-The-Air Updates Card */}
+        <AppUpdateCard />
+
           <View
             style={[
               styles.section,
@@ -231,14 +233,10 @@ export default function SettingsScreen() {
           </View>
         </ScrollView>
       </View>
-    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
   },
