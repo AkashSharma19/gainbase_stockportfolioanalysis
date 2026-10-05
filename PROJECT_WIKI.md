@@ -246,11 +246,11 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     4. **High-Resolution Stock Logo Engine (`getCompanyLogoUrl`)**: Dynamically resolves official company logos across the application (Stock Details Hero Card, Explore search & watchlist, Top Movers, Holdings/Allocations, and Transaction Pickers) matching against clean company domains, Twelve Data logos, and ticker symbols.
     5. **Direct Google Sheet Search**: Search across **Explore** and **Add Transaction** operates directly and exclusively against the user's authentic Google Sheet database (`tickers` store), matching symbols and company names without external dictionaries.
 
-### D. Native iOS Scene-Based Lifecycle (iOS SDK Compatibility)
+### D. Native iOS Scene-Based Lifecycle & OTA Integration (iOS SDK Compatibility)
 *   **Architecture**: Conforms to Apple's modern `UIScene` lifecycle required by recent iOS SDKs.
 *   **Scene Delegation**: [SceneDelegate.swift](file:///Users/akashsharma/Documents/Gainbase/ios/Gainbase/SceneDelegate.swift) manages the `UIWindow` and boots React Native via `appDelegate.reactNativeFactory.startReactNative`, handling scene connections, universal links, and deep link URL events.
-*   **App Delegation**: [AppDelegate.swift](file:///Users/akashsharma/Documents/Gainbase/ios/Gainbase/AppDelegate.swift) initializes the `ExpoReactNativeFactory` and provides session configurations via `configurationForConnecting` without legacy direct window binding.
-*   **Configuration**: [Info.plist](file:///Users/akashsharma/Documents/Gainbase/ios/Gainbase/Info.plist) and [app.json](file:///Users/akashsharma/Documents/Gainbase/app.json) declare `UIApplicationSceneManifest`.
+*   **App Delegation & OTA Startup**: [AppDelegate.swift](file:///Users/akashsharma/Documents/Gainbase/ios/Gainbase/AppDelegate.swift) initializes `ExpoReactNativeFactory` using the standard Expo SDK 52 delegate structure (`ReactNativeDelegate.bundleURL()` points cleanly to `main.jsbundle` in Release mode). The internal `ExpoUpdatesReactDelegateHandler` automatically handles the background update checks and replaces the root view whenever a new OTA bundle is ready.
+*   **Configuration**: [Info.plist](file:///Users/akashsharma/Documents/Gainbase/ios/Gainbase/Info.plist), [Expo.plist](file:///Users/akashsharma/Documents/Gainbase/ios/Gainbase/Supporting/Expo.plist), and [app.json](file:///Users/akashsharma/Documents/Gainbase/app.json) declare `UIApplicationSceneManifest` and `EXUpdates` credentials.
 
 ---
 
@@ -285,6 +285,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 
 ### G. Over-The-Air (OTA) Updates, Versioning & Build Management
 *   **Engine**: `expo-updates` with Expo EAS Update cloud CDN.
+*   **Channel & Branch Mapping**: The EAS Update `production` channel is linked directly to the `production` branch (`eas channel:create production`). Native `Expo.plist` requests `expo-channel-name = production`.
 *   **Runtime Version Matching**: `app.json` declares `"runtimeVersion": { "policy": "appVersion" }`. Every OTA update published targets all installed binaries that match the exact semantic version (e.g., `1.0.0`), preventing binary-mismatch crashes.
 *   **Dynamic Version Resolver**: [utils/version.ts](file:///Users/akashsharma/Documents/Gainbase/utils/version.ts) exports `getAppVersionInfo()` which extracts the active `version`, native `buildNumber`, `runtimeVersion`, EAS `channel`, and live OTA update hash (`otaUpdateId`), formatting them into a standard label (e.g. `v1.0.0 (Build 2) • OTA #8f3a1b`).
 *   **In-App Updater Card**: [components/AppUpdateCard.tsx](file:///Users/akashsharma/Documents/Gainbase/components/AppUpdateCard.tsx) embedded in [app/settings.tsx](file:///Users/akashsharma/Documents/Gainbase/app/settings.tsx). Features live channel and dynamic version metadata, manual update check trigger with `Updates.checkForUpdateAsync()`, download progress indicator, and instant reload via `Updates.reloadAsync()`.

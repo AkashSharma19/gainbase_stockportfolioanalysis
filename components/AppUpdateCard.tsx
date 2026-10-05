@@ -21,15 +21,6 @@ import { getAppVersionInfo } from '@/utils/version';
 // Safe check to verify ExpoUpdates native module is actually compiled into the current binary
 function getExpoUpdatesModule(): any {
   try {
-    const isNativeModuleRegistered = Boolean(
-      typeof globalThis !== 'undefined' &&
-      ((globalThis as any).expo?.modules?.ExpoUpdates || (globalThis as any).ExpoModules?.ExpoUpdates)
-    );
-
-    if (!isNativeModuleRegistered) {
-      return null;
-    }
-
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('expo-updates');
   } catch {
@@ -123,10 +114,19 @@ export function AppUpdateCard() {
       setIsChecking(false);
       setIsDownloading(false);
       setStatusMessage(null);
-      Alert.alert(
-        'Update Check',
-        error?.message || 'Unable to connect to the update server. Please check your internet connection.'
-      );
+      
+      const errMsg = error?.message || '';
+      if (errMsg.includes('undefined reason') || errMsg.includes('ERR_UPDATES_CHECK')) {
+        Alert.alert(
+          'Debug Build Detected',
+          'Over-The-Air downloads connect to the EAS CDN in Release builds. To test in Xcode:\n\n1. Go to Product → Scheme → Edit Scheme...\n2. Under "Run", change Build Configuration to "Release".\n3. Press Run (Cmd+R).'
+        );
+      } else {
+        Alert.alert(
+          'Update Check',
+          errMsg || 'Unable to connect to the update server. Please check your internet connection.'
+        );
+      }
     }
   };
 

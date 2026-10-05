@@ -3,15 +3,6 @@ import Constants from 'expo-constants';
 // Safe check to inspect ExpoUpdates module without native crashing
 function getExpoUpdatesModule(): any {
   try {
-    const isNativeModuleRegistered = Boolean(
-      typeof globalThis !== 'undefined' &&
-      ((globalThis as any).expo?.modules?.ExpoUpdates || (globalThis as any).ExpoModules?.ExpoUpdates)
-    );
-
-    if (!isNativeModuleRegistered) {
-      return null;
-    }
-
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('expo-updates');
   } catch {
