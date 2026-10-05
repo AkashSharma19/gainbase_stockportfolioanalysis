@@ -16,6 +16,7 @@ import {
 import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { getAppVersionInfo } from '@/utils/version';
 
 // Safe check to verify ExpoUpdates native module is actually compiled into the current binary
 function getExpoUpdatesModule(): any {
@@ -46,18 +47,9 @@ export function AppUpdateCard() {
   const [isUpdateReady, setIsUpdateReady] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Safe runtime channel inspection
-  const channelInfo = useMemo(() => {
-    try {
-      const Updates = getExpoUpdatesModule();
-      if (Updates && Updates.isEnabled) {
-        return Updates.channel || 'Production';
-      }
-    } catch {
-      // Native module not linked in current binary
-    }
-    return 'Production';
-  }, []);
+  const versionInfo = useMemo(() => {
+    return getAppVersionInfo();
+  }, [isUpdateReady]);
 
   const handleHaptic = (style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Light) => {
     try {
@@ -164,7 +156,7 @@ export function AppUpdateCard() {
             Over-The-Air Updates
           </ThemedText>
           <ThemedText style={[styles.subtitle, { color: currColors.textSecondary }]}>
-            {statusMessage || `Gainbase v1.0.0 • ${channelInfo}`}
+            {statusMessage || `Gainbase ${versionInfo.formattedString} • ${versionInfo.channel}`}
           </ThemedText>
         </View>
       </View>

@@ -622,6 +622,18 @@ export default function AddAccountScreen() {
                 clearButtonMode="while-editing"
                 autoCorrect={false}
               />
+              {Boolean(brandSearchQuery) && (
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setBrandSearchQuery('');
+                  }}
+                  style={{ padding: 4 }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={14} color={currColors.textSecondary} />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
@@ -853,6 +865,18 @@ export default function AddAccountScreen() {
               clearButtonMode="while-editing"
               autoCorrect={false}
             />
+            {Boolean(iconSearchQuery) && (
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setIconSearchQuery('');
+                }}
+                style={{ padding: 4 }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <X size={14} color={currColors.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* 3D Icons Grid */}

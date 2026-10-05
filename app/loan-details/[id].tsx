@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
   Edit2,
@@ -51,6 +51,7 @@ type ScheduleTab = 'upcoming' | 'paid' | 'all';
 export default function LoanDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
 
@@ -482,7 +483,13 @@ export default function LoanDetailsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 24) + 32 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* ─── 1. Unified Hero Card (Outstanding, Progress Bar & Metrics in 1 Card) ─── */}
         <View style={[styles.outstandingCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
           {/* Header & Lender */}

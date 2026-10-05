@@ -366,11 +366,11 @@ export default function StockDetailsScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 24) + 40 },
+        ]}
         showsVerticalScrollIndicator={false}
-        showsHorizontalScrollIndicator={false}
-        bounces={false}
-        overScrollMode="never"
       >
         {/* Hero Chart (7 Day Trend) */}
 

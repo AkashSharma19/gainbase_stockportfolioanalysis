@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
   Edit2,
@@ -18,6 +18,7 @@ import {
   TrendingDown,
   Activity,
   ArrowRightLeft,
+  Info,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -31,6 +32,7 @@ import { Category3DIcon } from '@/components/Category3DIcon';
 export default function AccountDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
 
@@ -182,7 +184,13 @@ export default function AccountDetailsScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 24) + 32 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Balance Hero Card */}
         <View style={[styles.balanceCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
           <ThemedText style={[styles.balanceLabel, { color: currColors.textSecondary }]}>
@@ -299,9 +307,22 @@ export default function AccountDetailsScreen() {
 
         {accountTxs.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center' }}>
-              No transactions logged for this account.
+            <Info size={32} color={currColors.textSecondary} style={{ marginBottom: 10 }} />
+            <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', fontSize: 13, lineHeight: 20 }}>
+              No transactions logged for this account yet.
             </ThemedText>
+            <TouchableOpacity
+              style={[styles.addTxPromptBtn, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}
+              onPress={() => {
+                handleHaptic();
+                router.push({ pathname: '/add-money-transaction', params: { defaultAccountId: account.id } });
+              }}
+              activeOpacity={0.7}
+            >
+              <ThemedText style={[styles.addTxPromptText, { color: currColors.tintMoney }]}>
+                + Log First Transaction
+              </ThemedText>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={[styles.txsList, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
@@ -507,6 +528,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 24,
     alignItems: 'center',
+  },
+  addTxPromptBtn: {
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  addTxPromptText: {
+    fontSize: 13,
+    fontFamily: 'Outfit_600SemiBold',
   },
   txsList: {
     marginHorizontal: 16,

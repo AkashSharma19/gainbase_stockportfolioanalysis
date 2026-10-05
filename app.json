@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.akashsharma.gainbase",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "entitlements": {
         "com.apple.security.application-groups": [
           "group.com.akashsharma.gainbase"
@@ -49,7 +49,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "versionCode": 2
     },
     "web": {
       "bundler": "metro",

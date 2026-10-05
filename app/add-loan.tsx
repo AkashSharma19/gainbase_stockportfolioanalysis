@@ -647,6 +647,18 @@ export default function AddLoanScreen() {
                 clearButtonMode="while-editing"
                 autoCorrect={false}
               />
+              {Boolean(iconSearch) && (
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setIconSearch('');
+                  }}
+                  style={{ padding: 4 }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={14} color={currColors.textSecondary} />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 

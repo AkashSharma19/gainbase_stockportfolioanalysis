@@ -751,6 +751,18 @@ export default function ManageCategoriesScreen() {
                 clearButtonMode="while-editing"
                 autoCorrect={false}
               />
+              {Boolean(iconPickerSearch) && (
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setIconPickerSearch('');
+                  }}
+                  style={{ padding: 4 }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={14} color={currColors.textSecondary} />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
