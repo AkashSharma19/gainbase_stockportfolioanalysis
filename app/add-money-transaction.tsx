@@ -43,7 +43,7 @@ import { MoneyTransaction, Account, AccountType } from '@/types/money';
 import { BankLogo } from '@/components/BankLogo';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { Category3DIcon } from '@/components/Category3DIcon';
-import { formatCurrencyINR, parseIndianAmount } from '@/utils/formatters';
+import { formatCurrencyINR, parseIndianAmount, formatExpressionWithIndianCommas, formatIndianAmount } from '@/utils/formatters';
 
 const ACCOUNT_TYPE_ICONS: Record<AccountType, { color: string }> = {
   wallet: { color: '#00C9A7' },
@@ -273,6 +273,17 @@ export default function AddMoneyTransactionScreen() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [accountSearchQuery, setAccountSearchQuery] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Live evaluated preview when typing math expressions (e.g. 5000 + 2500)
+  const evaluatedPreview = useMemo(() => {
+    if (/[+\-×÷]/.test(amountExpr)) {
+      const res = evaluateMathExpression(amountExpr);
+      if (res && res !== amountExpr && !isNaN(Number(res))) {
+        return formatIndianAmount(res);
+      }
+    }
+    return null;
+  }, [amountExpr]);
 
   // Load defaults or editing values
   useEffect(() => {
@@ -814,9 +825,19 @@ export default function AddMoneyTransactionScreen() {
             </View>
 
             <View style={styles.amountTextWrap}>
-              <ThemedText style={[styles.amountValueText, { color: currColors.text }]} numberOfLines={1}>
-                {amountExpr || '0'}
+              <ThemedText
+                style={[styles.amountValueText, { color: currColors.text }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.65}
+              >
+                {formatExpressionWithIndianCommas(amountExpr) || '0'}
               </ThemedText>
+              {evaluatedPreview && (
+                <ThemedText style={[styles.amountEvaluatedPreview, { color: currColors.tintMoney }]} numberOfLines={1}>
+                  = {currencySymbol}{evaluatedPreview}
+                </ThemedText>
+              )}
             </View>
 
             {/* Note / Date Quick Shortcut */}
@@ -1626,6 +1647,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontFamily: 'Outfit_600SemiBold',
     letterSpacing: -0.5,
+  },
+  amountEvaluatedPreview: {
+    fontSize: 12,
+    fontFamily: 'Outfit_600SemiBold',
+    marginTop: -1,
   },
   noteQuickBtn: {
     width: 36,

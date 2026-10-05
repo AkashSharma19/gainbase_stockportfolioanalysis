@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,8 +8,9 @@ import {
   Modal,
   Alert,
   Platform,
-  Keyboard,
   KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -18,7 +19,6 @@ import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
 } from 'react-native-draggable-flatlist';
-import { Swipeable } from 'react-native-gesture-handler';
 import {
   Plus,
   Search,
@@ -26,9 +26,9 @@ import {
   Trash2,
   Check,
   X,
-  ChevronDown,
   ArrowUpDown,
   GripVertical,
+  Sparkles,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -42,6 +42,31 @@ import {
   findBest3DIconForText,
 } from '@/constants/Category3DIcons';
 
+const DEFAULT_CATEGORIES: { income: string[]; expense: string[] } = {
+  income: ['Salary', 'Investments', 'Business', 'Freelance', 'Gift', 'Refund', 'Other'],
+  expense: [
+    'Holiday',
+    'Grocery',
+    'Food',
+    'Beverage',
+    'Transport',
+    'Internet',
+    'Electric',
+    'Water',
+    'Gas',
+    'Gym',
+    'Books',
+    'Shopping',
+    'Medical',
+    'Entertainment',
+    'House',
+    'Education',
+    'Gifts',
+    'EMI Payments',
+    'Others',
+  ],
+};
+
 interface CategoryRowItemProps {
   catName: string;
   index: number;
@@ -51,12 +76,9 @@ interface CategoryRowItemProps {
   currColors: any;
   count: number;
   categorySearch: string;
-  isInlineAdding: boolean;
-  editingCatName: string | null;
   drag: () => void;
   isActive: boolean;
   startEditCategory: (name: string) => void;
-  handleDelete: (name: string) => void;
 }
 
 function CategoryRowItem({
@@ -68,96 +90,74 @@ function CategoryRowItem({
   currColors,
   count,
   categorySearch,
-  isInlineAdding,
-  editingCatName,
   drag,
   isActive,
   startEditCategory,
-  handleDelete,
 }: CategoryRowItemProps) {
-  const swipeableRef = useRef<Swipeable>(null);
-
-  const renderRightActions = () => (
-    <View style={styles.swipeRightActionsContainer}>
-      <TouchableOpacity
-        style={styles.swipeDeleteBtn}
-        onPress={() => {
-          swipeableRef.current?.close();
-          handleDelete(catName);
-        }}
-        activeOpacity={0.8}
-      >
-        <Trash2 size={17} color="#FFFFFF" strokeWidth={2.2} />
-        <ThemedText style={styles.swipeDeleteText}>Delete</ThemedText>
-      </TouchableOpacity>
-    </View>
-  );
-
   return (
     <ScaleDecorator activeScale={1.03}>
-      <Swipeable
-        ref={swipeableRef}
-        renderRightActions={renderRightActions}
-        enabled={!isReorderMode && !categorySearch.trim()}
-        friction={2}
-        rightThreshold={30}
-        overshootRight={false}
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => {
+          if (!isReorderMode) startEditCategory(catName);
+        }}
+        onLongPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          drag();
+        }}
+        disabled={Boolean(categorySearch.trim())}
+        style={[
+          styles.categoryRow,
+          { backgroundColor: currColors.card },
+          !isLast && [styles.rowBorder, { borderBottomColor: currColors.border }],
+          isActive && [
+            styles.activeDraggingRow,
+            {
+              backgroundColor: isDark ? '#00C9A726' : '#E6FAF6',
+              borderColor: currColors.tintMoney,
+            },
+          ],
+        ]}
       >
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => {
-            if (!isReorderMode) startEditCategory(catName);
-          }}
-          onLongPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            drag();
-          }}
-          disabled={Boolean(categorySearch.trim()) || isInlineAdding || Boolean(editingCatName)}
-          style={[
-            styles.categoryRow,
-            { backgroundColor: currColors.card },
-            !isLast && [styles.rowBorder, { borderBottomColor: currColors.border }],
-            isActive && [
-              styles.activeDraggingRow,
-              {
-                backgroundColor: isDark ? '#00C9A726' : '#E6FAF6',
-                borderColor: currColors.tintMoney,
-              },
-            ],
-          ]}
-        >
-          <View style={styles.categoryLeft}>
-            <View style={styles.category3DWrap}>
-              <Category3DIcon name={catName} size={36} />
-            </View>
-            <View style={styles.categoryInfo}>
-              <ThemedText style={[styles.categoryTitle, { color: currColors.text }]} numberOfLines={1}>
-                {catName}
-              </ThemedText>
-              <ThemedText style={[styles.categorySubtitle, { color: currColors.textSecondary }]}>
-                {isReorderMode ? `Position #${index + 1}` : `${count} ${count === 1 ? 'transaction' : 'transactions'}`}
-              </ThemedText>
-            </View>
+        <View style={styles.categoryLeft}>
+          <View style={styles.category3DWrap}>
+            <Category3DIcon name={catName} size={36} />
           </View>
+          <View style={styles.categoryInfo}>
+            <ThemedText style={[styles.categoryTitle, { color: currColors.text }]} numberOfLines={1}>
+              {catName}
+            </ThemedText>
+            <ThemedText style={[styles.categorySubtitle, { color: currColors.textSecondary }]}>
+              {isReorderMode ? `Position #${index + 1}` : `${count} ${count === 1 ? 'transaction' : 'transactions'}`}
+            </ThemedText>
+          </View>
+        </View>
 
-          {isReorderMode && (
-            <TouchableOpacity
-              onPressIn={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                drag();
-              }}
-              style={[
-                styles.dragHandleBtn,
-                { backgroundColor: currColors.cardSecondary },
-                isActive && { backgroundColor: currColors.tintMoney },
-              ]}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <GripVertical size={18} color={isActive ? '#FFFFFF' : currColors.tintMoney} strokeWidth={2.2} />
-            </TouchableOpacity>
-          )}
-        </TouchableOpacity>
-      </Swipeable>
+        {isReorderMode ? (
+          <TouchableOpacity
+            onPressIn={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              drag();
+            }}
+            style={[
+              styles.dragHandleBtn,
+              { backgroundColor: currColors.cardSecondary },
+              isActive && { backgroundColor: currColors.tintMoney },
+            ]}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <GripVertical size={18} color={isActive ? '#FFFFFF' : currColors.tintMoney} strokeWidth={2.2} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={() => startEditCategory(catName)}
+            style={[styles.editIconBtn, { backgroundColor: currColors.cardSecondary }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Pencil size={14} color={currColors.textSecondary} />
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
     </ScaleDecorator>
   );
 }
@@ -170,81 +170,56 @@ export default function ManageCategoriesScreen() {
 
   const headerTopPadding = Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24);
 
-  const storeCategories = useMoneyStore((state) => state.categories) || {
-    income: ['Salary', 'Investments', 'Business', 'Freelance', 'Gift', 'Refund', 'Other'],
-    expense: [
-      'Holiday',
-      'Grocery',
-      'Food',
-      'Beverage',
-      'Transport',
-      'Internet',
-      'Electric',
-      'Water',
-      'Gas',
-      'Gym',
-      'Books',
-      'Shopping',
-      'Medical',
-      'Entertainment',
-      'House',
-      'Education',
-      'Gifts',
-      'EMI Payments',
-      'Others',
-    ],
-  };
-
-  const categoryMetadata = useMoneyStore((state) => state.categoryMetadata) || {};
+  // Stable selectors from Zustand store
+  const rawCategories = useMoneyStore((state) => state.categories);
+  const storeCategories = rawCategories || DEFAULT_CATEGORIES;
+  const categoryMetadata = useMoneyStore((state) => state.categoryMetadata);
   const addCategory = useMoneyStore((state) => state.addCategory);
   const updateCategory = useMoneyStore((state) => state.updateCategory);
   const removeCategory = useMoneyStore((state) => state.removeCategory);
   const reorderCategories = useMoneyStore((state) => state.reorderCategories);
-  const moneyTransactions = useMoneyStore((state) => state.moneyTransactions) || [];
+  const moneyTransactions = useMoneyStore((state) => state.moneyTransactions);
 
   // Tab State
   const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense');
   const [categorySearch, setCategorySearch] = useState('');
   const [isReorderMode, setIsReorderMode] = useState(false);
 
-  // Inline Adding State
-  const [isInlineAdding, setIsInlineAdding] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
-  const [newCatIcon, setNewCatIcon] = useState('food');
+  // Bottom Sheet Drawer State ('add' | 'edit' | null)
+  const [drawerMode, setDrawerMode] = useState<'add' | 'edit' | null>(null);
+
+  // Add / Edit form values
+  const [formName, setFormName] = useState('');
+  const [formIcon, setFormIcon] = useState('food');
+  const [editingTargetCatName, setEditingTargetCatName] = useState<string | null>(null);
   const [isIconManuallyOverridden, setIsIconManuallyOverridden] = useState(false);
 
-  // Inline Editing State
-  const [editingCatName, setEditingCatName] = useState<string | null>(null);
-  const [editFormName, setEditFormName] = useState('');
-  const [editFormIcon, setEditFormIcon] = useState('');
-
-  // Icon Picker Full Page Modal State
+  // Full-Page Icon Picker Modal State
   const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
-  const [iconPickerTarget, setIconPickerTarget] = useState<'add' | 'edit'>('add');
   const [iconPickerSearch, setIconPickerSearch] = useState('');
 
-  const flatListRef = useRef<any>(null);
-  const addInputRef = useRef<TextInput>(null);
-  const editInputRef = useRef<TextInput>(null);
+  const drawerInputRef = useRef<TextInput>(null);
 
-  const handleHaptic = () => {
+  const handleHaptic = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
+  }, []);
 
   // Transaction counts
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    moneyTransactions.forEach((tx) => {
-      if (tx.category) {
-        counts[tx.category] = (counts[tx.category] || 0) + 1;
-      }
-    });
+    if (Array.isArray(moneyTransactions)) {
+      moneyTransactions.forEach((tx) => {
+        if (tx && tx.category) {
+          counts[tx.category] = (counts[tx.category] || 0) + 1;
+        }
+      });
+    }
     return counts;
   }, [moneyTransactions]);
 
   // Current list of categories for active tab
   const currentTabCategories = useMemo(() => {
-    return storeCategories[activeTab] || [];
+    return storeCategories[activeTab] || DEFAULT_CATEGORIES[activeTab] || [];
   }, [storeCategories, activeTab]);
 
   // Filtered categories for current tab with search query
@@ -254,81 +229,53 @@ export default function ManageCategoriesScreen() {
     return currentTabCategories.filter((c) => c.toLowerCase().includes(q));
   }, [currentTabCategories, categorySearch]);
 
-  // Auto-suggest icon when typing new category name
-  const handleNewNameChange = (text: string) => {
-    setNewCatName(text);
+  // Open Drawer for Add
+  const openAddDrawer = useCallback(() => {
+    handleHaptic();
+    setIsReorderMode(false);
+    setDrawerMode('add');
+    setEditingTargetCatName(null);
+    setFormName('');
+    setIsIconManuallyOverridden(false);
+    setFormIcon(activeTab === 'income' ? 'banknote' : 'food');
+  }, [activeTab, handleHaptic]);
+
+  // Open Drawer for Edit
+  const startEditCategory = useCallback((catName: string) => {
+    handleHaptic();
+    setIsReorderMode(false);
+    setDrawerMode('edit');
+    setEditingTargetCatName(catName);
+    setFormName(catName);
+    const meta = categoryMetadata ? categoryMetadata[catName] : undefined;
+    setFormIcon(meta?.icon || catName.toLowerCase());
+    setIsIconManuallyOverridden(false);
+  }, [categoryMetadata, handleHaptic]);
+
+  // Close Drawer
+  const closeDrawer = useCallback(() => {
+    Keyboard.dismiss();
+    setDrawerMode(null);
+    setEditingTargetCatName(null);
+    setFormName('');
+  }, []);
+
+  // Handle Form Name typing with auto-suggest icon
+  const handleFormNameChange = (text: string) => {
+    setFormName(text);
     if (!isIconManuallyOverridden) {
       if (text.trim().length > 0) {
         const bestIcon = findBest3DIconForText(text);
-        setNewCatIcon(bestIcon);
+        setFormIcon(bestIcon);
       } else {
-        setNewCatIcon(activeTab === 'income' ? 'banknote' : 'food');
+        setFormIcon(activeTab === 'income' ? 'banknote' : 'food');
       }
     }
   };
 
-  // Auto-suggest icon when editing category name
-  const handleEditNameChange = (text: string) => {
-    setEditFormName(text);
-    if (!isIconManuallyOverridden && text.trim().length > 0) {
-      const bestIcon = findBest3DIconForText(text);
-      setEditFormIcon(bestIcon);
-    }
-  };
-
-  // Start Inline Add
-  const startInlineAdd = () => {
-    handleHaptic();
-    setEditingCatName(null);
-    setIsReorderMode(false);
-    setIsInlineAdding(true);
-    setNewCatName('');
-    setIsIconManuallyOverridden(false);
-    setNewCatIcon(activeTab === 'income' ? 'banknote' : 'food');
-
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 150);
-
-    setTimeout(() => {
-      addInputRef.current?.focus();
-    }, 50);
-  };
-
-  // Start Inline Edit
-  const startEditCategory = (catName: string) => {
-    handleHaptic();
-    setIsInlineAdding(false);
-    setIsReorderMode(false);
-    setEditingCatName(catName);
-    setEditFormName(catName);
-    const meta = categoryMetadata[catName];
-    setEditFormIcon(meta?.icon || catName.toLowerCase());
-    setIsIconManuallyOverridden(false);
-
-    const index = displayedCategories.findIndex((c) => c === catName);
-    if (index >= 0) {
-      setTimeout(() => {
-        try {
-          flatListRef.current?.scrollToIndex({
-            index,
-            viewPosition: 1,
-            animated: true,
-          });
-        } catch {
-          flatListRef.current?.scrollToOffset({ offset: index * 56, animated: true });
-        }
-      }, 150);
-    }
-
-    setTimeout(() => {
-      editInputRef.current?.focus();
-    }, 100);
-  };
-
   // Submit New Category
   const handleSaveNewCategory = () => {
-    const cleanName = newCatName.trim();
+    const cleanName = formName.trim();
     if (!cleanName) {
       Alert.alert('Required', 'Please enter a category name.');
       return;
@@ -344,16 +291,14 @@ export default function ManageCategoriesScreen() {
     }
 
     handleHaptic();
-    addCategory(activeTab, cleanName, newCatIcon, currColors.tintMoney);
-    setNewCatName('');
-    setIsInlineAdding(false);
-    setIsIconManuallyOverridden(false);
+    addCategory(activeTab, cleanName, formIcon, currColors.tintMoney);
+    closeDrawer();
   };
 
   // Save Edited Category
   const handleSaveEditedCategory = () => {
-    if (!editingCatName) return;
-    const cleanName = editFormName.trim();
+    if (!editingTargetCatName) return;
+    const cleanName = formName.trim();
     if (!cleanName) {
       Alert.alert('Required', 'Please enter a category name.');
       return;
@@ -361,7 +306,7 @@ export default function ManageCategoriesScreen() {
 
     const currentList = storeCategories[activeTab] || [];
     const isDuplicate = currentList.some(
-      (c) => c.toLowerCase() === cleanName.toLowerCase() && c !== editingCatName
+      (c) => c.toLowerCase() === cleanName.toLowerCase() && c !== editingTargetCatName
     );
     if (isDuplicate) {
       Alert.alert('Duplicate', 'A category with this name already exists.');
@@ -369,8 +314,8 @@ export default function ManageCategoriesScreen() {
     }
 
     handleHaptic();
-    updateCategory(activeTab, editingCatName, cleanName, editFormIcon, currColors.tintMoney);
-    setEditingCatName(null);
+    updateCategory(activeTab, editingTargetCatName, cleanName, formIcon, currColors.tintMoney);
+    closeDrawer();
   };
 
   // Delete Category
@@ -395,8 +340,8 @@ export default function ManageCategoriesScreen() {
           style: 'destructive',
           onPress: () => {
             handleHaptic();
-            if (editingCatName === catName) {
-              setEditingCatName(null);
+            if (drawerMode && editingTargetCatName === catName) {
+              closeDrawer();
             }
             removeCategory(activeTab, catName);
           },
@@ -406,9 +351,8 @@ export default function ManageCategoriesScreen() {
   };
 
   // Open Full-Page Icon Picker
-  const openIconPicker = (target: 'add' | 'edit') => {
+  const openIconPicker = () => {
     handleHaptic();
-    setIconPickerTarget(target);
     setIconPickerSearch('');
     setIsIconPickerVisible(true);
   };
@@ -416,13 +360,8 @@ export default function ManageCategoriesScreen() {
   // Select Icon from Full-Page Picker
   const handleSelectIcon = (iconId: string) => {
     handleHaptic();
-    if (iconPickerTarget === 'add') {
-      setNewCatIcon(iconId);
-      setIsIconManuallyOverridden(true);
-    } else {
-      setEditFormIcon(iconId);
-      setIsIconManuallyOverridden(true);
-    }
+    setFormIcon(iconId);
+    setIsIconManuallyOverridden(true);
     setIsIconPickerVisible(false);
   };
 
@@ -442,86 +381,38 @@ export default function ManageCategoriesScreen() {
   }, [iconPickerSearch]);
 
   // Render individual Category Item with Drag capability
-  const renderCategoryItem = ({ item: catName, getIndex, drag, isActive }: RenderItemParams<string>) => {
-    const index = getIndex() ?? 0;
-    const count = categoryCounts[catName] || 0;
-    const isEditingThis = editingCatName === catName;
-    const isLast = index === displayedCategories.length - 1 && !isInlineAdding;
+  const renderCategoryItem = useCallback(
+    ({ item: catName, getIndex, drag, isActive }: RenderItemParams<string>) => {
+      const index = getIndex() ?? 0;
+      const count = categoryCounts[catName] || 0;
+      const isLast = index === displayedCategories.length - 1;
 
-    if (isEditingThis) {
-      // Inline Edit Row
       return (
-        <View
-          style={[
-            styles.inlineEditRow,
-            { backgroundColor: isDark ? '#00C9A714' : '#00C9A70A', borderColor: currColors.tintMoney },
-            !isLast && [styles.rowBorder, { borderBottomColor: currColors.border }],
-          ]}
-        >
-          {/* 3D Icon Button (Tap to pick) */}
-          <TouchableOpacity
-            style={[styles.inlineIconButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.tintMoney }]}
-            onPress={() => openIconPicker('edit')}
-            activeOpacity={0.7}
-          >
-            <Category3DIcon name={editFormName} icon={editFormIcon} size={34} />
-            <View style={[styles.iconEditBadge, { backgroundColor: currColors.tintMoney }]}>
-              <Pencil size={8} color="#FFFFFF" strokeWidth={2.5} />
-            </View>
-          </TouchableOpacity>
-
-          {/* Category Name Input */}
-          <View style={styles.inlineInputWrap}>
-            <TextInput
-              ref={editInputRef}
-              style={[styles.inlineInput, { color: currColors.text }]}
-              value={editFormName}
-              onChangeText={handleEditNameChange}
-              placeholder="Category name"
-              placeholderTextColor={currColors.textSecondary}
-              returnKeyType="done"
-              onSubmitEditing={handleSaveEditedCategory}
-            />
-          </View>
-
-          {/* Actions: Cancel & Save */}
-          <View style={styles.inlineActionButtons}>
-            <TouchableOpacity
-              style={[styles.inlineSmallBtn, { backgroundColor: currColors.cardSecondary }]}
-              onPress={() => setEditingCatName(null)}
-            >
-              <X size={15} color={currColors.textSecondary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.inlineSmallBtn, { backgroundColor: currColors.tintMoney }]}
-              onPress={handleSaveEditedCategory}
-            >
-              <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <CategoryRowItem
+          catName={catName}
+          index={index}
+          isLast={isLast}
+          isReorderMode={isReorderMode}
+          isDark={isDark}
+          currColors={currColors}
+          count={count}
+          categorySearch={categorySearch}
+          drag={drag}
+          isActive={isActive}
+          startEditCategory={startEditCategory}
+        />
       );
-    }
-
-    return (
-      <CategoryRowItem
-        catName={catName}
-        index={index}
-        isLast={isLast}
-        isReorderMode={isReorderMode}
-        isDark={isDark}
-        currColors={currColors}
-        count={count}
-        categorySearch={categorySearch}
-        isInlineAdding={isInlineAdding}
-        editingCatName={editingCatName}
-        drag={drag}
-        isActive={isActive}
-        startEditCategory={startEditCategory}
-        handleDelete={handleDelete}
-      />
-    );
-  };
+    },
+    [
+      categoryCounts,
+      displayedCategories.length,
+      isReorderMode,
+      isDark,
+      currColors,
+      categorySearch,
+      startEditCategory,
+    ]
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: currColors.background, paddingTop: headerTopPadding }]}>
@@ -542,8 +433,7 @@ export default function ManageCategoriesScreen() {
             onPress={() => {
               handleHaptic();
               setIsReorderMode(!isReorderMode);
-              if (isInlineAdding) setIsInlineAdding(false);
-              if (editingCatName) setEditingCatName(null);
+              if (drawerMode) closeDrawer();
             }}
             activeOpacity={0.8}
           >
@@ -551,7 +441,7 @@ export default function ManageCategoriesScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.headerAddBtn, { backgroundColor: currColors.tintMoney }]}
-            onPress={startInlineAdd}
+            onPress={openAddDrawer}
             activeOpacity={0.8}
           >
             <Plus size={19} color="#FFFFFF" strokeWidth={2.5} />
@@ -559,190 +449,265 @@ export default function ManageCategoriesScreen() {
         </View>
       </View>
 
-      {/* Content wrapped in KeyboardAvoidingView */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        {/* Minimal Segmented Tab Switcher (Expense / Income) */}
-        <View style={[styles.tabContainer, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
-          <TouchableOpacity
+      {/* Minimal Segmented Tab Switcher (Expense / Income) */}
+      <View style={[styles.tabContainer, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
+        <TouchableOpacity
+          style={[
+            styles.tabBtn,
+            activeTab === 'expense' && [styles.tabBtnActive, { backgroundColor: currColors.card, borderColor: currColors.border }],
+          ]}
+          onPress={() => {
+            handleHaptic();
+            setActiveTab('expense');
+            if (drawerMode) closeDrawer();
+          }}
+          activeOpacity={0.8}
+        >
+          <ThemedText
             style={[
-              styles.tabBtn,
-              activeTab === 'expense' && [styles.tabBtnActive, { backgroundColor: currColors.card, borderColor: currColors.border }],
+              styles.tabBtnText,
+              { color: activeTab === 'expense' ? '#FF3B30' : currColors.textSecondary },
+              activeTab === 'expense' && styles.tabBtnTextActive,
             ]}
-            onPress={() => {
-              handleHaptic();
-              setActiveTab('expense');
-              setIsInlineAdding(false);
-              setEditingCatName(null);
-            }}
-            activeOpacity={0.8}
           >
-            <ThemedText
-              style={[
-                styles.tabBtnText,
-                { color: activeTab === 'expense' ? '#FF3B30' : currColors.textSecondary },
-                activeTab === 'expense' && styles.tabBtnTextActive,
-              ]}
-            >
-              Expense ({storeCategories.expense?.length || 0})
-            </ThemedText>
-          </TouchableOpacity>
+            Expense ({storeCategories.expense?.length || 0})
+          </ThemedText>
+        </TouchableOpacity>
 
-          <TouchableOpacity
+        <TouchableOpacity
+          style={[
+            styles.tabBtn,
+            activeTab === 'income' && [styles.tabBtnActive, { backgroundColor: currColors.card, borderColor: currColors.border }],
+          ]}
+          onPress={() => {
+            handleHaptic();
+            setActiveTab('income');
+            if (drawerMode) closeDrawer();
+          }}
+          activeOpacity={0.8}
+        >
+          <ThemedText
             style={[
-              styles.tabBtn,
-              activeTab === 'income' && [styles.tabBtnActive, { backgroundColor: currColors.card, borderColor: currColors.border }],
+              styles.tabBtnText,
+              { color: activeTab === 'income' ? '#34C759' : currColors.textSecondary },
+              activeTab === 'income' && styles.tabBtnTextActive,
             ]}
-            onPress={() => {
-              handleHaptic();
-              setActiveTab('income');
-              setIsInlineAdding(false);
-              setEditingCatName(null);
-            }}
-            activeOpacity={0.8}
           >
-            <ThemedText
-              style={[
-                styles.tabBtnText,
-                { color: activeTab === 'income' ? '#34C759' : currColors.textSecondary },
-                activeTab === 'income' && styles.tabBtnTextActive,
-              ]}
-            >
-              Income ({storeCategories.income?.length || 0})
+            Income ({storeCategories.income?.length || 0})
+          </ThemedText>
+        </TouchableOpacity>
+      </View>
+
+      {/* Search Categories Bar or Reorder Hint Banner */}
+      {isReorderMode ? (
+        <View style={styles.reorderHintWrapper}>
+          <View style={[styles.reorderHintBanner, { backgroundColor: isDark ? '#00C9A718' : '#00C9A70F', borderColor: currColors.tintMoney }]}>
+            <GripVertical size={16} color={currColors.tintMoney} />
+            <ThemedText style={[styles.reorderHintText, { color: currColors.tintMoney }]}>
+              Drag the handles to reorder categories
             </ThemedText>
-          </TouchableOpacity>
+          </View>
         </View>
-
-        {/* Search Categories Bar or Reorder Hint Banner */}
-        {isReorderMode ? (
-          <View style={styles.reorderHintWrapper}>
-            <View style={[styles.reorderHintBanner, { backgroundColor: isDark ? '#00C9A718' : '#00C9A70F', borderColor: currColors.tintMoney }]}>
-              <GripVertical size={16} color={currColors.tintMoney} />
-              <ThemedText style={[styles.reorderHintText, { color: currColors.tintMoney }]}>
-                Drag the handles to reorder categories
-              </ThemedText>
-            </View>
+      ) : (
+        <View style={styles.searchBarWrapper}>
+          <View style={[styles.searchBarBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            <Search size={15} color={currColors.textSecondary} style={{ marginRight: 8 }} />
+            <TextInput
+              style={[styles.searchBarInput, { color: currColors.text }]}
+              placeholder={`Search ${activeTab} categories...`}
+              placeholderTextColor={currColors.textSecondary}
+              value={categorySearch}
+              onChangeText={setCategorySearch}
+              clearButtonMode="while-editing"
+            />
+            {Boolean(categorySearch) && (
+              <TouchableOpacity onPress={() => setCategorySearch('')} style={{ padding: 4 }}>
+                <X size={14} color={currColors.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
-        ) : (
-          <View style={styles.searchBarWrapper}>
-            <View style={[styles.searchBarBox, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-              <Search size={15} color={currColors.textSecondary} style={{ marginRight: 8 }} />
-              <TextInput
-                style={[styles.searchBarInput, { color: currColors.text }]}
-                placeholder={`Search ${activeTab} categories...`}
-                placeholderTextColor={currColors.textSecondary}
-                value={categorySearch}
-                onChangeText={setCategorySearch}
-                clearButtonMode="while-editing"
-              />
-              {Boolean(categorySearch) && (
-                <TouchableOpacity onPress={() => setCategorySearch('')} style={{ padding: 4 }}>
-                  <X size={14} color={currColors.textSecondary} />
+        </View>
+      )}
+
+      {/* Draggable Categories FlatList */}
+      <View style={styles.listWrapper}>
+        <View style={[styles.cardContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <DraggableFlatList
+            data={displayedCategories}
+            onDragEnd={({ data }) => {
+              if (!categorySearch.trim()) {
+                reorderCategories(activeTab, data);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+            }}
+            keyExtractor={(item) => item}
+            renderItem={renderCategoryItem}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{
+              paddingBottom: Math.max(insets.bottom, 20),
+            }}
+            ListEmptyComponent={
+              <View style={styles.emptyWrap}>
+                <ThemedText style={{ color: currColors.textSecondary, fontSize: 13 }}>
+                  No categories found for "{categorySearch}"
+                </ThemedText>
+              </View>
+            }
+          />
+        </View>
+      </View>
+
+      {/* ========================================================================= */}
+      {/* BOTTOM SHEET DRAWER OVERLAY FOR ADD & EDIT (IN-TREE, KEYBOARD SAFE) */}
+      {/* ========================================================================= */}
+      {drawerMode !== null && (
+        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.drawerOverlay}
+          >
+            {/* Dismiss backdrop on tap */}
+            <TouchableWithoutFeedback onPress={closeDrawer}>
+              <View style={styles.drawerBackdrop} />
+            </TouchableWithoutFeedback>
+
+            <View
+              style={[
+                styles.drawerSheet,
+                {
+                  backgroundColor: currColors.card,
+                  borderColor: currColors.border,
+                  paddingBottom: Math.max(insets.bottom, 16) + 8,
+                },
+              ]}
+            >
+              {/* Drawer Drag Indicator */}
+              <View style={styles.drawerHandleWrap}>
+                <View style={[styles.drawerHandle, { backgroundColor: currColors.border }]} />
+              </View>
+
+              {/* Drawer Header */}
+              <View style={styles.drawerHeader}>
+                <View>
+                  <ThemedText style={[styles.drawerTitle, { color: currColors.text }]}>
+                    {drawerMode === 'add' ? 'Add New Category' : 'Edit Category'}
+                  </ThemedText>
+                  <ThemedText style={[styles.drawerSubtitle, { color: currColors.textSecondary }]}>
+                    {activeTab === 'expense' ? 'Expense Category' : 'Income Category'}
+                  </ThemedText>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.drawerCloseBtn, { backgroundColor: currColors.cardSecondary }]}
+                  onPress={closeDrawer}
+                  activeOpacity={0.8}
+                >
+                  <X size={18} color={currColors.textSecondary} />
                 </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        )}
+              </View>
 
-        {/* Draggable Categories FlatList */}
-        <View style={styles.listWrapper}>
-          <View style={[styles.cardContainer, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            <DraggableFlatList
-              ref={flatListRef}
-              data={displayedCategories}
-              onDragEnd={({ data }) => {
-                if (!categorySearch.trim()) {
-                  reorderCategories(activeTab, data);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-              }}
-              keyExtractor={(item) => item}
-              renderItem={renderCategoryItem}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-              onScrollToIndexFailed={(info) => {
-                setTimeout(() => {
-                  flatListRef.current?.scrollToOffset({
-                    offset: info.averageItemLength * info.index,
-                    animated: true,
-                  });
-                }, 100);
-              }}
-              contentContainerStyle={{
-                paddingBottom: isInlineAdding ? 16 : Math.max(insets.bottom, 16),
-              }}
-              ListEmptyComponent={
-                !isInlineAdding ? (
-                  <View style={styles.emptyWrap}>
-                    <ThemedText style={{ color: currColors.textSecondary, fontSize: 13 }}>
-                      No categories found for "{categorySearch}"
+              {/* Icon Preview + Auto-suggest hints */}
+              <View style={styles.drawerIconSection}>
+                <TouchableOpacity
+                  style={[
+                    styles.drawerIconBox,
+                    {
+                      backgroundColor: currColors.cardSecondary,
+                      borderColor: currColors.tintMoney,
+                    },
+                  ]}
+                  onPress={openIconPicker}
+                  activeOpacity={0.8}
+                >
+                  <Category3DIcon name={formName} icon={formIcon} size={50} />
+                  <View style={[styles.drawerIconPencilBadge, { backgroundColor: currColors.tintMoney }]}>
+                    <Pencil size={11} color="#FFFFFF" strokeWidth={2.5} />
+                  </View>
+                </TouchableOpacity>
+
+                <View style={styles.drawerIconLabelWrap}>
+                  <TouchableOpacity onPress={openIconPicker} activeOpacity={0.7}>
+                    <ThemedText style={[styles.drawerChangeIconText, { color: currColors.tintMoney }]}>
+                      Tap icon to change
+                    </ThemedText>
+                  </TouchableOpacity>
+                  <View style={styles.drawerAutoSuggestBadge}>
+                    <Sparkles size={12} color={currColors.tintMoney} />
+                    <ThemedText style={[styles.drawerAutoSuggestText, { color: currColors.textSecondary }]}>
+                      Auto-matched to your title
                     </ThemedText>
                   </View>
-                ) : null
-              }
-              ListFooterComponent={
-                isInlineAdding ? (
-                  <View
-                    style={[
-                      styles.inlineAddRow,
-                      { backgroundColor: isDark ? '#00C9A718' : '#00C9A70D', borderColor: currColors.tintMoney },
-                    ]}
-                  >
-                    {/* Tap to Pick 3D Icon */}
-                    <TouchableOpacity
-                      style={[styles.inlineIconButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.tintMoney }]}
-                      onPress={() => openIconPicker('add')}
-                      activeOpacity={0.7}
-                    >
-                      <Category3DIcon name={newCatName} icon={newCatIcon} size={34} />
-                      <View style={[styles.iconEditBadge, { backgroundColor: currColors.tintMoney }]}>
-                        <ChevronDown size={8} color="#FFFFFF" strokeWidth={3} />
-                      </View>
+                </View>
+              </View>
+
+              {/* Category Name Input Field */}
+              <View style={styles.drawerInputSection}>
+                <ThemedText style={[styles.drawerInputLabel, { color: currColors.textSecondary }]}>
+                  Category Name
+                </ThemedText>
+                <View style={[styles.drawerInputBox, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
+                  <TextInput
+                    ref={drawerInputRef}
+                    style={[styles.drawerTextInput, { color: currColors.text }]}
+                    placeholder="e.g. Fuel, Spotify, Pet Food, Freelance..."
+                    placeholderTextColor={currColors.textSecondary}
+                    value={formName}
+                    onChangeText={handleFormNameChange}
+                    returnKeyType="done"
+                    autoFocus={true}
+                    autoCapitalize="words"
+                    onSubmitEditing={drawerMode === 'add' ? handleSaveNewCategory : handleSaveEditedCategory}
+                  />
+                  {Boolean(formName) && (
+                    <TouchableOpacity onPress={() => handleFormNameChange('')} style={{ padding: 6 }}>
+                      <X size={15} color={currColors.textSecondary} />
                     </TouchableOpacity>
+                  )}
+                </View>
+              </View>
 
-                    {/* Inline Text Input */}
-                    <View style={styles.inlineInputWrap}>
-                      <TextInput
-                        ref={addInputRef}
-                        style={[styles.inlineInput, { color: currColors.text }]}
-                        placeholder="New category name (e.g. Fuel, Pet)..."
-                        placeholderTextColor={currColors.textSecondary}
-                        value={newCatName}
-                        onChangeText={handleNewNameChange}
-                        returnKeyType="done"
-                        onSubmitEditing={handleSaveNewCategory}
-                        autoCapitalize="words"
-                      />
-                      <ThemedText style={[styles.inlineHint, { color: currColors.tintMoney }]}>
-                        Auto-suggesting icon • Tap icon to choose
-                      </ThemedText>
-                    </View>
+              {/* Drawer Actions */}
+              <View style={styles.drawerActionsRow}>
+                {drawerMode === 'edit' && editingTargetCatName && (
+                  <TouchableOpacity
+                    style={[styles.drawerDeleteBtn, { backgroundColor: isDark ? '#FF3B3020' : '#FF3B3014' }]}
+                    onPress={() => handleDelete(editingTargetCatName)}
+                    activeOpacity={0.8}
+                  >
+                    <Trash2 size={18} color="#FF3B30" strokeWidth={2.2} />
+                  </TouchableOpacity>
+                )}
 
-                    {/* Inline Actions */}
-                    <View style={styles.inlineActionButtons}>
-                      <TouchableOpacity
-                        style={[styles.inlineSmallBtn, { backgroundColor: currColors.cardSecondary }]}
-                        onPress={() => setIsInlineAdding(false)}
-                      >
-                        <X size={15} color={currColors.textSecondary} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.inlineSmallBtn, { backgroundColor: currColors.tintMoney }]}
-                        onPress={handleSaveNewCategory}
-                      >
-                        <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ) : null
-              }
-            />
-          </View>
+                <TouchableOpacity
+                  style={[
+                    styles.drawerSubmitBtn,
+                    {
+                      backgroundColor: currColors.tintMoney,
+                      flex: drawerMode === 'edit' ? 1 : undefined,
+                      width: drawerMode === 'add' ? '100%' : undefined,
+                    },
+                  ]}
+                  onPress={drawerMode === 'add' ? handleSaveNewCategory : handleSaveEditedCategory}
+                  activeOpacity={0.85}
+                >
+                  {drawerMode === 'add' ? (
+                    <>
+                      <Plus size={18} color="#FFFFFF" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                      <ThemedText style={styles.drawerSubmitBtnText}>Create Category</ThemedText>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={18} color="#FFFFFF" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                      <ThemedText style={styles.drawerSubmitBtnText}>Save Changes</ThemedText>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
         </View>
-      </KeyboardAvoidingView>
+      )}
 
       {/* FULL-PAGE CHOOSE ICON MODAL */}
       <Modal
@@ -806,8 +771,7 @@ export default function ManageCategoriesScreen() {
               </View>
             ) : (
               filteredPickerIcons.map((def, idx) => {
-                const isSelected =
-                  iconPickerTarget === 'add' ? newCatIcon === def.id : editFormIcon === def.id;
+                const isSelected = formIcon === def.id;
 
                 return (
                   <TouchableOpacity
@@ -1006,14 +970,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_400Regular',
     marginTop: 2,
   },
-  categoryActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  iconActionBtn: {
-    width: 32,
-    height: 32,
+  editIconBtn: {
+    width: 30,
+    height: 30,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1025,85 +984,155 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  swipeRightActionsContainer: {
-    width: 78,
-    height: '100%',
-    flexDirection: 'row',
-  },
-  swipeDeleteBtn: {
+  // Bottom Sheet Drawer Styles
+  drawerOverlay: {
     flex: 1,
-    backgroundColor: '#FF3B30',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.6)',
   },
-  swipeDeleteText: {
-    color: '#FFFFFF',
-    fontSize: 11,
+  drawerBackdrop: {
+    flex: 1,
+  },
+  drawerSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 20,
+  },
+  drawerHandleWrap: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  drawerHandle: {
+    width: 40,
+    height: 4.5,
+    borderRadius: 3,
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    marginBottom: 18,
+  },
+  drawerTitle: {
+    fontSize: 18,
     fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.3,
   },
-  inlineEditRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderRadius: 12,
-    margin: 6,
-  },
-  inlineIconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    marginRight: 10,
-  },
-  iconEditBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inlineInputWrap: {
-    flex: 1,
-    marginRight: 8,
-  },
-  inlineInput: {
-    fontSize: 14,
-    fontFamily: 'Outfit_500Medium',
-    paddingVertical: 4,
-  },
-  inlineHint: {
-    fontSize: 10,
+  drawerSubtitle: {
+    fontSize: 12,
     fontFamily: 'Outfit_400Regular',
     marginTop: 2,
   },
-  inlineActionButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  inlineSmallBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+  drawerCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  inlineAddRow: {
+  drawerIconSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderTopWidth: 1,
+    marginBottom: 18,
+    gap: 14,
   },
+  drawerIconBox: {
+    width: 66,
+    height: 66,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  drawerIconPencilBadge: {
+    position: 'absolute',
+    bottom: -3,
+    right: -3,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#000000',
+  },
+  drawerIconLabelWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 4,
+  },
+  drawerChangeIconText: {
+    fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  drawerAutoSuggestBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  drawerAutoSuggestText: {
+    fontSize: 11,
+    fontFamily: 'Outfit_400Regular',
+  },
+  drawerInputSection: {
+    marginBottom: 20,
+  },
+  drawerInputLabel: {
+    fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
+    marginBottom: 6,
+  },
+  drawerInputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+  },
+  drawerTextInput: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: 'Outfit_500Medium',
+  },
+  drawerActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  drawerDeleteBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  drawerSubmitBtn: {
+    height: 48,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  drawerSubmitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.2,
+  },
+  // Full Screen Icon Picker
   fullModalContainer: {
     flex: 1,
   },
@@ -1162,3 +1191,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
