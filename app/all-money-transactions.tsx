@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,7 +8,7 @@ import {
   Modal,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -34,6 +34,14 @@ import { usePortfolioStore } from '@/store/usePortfolioStore';
 
 export default function AllTransactionsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    category?: string;
+    type?: 'all' | 'income' | 'expense' | 'transfer';
+    dateRange?: 'this_month' | 'this_week' | 'last_30_days' | 'last_90_days' | 'this_year' | 'all';
+    startDate?: string;
+    endDate?: string;
+    dateLabel?: string;
+  }>();
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
 
@@ -46,27 +54,81 @@ export default function AllTransactionsScreen() {
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
 
-  // Filter state
-  const [activeFilter, setActiveFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-  // Date range presets state
+  // Date range presets state type
   type DateRangeKey = 'this_month' | 'this_week' | 'last_30_days' | 'last_90_days' | 'this_year' | 'all';
-  const [dateRange, setDateRange] = useState<DateRangeKey>('this_month');
+
+  // Custom date bounds state (e.g. from Money Analytics specific month/quarter/year)
+  const [customRange, setCustomRange] = useState<{
+    startDate: string;
+    endDate: string;
+    label: string;
+  } | null>(
+    params.startDate && params.endDate
+      ? {
+          startDate: params.startDate,
+          endDate: params.endDate,
+          label: params.dateLabel || 'Selected Period',
+        }
+      : null
+  );
+
+  // Filter state initialized from params
+  const [activeFilter, setActiveFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>(
+    params.type && ['all', 'income', 'expense', 'transfer'].includes(params.type)
+      ? params.type
+      : 'all'
+  );
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(
+    params.category ? params.category : null
+  );
+  const [dateRange, setDateRange] = useState<DateRangeKey>(
+    params.dateRange && ['this_month', 'this_week', 'last_30_days', 'last_90_days', 'this_year', 'all'].includes(params.dateRange)
+      ? params.dateRange
+      : 'this_month'
+  );
+
+  useEffect(() => {
+    if (params.category !== undefined) {
+      setSelectedCategory(params.category || null);
+    }
+    if (params.type && ['all', 'income', 'expense', 'transfer'].includes(params.type)) {
+      setActiveFilter(params.type);
+    }
+    if (params.startDate && params.endDate) {
+      setCustomRange({
+        startDate: params.startDate,
+        endDate: params.endDate,
+        label: params.dateLabel || 'Selected Period',
+      });
+      setDateRange('all');
+    } else if (params.dateRange && ['this_month', 'this_week', 'last_30_days', 'last_90_days', 'this_year', 'all'].includes(params.dateRange)) {
+      setCustomRange(null);
+      setDateRange(params.dateRange as DateRangeKey);
+    }
+  }, [params.category, params.type, params.dateRange, params.startDate, params.endDate, params.dateLabel]);
 
   // Modal sheet visibility
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   // Check if any filter is active away from defaults
   const isFilterActive = useMemo(() => {
-    return activeFilter !== 'all' || dateRange !== 'this_month' || selectedCategory !== null;
-  }, [activeFilter, dateRange, selectedCategory]);
+    return activeFilter !== 'all' || dateRange !== 'this_month' || selectedCategory !== null || customRange !== null;
+  }, [activeFilter, dateRange, selectedCategory, customRange]);
 
   // Compute active filters list for display summary chips
   const activeFilters = useMemo(() => {
     const list: Array<{ key: string; label: string; onClear: () => void }> = [];
     
-    if (dateRange !== 'all') {
+    if (customRange && customRange.label) {
+      list.push({
+        key: 'dateRange',
+        label: customRange.label,
+        onClear: () => {
+          setCustomRange(null);
+          setDateRange('all');
+        },
+      });
+    } else if (dateRange !== 'all') {
       const labels: Record<DateRangeKey, string> = {
         this_month: 'This Month',
         this_week: 'This Week',
@@ -108,11 +170,19 @@ export default function AllTransactionsScreen() {
     }
     
     return list;
-  }, [activeFilter, dateRange, selectedCategory]);
+  }, [activeFilter, dateRange, selectedCategory, customRange]);
 
   // Helper check for date range inclusion
   const isWithinDateRange = useCallback((dateStr: string, range: DateRangeKey) => {
     const txTime = new Date(dateStr).getTime();
+    
+    // If a custom range is active (e.g. from Money Analytics historical navigation)
+    if (customRange && customRange.startDate && customRange.endDate) {
+      const start = new Date(customRange.startDate).getTime();
+      const end = new Date(customRange.endDate).getTime();
+      return txTime >= start && txTime <= end;
+    }
+
     const now = new Date();
     
     switch (range) {
@@ -429,6 +499,7 @@ export default function AllTransactionsScreen() {
                             ]}
                             onPress={() => {
                               handleHaptic();
+                              setCustomRange(null);
                               setDateRange(preset.key);
                             }}
                           >
@@ -530,6 +601,7 @@ export default function AllTransactionsScreen() {
                     style={[styles.modalClearBtn, { borderColor: currColors.border }]}
                     onPress={() => {
                       handleHaptic();
+                      setCustomRange(null);
                       setActiveFilter('all');
                       setDateRange('this_month');
                       setSelectedCategory(null);

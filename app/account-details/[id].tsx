@@ -17,6 +17,7 @@ import {
   ArrowUpRight,
   TrendingDown,
   Activity,
+  ArrowRightLeft,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -25,7 +26,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
-import { BankLogo } from '@/components/BankLogo';
+import { Category3DIcon } from '@/components/Category3DIcon';
 
 export default function AccountDetailsScreen() {
   const router = useRouter();
@@ -184,17 +185,6 @@ export default function AccountDetailsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         {/* Balance Hero Card */}
         <View style={[styles.balanceCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <View style={[styles.indicatorPill, { backgroundColor: `${account.color}15`, marginBottom: 0 }]}>
-              <View style={[styles.indicatorDot, { backgroundColor: account.color }]} />
-              <ThemedText style={[styles.indicatorText, { color: account.color }]}>
-                {account.type.replace('_', ' ').toUpperCase()}
-              </ThemedText>
-            </View>
-            {account.logo ? (
-              <BankLogo logo={account.logo} size={28} />
-            ) : null}
-          </View>
           <ThemedText style={[styles.balanceLabel, { color: currColors.textSecondary }]}>
             {account.type === 'investment' && account.linkedBroker 
               ? `CURRENT VALUE (LINKED: ${account.linkedBroker.toUpperCase()})` 
@@ -358,27 +348,27 @@ export default function AccountDetailsScreen() {
                   }}
                 >
                   <View style={styles.txLeft}>
-                    <View
-                      style={[
-                        styles.txIcon,
-                        {
-                          backgroundColor:
-                            isTransfer
-                              ? 'rgba(0, 122, 255, 0.1)'
-                              : isIncome
-                              ? 'rgba(52, 199, 89, 0.1)'
-                              : 'rgba(255, 59, 48, 0.1)',
-                        },
-                      ]}
-                    >
-                      {isTransfer ? (
-                        <Activity size={18} color={isSource ? '#FF9500' : '#007AFF'} />
-                      ) : isIncome ? (
-                        <ArrowDownLeft size={18} color="#34C759" />
-                      ) : (
-                        <ArrowUpRight size={18} color="#FF3B30" />
-                      )}
-                    </View>
+                    {isTransfer ? (
+                      <View
+                        style={[
+                          styles.txIcon,
+                          {
+                            backgroundColor:
+                              colorScheme === 'dark'
+                                ? 'rgba(255, 255, 255, 0.08)'
+                                : 'rgba(0, 0, 0, 0.05)',
+                          },
+                        ]}
+                      >
+                        <ArrowRightLeft size={18} color="#8E8E93" />
+                      </View>
+                    ) : (
+                      <Category3DIcon
+                        name={tx.category}
+                        size={36}
+                        style={{ marginRight: 12 }}
+                      />
+                    )}
                     <View style={styles.txInfo}>
                       <ThemedText style={[styles.txLabelText, { color: currColors.text }]} numberOfLines={1}>
                         {typeLabel}
@@ -462,26 +452,6 @@ const styles = StyleSheet.create({
     padding: 24,
     marginTop: 8,
   },
-  indicatorPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  indicatorDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 6,
-  },
-  indicatorText: {
-    fontSize: 10,
-    fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: 0.5,
-  },
   balanceLabel: {
     fontSize: 10,
     fontWeight: '700',
@@ -563,9 +533,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
   },
   txInfo: {
-    marginLeft: 12,
     flex: 1,
   },
   txLabelText: {

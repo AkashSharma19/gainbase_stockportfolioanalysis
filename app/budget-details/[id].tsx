@@ -341,9 +341,11 @@ export default function BudgetDetailsScreen() {
                   ]}
                 >
                   <View style={styles.txLeft}>
-                    <View style={[styles.txIconBox, { backgroundColor: 'rgba(255, 59, 48, 0.1)' }]}>
-                      <ArrowUpRight size={18} color="#FF3B30" />
-                    </View>
+                    <Category3DIcon
+                      name={tx.category}
+                      size={36}
+                      style={{ marginRight: 12 }}
+                    />
                     <View style={styles.txInfo}>
                       <ThemedText style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
                         {tx.category}

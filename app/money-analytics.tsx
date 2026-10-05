@@ -29,35 +29,35 @@ import { BackButton } from '@/components/BackButton';
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const DEFAULT_CATEGORY_METADATA: Record<string, { icon: string; color: string }> = {
-  'Food & Dining': { icon: 'Utensils', color: '#FF3B30' },
-  'Rent & Bills': { icon: 'Receipt', color: '#007AFF' },
-  'Shopping': { icon: 'ShoppingBag', color: '#FF9500' },
-  'Entertainment': { icon: 'Clapperboard', color: '#AF52DE' },
-  'Travel': { icon: 'Plane', color: '#34C759' },
-  'Medical': { icon: 'Pill', color: '#FF2D55' },
-  'Education': { icon: 'GraduationCap', color: '#5AC8FA' },
-  'Food': { icon: 'UtensilsCrossed', color: '#FF6B6B' },
-  'Junk': { icon: 'Cookie', color: '#FF922B' },
-  'Shopping - Electronics': { icon: 'Laptop', color: '#5856D6' },
-  'Shopping - Clothes': { icon: 'Shirt', color: '#FD79A8' },
-  'Subscriptions - OTT': { icon: 'Tv', color: '#CC5DE8' },
-  'Subscriptions - WiFi': { icon: 'Wifi', color: '#4DABF7' },
-  'House': { icon: 'Home', color: '#20C997' },
-  'Electricity Bill': { icon: 'Zap', color: '#FFCC00' },
-  'Transport - Fuel': { icon: 'Fuel', color: '#FF8E53' },
-  'Transport - Cab': { icon: 'Car', color: '#FCC419' },
-  'Maintainance': { icon: 'Wrench', color: '#8E8E93' },
-  'Maintenance': { icon: 'Wrench', color: '#8E8E93' },
-  'Travel/ Trips': { icon: 'Compass', color: '#748FFC' },
-  'Family': { icon: 'Users', color: '#B33771' },
-  'Gifts': { icon: 'Gift', color: '#E84393' },
-  'EMI Payments': { icon: 'CalendarRange', color: '#A06A42' },
-  'Salary': { icon: 'Banknote', color: '#34C759' },
-  'Investments': { icon: 'TrendingUp', color: '#00C9A7' },
-  'Business': { icon: 'Briefcase', color: '#007AFF' },
-  'Refund': { icon: 'RotateCcw', color: '#5856D6' },
-  'Others': { icon: 'Tag', color: '#8E8E93' },
-  'Other': { icon: 'Tag', color: '#8E8E93' },
+  'Food & Dining': { icon: 'food', color: '#FF3B30' },
+  'Rent & Bills': { icon: 'receipt', color: '#007AFF' },
+  'Shopping': { icon: 'shopping', color: '#FF9500' },
+  'Entertainment': { icon: 'clapperboard', color: '#AF52DE' },
+  'Travel': { icon: 'travel', color: '#34C759' },
+  'Medical': { icon: 'medical', color: '#FF2D55' },
+  'Education': { icon: 'education', color: '#5AC8FA' },
+  'Food': { icon: 'food', color: '#FF6B6B' },
+  'Junk': { icon: 'cookie', color: '#FF922B' },
+  'Shopping - Electronics': { icon: 'laptop', color: '#5856D6' },
+  'Shopping - Clothes': { icon: 'clothes', color: '#FD79A8' },
+  'Subscriptions - OTT': { icon: 'tv', color: '#CC5DE8' },
+  'Subscriptions - WiFi': { icon: 'internet', color: '#4DABF7' },
+  'House': { icon: 'house', color: '#20C997' },
+  'Electricity Bill': { icon: 'electric', color: '#FFCC00' },
+  'Transport - Fuel': { icon: 'fuel', color: '#FF8E53' },
+  'Transport - Cab': { icon: 'car', color: '#FCC419' },
+  'Maintainance': { icon: 'wrench', color: '#8E8E93' },
+  'Maintenance': { icon: 'wrench', color: '#8E8E93' },
+  'Travel/ Trips': { icon: 'compass', color: '#748FFC' },
+  'Family': { icon: 'home_garden', color: '#B33771' },
+  'Gifts': { icon: 'gift', color: '#E84393' },
+  'EMI Payments': { icon: 'credit_card', color: '#A06A42' },
+  'Salary': { icon: 'banknote', color: '#34C759' },
+  'Investments': { icon: 'investments', color: '#00C9A7' },
+  'Business': { icon: 'briefcase', color: '#007AFF' },
+  'Refund': { icon: 'money', color: '#5856D6' },
+  'Others': { icon: 'package', color: '#8E8E93' },
+  'Other': { icon: 'package', color: '#8E8E93' },
 };
 
 const CATEGORY_COLORS = [
@@ -115,6 +115,42 @@ export default function MoneyAnalyticsScreen() {
     }
     const prefix = val < 0 ? '-' : '';
     return `${prefix}${symbol}${formatted}`;
+  };
+
+  const getPeriodDateBounds = (date: Date, tf: TimeFrame) => {
+    const y = date.getFullYear();
+    const m = date.getMonth();
+    if (tf === 'month') {
+      const start = new Date(y, m, 1, 0, 0, 0, 0);
+      const end = new Date(y, m + 1, 0, 23, 59, 59, 999);
+      return {
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        dateLabel: date.toLocaleString('default', { month: 'long', year: 'numeric' }),
+      };
+    } else if (tf === 'quarter') {
+      const q = Math.floor(m / 3);
+      const start = new Date(y, q * 3, 1, 0, 0, 0, 0);
+      const end = new Date(y, (q + 1) * 3, 0, 23, 59, 59, 999);
+      return {
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        dateLabel: `Q${q + 1} ${y}`,
+      };
+    } else if (tf === 'year') {
+      const start = new Date(y, 0, 1, 0, 0, 0, 0);
+      const end = new Date(y, 11, 31, 23, 59, 59, 999);
+      return {
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        dateLabel: `${y}`,
+      };
+    }
+    return {
+      startDate: undefined,
+      endDate: undefined,
+      dateLabel: 'All Time',
+    };
   };
 
   // ─── Timeframe Controls & Label ───
@@ -221,8 +257,8 @@ export default function MoneyAnalyticsScreen() {
 
       if (!totals[tx.category]) {
         const color = getCategoryColor(tx.category, categoryMetadata);
-        const icon = categoryMetadata?.[tx.category]?.icon || DEFAULT_CATEGORY_METADATA[tx.category]?.icon || 'Tag';
-        totals[tx.category] = { amount: 0, count: 0, color, icon };
+        const icon = categoryMetadata?.[tx.category]?.icon || DEFAULT_CATEGORY_METADATA[tx.category]?.icon;
+        totals[tx.category] = { amount: 0, count: 0, color, icon: icon || '' };
       }
       totals[tx.category].amount += tx.amount;
       totals[tx.category].count += 1;
@@ -251,6 +287,8 @@ export default function MoneyAnalyticsScreen() {
   // ─── 12-Month Trend Aggregation ───
   const monthlyTrends = useMemo(() => {
     const list: {
+      year: number;
+      month: number;
       monthKey: string;
       monthLabel: string;
       fullLabel: string;
@@ -270,6 +308,8 @@ export default function MoneyAnalyticsScreen() {
       const fullLabel = d.toLocaleString('default', { month: 'long', year: 'numeric' });
 
       list.push({
+        year,
+        month,
         monthKey,
         monthLabel,
         fullLabel,
@@ -496,7 +536,17 @@ export default function MoneyAnalyticsScreen() {
                       activeOpacity={0.7}
                       onPress={() => {
                         handleHaptic();
-                        setFocusedCategory(isFocused ? null : item.name);
+                        const bounds = getPeriodDateBounds(selectedDate, timeFrame);
+                        router.push({
+                          pathname: '/all-money-transactions',
+                          params: {
+                            category: item.name,
+                            type: activeTab === 'income' ? 'income' : 'expense',
+                            startDate: bounds.startDate,
+                            endDate: bounds.endDate,
+                            dateLabel: bounds.dateLabel,
+                          },
+                        });
                       }}
                     >
                       <View style={styles.categoryMain}>
@@ -604,12 +654,26 @@ export default function MoneyAnalyticsScreen() {
                 const isLast = index === monthlyTrends.length - 1;
                 const isPositive = item.surplus >= 0;
                 return (
-                  <View
+                  <TouchableOpacity
                     key={item.monthKey}
                     style={[
                       styles.trendRowItem,
                       !isLast && { borderBottomWidth: 1, borderBottomColor: currColors.border },
                     ]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      handleHaptic();
+                      const start = new Date(item.year, item.month, 1, 0, 0, 0, 0);
+                      const end = new Date(item.year, item.month + 1, 0, 23, 59, 59, 999);
+                      router.push({
+                        pathname: '/all-money-transactions',
+                        params: {
+                          startDate: start.toISOString(),
+                          endDate: end.toISOString(),
+                          dateLabel: item.fullLabel,
+                        },
+                      });
+                    }}
                   >
                     <View>
                       <ThemedText type="semiBold" style={[styles.trendMonthLabel, { color: currColors.text }]}>
@@ -647,7 +711,7 @@ export default function MoneyAnalyticsScreen() {
                         </ThemedText>
                       </View>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
