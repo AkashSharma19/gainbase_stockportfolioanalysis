@@ -1112,26 +1112,12 @@ export function MoneyDashboard() {
                   }}
                 >
                   <View style={styles.txLeft}>
-                    {tx.type === 'transfer' ? (
-                      <View
-                        style={[
-                          styles.txIconBox,
-                          {
-                            backgroundColor: isDark
-                              ? 'rgba(255, 255, 255, 0.08)'
-                              : 'rgba(0, 0, 0, 0.05)',
-                          },
-                        ]}
-                      >
-                        <ArrowRightLeft size={18} color="#8E8E93" />
-                      </View>
-                    ) : (
-                      <Category3DIcon
-                        name={tx.category}
-                        size={36}
-                        style={{ marginRight: 12 }}
-                      />
-                    )}
+                    <Category3DIcon
+                      name={tx.type === 'transfer' ? 'Transfer' : tx.category}
+                      icon={tx.type === 'transfer' ? 'transfer' : undefined}
+                      size={36}
+                      style={{ marginRight: 12 }}
+                    />
                     <View style={styles.txInfo}>
                       <ThemedText style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
                         {tx.type === 'transfer' ? `Transfer: ${account?.name} → ${toAccount?.name}` : tx.category}

@@ -369,27 +369,12 @@ export default function AccountDetailsScreen() {
                   }}
                 >
                   <View style={styles.txLeft}>
-                    {isTransfer ? (
-                      <View
-                        style={[
-                          styles.txIcon,
-                          {
-                            backgroundColor:
-                              colorScheme === 'dark'
-                                ? 'rgba(255, 255, 255, 0.08)'
-                                : 'rgba(0, 0, 0, 0.05)',
-                          },
-                        ]}
-                      >
-                        <ArrowRightLeft size={18} color="#8E8E93" />
-                      </View>
-                    ) : (
-                      <Category3DIcon
-                        name={tx.category}
-                        size={36}
-                        style={{ marginRight: 12 }}
-                      />
-                    )}
+                    <Category3DIcon
+                      name={isTransfer ? 'Transfer' : tx.category}
+                      icon={isTransfer ? 'transfer' : undefined}
+                      size={36}
+                      style={{ marginRight: 12 }}
+                    />
                     <View style={styles.txInfo}>
                       <ThemedText style={[styles.txLabelText, { color: currColors.text }]} numberOfLines={1}>
                         {typeLabel}

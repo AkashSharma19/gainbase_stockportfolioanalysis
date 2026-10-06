@@ -92,6 +92,7 @@ const KEYWORD_TO_ID: Record<string, string> = {
   credit_card: 'credit_card', creditcard: 'credit_card', calendarrange: 'credit_card', cred: 'credit_card',
   receipt: 'receipt', bill: 'receipt', invoice: 'receipt', tax: 'receipt',
   coin: 'coin',
+  transfer: 'transfer', 'account transfer': 'transfer', 'self transfer': 'transfer', 'bank transfer': 'transfer', arrowrightleft: 'transfer', arrow_right_left: 'transfer', exchange: 'transfer',
   // Goals
   target: 'target', bullseye: 'target', goal: 'target',
   rocket: 'rocket', star: 'star',

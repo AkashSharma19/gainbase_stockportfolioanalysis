@@ -256,10 +256,10 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 
 ### E. 3D Icon System (Category3DIcon)
 
-*   **Catalog**: `constants/Category3DIcons.ts` → `CATEGORY_3D_ICONS_LIST` (source of truth; each item: `{ id, name, group, path, keywords }`).
+*   **Catalog**: `constants/Category3DIcons.ts` → `CATEGORY_3D_ICONS_LIST` (source of truth; each item: `{ id, name, group, path, keywords }`). Includes high-resolution 3D asset for Account Transfers (`transfer` / 3D Curved Exchange & Cycle Arrows).
 *   **Resolver**: `components/Category3DIcon.tsx` resolves icons by:
     1. Direct key match in `LOCAL_3D_ICON_MAP`
-    2. Exact compound category mapping in `KEYWORD_TO_ID` (e.g., `'Shopping - Electronics'` → `laptop`, `'EMI Payments'` → `credit_card`, `'Subscriptions - OTT'` → `tv`, `'Subscriptions - WiFi'` → `internet`, `'Transport - Fuel'` → `fuel`, `'Transport - Cab'` → `car`, `'Travel/ Trips'` → `compass`, `'Food & Dining'` → `food`, `'Rent & Bills'` → `receipt`, `'Electricity Bill'` → `electric`)
+    2. Exact compound category mapping in `KEYWORD_TO_ID` (e.g., `'Shopping - Electronics'` → `laptop`, `'EMI Payments'` → `credit_card`, `'Subscriptions - OTT'` → `tv`, `'Subscriptions - WiFi'` → `internet`, `'Transport - Fuel'` → `fuel`, `'Transport - Cab'` → `car`, `'Travel/ Trips'` → `compass`, `'Food & Dining'` → `food`, `'Rent & Bills'` → `receipt`, `'Electricity Bill'` → `electric`, `'transfer'` / `'account transfer'` → `transfer`)
     3. ID or name match in `CATEGORY_3D_ICONS_LIST`
     4. Reverse token-level word matching
     5. Smart fuzzy suggestion ranking via `findBest3DIconForText`
@@ -269,7 +269,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     - **Goal Icons**: `app/create-goal.tsx` — full-page modal with search grid. Icon ID stored in `FinancialGoal.icon`.
     - **Category Icons**: `app/manage-categories.tsx` — full-page 3D icon picker grid. Icon ID stored in `Category.icon`. Features responsive Bottom Sheet Drawer for adding and editing categories (`KeyboardAvoidingView` to prevent keyboard obstruction), live 3D icon preview card with auto-matching, tap to open full-page icon catalog, swipe-left-to-delete gesture (`react-native-gesture-handler` `Swipeable`), and drag-and-drop reordering (`react-native-draggable-flatlist`).
     - **Account Icons (Receivable/Payable)**: `app/add-account.tsx` — icon picker appears conditionally for `receivable`/`payable` account types only. Icon ID stored in `Account.icon`. Displayed on `app/(tabs)/money-accounts.tsx` using `Category3DIcon` when `CATEGORY_3D_ICONS_LIST.find(i => i.id === item.icon)` resolves.
-    - **Budget Details & Money Analytics**: Transactions and category breakdown lists in `app/budget-details/[id].tsx`, `app/money-analytics.tsx`, and `app/all-money-transactions.tsx` render identical 3D category icons.
+    - **Budget Details, Transaction Feeds & Money Analytics**: Transactions and category breakdown lists in `components/MoneyDashboard.tsx`, `app/budget-details/[id].tsx`, `app/account-details/[id].tsx`, `app/money-analytics.tsx`, and `app/all-money-transactions.tsx` render unified 3D category and transfer icons.
 
 ### F. UI/UX Design System & Token Standardization
 *   **Theme & Color Contrast System**: 
@@ -281,6 +281,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 *   **Modal Form Standards**: Standardized iOS modal top bar with `Cancel` (`textSecondary`, `Outfit_500Medium`) on left and `Save` (accent color, `Outfit_600SemiBold`) on right.
 *   **Amount Input Row Standard**: Right-aligned numeric inputs embed the currency prefix directly into the `TextInput` (`placeholder="₹ 0"` and `value={amount ? \`₹ ${amount}\` : ''}` with `styles.input` `flex: 1`, `textAlign: 'right'`), eliminating flex-shrink clipping or scroll-under text overlapping issues while keeping `₹` and the formatted digits seamlessly together at the right edge.
 *   **Progress Bars & Gauges**: Standardized compact list rows to `height: 5, borderRadius: 2.5` and hero cards to `height: 8, borderRadius: 4` with `currColors.cardSecondary` track fill.
+*   **Branding & App Icon**: Configured with the **Infinite Growth Ribbon** aesthetic (3D ascending mint-to-violet gradient loop on deep space black). `assets/images/icon.png` (1024x1024 universal icon), `assets/images/adaptive-icon.png` (Android adaptive icon), `assets/images/splash-icon.png` (launch mark), and `assets/images/favicon.png` with matching `#000000` splash and adaptive background fills in [app.json](file:///Users/akashsharma/Documents/Gainbase/app.json).
 *   **Typography**: Outfitted with Google Font Outfit tokens via `<ThemedText type="...">` avoiding conflicting React Native font-weight overrides.
 
 ### G. Over-The-Air (OTA) Updates, Versioning & Build Management

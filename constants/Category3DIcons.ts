@@ -531,6 +531,16 @@ export const CATEGORY_3D_ICONS_LIST: Category3DItem[] = [
     keywords: ['coin', 'gold', 'silver', 'change', 'bullion', 'coins', 'jewel']
   },
   {
+    id: 'transfer',
+    name: 'Account Transfer',
+    group: 'Finance & Money',
+    path: 'Clockwise%20vertical%20arrows/3D/clockwise_vertical_arrows_3d.png',
+    keywords: [
+      'transfer', 'account transfer', 'self transfer', 'bank transfer',
+      'exchange', 'shift', 'swap', 'move', 'fund transfer', 'internal transfer', 'neft', 'rtgs', 'imps', 'upi'
+    ]
+  },
+  {
     id: 'target',
     name: 'Bullseye Target',
     group: 'Finance & Goals',

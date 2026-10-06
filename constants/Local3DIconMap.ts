@@ -88,6 +88,7 @@ const LOCAL_3D_ICON_MAP: Record<string, any> = {
   credit_card:    require('../assets/icons3d/credit_card.png'),
   receipt:        require('../assets/icons3d/receipt.png'),
   coin:           require('../assets/icons3d/coin.png'),
+  transfer:       require('../assets/icons3d/transfer.png'),
 
   // Finance & Goals
   target:         require('../assets/icons3d/target.png'),
