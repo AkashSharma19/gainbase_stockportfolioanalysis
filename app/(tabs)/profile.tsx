@@ -993,6 +993,7 @@ export default function ProfileScreen() {
   );
 
   const handleOpenEditModal = () => {
+    handleHaptic();
     setEditName(userName);
     setEditEmail(userEmail);
     setEditMobile(userMobile);
@@ -1448,7 +1449,10 @@ export default function ProfileScreen() {
             <View style={styles.gridRow}>
               <TouchableOpacity
                 style={styles.gridButton}
-                onPress={handleDownloadSample}
+                onPress={() => {
+                  handleHaptic();
+                  handleDownloadSample();
+                }}
               >
                 <View
                   style={[
@@ -1465,7 +1469,10 @@ export default function ProfileScreen() {
 
               <TouchableOpacity
                 style={styles.gridButton}
-                onPress={handleImport}
+                onPress={() => {
+                  handleHaptic();
+                  handleImport();
+                }}
               >
                 <View
                   style={[
@@ -1482,7 +1489,10 @@ export default function ProfileScreen() {
 
               <TouchableOpacity
                 style={styles.gridButton}
-                onPress={handleBackup}
+                onPress={() => {
+                  handleHaptic();
+                  handleBackup();
+                }}
               >
                 <View
                   style={[
@@ -1499,7 +1509,10 @@ export default function ProfileScreen() {
 
               <TouchableOpacity
                 style={styles.gridButton}
-                onPress={handleExport}
+                onPress={() => {
+                  handleHaptic();
+                  handleExport();
+                }}
               >
                 <View
                   style={[
@@ -1533,7 +1546,10 @@ export default function ProfileScreen() {
             <View style={styles.gridRow}>
               <TouchableOpacity
                 style={styles.gridButton}
-                onPress={handleDownloadMoneySample}
+                onPress={() => {
+                  handleHaptic();
+                  handleDownloadMoneySample();
+                }}
               >
                 <View
                   style={[
@@ -1550,7 +1566,10 @@ export default function ProfileScreen() {
 
               <TouchableOpacity
                 style={styles.gridButton}
-                onPress={handleImportMoney}
+                onPress={() => {
+                  handleHaptic();
+                  handleImportMoney();
+                }}
               >
                 <View
                   style={[
@@ -1567,7 +1586,10 @@ export default function ProfileScreen() {
 
               <TouchableOpacity
                 style={styles.gridButton}
-                onPress={handleBackupMoney}
+                onPress={() => {
+                  handleHaptic();
+                  handleBackupMoney();
+                }}
               >
                 <View
                   style={[
@@ -1584,7 +1606,10 @@ export default function ProfileScreen() {
 
               <TouchableOpacity
                 style={styles.gridButton}
-                onPress={handleExportMoney}
+                onPress={() => {
+                  handleHaptic();
+                  handleExportMoney();
+                }}
               >
                 <View
                   style={[
@@ -1618,7 +1643,10 @@ export default function ProfileScreen() {
             <View style={styles.gridRow}>
               <TouchableOpacity
                 style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 4 }}
-                onPress={() => router.push('/cloud-backup')}
+                onPress={() => {
+                  handleHaptic();
+                  router.push('/cloud-backup');
+                }}
               >
                 <View
                   style={[
@@ -1657,7 +1685,10 @@ export default function ProfileScreen() {
             <View style={styles.gridRow}>
               <TouchableOpacity
                 style={styles.gridButton}
-                onPress={() => router.push('/settings')}
+                onPress={() => {
+                  handleHaptic();
+                  router.push('/settings');
+                }}
               >
                 <View
                   style={[
@@ -1695,6 +1726,7 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.gridButton}
                 onPress={() => {
+                  handleHaptic();
                   Linking.openURL(
                     'https://chat.whatsapp.com/INyTPVgPq908dEMWgFiq44?mode=gi_t',
                   );
@@ -1715,7 +1747,10 @@ export default function ProfileScreen() {
 
               <TouchableOpacity
                 style={styles.gridButton}
-                onPress={handleDeleteData}
+                onPress={() => {
+                  handleHaptic();
+                  handleDeleteData();
+                }}
               >
                 <View
                   style={[

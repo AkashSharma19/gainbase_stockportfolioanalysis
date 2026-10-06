@@ -221,7 +221,10 @@ export default function SettingsScreen() {
               </View>
               <Switch
                 value={showCurrencySymbol}
-                onValueChange={toggleCurrencySymbol}
+                onValueChange={(val) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  toggleCurrencySymbol();
+                }}
                 trackColor={{ false: '#767577', true: '#007AFF' }}
                 thumbColor={
                   Platform.OS === 'ios'
