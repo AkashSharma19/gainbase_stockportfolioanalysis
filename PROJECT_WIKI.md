@@ -266,11 +266,11 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     4. Reverse token-level word matching
     5. Smart fuzzy suggestion ranking via `findBest3DIconForText`
     6. Heuristic keyword partial matching
-    7. Fallback to `CategoryIcon` (vector) if no 3D asset matches
+    7. Fallback to `CategoryIcon` (vector) if no 3D asset matches. Rendered with `fadeDuration={0}` to eliminate Android's default 300ms fade-in transition and ensure instantaneous offline rasterization.
 *   **Usage**:
-    - **Goal Icons**: `app/create-goal.tsx` — full-page modal with search grid. Icon ID stored in `FinancialGoal.icon`.
+    - **Goal Icons**: `app/create-goal.tsx` (full-page modal with search grid), `app/goals.tsx` (goals list), and `components/FinancialGoalsCard.tsx` (featured dashboard card). Icon ID stored in `FinancialGoal.icon`. Rendered directly as unboxed 3D floating icons without tinted background containers (matching the transaction and account design language).
     - **Category Icons**: `app/manage-categories.tsx` — full-page 3D icon picker grid. Icon ID stored in `Category.icon`. Features floating hover action button (FAB) in the bottom right corner for adding categories, responsive Bottom Sheet Drawer for adding and editing categories (cross-platform `KeyboardAvoidingView` with iOS `'padding'` and Android `'height'` plus full-width drawer overlay to prevent keyboard obstruction), live 3D icon preview card with auto-matching, tap to open full-page icon catalog, swipe-left-to-delete gesture (`react-native-gesture-handler` `Swipeable`), and drag-and-drop reordering (`react-native-draggable-flatlist`).
-    - **Account Icons (Receivable/Payable)**: `app/add-account.tsx` — icon picker appears conditionally for `receivable`/`payable` account types only. Icon ID stored in `Account.icon`. Displayed on `app/(tabs)/money-accounts.tsx` using `Category3DIcon` when `CATEGORY_3D_ICONS_LIST.find(i => i.id === item.icon)` resolves.
+    - **Account Icons (Wallet, Receivable, Payable & Custom)**: `app/add-account.tsx` — icon picker available for `wallet`, `receivable`, and `payable` account types. Displayed cleanly on `app/(tabs)/money-accounts.tsx` directly as 3D floating icons without boxed wrappers (size 36, matching transaction feeds). Wallets render a dedicated 3D wallet/purse icon (`wallet`) by default, while receivables/payables and custom icon accounts render their respective 3D icons without background boxes.
     - **Budget Details, Transaction Feeds & Money Analytics**: Transactions and category breakdown lists in `components/MoneyDashboard.tsx`, `app/budget-details/[id].tsx`, `app/account-details/[id].tsx`, `app/money-analytics.tsx`, and `app/all-money-transactions.tsx` render unified 3D category and transfer icons.
 
 ### F. UI/UX Design System & Token Standardization

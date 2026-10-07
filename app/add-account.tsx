@@ -133,7 +133,7 @@ export default function AddAccountScreen() {
       setLogo(editingAccount.logo || '');
       setAccountNumber(editingAccount.accountNumber || '');
       setColor(editingAccount.color);
-      setIconId(editingAccount.icon || '');
+      setIconId(editingAccount.icon || (editingAccount.type === 'wallet' ? 'wallet' : ''));
       setIncludeInAssets(editingAccount.includeInAssets !== false);
       setLinkedBroker(editingAccount.linkedBroker || '');
     }
@@ -191,19 +191,19 @@ export default function AddAccountScreen() {
         logo: logo || undefined,
         accountNumber: accountNumber.trim() || undefined,
         color,
-        icon: (type === 'receivable' || type === 'payable') ? (iconId || 'users') : undefined,
+        icon: (type === 'receivable' || type === 'payable' || type === 'wallet')
+          ? (iconId || (type === 'wallet' ? 'wallet' : (type === 'receivable' ? 'receivable' : 'payable')))
+          : undefined,
         includeInAssets,
         linkedBroker: type === 'investment' ? (linkedBroker || undefined) : undefined,
       });
     } else {
       const resolvedIcon =
-        (type === 'receivable' || type === 'payable') && iconId
-          ? iconId
-          : type === 'wallet' ? 'Wallet'
+        (type === 'receivable' || type === 'payable' || type === 'wallet')
+          ? (iconId || (type === 'wallet' ? 'wallet' : (type === 'receivable' ? 'receivable' : 'payable')))
           : type === 'savings' ? 'Landmark'
           : type === 'investment' ? 'Activity'
-          : type === 'receivable' ? 'ArrowDownLeft'
-          : type === 'payable' ? 'ArrowUpRight'
+          : type === 'emergency_fund' ? 'PiggyBank'
           : 'CreditCard';
       const newAccount: Account = {
         id: Math.random().toString(36).substring(2, 9),
@@ -441,8 +441,8 @@ export default function AddAccountScreen() {
                 </TouchableOpacity>
               ) : null}
 
-              {/* Icon Row (only for receivable/payable) */}
-              {(type === 'receivable' || type === 'payable') ? (
+              {/* Icon Row (for receivable/payable/wallet) */}
+              {(type === 'receivable' || type === 'payable' || type === 'wallet') ? (
                 <TouchableOpacity
                   style={[styles.formRow, { borderBottomColor: currColors.border }]}
                   onPress={() => setShowIconModal(true)}
@@ -451,10 +451,18 @@ export default function AddAccountScreen() {
                   <ThemedText style={[styles.label, { color: currColors.text }]}>Account Icon</ThemedText>
                   <View style={styles.valueContainer}>
                     <View style={styles.typeBadge}>
-                      <Category3DIcon name={iconId || 'users'} icon={iconId || 'users'} size={26} />
-                      <ThemedText style={[styles.valueText, { color: currColors.text, marginLeft: 8 }]}>
-                        {CATEGORY_3D_ICONS_LIST.find((i) => i.id === iconId)?.name || 'Default'}
-                      </ThemedText>
+                      {(() => {
+                        const defaultIcon = type === 'wallet' ? 'wallet' : (type === 'receivable' ? 'receivable' : 'payable');
+                        const activeIcon = iconId || defaultIcon;
+                        return (
+                          <>
+                            <Category3DIcon name={activeIcon} icon={activeIcon} size={26} />
+                            <ThemedText style={[styles.valueText, { color: currColors.text, marginLeft: 8 }]}>
+                              {CATEGORY_3D_ICONS_LIST.find((i) => i.id === activeIcon)?.name || 'Default'}
+                            </ThemedText>
+                          </>
+                        );
+                      })()}
                     </View>
                     <ChevronRight size={16} color={currColors.border} style={{ marginLeft: 6 }} />
                   </View>

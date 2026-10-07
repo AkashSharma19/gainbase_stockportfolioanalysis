@@ -86,8 +86,9 @@ const KEYWORD_TO_ID: Record<string, string> = {
   textiles: 'clothes', media: 'clapperboard',
   etf: 'investments', 'large cap': 'trophy', 'mid cap': 'medal', 'small cap': 'target',
   // Finance & Money
-  salary: 'banknote', cash: 'banknote', income: 'banknote', banknote: 'banknote', stipend: 'banknote', payout: 'banknote',
+  salary: 'banknote', income: 'banknote', banknote: 'banknote', stipend: 'banknote', payout: 'banknote',
   money: 'money', savings: 'money', refund: 'money', rotateccw: 'money',
+  wallet: 'wallet', cash: 'wallet', 'cash wallet': 'wallet', 'main wallet': 'wallet', purse: 'wallet',
   investments: 'investments', stocks: 'investments', invest: 'investments', trendingup: 'investments', mutual: 'investments', sip: 'investments',
   credit_card: 'credit_card', creditcard: 'credit_card', calendarrange: 'credit_card', cred: 'credit_card',
   receipt: 'receipt', bill: 'receipt', invoice: 'receipt', tax: 'receipt',
@@ -209,6 +210,7 @@ export function Category3DIcon({
   return (
     <Image
       source={localSource}
+      fadeDuration={0}
       style={[{ width: size, height: size, resizeMode: 'contain' }, style]}
     />
   );

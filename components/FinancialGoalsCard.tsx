@@ -173,9 +173,12 @@ export function FinancialGoalsCard() {
       <View style={styles.content}>
         <View style={styles.mainRow}>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 }}>
-            <View style={[styles.featuredIconWrap, { backgroundColor: `${goalColor}15` }]}>
-              <Category3DIcon name={featuredGoal.icon} icon={featuredGoal.icon} size={22} />
-            </View>
+            <Category3DIcon
+              name={featuredGoal.icon}
+              icon={featuredGoal.icon}
+              size={32}
+              style={{ marginRight: 10 }}
+            />
             <View style={{ flex: 1 }}>
               <ThemedText style={[styles.goalName, { color: currColors.text }]} numberOfLines={1}>
                 {featuredGoal.name}

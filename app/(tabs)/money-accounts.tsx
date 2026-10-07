@@ -218,17 +218,52 @@ export default function AccountsScreen() {
       >
         <View style={styles.cardMainRow}>
           <View style={styles.cardLeft}>
-            {item.logo ? (
-              <BankLogo logo={item.logo} size={30} style={{ marginRight: 12 }} />
-            ) : (item.type === 'receivable' || item.type === 'payable') && item.icon && CATEGORY_3D_ICONS_LIST.find((i) => i.id === item.icon) ? (
-              <View style={[styles.iconWrapper, { backgroundColor: `${item.color}15` }]}>
-                <Category3DIcon name={item.icon} icon={item.icon} size={26} />
-              </View>
-            ) : (
-              <View style={[styles.iconWrapper, { backgroundColor: `${item.color}15` }]}>
-                <IconComponent size={18} color={item.color} />
-              </View>
-            )}
+            {(() => {
+              if (item.logo) {
+                return <BankLogo logo={item.logo} size={30} style={{ marginRight: 12 }} />;
+              }
+
+              if (item.type === 'wallet') {
+                const walletIcon = item.icon && item.icon.toLowerCase() !== 'wallet' ? item.icon : 'wallet';
+                return (
+                  <Category3DIcon
+                    name={walletIcon}
+                    icon={walletIcon}
+                    size={36}
+                    style={{ marginRight: 12 }}
+                  />
+                );
+              }
+
+              if (item.type === 'receivable' || item.type === 'payable') {
+                const peerIcon = item.icon || (item.type === 'receivable' ? 'receivable' : 'payable');
+                return (
+                  <Category3DIcon
+                    name={peerIcon}
+                    icon={peerIcon}
+                    size={36}
+                    style={{ marginRight: 12 }}
+                  />
+                );
+              }
+
+              if (item.icon && CATEGORY_3D_ICONS_LIST.find((i) => i.id === item.icon)) {
+                return (
+                  <Category3DIcon
+                    name={item.icon}
+                    icon={item.icon}
+                    size={36}
+                    style={{ marginRight: 12 }}
+                  />
+                );
+              }
+
+              return (
+                <View style={[styles.iconWrapper, { backgroundColor: `${item.color}15` }]}>
+                  <IconComponent size={18} color={item.color} />
+                </View>
+              );
+            })()}
             <View style={styles.accountInfo}>
               <ThemedText type="semiBold" style={[styles.accountName, { color: currColors.text }]} numberOfLines={1}>
                 {item.name}

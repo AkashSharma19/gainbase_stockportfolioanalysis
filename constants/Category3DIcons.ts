@@ -500,6 +500,13 @@ export const CATEGORY_3D_ICONS_LIST: Category3DItem[] = [
     keywords: ['money', 'savings', 'bonus', 'funds', 'cash', 'wealth', 'dividend', 'interest', 'cashback', 'refund']
   },
   {
+    id: 'wallet',
+    name: 'Wallet',
+    group: 'Finance & Money',
+    path: 'Purse/3D/purse_3d.png',
+    keywords: ['wallet', 'cash', 'purse', 'money', 'pocket', 'cash in hand', 'physical cash', 'notes', 'currency', 'main wallet']
+  },
+  {
     id: 'investments',
     name: 'Growth Chart',
     group: 'Finance & Money',

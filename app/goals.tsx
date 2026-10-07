@@ -123,10 +123,13 @@ const GoalRowItem = memo(
         >
           {/* Main Top Row */}
           <View style={styles.cardMainRow}>
-            {/* Left Icon Container */}
-            <View style={[styles.iconWrapper, { backgroundColor: `${goalColor}15` }]}>
-              <Category3DIcon name={goal.icon} icon={goal.icon} size={26} />
-            </View>
+            {/* Left 3D Icon */}
+            <Category3DIcon
+              name={goal.icon}
+              icon={goal.icon}
+              size={36}
+              style={{ marginRight: 12 }}
+            />
 
             {/* Middle Info Column */}
             <View style={styles.infoCol}>
