@@ -8,6 +8,7 @@ import {
   Alert,
   ScrollView,
   NativeModules,
+  Platform,
 } from 'react-native';
 import { useColorScheme } from '@/components/useColorScheme';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -69,9 +70,9 @@ export default function CloudBackupScreen() {
           webClientId: GOOGLE_WEB_CLIENT_ID.endsWith('YOUR_GOOGLE_WEB_CLIENT_ID') 
             ? undefined 
             : GOOGLE_WEB_CLIENT_ID,
-          iosClientId: GOOGLE_IOS_CLIENT_ID.endsWith('YOUR_GOOGLE_IOS_CLIENT_ID') 
-            ? undefined 
-            : GOOGLE_IOS_CLIENT_ID,
+          iosClientId: Platform.OS === 'ios' && !GOOGLE_IOS_CLIENT_ID.endsWith('YOUR_GOOGLE_IOS_CLIENT_ID')
+            ? GOOGLE_IOS_CLIENT_ID 
+            : undefined,
           offlineAccess: true,
         });
       } catch (e) {
@@ -115,10 +116,10 @@ export default function CloudBackupScreen() {
   const handleGoogleSignIn = async () => {
     handleHaptic();
     
-    if (
-      GOOGLE_WEB_CLIENT_ID === 'YOUR_GOOGLE_WEB_CLIENT_ID' ||
-      GOOGLE_IOS_CLIENT_ID === 'YOUR_GOOGLE_IOS_CLIENT_ID'
-    ) {
+    const isWebMissing = GOOGLE_WEB_CLIENT_ID.includes('YOUR_GOOGLE_WEB_CLIENT_ID');
+    const isIosMissing = Platform.OS === 'ios' && GOOGLE_IOS_CLIENT_ID.includes('YOUR_GOOGLE_IOS_CLIENT_ID');
+
+    if (isWebMissing || isIosMissing) {
       Alert.alert(
         'Setup Required',
         'Please configure your Google Client IDs in app/cloud-backup.tsx before testing Google Sign-In.'
@@ -160,7 +161,11 @@ export default function CloudBackupScreen() {
       triggerSync();
     } catch (error: any) {
       console.error('Google Auth Error:', error);
-      Alert.alert('Google Sign-In Failed', error.message || 'An error occurred during Google Sign-In.');
+      let errorMsg = error?.message || 'An error occurred during Google Sign-In.';
+      if (error?.code === '10' || error?.code === 10 || errorMsg.includes('DEVELOPER_ERROR')) {
+        errorMsg = 'Developer Error (code 10): SHA-1 fingerprint or package name (com.akashsharma.gainbase) does not match the Android OAuth Client in Google Cloud Console.';
+      }
+      Alert.alert('Google Sign-In Failed', errorMsg);
     } finally {
       setLoading(false);
     }
