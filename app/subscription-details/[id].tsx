@@ -36,6 +36,8 @@ import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Subscription, SubscriptionPayment } from '@/types/money';
 import { Category3DIcon } from '@/components/Category3DIcon';
+import { AccountPickerModal } from '@/components/AccountPickerModal';
+import { AccountSelectCard } from '@/components/AccountSelectCard';
 import { advanceDateByCycle } from '@/lib/finance';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
@@ -705,101 +707,72 @@ interface ScheduleRow {
             style={{ width: '100%', justifyContent: 'flex-end' }}
           >
             <View style={[styles.modalContent, { backgroundColor: currColors.card }]}>
-              {showAccountSelector ? (
-                <View style={{ width: '100%', minHeight: 300, maxHeight: 450 }}>
-                  <View style={[styles.modalHeader, { borderBottomColor: currColors.border, marginBottom: 12 }]}>
-                    <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Select Account</ThemedText>
-                    <TouchableOpacity onPress={() => setShowAccountSelector(false)}>
-                      <X size={22} color={currColors.text} />
-                    </TouchableOpacity>
-                  </View>
-                  <FlatList
-                    data={accounts.filter((a) => !a.isArchived)}
-                    keyExtractor={(item) => item.id}
-                    bounces={false}
-                    style={{ maxHeight: 350 }}
-                    renderItem={({ item }) => (
-                      <TouchableOpacity
-                        style={[styles.modalItem, { borderBottomColor: currColors.border }]}
-                        onPress={() => {
-                          handleHaptic();
-                          setSelectedAccountId(item.id);
-                          setShowAccountSelector(false);
-                        }}
-                      >
-                        <ThemedText style={{ color: currColors.text, fontSize: 15, fontFamily: 'Outfit_400Regular' }}>
-                          {item.name}
-                        </ThemedText>
-                        <ThemedText style={{ color: currColors.textSecondary, fontSize: 13, fontFamily: 'Outfit_400Regular' }}>
-                          {formatAmount(item.balance)}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    )}
-                  />
-                </View>
-              ) : (
-                <>
-                  <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
-                    <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
-                      Log Subscription Payment
-                    </ThemedText>
-                    <TouchableOpacity onPress={() => setShowLogPaymentModal(false)}>
-                      <X size={22} color={currColors.text} />
-                    </TouchableOpacity>
-                  </View>
+              <View style={[styles.modalHeader, { borderBottomColor: currColors.border }]}>
+                <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
+                  Log Subscription Payment
+                </ThemedText>
+                <TouchableOpacity onPress={() => setShowLogPaymentModal(false)}>
+                  <X size={22} color={currColors.text} />
+                </TouchableOpacity>
+              </View>
 
-                  <View style={styles.modalInputGroup}>
-                    <ThemedText style={[styles.modalLabel, { color: currColors.textSecondary }]}>
-                      PAYMENT AMOUNT
-                    </ThemedText>
-                    <TextInput
-                      style={[
-                        styles.modalAmountInput,
-                        { color: currColors.text, borderBottomColor: currColors.border },
-                      ]}
-                      placeholder="0"
-                      placeholderTextColor={currColors.textSecondary}
-                      keyboardType="numeric"
-                      value={paymentAmount}
-                      onChangeText={(val) => setPaymentAmount(formatIndianAmount(val))}
-                    />
-                  </View>
+              <View style={styles.modalInputGroup}>
+                <ThemedText style={[styles.modalLabel, { color: currColors.textSecondary }]}>
+                  PAYMENT AMOUNT
+                </ThemedText>
+                <TextInput
+                  style={[
+                    styles.modalAmountInput,
+                    { color: currColors.text, borderBottomColor: currColors.border },
+                  ]}
+                  placeholder="0"
+                  placeholderTextColor={currColors.textSecondary}
+                  keyboardType="numeric"
+                  value={paymentAmount}
+                  onChangeText={(val) => setPaymentAmount(formatIndianAmount(val))}
+                />
+              </View>
 
-                  <View style={styles.modalInputGroup}>
-                    <ThemedText style={[styles.modalLabel, { color: currColors.textSecondary }]}>
-                      PAY FROM ACCOUNT
-                    </ThemedText>
-                    <TouchableOpacity
-                      style={[
-                        styles.modalSelectBox,
-                        { backgroundColor: currColors.cardSecondary, borderColor: currColors.border },
-                      ]}
-                      onPress={() => {
-                        handleHaptic();
-                        setShowAccountSelector(true);
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        <Wallet size={16} color="#00C9A7" />
-                        <ThemedText style={{ color: selectedAccountId ? currColors.text : currColors.textSecondary, fontSize: 14, fontFamily: 'Outfit_400Regular' }}>
-                          {accounts.find((a) => a.id === selectedAccountId)?.name || 'Select Account'}
-                        </ThemedText>
-                      </View>
-                      <ChevronDown size={16} color={currColors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
+              <View style={styles.modalInputGroup}>
+                <ThemedText style={[styles.modalLabel, { color: currColors.textSecondary }]}>
+                  PAY FROM ACCOUNT
+                </ThemedText>
+                <AccountSelectCard
+                  selectedAccount={accounts.find((a) => a.id === selectedAccountId)}
+                  onPress={() => {
+                    handleHaptic();
+                    setShowAccountSelector(true);
+                  }}
+                  label="Select Account"
+                  style={{ backgroundColor: currColors.cardSecondary, borderColor: currColors.border }}
+                />
+              </View>
 
-                  <TouchableOpacity
-                    style={[styles.modalSubmitBtn, { backgroundColor: themeColor }]}
-                    activeOpacity={0.8}
-                    onPress={handleConfirmLogPayment}
-                  >
-                    <ThemedText style={styles.modalSubmitBtnText}>Confirm Payment</ThemedText>
-                  </TouchableOpacity>
-                </>
-              )}
+              <TouchableOpacity
+                style={[styles.modalSubmitBtn, { backgroundColor: themeColor }]}
+                activeOpacity={0.8}
+                onPress={handleConfirmLogPayment}
+              >
+                <ThemedText style={styles.modalSubmitBtnText}>Confirm Payment</ThemedText>
+              </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
+
+          {/* Unified Account Picker Modal (Nested inside parent modal for iOS presentation) */}
+          <AccountPickerModal
+            visible={showAccountSelector}
+            onClose={() => setShowAccountSelector(false)}
+            onSelectAccount={(acc) => {
+              setSelectedAccountId(acc.id);
+            }}
+            onAddNewAccount={() => {
+              setShowAccountSelector(false);
+              setShowLogPaymentModal(false);
+              router.push('/add-account');
+            }}
+            selectedAccountId={selectedAccountId}
+            title="Choose Account"
+          />
         </View>
       </Modal>
     </SafeAreaView>

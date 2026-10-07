@@ -417,12 +417,8 @@ const styles = StyleSheet.create({
     marginTop: -10,
   },
   largeIconContainer: {
-    width: 90,
-    height: 90,
-    borderRadius: 30,
-    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    justifyContent: 'center',
     marginBottom: 16,
   },
   sectorTitle: {

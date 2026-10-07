@@ -35,6 +35,8 @@ import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { EMIPayment } from '@/types/money';
 import { Category3DIcon } from '@/components/Category3DIcon';
 import { LOAN_3D_ICON_MAP } from '@/constants/Category3DIcons';
+import { AccountPickerModal } from '@/components/AccountPickerModal';
+import { AccountSelectCard } from '@/components/AccountSelectCard';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 import { getNextLoanDuePayment } from '@/lib/finance';
 
@@ -766,39 +768,7 @@ export default function LoanDetailsScreen() {
             style={{ width: '100%', justifyContent: 'flex-end' }}
           >
             <View style={[styles.modalContent, { backgroundColor: currColors.card }]}>
-              {showAccountSelector ? (
-                <View style={{ width: '100%', minHeight: 300, maxHeight: 450 }}>
-                  <View style={[styles.modalHeader, { borderBottomColor: currColors.border, marginBottom: 12 }]}>
-                    <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
-                      Select Account
-                    </ThemedText>
-                    <TouchableOpacity onPress={() => setShowAccountSelector(false)}>
-                      <X size={22} color={currColors.text} />
-                    </TouchableOpacity>
-                  </View>
-                  <FlatList
-                    data={accounts.filter(a => !a.isArchived)}
-                    keyExtractor={(item) => item.id}
-                    bounces={false}
-                    style={{ maxHeight: 350 }}
-                    renderItem={({ item }) => (
-                      <TouchableOpacity
-                        style={[styles.modalItem, { borderBottomColor: currColors.border }]}
-                        onPress={() => {
-                          handleHaptic();
-                          setSelectedAccountId(item.id);
-                          setShowAccountSelector(false);
-                        }}
-                      >
-                        <ThemedText style={{ color: currColors.text, fontSize: 15, fontFamily: 'Outfit_400Regular' }}>{item.name}</ThemedText>
-                        <ThemedText style={{ color: currColors.textSecondary, fontSize: 13, fontFamily: 'Outfit_400Regular' }}>
-                          {formatAmount(item.balance)}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    )}
-                  />
-                </View>
-              ) : showCategorySelector ? (
+              {showCategorySelector ? (
                 <View style={{ width: '100%', minHeight: 300, maxHeight: 450 }}>
                   <View style={[styles.modalHeader, { borderBottomColor: currColors.border, marginBottom: 12 }]}>
                     <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
@@ -855,18 +825,15 @@ export default function LoanDetailsScreen() {
 
                   <View style={styles.modalInputGroup}>
                     <ThemedText style={[styles.modalLabel, { color: currColors.textSecondary }]}>PAY FROM ACCOUNT</ThemedText>
-                    <TouchableOpacity
-                      style={[styles.modalSelectBox, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}
+                    <AccountSelectCard
+                      selectedAccount={accounts.find(a => a.id === selectedAccountId)}
                       onPress={() => {
                         handleHaptic();
                         setShowAccountSelector(true);
                       }}
-                    >
-                      <ThemedText style={{ color: selectedAccountId ? currColors.text : currColors.textSecondary, fontSize: 15, fontFamily: 'Outfit_400Regular' }}>
-                        {accounts.find(a => a.id === selectedAccountId)?.name || 'Select Account'}
-                      </ThemedText>
-                      <ChevronDown size={18} color={currColors.textSecondary} />
-                    </TouchableOpacity>
+                      label="Select Account"
+                      style={{ backgroundColor: currColors.cardSecondary, borderColor: currColors.border }}
+                    />
                   </View>
 
                   <View style={styles.modalInputGroup}>
@@ -878,9 +845,14 @@ export default function LoanDetailsScreen() {
                         setShowCategorySelector(true);
                       }}
                     >
-                      <ThemedText style={{ color: selectedCategory ? currColors.text : currColors.textSecondary, fontSize: 15, fontFamily: 'Outfit_400Regular' }}>
-                        {selectedCategory || 'Select Category'}
-                      </ThemedText>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {selectedCategory ? (
+                          <Category3DIcon name={selectedCategory} size={20} style={{ marginRight: 8 }} />
+                        ) : null}
+                        <ThemedText style={{ color: selectedCategory ? currColors.text : currColors.textSecondary, fontSize: 15, fontFamily: 'Outfit_400Regular' }}>
+                          {selectedCategory || 'Select Category'}
+                        </ThemedText>
+                      </View>
                       <ChevronDown size={18} color={currColors.textSecondary} />
                     </TouchableOpacity>
                   </View>
@@ -931,6 +903,22 @@ export default function LoanDetailsScreen() {
               )}
             </View>
           </KeyboardAvoidingView>
+
+          {/* Unified Account Picker Modal (Nested inside parent modal for iOS presentation) */}
+          <AccountPickerModal
+            visible={showAccountSelector}
+            onClose={() => setShowAccountSelector(false)}
+            onSelectAccount={(acc) => {
+              setSelectedAccountId(acc.id);
+            }}
+            onAddNewAccount={() => {
+              setShowAccountSelector(false);
+              setShowLogPaymentModal(false);
+              router.push('/add-account');
+            }}
+            selectedAccountId={selectedAccountId}
+            title="Choose Account"
+          />
         </View>
       </Modal>
     </SafeAreaView>

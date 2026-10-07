@@ -43,125 +43,10 @@ import { MoneyTransaction, Account, AccountType } from '@/types/money';
 import { BankLogo } from '@/components/BankLogo';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { Category3DIcon } from '@/components/Category3DIcon';
+import { AccountLogoOrIcon } from '@/components/AccountLogoOrIcon';
+import { AccountSelectCard } from '@/components/AccountSelectCard';
+import { AccountPickerModal } from '@/components/AccountPickerModal';
 import { formatCurrencyINR, parseIndianAmount, formatExpressionWithIndianCommas, formatIndianAmount } from '@/utils/formatters';
-
-const ACCOUNT_TYPE_ICONS: Record<AccountType, { color: string }> = {
-  wallet: { color: '#00C9A7' },
-  savings: { color: '#007AFF' },
-  investment: { color: '#AF52DE' },
-  credit_card: { color: '#FF9500' },
-  emergency_fund: { color: '#FF2D55' },
-  receivable: { color: '#34C759' },
-  payable: { color: '#FF3B30' },
-};
-
-const SECTION_ORDER = [
-  'BANK ACCOUNTS',
-  'CREDIT CARDS',
-  'CASH & WALLETS',
-  'INVESTMENTS',
-  'EMERGENCY FUND',
-  'PEER BALANCES',
-  'ACCOUNTS',
-];
-
-const getAccountTypeSection = (type: AccountType): string => {
-  switch (type) {
-    case 'savings':
-      return 'BANK ACCOUNTS';
-    case 'credit_card':
-      return 'CREDIT CARDS';
-    case 'wallet':
-      return 'CASH & WALLETS';
-    case 'investment':
-      return 'INVESTMENTS';
-    case 'emergency_fund':
-      return 'EMERGENCY FUND';
-    case 'receivable':
-    case 'payable':
-      return 'PEER BALANCES';
-    default:
-      return 'ACCOUNTS';
-  }
-};
-
-function AccountLogoOrIcon({
-  account,
-  size = 26,
-  variant = 'circle',
-}: {
-  account: Account;
-  size?: number;
-  variant?: 'circle' | 'card';
-}) {
-  const config = ACCOUNT_TYPE_ICONS[account.type] || ACCOUNT_TYPE_ICONS.wallet;
-
-  if (variant === 'card') {
-    if (account.logo) {
-      return (
-        <BankLogo
-          logo={account.logo}
-          size={30}
-          style={{ width: 44, height: 30, borderRadius: 7, marginRight: 10 }}
-        />
-      );
-    }
-    return (
-      <View
-        style={{
-          width: 44,
-          height: 30,
-          borderRadius: 7,
-          backgroundColor: `${config.color}18`,
-          borderWidth: 1,
-          borderColor: `${config.color}35`,
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginRight: 10,
-        }}
-      >
-        {account.type === 'wallet' ? (
-          <Wallet size={16} color={config.color} strokeWidth={2} />
-        ) : account.type === 'credit_card' ? (
-          <CreditCard size={16} color={config.color} strokeWidth={2} />
-        ) : account.type === 'savings' ? (
-          <Landmark size={16} color={config.color} strokeWidth={2} />
-        ) : account.type === 'investment' ? (
-          <TrendingUp size={16} color={config.color} strokeWidth={2} />
-        ) : account.type === 'emergency_fund' ? (
-          <PiggyBank size={16} color={config.color} strokeWidth={2} />
-        ) : account.type === 'receivable' || account.type === 'payable' ? (
-          <Users size={16} color={config.color} strokeWidth={2} />
-        ) : (
-          <ThemedText style={{ fontSize: 11, color: config.color, fontFamily: 'Outfit_700Bold' }}>
-            {account.name.slice(0, 3).toUpperCase()}
-          </ThemedText>
-        )}
-      </View>
-    );
-  }
-
-  if (account.logo) {
-    return <BankLogo logo={account.logo} size={size} style={{ marginRight: 6 }} />;
-  }
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: `${config.color}20`,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 6,
-      }}
-    >
-      <ThemedText style={{ fontSize: size * 0.45, color: config.color, fontWeight: '700' }}>
-        {account.name.charAt(0).toUpperCase()}
-      </ThemedText>
-    </View>
-  );
-}
 
 const getPredictedAccount = (
   type: 'income' | 'expense' | 'transfer',
@@ -271,7 +156,6 @@ export default function AddMoneyTransactionScreen() {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showToAccountModal, setShowToAccountModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [accountSearchQuery, setAccountSearchQuery] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Live evaluated preview when typing math expressions (e.g. 5000 + 2500)
@@ -455,53 +339,6 @@ export default function AddMoneyTransactionScreen() {
       setDate(selectedDate);
     }
   };
-
-  const activeAccounts = useMemo(() => {
-    return accounts.filter((a) => !a.isArchived);
-  }, [accounts]);
-
-  const filteredAccounts = useMemo(() => {
-    if (!accountSearchQuery) return activeAccounts;
-    return activeAccounts.filter((a) =>
-      a.name.toLowerCase().includes(accountSearchQuery.toLowerCase().trim())
-    );
-  }, [activeAccounts, accountSearchQuery]);
-
-  const groupedAccounts = useMemo(() => {
-    const map: Record<string, Account[]> = {};
-    filteredAccounts.forEach((acc) => {
-      const sec = getAccountTypeSection(acc.type);
-      if (!map[sec]) map[sec] = [];
-      map[sec].push(acc);
-    });
-    return Object.entries(map)
-      .map(([title, data]) => ({ title, data }))
-      .sort((a, b) => {
-        const idxA = SECTION_ORDER.indexOf(a.title);
-        const idxB = SECTION_ORDER.indexOf(b.title);
-        return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
-      });
-  }, [filteredAccounts]);
-
-  const groupedToAccounts = useMemo(() => {
-    const list = activeAccounts.filter((a) => a.id !== accountId);
-    const filtered = accountSearchQuery
-      ? list.filter((a) => a.name.toLowerCase().includes(accountSearchQuery.toLowerCase().trim()))
-      : list;
-    const map: Record<string, Account[]> = {};
-    filtered.forEach((acc) => {
-      const sec = getAccountTypeSection(acc.type);
-      if (!map[sec]) map[sec] = [];
-      map[sec].push(acc);
-    });
-    return Object.entries(map)
-      .map(([title, data]) => ({ title, data }))
-      .sort((a, b) => {
-        const idxA = SECTION_ORDER.indexOf(a.title);
-        const idxB = SECTION_ORDER.indexOf(b.title);
-        return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
-      });
-  }, [activeAccounts, accountId, accountSearchQuery]);
 
   const sourceAccount = accounts.find((a) => a.id === accountId);
   const destAccount = accounts.find((a) => a.id === toAccountId);
@@ -786,31 +623,11 @@ export default function AddMoneyTransactionScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity
-              style={[styles.accountSelectorCard, { backgroundColor: currColors.card, borderColor: currColors.border, borderWidth: 1 }]}
+            <AccountSelectCard
+              selectedAccount={sourceAccount}
               onPress={() => setShowAccountModal(true)}
-              activeOpacity={0.7}
-            >
-              <ThemedText style={[styles.accountSelectLabel, { color: currColors.text }]}>
-                Select Account
-              </ThemedText>
-
-              <View style={styles.accountSelectedRight}>
-                {sourceAccount ? (
-                  <View style={styles.accountBadgeRow}>
-                    <AccountLogoOrIcon account={sourceAccount} size={22} />
-                    <ThemedText style={[styles.accountSelectedName, { color: currColors.text }]} numberOfLines={1}>
-                      {sourceAccount.name}
-                    </ThemedText>
-                  </View>
-                ) : (
-                  <ThemedText style={[styles.accountPlaceholder, { color: currColors.textSecondary }]}>
-                    Select
-                  </ThemedText>
-                )}
-                <ChevronRight size={18} color={currColors.textSecondary} style={{ marginLeft: 4 }} />
-              </View>
-            </TouchableOpacity>
+              label="Select Account"
+            />
           )}
         </View>
 
@@ -1100,305 +917,28 @@ export default function AddMoneyTransactionScreen() {
       </Modal>
 
       {/* ACCOUNT SELECTION MODAL */}
-      <Modal visible={showAccountModal} animationType="slide" presentationStyle="fullScreen">
-        <View
-          style={[
-            styles.accountModalContainer,
-            {
-              backgroundColor: currColors.background,
-              paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24),
-              paddingBottom: Math.max(insets.bottom, 16),
-            },
-          ]}
-        >
-          <StatusBar style={isDark ? 'light' : 'dark'} />
-          {/* Header */}
-          <View style={styles.accountModalHeader}>
-            <TouchableOpacity
-              style={[styles.modalCircularBtn, { backgroundColor: currColors.cardSecondary }]}
-              onPress={() => {
-                setShowAccountModal(false);
-                setAccountSearchQuery('');
-              }}
-              activeOpacity={0.7}
-            >
-              <X size={20} color={currColors.text} strokeWidth={2.2} />
-            </TouchableOpacity>
-
-            <ThemedText style={[styles.accountModalTitle, { color: currColors.text }]}>
-              Choose Account
-            </ThemedText>
-
-            <TouchableOpacity
-              style={[
-                styles.modalCircularBtn,
-                { backgroundColor: currColors.tintMoney },
-              ]}
-              onPress={() => {
-                setShowAccountModal(false);
-                setAccountSearchQuery('');
-              }}
-              activeOpacity={0.7}
-            >
-              <Check size={20} color="#FFFFFF" strokeWidth={2.5} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Search Bar */}
-          <View style={[styles.accountSearchWrapper, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            <Search size={15} color={currColors.textSecondary} />
-            <TextInput
-              style={[styles.accountSearchInput, { color: currColors.text }]}
-              placeholder="Search account..."
-              placeholderTextColor={currColors.textSecondary}
-              value={accountSearchQuery}
-              onChangeText={setAccountSearchQuery}
-              clearButtonMode="while-editing"
-            />
-            {Boolean(accountSearchQuery) && (
-              <TouchableOpacity onPress={() => setAccountSearchQuery('')} style={{ padding: 4 }}>
-                <X size={14} color={currColors.textSecondary} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Grouped Account List */}
-          <ScrollView
-            style={styles.accountModalScroll}
-            contentContainerStyle={styles.accountModalScrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {groupedAccounts.length === 0 ? (
-              <View style={styles.accountEmptyState}>
-                <ThemedText style={{ color: currColors.textSecondary, fontSize: 14 }}>
-                  No accounts found
-                </ThemedText>
-              </View>
-            ) : (
-              groupedAccounts.map((section) => (
-                <View key={section.title} style={styles.accountSectionBlock}>
-                  <ThemedText style={[styles.accountSectionTitle, { color: currColors.textSecondary }]}>
-                    {section.title}
-                  </ThemedText>
-
-                  <View style={styles.accountSectionCards}>
-                    {section.data.map((item) => {
-                      const isSelected = accountId === item.id;
-                      return (
-                        <TouchableOpacity
-                          key={item.id}
-                          style={[
-                            styles.accountCardItem,
-                            {
-                              backgroundColor: isSelected
-                                ? (isDark ? '#00C9A718' : '#00C9A70E')
-                                : currColors.card,
-                              borderColor: isSelected ? currColors.tintMoney : currColors.border,
-                              borderWidth: isSelected ? 1.5 : 1,
-                            },
-                          ]}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setAccountId(item.id);
-                            setIsAccountManuallySelected(true);
-                            setShowAccountModal(false);
-                            setAccountSearchQuery('');
-                          }}
-                          activeOpacity={0.7}
-                        >
-                          <View style={styles.accountCardLeft}>
-                            <AccountLogoOrIcon account={item} variant="card" />
-                            <View style={styles.accountCardInfo}>
-                              <ThemedText style={[styles.accountCardName, { color: currColors.text }]} numberOfLines={1}>
-                                {item.name}
-                              </ThemedText>
-                              <ThemedText style={[styles.accountCardSubtitle, { color: currColors.textSecondary }]} numberOfLines={1}>
-                                {item.institution || item.accountNumber || (item.type === 'wallet' ? 'Cash Wallet' : item.type.replace('_', ' ').toUpperCase())}
-                              </ThemedText>
-                            </View>
-                          </View>
-
-                          <ThemedText style={[styles.accountCardBalance, { color: currColors.text }]}>
-                            {formatCurrencyINR(item.balance, true, 0)}
-                          </ThemedText>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              ))
-            )}
-          </ScrollView>
-
-          {/* Bottom Add Account Pill Button */}
-          <View style={[styles.accountBottomActionWrap, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 16) }]}>
-            <TouchableOpacity
-              style={[styles.accountBottomPillBtn, { backgroundColor: currColors.cardSecondary }]}
-              onPress={() => {
-                setShowAccountModal(false);
-                setAccountSearchQuery('');
-                router.push('/add-account');
-              }}
-              activeOpacity={0.7}
-            >
-              <ThemedText style={[styles.accountBottomPillText, { color: currColors.text }]}>
-                Add new account
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <AccountPickerModal
+        visible={showAccountModal}
+        onClose={() => setShowAccountModal(false)}
+        onSelectAccount={(acc) => {
+          setAccountId(acc.id);
+          setIsAccountManuallySelected(true);
+        }}
+        selectedAccountId={accountId}
+        title="Choose Account"
+      />
 
       {/* TO ACCOUNT SELECTION MODAL (Transfer only) */}
-      <Modal visible={showToAccountModal} animationType="slide" presentationStyle="fullScreen">
-        <View
-          style={[
-            styles.accountModalContainer,
-            {
-              backgroundColor: currColors.background,
-              paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24),
-              paddingBottom: Math.max(insets.bottom, 16),
-            },
-          ]}
-        >
-          <StatusBar style={isDark ? 'light' : 'dark'} />
-          {/* Header */}
-          <View style={styles.accountModalHeader}>
-            <TouchableOpacity
-              style={[styles.modalCircularBtn, { backgroundColor: currColors.cardSecondary }]}
-              onPress={() => {
-                setShowToAccountModal(false);
-                setAccountSearchQuery('');
-              }}
-              activeOpacity={0.7}
-            >
-              <X size={20} color={currColors.text} strokeWidth={2.2} />
-            </TouchableOpacity>
-
-            <ThemedText style={[styles.accountModalTitle, { color: currColors.text }]}>
-              Destination Account
-            </ThemedText>
-
-            <TouchableOpacity
-              style={[
-                styles.modalCircularBtn,
-                { backgroundColor: currColors.tintMoney },
-              ]}
-              onPress={() => {
-                setShowToAccountModal(false);
-                setAccountSearchQuery('');
-              }}
-              activeOpacity={0.7}
-            >
-              <Check size={20} color="#FFFFFF" strokeWidth={2.5} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Search Bar */}
-          <View style={[styles.accountSearchWrapper, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            <Search size={15} color={currColors.textSecondary} />
-            <TextInput
-              style={[styles.accountSearchInput, { color: currColors.text }]}
-              placeholder="Search account..."
-              placeholderTextColor={currColors.textSecondary}
-              value={accountSearchQuery}
-              onChangeText={setAccountSearchQuery}
-              clearButtonMode="while-editing"
-            />
-            {Boolean(accountSearchQuery) && (
-              <TouchableOpacity onPress={() => setAccountSearchQuery('')} style={{ padding: 4 }}>
-                <X size={14} color={currColors.textSecondary} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Grouped Destination Account List */}
-          <ScrollView
-            style={styles.accountModalScroll}
-            contentContainerStyle={styles.accountModalScrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {groupedToAccounts.length === 0 ? (
-              <View style={styles.accountEmptyState}>
-                <ThemedText style={{ color: currColors.textSecondary, fontSize: 14 }}>
-                  No destination accounts available
-                </ThemedText>
-              </View>
-            ) : (
-              groupedToAccounts.map((section) => (
-                <View key={section.title} style={styles.accountSectionBlock}>
-                  <ThemedText style={[styles.accountSectionTitle, { color: currColors.textSecondary }]}>
-                    {section.title}
-                  </ThemedText>
-
-                  <View style={styles.accountSectionCards}>
-                    {section.data.map((item) => {
-                      const isSelected = toAccountId === item.id;
-                      return (
-                        <TouchableOpacity
-                          key={item.id}
-                          style={[
-                            styles.accountCardItem,
-                            {
-                              backgroundColor: isSelected
-                                ? (isDark ? '#00C9A718' : '#00C9A70E')
-                                : currColors.card,
-                              borderColor: isSelected ? currColors.tintMoney : currColors.border,
-                              borderWidth: isSelected ? 1.5 : 1,
-                            },
-                          ]}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setToAccountId(item.id);
-                            setShowToAccountModal(false);
-                            setAccountSearchQuery('');
-                          }}
-                          activeOpacity={0.7}
-                        >
-                          <View style={styles.accountCardLeft}>
-                            <AccountLogoOrIcon account={item} variant="card" />
-                            <View style={styles.accountCardInfo}>
-                              <ThemedText style={[styles.accountCardName, { color: currColors.text }]} numberOfLines={1}>
-                                {item.name}
-                              </ThemedText>
-                              <ThemedText style={[styles.accountCardSubtitle, { color: currColors.textSecondary }]} numberOfLines={1}>
-                                {item.institution || item.accountNumber || (item.type === 'wallet' ? 'Cash Wallet' : item.type.replace('_', ' ').toUpperCase())}
-                              </ThemedText>
-                            </View>
-                          </View>
-
-                          <ThemedText style={[styles.accountCardBalance, { color: currColors.text }]}>
-                            {formatCurrencyINR(item.balance, true, 0)}
-                          </ThemedText>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              ))
-            )}
-          </ScrollView>
-
-          {/* Bottom Add Account Pill Button */}
-          <View style={[styles.accountBottomActionWrap, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 16) }]}>
-            <TouchableOpacity
-              style={[styles.accountBottomPillBtn, { backgroundColor: currColors.cardSecondary }]}
-              onPress={() => {
-                setShowToAccountModal(false);
-                setAccountSearchQuery('');
-                router.push('/add-account');
-              }}
-              activeOpacity={0.7}
-            >
-              <ThemedText style={[styles.accountBottomPillText, { color: currColors.text }]}>
-                Add new account
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <AccountPickerModal
+        visible={showToAccountModal}
+        onClose={() => setShowToAccountModal(false)}
+        onSelectAccount={(acc) => {
+          setToAccountId(acc.id);
+        }}
+        selectedAccountId={toAccountId}
+        filterAccounts={(acc) => acc.id !== accountId}
+        title="Destination Account"
+      />
 
       {/* HELP MODAL */}
       <Modal visible={showHelpModal} animationType="fade" transparent>

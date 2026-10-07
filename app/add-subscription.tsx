@@ -31,6 +31,8 @@ import { Subscription, Account } from '@/types/money';
 import { formatCurrencyINR, formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 import { BankLogo } from '@/components/BankLogo';
 import { Category3DIcon } from '@/components/Category3DIcon';
+import { AccountLogoOrIcon } from '@/components/AccountLogoOrIcon';
+import { AccountPickerModal } from '@/components/AccountPickerModal';
 import {
   CATEGORY_3D_ICONS_LIST,
   findBest3DIconForText,
@@ -42,29 +44,6 @@ const CYCLES: { cycle: Subscription['billingCycle']; label: string }[] = [
   { cycle: 'quarterly', label: 'Quarterly' },
   { cycle: 'weekly', label: 'Weekly' },
 ];
-
-function AccountLogoOrInitials({ account, size = 24 }: { account: Account; size?: number }) {
-  if (account.logo) {
-    return <BankLogo logo={account.logo} size={size} style={{ marginRight: 8 }} />;
-  }
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: '#00C9A720',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 8,
-      }}
-    >
-      <ThemedText style={{ fontSize: size * 0.45, color: '#00C9A7', fontWeight: '700' }}>
-        {account.name.charAt(0).toUpperCase()}
-      </ThemedText>
-    </View>
-  );
-}
 
 export default function AddSubscriptionScreen() {
   const router = useRouter();
@@ -404,7 +383,7 @@ export default function AddSubscriptionScreen() {
               <View style={styles.valueContainer}>
                 {linkedAccount ? (
                   <View style={styles.accountBadge}>
-                    <AccountLogoOrInitials account={linkedAccount} size={20} />
+                    <AccountLogoOrIcon account={linkedAccount} size={20} />
                     <ThemedText style={[styles.valueText, { color: currColors.text }]}>
                       {linkedAccount.name}
                     </ThemedText>
@@ -617,77 +596,16 @@ export default function AddSubscriptionScreen() {
         </View>
       </Modal>
 
-      {/* ACCOUNT SELECTION MODAL */}
-      <Modal
+      {/* UNIFIED ACCOUNT PICKER MODAL */}
+      <AccountPickerModal
         visible={showAccountModal}
-        animationType="slide"
-        presentationStyle="fullScreen"
-        statusBarTranslucent={true}
-        onRequestClose={() => setShowAccountModal(false)}
-      >
-        <View style={[styles.modalMainContainer, { backgroundColor: currColors.background }]}>
-          <View
-            style={[
-              styles.iconModalHeader,
-              {
-                paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24),
-                borderBottomColor: currColors.border,
-                backgroundColor: currColors.background,
-              },
-            ]}
-          >
-            <TouchableOpacity
-              onPress={() => {
-                handleHaptic();
-                setShowAccountModal(false);
-              }}
-              style={styles.headerButton}
-              activeOpacity={0.7}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
-                Cancel
-              </ThemedText>
-            </TouchableOpacity>
-
-            <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
-              Select Debit Account
-            </ThemedText>
-
-            <View style={{ width: 50 }} />
-          </View>
-
-          <FlatList
-            data={activeAccounts}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={[styles.listContent, { paddingBottom: Math.max(insets.bottom, 24) + 20 }]}
-            renderItem={({ item }) => {
-              const isSelected = linkedAccountId === item.id;
-              return (
-                <TouchableOpacity
-                  style={[styles.listItem, { borderBottomColor: currColors.border }]}
-                  onPress={() => {
-                    handleHaptic();
-                    setLinkedAccountId(item.id);
-                    setShowAccountModal(false);
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <AccountLogoOrInitials account={item} size={32} />
-                    <View style={{ flex: 1, marginLeft: 4 }}>
-                      <ThemedText style={[styles.itemTitle, { color: currColors.text }]}>{item.name}</ThemedText>
-                      <ThemedText style={[styles.itemSubtitle, { color: currColors.textSecondary }]}>
-                        Balance: {formatCurrencyINR(item.balance, true, 0)}
-                      </ThemedText>
-                    </View>
-                  </View>
-                  {isSelected && <Check size={18} color="#00C9A7" strokeWidth={2.5} />}
-                </TouchableOpacity>
-              );
-            }}
-          />
-        </View>
-      </Modal>
+        onClose={() => setShowAccountModal(false)}
+        onSelectAccount={(acc) => {
+          setLinkedAccountId(acc.id);
+        }}
+        selectedAccountId={linkedAccountId}
+        title="Select Debit Account"
+      />
     </View>
   );
 }

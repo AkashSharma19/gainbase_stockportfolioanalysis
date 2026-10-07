@@ -34,6 +34,8 @@ import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { EMIPayment } from '@/types/money';
 import { Category3DIcon } from '@/components/Category3DIcon';
 import { LOAN_3D_ICON_MAP } from '@/constants/Category3DIcons';
+import { AccountPickerModal } from '@/components/AccountPickerModal';
+import { AccountSelectCard } from '@/components/AccountSelectCard';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
 export default function PrepayLoanScreen() {
@@ -390,45 +392,15 @@ export default function PrepayLoanScreen() {
               PAY FROM ACCOUNT
             </ThemedText>
 
-            <TouchableOpacity
-              style={[styles.accountSelectBox, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}
+            <AccountSelectCard
+              selectedAccount={selectedAccount}
               onPress={() => {
                 handleHaptic();
-                setShowAccountSelector(!showAccountSelector);
+                setShowAccountSelector(true);
               }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Wallet size={18} color="#00C9A7" />
-                <ThemedText style={{ fontSize: 14, color: currColors.text, fontFamily: 'Outfit_500Medium' }}>
-                  {selectedAccount ? selectedAccount.name : 'Select Account'}
-                </ThemedText>
-              </View>
-              <ChevronDown size={16} color={currColors.textSecondary} />
-            </TouchableOpacity>
-
-            {showAccountSelector && (
-              <View style={[styles.accountDropdown, { borderColor: currColors.border, backgroundColor: currColors.cardSecondary }]}>
-                {accounts.map((acc) => (
-                  <TouchableOpacity
-                    key={acc.id}
-                    style={[
-                      styles.accountOption,
-                      acc.id === selectedAccountId && { backgroundColor: 'rgba(0, 201, 167, 0.1)' }
-                    ]}
-                    onPress={() => {
-                      handleHaptic();
-                      setSelectedAccountId(acc.id);
-                      setShowAccountSelector(false);
-                    }}
-                  >
-                    <ThemedText style={{ fontSize: 13, color: acc.id === selectedAccountId ? '#00C9A7' : currColors.text, fontFamily: 'Outfit_500Medium' }}>
-                      {acc.name}
-                    </ThemedText>
-                    {acc.id === selectedAccountId && <Check size={16} color="#00C9A7" />}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+              label="Select Account"
+              style={{ backgroundColor: currColors.cardSecondary, borderColor: currColors.border }}
+            />
           </View>
 
           {/* Prepayment Impact & Strategies */}
@@ -542,6 +514,16 @@ export default function PrepayLoanScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <AccountPickerModal
+        visible={showAccountSelector}
+        onClose={() => setShowAccountSelector(false)}
+        onSelectAccount={(acc) => {
+          setSelectedAccountId(acc.id);
+        }}
+        selectedAccountId={selectedAccountId}
+        title="Choose Account"
+      />
     </SafeAreaView>
   );
 }

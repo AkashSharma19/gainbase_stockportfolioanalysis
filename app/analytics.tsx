@@ -624,7 +624,7 @@ export default function AnalyticsScreen() {
                           <View
                             style={[
                               styles.holdingIcon,
-                              { backgroundColor: brokerLogoId ? 'transparent' : categoryColor + '22' },
+                              { backgroundColor: 'transparent' },
                             ]}
                           >
                             {selectedDimension === 'Company Name' &&
@@ -647,9 +647,9 @@ export default function AnalyticsScreen() {
                                 />
                               </View>
                             ) : brokerLogoId ? (
-                              <BankLogo logo={brokerLogoId} size={26} />
+                              <BankLogo logo={brokerLogoId} size={28} />
                             ) : (
-                              <Category3DIcon name={item.name} size={30} />
+                              <Category3DIcon name={item.name} size={36} />
                             )}
                           </View>
                         );
