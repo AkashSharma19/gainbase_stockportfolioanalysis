@@ -18,8 +18,7 @@ import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { BackButton } from '@/components/BackButton';
 import { ThemedText } from '@/components/ThemedText';
-import { AppUpdateCard } from '@/components/AppUpdateCard';
-import { getAppVersionInfo } from '@/utils/version';
+import { VersionCheckFooter } from '@/components/VersionCheckFooter';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -35,7 +34,6 @@ export default function SettingsScreen() {
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
   const headerTopPadding = Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24);
-  const versionInfo = getAppVersionInfo();
 
   return (
     <View style={[styles.container, { backgroundColor: currColors.background, paddingTop: headerTopPadding }]}>
@@ -55,8 +53,7 @@ export default function SettingsScreen() {
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 24, 40) }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Over-The-Air Updates Card */}
-        <AppUpdateCard />
+
 
           <View
             style={[
@@ -237,15 +234,8 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          {/* Version & Build Info Footer */}
-          <View style={styles.footerVersionWrap}>
-            <ThemedText style={[styles.footerVersionText, { color: currColors.textSecondary }]}>
-              Gainbase {versionInfo.formattedString}
-            </ThemedText>
-            <ThemedText style={[styles.footerBuildMetaText, { color: currColors.textSecondary }]}>
-              Runtime: {versionInfo.runtimeVersion} • Channel: {versionInfo.channel}
-            </ThemedText>
-          </View>
+          {/* Version & Build Info Footer with Refresh check button */}
+          <VersionCheckFooter />
         </ScrollView>
       </View>
   );

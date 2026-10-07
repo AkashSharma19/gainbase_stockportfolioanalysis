@@ -282,6 +282,80 @@ export default function AllTransactionsScreen() {
     return [...list].sort((a, b) => b.date.localeCompare(a.date));
   }, [moneyTransactions, activeFilter, dateRange, selectedCategory, isWithinDateRange]);
 
+  // Helper for human-friendly group date header (e.g. "Today", "Yesterday", "22 May 2024")
+  const getGroupDateLabel = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const txDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+    const diffDays = Math.round((today.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+
+    return d.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric',
+    });
+  };
+
+  // Helper for pastel category circular badge backgrounds
+  const getCategoryBadgeTint = (category: string, type: 'income' | 'expense' | 'transfer', isDark: boolean) => {
+    if (type === 'income') {
+      return { bg: isDark ? '#00C9A722' : '#E6F9F5' };
+    }
+    if (type === 'transfer') {
+      return { bg: isDark ? '#007AFF22' : '#EDF4FF' };
+    }
+    const cat = (category || '').toLowerCase();
+    if (cat.includes('grocer') || cat.includes('food') || cat.includes('dine') || cat.includes('restaurant') || cat.includes('snack') || cat.includes('eat')) {
+      return { bg: isDark ? '#34C75924' : '#EAF8EE' };
+    }
+    if (cat.includes('shop') || cat.includes('cloth') || (cat.includes('electr') && !cat.includes('electric bill')) || cat.includes('gadget') || cat.includes('amazon') || cat.includes('purchase')) {
+      return { bg: isDark ? '#AF52DE24' : '#F5EDFD' };
+    }
+    if (cat.includes('bill') || cat.includes('electric') || cat.includes('utility') || cat.includes('rent') || cat.includes('recharge') || cat.includes('wifi') || cat.includes('internet') || cat.includes('emi') || cat.includes('loan')) {
+      return { bg: isDark ? '#FF950024' : '#FFF4EB' };
+    }
+    if (cat.includes('transport') || cat.includes('travel') || cat.includes('taxi') || cat.includes('cab') || cat.includes('fuel') || cat.includes('petrol') || cat.includes('uber') || cat.includes('ola')) {
+      return { bg: isDark ? '#FFCC0026' : '#FFF9E6' };
+    }
+    if (cat.includes('entertain') || cat.includes('movie') || cat.includes('ott') || cat.includes('netflix') || cat.includes('game') || cat.includes('play')) {
+      return { bg: isDark ? '#FF2D5524' : '#FEECEF' };
+    }
+    if (cat.includes('health') || cat.includes('medic') || cat.includes('doctor') || cat.includes('gym') || cat.includes('fit') || cat.includes('pharma')) {
+      return { bg: isDark ? '#32ADE624' : '#E8F6FC' };
+    }
+    if (cat.includes('invest') || cat.includes('stock') || cat.includes('mutual') || cat.includes('gold')) {
+      return { bg: isDark ? '#5856D624' : '#EFF0FD' };
+    }
+    return { bg: isDark ? '#8E8E9324' : '#F2F2F7' };
+  };
+
+  // Group filtered transactions by day
+  const groupedTransactions = useMemo(() => {
+    const map: Record<string, typeof filteredTxs> = {};
+    const order: string[] = [];
+
+    filteredTxs.forEach((tx) => {
+      const d = new Date(tx.date);
+      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (!map[dateKey]) {
+        map[dateKey] = [];
+        order.push(dateKey);
+      }
+      map[dateKey].push(tx);
+    });
+
+    return order.map((dateKey) => ({
+      dateKey,
+      label: getGroupDateLabel(map[dateKey][0].date),
+      data: map[dateKey],
+    }));
+  }, [filteredTxs]);
+
   // Sum of income and expense for the filtered transactions
   const stats = useMemo(() => {
     let income = 0;
@@ -682,79 +756,94 @@ export default function AllTransactionsScreen() {
             </ThemedText>
           </View>
         ) : (
-          <View style={[styles.txsList, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            {filteredTxs.map((tx, index) => {
-              const account = accounts.find((a) => a.id === tx.accountId);
-              const toAccount = tx.toAccountId ? accounts.find((a) => a.id === tx.toAccountId) : null;
-              
-              const isIncome = tx.type === 'income';
-              const isExpense = tx.type === 'expense';
-              const isTransfer = tx.type === 'transfer';
-              
-              // Determine display details
-              let typeLabel = '';
-              let subtitle = '';
-              let txColor = currColors.text;
-              let displayAmount = tx.amount;
+          <View style={styles.groupsContainer}>
+            {groupedTransactions.map((group) => (
+              <View key={group.dateKey} style={styles.dateGroupWrapper}>
+                <ThemedText style={[styles.dateGroupHeader, { color: currColors.text }]}>
+                  {group.label}
+                </ThemedText>
 
-              if (isTransfer) {
-                typeLabel = `Transfer`;
-                subtitle = `${account?.name || 'Unknown'} → ${toAccount?.name || 'Unknown'}`;
-                txColor = currColors.text;
-                displayAmount = tx.amount;
-              } else {
-                typeLabel = tx.category;
-                subtitle = account?.name || '';
-                txColor = isIncome ? '#34C759' : '#FF3B30';
-                displayAmount = tx.amount;
-              }
-
-              return (
-                <TouchableOpacity
-                  key={tx.id}
+                <View
                   style={[
-                    styles.txItem,
-                    { borderBottomColor: currColors.border, borderBottomWidth: index === filteredTxs.length - 1 ? 0 : 1 }
+                    styles.dateGroupCard,
+                    {
+                      backgroundColor: currColors.card,
+                      borderColor: currColors.border,
+                    },
                   ]}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    handleHaptic();
-                    router.push({ pathname: '/add-money-transaction', params: { id: tx.id } });
-                  }}
                 >
-                  <View style={styles.txLeft}>
-                    <Category3DIcon
-                      name={isTransfer ? 'Transfer' : tx.category}
-                      icon={isTransfer ? 'transfer' : undefined}
-                      size={36}
-                      style={{ marginRight: 12 }}
-                    />
-                    <View style={styles.txInfo}>
-                      <ThemedText style={[styles.txLabelText, { color: currColors.text }]} numberOfLines={1}>
-                        {typeLabel}
-                      </ThemedText>
-                      <ThemedText style={[styles.txSubText, { color: currColors.textSecondary }]} numberOfLines={1}>
-                        {new Date(tx.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                        {subtitle ? ` • ${subtitle}` : ''}
-                        {tx.note ? ` • ${tx.note}` : ''}
-                      </ThemedText>
-                    </View>
-                  </View>
+                  {group.data.map((tx, index) => {
+                    const account = accounts.find((a) => a.id === tx.accountId);
+                    const toAccount = tx.toAccountId ? accounts.find((a) => a.id === tx.toAccountId) : null;
 
-                  <View style={styles.txRight}>
-                    <ThemedText style={[styles.txAmountText, { color: txColor }]}>
-                      {isIncome ? '+' : isExpense ? '-' : ''}{formatAmount(displayAmount)}
-                    </ThemedText>
-                    <TouchableOpacity
-                      style={styles.deleteTxBtn}
-                      onPress={() => handleDeleteTransaction(tx.id)}
-                    >
-                      <Trash2 size={13} color={currColors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+                    const isIncome = tx.type === 'income';
+                    const isExpense = tx.type === 'expense';
+                    const isTransfer = tx.type === 'transfer';
+                    const isLast = index === group.data.length - 1;
+
+                    // Title & Subtitle logic matching modern banking UI
+                    const primaryTitle = tx.note && tx.note.trim()
+                      ? tx.note.trim()
+                      : (isTransfer ? 'Transfer' : tx.category);
+
+                    const secondarySubtitle = tx.note && tx.note.trim()
+                      ? (isTransfer ? `${account?.name || 'Account'} → ${toAccount?.name || 'Account'}` : tx.category)
+                      : (isTransfer ? `${account?.name || 'Account'} → ${toAccount?.name || 'Account'}` : (account?.name || ''));
+
+                    const tint = getCategoryBadgeTint(tx.category, tx.type, colorScheme === 'dark');
+
+                    return (
+                      <TouchableOpacity
+                        key={tx.id}
+                        style={[
+                          styles.txRowItem,
+                          {
+                            borderBottomColor: currColors.border,
+                            borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
+                          },
+                        ]}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          handleHaptic();
+                          router.push({ pathname: '/add-money-transaction', params: { id: tx.id } });
+                        }}
+                        onLongPress={() => handleDeleteTransaction(tx.id)}
+                      >
+                        <View style={styles.txRowLeft}>
+                          <Category3DIcon
+                            name={isTransfer ? 'Transfer' : tx.category}
+                            icon={isTransfer ? 'transfer' : undefined}
+                            size={34}
+                            style={{ marginRight: 12 }}
+                          />
+                          <View style={styles.txInfoCol}>
+                            <ThemedText style={[styles.txPrimaryText, { color: currColors.text }]} numberOfLines={1}>
+                              {primaryTitle}
+                            </ThemedText>
+                            <ThemedText style={[styles.txSecondaryText, { color: currColors.textSecondary }]} numberOfLines={1}>
+                              {secondarySubtitle}
+                            </ThemedText>
+                          </View>
+                        </View>
+
+                        <View style={styles.txRowRight}>
+                          <ThemedText
+                            style={[
+                              styles.txAmountDisplay,
+                              {
+                                color: isIncome ? '#34C759' : isExpense ? '#FF3B30' : currColors.text,
+                              },
+                            ]}
+                          >
+                            {isIncome ? '+' : isExpense ? '-' : ''}{formatAmount(tx.amount)}
+                          </ThemedText>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
           </View>
         )}
       </ScrollView>
@@ -1016,61 +1105,58 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderStyle: 'dashed',
   },
-  txsList: {
-    marginHorizontal: 16,
+  groupsContainer: {
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
+  dateGroupWrapper: {
+    marginBottom: 16,
+  },
+  dateGroupHeader: {
+    fontSize: 11,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+    marginLeft: 4,
+  },
+  dateGroupCard: {
     borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
-    marginTop: 4,
+    paddingHorizontal: 14,
   },
-  txItem: {
+  txRowItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 11,
   },
-  txLeft: {
+  txRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 12,
+    marginRight: 10,
   },
-  txIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  txInfo: {
+  txInfoCol: {
     flex: 1,
+    justifyContent: 'center',
   },
-  txLabelText: {
+  txPrimaryText: {
     fontSize: 14,
     fontFamily: 'Outfit_600SemiBold',
-    marginBottom: 2,
+    marginBottom: 1,
   },
-  txSubText: {
+  txSecondaryText: {
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
   },
-  txRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  txRowRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
-  txAmountText: {
+  txAmountDisplay: {
     fontSize: 14,
     fontFamily: 'Outfit_600SemiBold',
-    marginRight: 8,
-  },
-  deleteTxBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 59, 48, 0.05)',
   },
 });

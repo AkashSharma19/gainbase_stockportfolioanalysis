@@ -29,6 +29,38 @@ import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Category3DIcon } from '@/components/Category3DIcon';
 
+const getCategoryBadgeTint = (category: string, type: 'income' | 'expense' | 'transfer', isDark: boolean) => {
+  if (type === 'income') {
+    return { bg: isDark ? '#00C9A722' : '#E6F9F5' };
+  }
+  if (type === 'transfer') {
+    return { bg: isDark ? '#007AFF22' : '#EDF4FF' };
+  }
+  const cat = (category || '').toLowerCase();
+  if (cat.includes('grocer') || cat.includes('food') || cat.includes('dine') || cat.includes('restaurant') || cat.includes('snack') || cat.includes('eat')) {
+    return { bg: isDark ? '#34C75924' : '#EAF8EE' };
+  }
+  if (cat.includes('shop') || cat.includes('cloth') || (cat.includes('electr') && !cat.includes('electric bill')) || cat.includes('gadget') || cat.includes('amazon') || cat.includes('purchase')) {
+    return { bg: isDark ? '#AF52DE24' : '#F5EDFD' };
+  }
+  if (cat.includes('bill') || cat.includes('electric') || cat.includes('utility') || cat.includes('rent') || cat.includes('recharge') || cat.includes('wifi') || cat.includes('internet') || cat.includes('emi') || cat.includes('loan')) {
+    return { bg: isDark ? '#FF950024' : '#FFF4EB' };
+  }
+  if (cat.includes('transport') || cat.includes('travel') || cat.includes('taxi') || cat.includes('cab') || cat.includes('fuel') || cat.includes('petrol') || cat.includes('uber') || cat.includes('ola')) {
+    return { bg: isDark ? '#FFCC0026' : '#FFF9E6' };
+  }
+  if (cat.includes('entertain') || cat.includes('movie') || cat.includes('ott') || cat.includes('netflix') || cat.includes('game') || cat.includes('play')) {
+    return { bg: isDark ? '#FF2D5524' : '#FEECEF' };
+  }
+  if (cat.includes('health') || cat.includes('medic') || cat.includes('doctor') || cat.includes('gym') || cat.includes('fit') || cat.includes('pharma')) {
+    return { bg: isDark ? '#32ADE624' : '#E8F6FC' };
+  }
+  if (cat.includes('invest') || cat.includes('stock') || cat.includes('mutual') || cat.includes('gold')) {
+    return { bg: isDark ? '#5856D624' : '#EFF0FD' };
+  }
+  return { bg: isDark ? '#8E8E9324' : '#F2F2F7' };
+};
+
 export default function AccountDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -355,33 +387,41 @@ export default function AccountDetailsScreen() {
                 displayAmount = isIncome ? tx.amount : -tx.amount;
               }
 
+              const tint = getCategoryBadgeTint(tx.category, tx.type, colorScheme === 'dark');
+              const primaryTitle = tx.note && tx.note.trim()
+                ? tx.note.trim()
+                : typeLabel;
+              const secondarySubtitle = tx.note && tx.note.trim()
+                ? `${new Date(tx.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • ${typeLabel}`
+                : new Date(tx.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
               return (
                 <TouchableOpacity
                   key={tx.id}
                   style={[
                     styles.txItem,
-                    { borderBottomColor: currColors.border, borderBottomWidth: index === accountTxs.length - 1 ? 0 : 1 }
+                    { borderBottomColor: currColors.border, borderBottomWidth: index === accountTxs.length - 1 ? 0 : StyleSheet.hairlineWidth }
                   ]}
                   activeOpacity={0.7}
                   onPress={() => {
                     handleHaptic();
                     router.push({ pathname: '/add-money-transaction', params: { id: tx.id } });
                   }}
+                  onLongPress={() => handleDeleteTransaction(tx.id)}
                 >
                   <View style={styles.txLeft}>
                     <Category3DIcon
                       name={isTransfer ? 'Transfer' : tx.category}
                       icon={isTransfer ? 'transfer' : undefined}
-                      size={36}
+                      size={34}
                       style={{ marginRight: 12 }}
                     />
                     <View style={styles.txInfo}>
                       <ThemedText style={[styles.txLabelText, { color: currColors.text }]} numberOfLines={1}>
-                        {typeLabel}
+                        {primaryTitle}
                       </ThemedText>
-                      <ThemedText style={[styles.txSubText, { color: currColors.textSecondary }]}>
-                        {new Date(tx.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                        {tx.note ? ` • ${tx.note}` : ''}
+                      <ThemedText style={[styles.txSubText, { color: currColors.textSecondary }]} numberOfLines={1}>
+                        {secondarySubtitle}
                       </ThemedText>
                     </View>
                   </View>
@@ -390,12 +430,6 @@ export default function AccountDetailsScreen() {
                     <ThemedText style={[styles.txAmountText, { color: txColor }]}>
                       {displayAmount > 0 ? '+' : ''}{formatAmount(displayAmount)}
                     </ThemedText>
-                    <TouchableOpacity
-                      style={styles.deleteTxBtn}
-                      onPress={() => handleDeleteTransaction(tx.id)}
-                    >
-                      <Trash2 size={14} color={currColors.textSecondary} />
-                    </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
               );
@@ -535,7 +569,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 16,
   },
   txLeft: {
@@ -544,38 +578,26 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 10,
   },
-  txIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
   txInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
   txLabelText: {
     fontSize: 14,
-    fontWeight: '400',
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: 'Outfit_600SemiBold',
+    marginBottom: 1,
   },
   txSubText: {
     fontSize: 11,
-    marginTop: 2,
+    fontFamily: 'Outfit_400Regular',
   },
   txRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
   txAmountText: {
     fontSize: 14,
-    fontWeight: '400',
-    fontFamily: 'Outfit_400Regular',
-  },
-  deleteTxBtn: {
-    padding: 4,
+    fontFamily: 'Outfit_600SemiBold',
   },
   warningBanner: {
     marginTop: 20,

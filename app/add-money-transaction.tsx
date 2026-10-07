@@ -35,6 +35,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from '@/components/ThemedText';
+import { BackButton } from '@/components/BackButton';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
@@ -362,16 +363,7 @@ export default function AddMoneyTransactionScreen() {
       <View style={styles.safeArea}>
         {/* Top Header */}
         <View style={styles.topHeader}>
-          <TouchableOpacity
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.back();
-            }}
-            style={[styles.headerIconButton, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border, borderWidth: StyleSheet.hairlineWidth }]}
-            activeOpacity={0.7}
-          >
-            <X size={20} color={currColors.text} />
-          </TouchableOpacity>
+          <BackButton />
 
           <ThemedText style={[styles.headerTitleText, { color: currColors.text }]}>
             {editingTx ? 'Edit transaction' : 'Add transaction'}

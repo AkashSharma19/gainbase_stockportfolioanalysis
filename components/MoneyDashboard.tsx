@@ -75,6 +75,38 @@ const getSubscriptionIcon = (logoName: string | undefined) => {
   }
 };
 
+const getCategoryBadgeTint = (category: string, type: 'income' | 'expense' | 'transfer', isDark: boolean) => {
+  if (type === 'income') {
+    return { bg: isDark ? '#00C9A722' : '#E6F9F5' };
+  }
+  if (type === 'transfer') {
+    return { bg: isDark ? '#007AFF22' : '#EDF4FF' };
+  }
+  const cat = (category || '').toLowerCase();
+  if (cat.includes('grocer') || cat.includes('food') || cat.includes('dine') || cat.includes('restaurant') || cat.includes('snack') || cat.includes('eat')) {
+    return { bg: isDark ? '#34C75924' : '#EAF8EE' };
+  }
+  if (cat.includes('shop') || cat.includes('cloth') || (cat.includes('electr') && !cat.includes('electric bill')) || cat.includes('gadget') || cat.includes('amazon') || cat.includes('purchase')) {
+    return { bg: isDark ? '#AF52DE24' : '#F5EDFD' };
+  }
+  if (cat.includes('bill') || cat.includes('electric') || cat.includes('utility') || cat.includes('rent') || cat.includes('recharge') || cat.includes('wifi') || cat.includes('internet') || cat.includes('emi') || cat.includes('loan')) {
+    return { bg: isDark ? '#FF950024' : '#FFF4EB' };
+  }
+  if (cat.includes('transport') || cat.includes('travel') || cat.includes('taxi') || cat.includes('cab') || cat.includes('fuel') || cat.includes('petrol') || cat.includes('uber') || cat.includes('ola')) {
+    return { bg: isDark ? '#FFCC0026' : '#FFF9E6' };
+  }
+  if (cat.includes('entertain') || cat.includes('movie') || cat.includes('ott') || cat.includes('netflix') || cat.includes('game') || cat.includes('play')) {
+    return { bg: isDark ? '#FF2D5524' : '#FEECEF' };
+  }
+  if (cat.includes('health') || cat.includes('medic') || cat.includes('doctor') || cat.includes('gym') || cat.includes('fit') || cat.includes('pharma')) {
+    return { bg: isDark ? '#32ADE624' : '#E8F6FC' };
+  }
+  if (cat.includes('invest') || cat.includes('stock') || cat.includes('mutual') || cat.includes('gold')) {
+    return { bg: isDark ? '#5856D624' : '#EFF0FD' };
+  }
+  return { bg: isDark ? '#8E8E9324' : '#F2F2F7' };
+};
+
 interface DonutChartProps {
   warnings: number;
   tips: number;
@@ -1076,6 +1108,9 @@ export function MoneyDashboard() {
               const account = accounts.find((a) => a.id === tx.accountId);
               const toAccount = tx.toAccountId ? accounts.find((a) => a.id === tx.toAccountId) : null;
               const isLast = index === filteredRecentTxs.length - 1;
+              const isIncome = tx.type === 'income';
+              const isExpense = tx.type === 'expense';
+              const isTransfer = tx.type === 'transfer';
 
               const getRelativeDateLabel = (dateStr: string) => {
                 const d = new Date(dateStr);
@@ -1095,6 +1130,16 @@ export function MoneyDashboard() {
                 }
               };
 
+              const primaryTitle = tx.note && tx.note.trim()
+                ? tx.note.trim()
+                : (isTransfer ? 'Transfer' : tx.category);
+
+              const secondarySubtitle = tx.note && tx.note.trim()
+                ? `${getRelativeDateLabel(tx.date)} • ${isTransfer ? `${account?.name || 'Account'} → ${toAccount?.name || 'Account'}` : tx.category}`
+                : `${getRelativeDateLabel(tx.date)} • ${isTransfer ? `${account?.name || 'Account'} → ${toAccount?.name || 'Account'}` : (account?.name || '')}`;
+
+              const tint = getCategoryBadgeTint(tx.category, tx.type, colorScheme === 'dark');
+
               return (
                 <TouchableOpacity
                   key={tx.id}
@@ -1102,7 +1147,7 @@ export function MoneyDashboard() {
                     styles.txItem,
                     {
                       borderBottomColor: currColors.border,
-                      borderBottomWidth: isLast ? 0 : 1,
+                      borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
                     },
                   ]}
                   activeOpacity={0.7}
@@ -1113,18 +1158,17 @@ export function MoneyDashboard() {
                 >
                   <View style={styles.txLeft}>
                     <Category3DIcon
-                      name={tx.type === 'transfer' ? 'Transfer' : tx.category}
-                      icon={tx.type === 'transfer' ? 'transfer' : undefined}
-                      size={36}
+                      name={isTransfer ? 'Transfer' : tx.category}
+                      icon={isTransfer ? 'transfer' : undefined}
+                      size={34}
                       style={{ marginRight: 12 }}
                     />
                     <View style={styles.txInfo}>
                       <ThemedText style={[styles.txCategory, { color: currColors.text }]} numberOfLines={1}>
-                        {tx.type === 'transfer' ? `Transfer: ${account?.name} → ${toAccount?.name}` : tx.category}
+                        {primaryTitle}
                       </ThemedText>
                       <ThemedText style={[styles.txDate, { color: currColors.textSecondary }]} numberOfLines={1}>
-                        {getRelativeDateLabel(tx.date)} • {account?.name || 'Unknown Account'}
-                        {tx.note ? ` • ${tx.note}` : ''}
+                        {secondarySubtitle}
                       </ThemedText>
                     </View>
                   </View>
@@ -1134,15 +1178,15 @@ export function MoneyDashboard() {
                       styles.txAmount,
                       {
                         color:
-                          tx.type === 'income'
+                          isIncome
                             ? '#34C759'
-                            : tx.type === 'expense'
+                            : isExpense
                             ? '#FF3B30'
                             : currColors.text,
                       },
                     ]}
                   >
-                    {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
+                    {isIncome ? '+' : isExpense ? '-' : ''}
                     {formatAmount(tx.amount)}
                   </ThemedText>
                 </TouchableOpacity>
@@ -1405,32 +1449,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 12,
-  },
-  txIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginRight: 10,
   },
   txInfo: {
-    marginLeft: 12,
     flex: 1,
+    justifyContent: 'center',
   },
   txCategory: {
     fontSize: 14,
-    fontWeight: '400',
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: 'Outfit_600SemiBold',
+    marginBottom: 1,
   },
   txDate: {
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
-    marginTop: 2,
   },
   txAmount: {
     fontSize: 14,
-    fontWeight: '400',
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: 'Outfit_600SemiBold',
   },
 });

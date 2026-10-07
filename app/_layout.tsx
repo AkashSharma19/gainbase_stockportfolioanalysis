@@ -186,7 +186,7 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="add-money-transaction"
-            options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', headerShown: false }}
+            options={{ animation: 'slide_from_right', headerShown: false }}
           />
           <Stack.Screen
             name="all-money-transactions"
@@ -246,7 +246,7 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="manage-categories"
-            options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', headerShown: false }}
+            options={{ animation: 'slide_from_right', headerShown: false }}
           />
           <Stack.Screen
             name="ai-chat"

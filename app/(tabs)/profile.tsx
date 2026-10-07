@@ -26,12 +26,15 @@ import {
   Check,
   Cloud,
   ArrowRightLeft,
-  Globe,
   ChevronRight,
+  TrendingUp,
+  Wallet,
 } from 'lucide-react-native';
 import { useMoneyStore } from '@/store/useMoneyStore';
+import { useGoalStore } from '@/store/useGoalStore';
 import { AccountType, Account, Loan, EMIPayment, Budget } from '../../types/money';
 import { Subscription, SubscriptionPayment } from '../../types/money';
+import { FinancialGoal } from '../../types/goals';
 
 
 import React, { useMemo, useState } from 'react';
@@ -50,6 +53,7 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
+import { VersionCheckFooter } from '@/components/VersionCheckFooter';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as XLSX from 'xlsx';
@@ -79,6 +83,7 @@ export default function ProfileScreen() {
   const currColors = Colors[colorScheme];
 
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [dataSheetType, setDataSheetType] = useState<'investments' | 'money_manager' | null>(null);
 
   // Modal Edit State
   const [editName, setEditName] = useState(userName);
@@ -103,6 +108,7 @@ export default function ProfileScreen() {
   const moneyEmiPayments = useMoneyStore((state) => state.emiPayments);
   const subscriptions: Subscription[] = useMoneyStore((state) => state.subscriptions) || [];
   const subscriptionPayments: SubscriptionPayment[] = useMoneyStore((state) => state.subscriptionPayments) || [];
+  const moneyGoals: FinancialGoal[] = useGoalStore((state) => state.goals) || [];
   const importMoneyData = useMoneyStore((state) => state.importMoneyData);
   const restoreMoneyData = useMoneyStore((state) => state.restoreMoneyData);
   const clearAllMoneyData = useMoneyStore((state) => state.clearAllMoneyData);
@@ -111,42 +117,291 @@ export default function ProfileScreen() {
 
   const handleDownloadMoneySample = async () => {
     try {
-      const sampleData = [
+      // 1. Transactions Sample Sheet
+      const sampleTransactions = [
         {
           Date: '2026-07-01',
           Type: 'EXPENSE',
-          Amount: 150.0,
+          Amount: 450.0,
           Category: 'Food & Dining',
-          Account: 'Savings Account',
+          Account: 'HDFC Savings Account',
           'To Account (Transfers only)': '',
-          Note: 'Coffee and snacks at work',
+          Note: 'Dinner with colleagues',
         },
         {
           Date: '2026-07-02',
           Type: 'INCOME',
-          Amount: 50000.0,
+          Amount: 85000.0,
           Category: 'Salary',
-          Account: 'Savings Account',
+          Account: 'HDFC Savings Account',
           'To Account (Transfers only)': '',
-          Note: 'Monthly paycheck',
+          Note: 'Monthly Salary Credit',
         },
         {
           Date: '2026-07-03',
           Type: 'TRANSFER',
-          Amount: 1000.0,
+          Amount: 15000.0,
           Category: 'Transfer',
-          Account: 'Savings Account',
-          'To Account (Transfers only)': 'Cash Wallet',
-          Note: 'ATM Cash Withdrawal',
+          Account: 'HDFC Savings Account',
+          'To Account (Transfers only)': 'Emergency Reserve',
+          Note: 'Monthly Emergency Fund Allocation',
+        },
+        {
+          Date: '2026-07-05',
+          Type: 'EXPENSE',
+          Amount: 1499.0,
+          Category: 'Subscriptions',
+          Account: 'ICICI Credit Card',
+          'To Account (Transfers only)': '',
+          Note: 'Broadband Wifi Bill',
         },
       ];
 
-      const worksheet = XLSX.utils.json_to_sheet(sampleData);
+      // 2. Accounts Sample Sheet
+      const sampleAccounts = [
+        {
+          'Account Name': 'HDFC Savings Account',
+          Type: 'savings',
+          Balance: 125000.0,
+          Icon: 'landmark',
+          Color: '#007AFF',
+          Institution: 'HDFC Bank',
+          'Account Number': '•••• 4821',
+          'Credit Limit': 0,
+          'Interest Rate': 3.5,
+          'Include In Assets': 'YES',
+          'Linked Broker': '',
+        },
+        {
+          'Account Name': 'ICICI Credit Card',
+          Type: 'credit_card',
+          Balance: -12450.0,
+          Icon: 'credit_card',
+          Color: '#FF9500',
+          Institution: 'ICICI Bank',
+          'Account Number': '•••• 9934',
+          'Credit Limit': 250000.0,
+          'Interest Rate': 0,
+          'Include In Assets': 'YES',
+          'Linked Broker': '',
+        },
+        {
+          'Account Name': 'Cash Wallet',
+          Type: 'wallet',
+          Balance: 4500.0,
+          Icon: 'wallet',
+          Color: '#34C759',
+          Institution: 'Cash',
+          'Account Number': '',
+          'Credit Limit': 0,
+          'Interest Rate': 0,
+          'Include In Assets': 'YES',
+          'Linked Broker': '',
+        },
+        {
+          'Account Name': 'Zerodha Trading',
+          Type: 'investment',
+          Balance: 340000.0,
+          Icon: 'trending_up',
+          Color: '#5856D6',
+          Institution: 'Zerodha',
+          'Account Number': 'ZR8821',
+          'Credit Limit': 0,
+          'Interest Rate': 0,
+          'Include In Assets': 'YES',
+          'Linked Broker': 'Zerodha',
+        },
+        {
+          'Account Name': 'Emergency Reserve',
+          Type: 'emergency_fund',
+          Balance: 150000.0,
+          Icon: 'shield_check',
+          Color: '#00C9A7',
+          Institution: 'SBI Bank',
+          'Account Number': '•••• 1102',
+          'Credit Limit': 0,
+          'Interest Rate': 6.8,
+          'Include In Assets': 'YES',
+          'Linked Broker': '',
+        },
+      ];
+
+      // 3. Loans Sample Sheet
+      const sampleLoans = [
+        {
+          'Loan Name': 'Home Loan',
+          'Lender Name': 'SBI Home Finance',
+          Principal: 4500000.0,
+          Outstanding: 3850000.0,
+          'Interest Rate': 8.5,
+          'EMI Amount': 39050.0,
+          'Tenure Months': 240,
+          'Start Date': '2023-01-10',
+          'End Date': '2043-01-10',
+          'Linked Account': 'HDFC Savings Account',
+          Type: 'home',
+          'Is Active': 'YES',
+        },
+        {
+          'Loan Name': 'Car Loan',
+          'Lender Name': 'HDFC Auto Loans',
+          Principal: 800000.0,
+          Outstanding: 420000.0,
+          'Interest Rate': 8.9,
+          'EMI Amount': 16500.0,
+          'Tenure Months': 60,
+          'Start Date': '2023-06-15',
+          'End Date': '2028-06-15',
+          'Linked Account': 'HDFC Savings Account',
+          Type: 'car',
+          'Is Active': 'YES',
+        },
+      ];
+
+      // 4. EMI Payments Sample Sheet
+      const sampleEmis = [
+        {
+          'Loan Name': 'Home Loan',
+          Amount: 39050.0,
+          'Principal Portion': 11800.0,
+          'Interest Portion': 27250.0,
+          Date: '2026-06-10',
+          Status: 'PAID',
+        },
+        {
+          'Loan Name': 'Car Loan',
+          Amount: 16500.0,
+          'Principal Portion': 13385.0,
+          'Interest Portion': 3115.0,
+          Date: '2026-06-15',
+          Status: 'PAID',
+        },
+      ];
+
+      // 5. Subscriptions Sample Sheet
+      const sampleSubscriptions = [
+        {
+          Name: 'Netflix Premium 4K',
+          Provider: 'Netflix',
+          Amount: 649.0,
+          'Billing Cycle': 'monthly',
+          'Next Payment Date': '2026-08-01',
+          Color: '#E50914',
+          Logo: 'tv',
+          'Linked Account': 'ICICI Credit Card',
+          Category: 'Entertainment',
+          'Is Active': 'YES',
+        },
+        {
+          Name: 'Spotify Duo',
+          Provider: 'Spotify',
+          Amount: 149.0,
+          'Billing Cycle': 'monthly',
+          'Next Payment Date': '2026-08-10',
+          Color: '#1DB954',
+          Logo: 'music',
+          'Linked Account': 'ICICI Credit Card',
+          Category: 'Entertainment',
+          'Is Active': 'YES',
+        },
+      ];
+
+      // 6. Subscription Payments Sample Sheet
+      const sampleSubPayments = [
+        {
+          'Subscription Name': 'Netflix Premium 4K',
+          Amount: 649.0,
+          Date: '2026-07-01',
+          Status: 'PAID',
+        },
+      ];
+
+      // 7. Budgets Sample Sheet
+      const sampleBudgets = [
+        {
+          'Budget Name': 'Monthly Living Expenses',
+          Period: 'monthly',
+          'Start Date': '2026-07-01',
+          'End Date': '2026-07-31',
+          'Total Limit': 45000.0,
+          'Category Name': 'Food & Dining',
+          'Category Icon': 'food',
+          'Category Color': '#FF9500',
+          'Category Limit': 15000.0,
+          'Category Spent': 450.0,
+          'Is Active': 'YES',
+        },
+        {
+          'Budget Name': 'Monthly Living Expenses',
+          Period: 'monthly',
+          'Start Date': '2026-07-01',
+          'End Date': '2026-07-31',
+          'Total Limit': 45000.0,
+          'Category Name': 'Shopping',
+          'Category Icon': 'shopping',
+          'Category Color': '#5856D6',
+          'Category Limit': 10000.0,
+          'Category Spent': 0.0,
+          'Is Active': 'YES',
+        },
+      ];
+
+      // 8. Categories Sample Sheet
+      const sampleCategories = [
+        { Type: 'INCOME', 'Category Name': 'Salary' },
+        { Type: 'INCOME', 'Category Name': 'Investments' },
+        { Type: 'INCOME', 'Category Name': 'Freelance' },
+        { Type: 'EXPENSE', 'Category Name': 'Food & Dining' },
+        { Type: 'EXPENSE', 'Category Name': 'Shopping' },
+        { Type: 'EXPENSE', 'Category Name': 'Rent & Utilities' },
+        { Type: 'EXPENSE', 'Category Name': 'Transport' },
+        { Type: 'EXPENSE', 'Category Name': 'EMI Payments' },
+        { Type: 'EXPENSE', 'Category Name': 'Subscriptions' },
+      ];
+
+      // 9. Financial Goals Sample Sheet
+      const sampleGoals = [
+        {
+          Name: 'Build 6-Month Liquid Reserve',
+          Description: 'Ensure liquid safety net in Cash, Savings, and Emergency funds',
+          Category: 'savings',
+          Icon: 'ShieldCheck',
+          Color: '#00C9A7',
+          Formula: 'Cash + Savings + Emergency',
+          'Target Value': 300000.0,
+          'Targets (comma-separated)': '100000, 200000, 300000',
+          Unit: 'currency',
+          Operator: '>=',
+          'Is Completed': 'NO',
+        },
+        {
+          Name: '₹10 Lakh Stock Portfolio',
+          Description: 'Grow equity and ETF investments',
+          Category: 'investments',
+          Icon: 'TrendingUp',
+          Color: '#34C759',
+          Formula: 'HoldingsValue',
+          'Target Value': 1000000.0,
+          'Targets (comma-separated)': '250000, 500000, 1000000',
+          Unit: 'currency',
+          Operator: '>=',
+          'Is Completed': 'NO',
+        },
+      ];
+
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Money_Manager_Template');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleTransactions), 'Transactions');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleAccounts), 'Accounts');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleLoans), 'Loans');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleEmis), 'EMIPayments');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleSubscriptions), 'Subscriptions');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleSubPayments), 'SubscriptionPayments');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleBudgets), 'Budgets');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleCategories), 'Categories');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleGoals), 'Goals');
 
       const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
-      const filename = `Money_Manager_Sample_Template.xlsx`;
+      const filename = `Gainbase_Money_Manager_Sample_Template.xlsx`;
       const fileUri = `${FileSystem.cacheDirectory}${filename}`;
 
       await FileSystem.writeAsStringAsync(fileUri, wbout, {
@@ -196,6 +451,12 @@ export default function ProfileScreen() {
         Balance: a.balance,
         Icon: a.icon || 'wallet',
         Color: a.color || '#007AFF',
+        Institution: a.institution || '',
+        'Account Number': a.accountNumber || '',
+        'Credit Limit': a.creditLimit || 0,
+        'Interest Rate': a.interestRate || 0,
+        'Include In Assets': a.includeInAssets !== false ? 'YES' : 'NO',
+        'Linked Broker': a.linkedBroker || '',
       }));
       const worksheetAccs = XLSX.utils.json_to_sheet(accsSheetData);
 
@@ -206,6 +467,7 @@ export default function ProfileScreen() {
         Principal: l.principalAmount,
         Outstanding: l.outstandingAmount,
         'Interest Rate': l.interestRate,
+        'EMI Amount': l.emiAmount,
         'Tenure Months': l.tenureMonths,
         'Start Date': l.startDate.split('T')[0],
         'End Date': l.endDate.split('T')[0],
@@ -215,7 +477,44 @@ export default function ProfileScreen() {
       }));
       const worksheetLoans = XLSX.utils.json_to_sheet(loansSheetData);
 
-      // 4. Budgets
+      // 4. EMI Payments
+      const loanMap = new Map(moneyLoans.map((l) => [l.id, l.name]));
+      const emiSheetData = moneyEmiPayments.map((p) => ({
+        'Loan Name': loanMap.get(p.loanId) || 'Unknown Loan',
+        Amount: p.amount,
+        'Principal Portion': p.principalPortion,
+        'Interest Portion': p.interestPortion,
+        Date: p.date.split('T')[0],
+        Status: p.status.toUpperCase(),
+      }));
+      const worksheetEmi = XLSX.utils.json_to_sheet(emiSheetData);
+
+      // 5. Subscriptions
+      const subscriptionsSheetData = subscriptions.map((s: Subscription) => ({
+        Name: s.name,
+        Provider: s.provider || '',
+        Amount: s.amount,
+        'Billing Cycle': s.billingCycle,
+        'Next Payment Date': s.nextPaymentDate ? s.nextPaymentDate.split('T')[0] : '',
+        Color: s.color || '#00C9A7',
+        Logo: s.logo || s.icon || '',
+        'Linked Account': s.linkedAccountId ? accountMap.get(s.linkedAccountId) || '' : '',
+        Category: s.category || '',
+        'Is Active': s.isActive ? 'YES' : 'NO',
+      }));
+      const worksheetSubscriptions = XLSX.utils.json_to_sheet(subscriptionsSheetData);
+
+      // 6. Subscription Payments
+      const subMap = new Map(subscriptions.map((s: Subscription) => [s.id, s.name]));
+      const subPaymentsSheetData = subscriptionPayments.map((p: SubscriptionPayment) => ({
+        'Subscription Name': subMap.get(p.subscriptionId) || 'Unknown Subscription',
+        Amount: p.amount,
+        Date: p.date.split('T')[0],
+        Status: p.status.toUpperCase(),
+      }));
+      const worksheetSubPayments = XLSX.utils.json_to_sheet(subPaymentsSheetData);
+
+      // 7. Budgets
       const budgetsSheetData: any[] = [];
       moneyBudgets.forEach((b) => {
         if (b.categories.length === 0) {
@@ -252,7 +551,7 @@ export default function ProfileScreen() {
       });
       const worksheetBudgets = XLSX.utils.json_to_sheet(budgetsSheetData);
 
-      // 5. Categories
+      // 8. Categories
       const categoriesSheetData: any[] = [];
       (storeCategories.income || []).forEach((name) => {
         categoriesSheetData.push({ Type: 'INCOME', 'Category Name': name });
@@ -262,28 +561,35 @@ export default function ProfileScreen() {
       });
       const worksheetCategories = XLSX.utils.json_to_sheet(categoriesSheetData);
 
-      // 6. EMI Payments
-      const loanMap = new Map(moneyLoans.map((l) => [l.id, l.name]));
-      const emiSheetData = moneyEmiPayments.map((p) => ({
-        'Loan Name': loanMap.get(p.loanId) || 'Unknown Loan',
-        Amount: p.amount,
-        'Principal Portion': p.principalPortion,
-        'Interest Portion': p.interestPortion,
-        Date: p.date.split('T')[0],
-        Status: p.status.toUpperCase(),
+      // 9. Goals
+      const goalsSheetData = moneyGoals.map((g: FinancialGoal) => ({
+        Name: g.name,
+        Description: g.description || '',
+        Category: g.category,
+        Icon: g.icon || 'ShieldCheck',
+        Color: g.color || '#00C9A7',
+        Formula: g.formula,
+        'Target Value': g.targetValue,
+        'Targets (comma-separated)': Array.isArray(g.targets) ? g.targets.join(', ') : '',
+        Unit: g.unit,
+        Operator: g.operator,
+        'Is Completed': g.isManuallyCompleted ? 'YES' : 'NO',
       }));
-      const worksheetEmi = XLSX.utils.json_to_sheet(emiSheetData);
+      const worksheetGoals = XLSX.utils.json_to_sheet(goalsSheetData);
 
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheetTxs, 'Transactions');
       XLSX.utils.book_append_sheet(workbook, worksheetAccs, 'Accounts');
       XLSX.utils.book_append_sheet(workbook, worksheetLoans, 'Loans');
+      XLSX.utils.book_append_sheet(workbook, worksheetEmi, 'EMIPayments');
+      XLSX.utils.book_append_sheet(workbook, worksheetSubscriptions, 'Subscriptions');
+      XLSX.utils.book_append_sheet(workbook, worksheetSubPayments, 'SubscriptionPayments');
       XLSX.utils.book_append_sheet(workbook, worksheetBudgets, 'Budgets');
       XLSX.utils.book_append_sheet(workbook, worksheetCategories, 'Categories');
-      XLSX.utils.book_append_sheet(workbook, worksheetEmi, 'EMIPayments');
+      XLSX.utils.book_append_sheet(workbook, worksheetGoals, 'Goals');
 
       const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
-      const filename = `Money_Transactions_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const filename = `Gainbase_Money_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
       const fileUri = `${FileSystem.cacheDirectory}${filename}`;
 
       await FileSystem.writeAsStringAsync(fileUri, wbout, {
@@ -293,7 +599,7 @@ export default function ProfileScreen() {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(fileUri, {
           mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          dialogTitle: 'Export Money Transactions',
+          dialogTitle: 'Export Money Manager Data',
           UTI: 'com.microsoft.excel.xlsx',
         });
       } else {
@@ -301,7 +607,7 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Money Export Error:', error);
-      Alert.alert('Export Failed', 'An error occurred while exporting money transactions.');
+      Alert.alert('Export Failed', 'An error occurred while exporting money data.');
     }
   };
 
@@ -359,7 +665,44 @@ export default function ProfileScreen() {
       }));
       const worksheetLoans = XLSX.utils.json_to_sheet(loansSheetData);
 
-      // 4. Budgets
+      // 4. EMI Payments
+      const loanMap = new Map(moneyLoans.map((l) => [l.id, l.name]));
+      const emiSheetData = moneyEmiPayments.map((p) => ({
+        'Loan Name': loanMap.get(p.loanId) || 'Unknown Loan',
+        Amount: p.amount,
+        'Principal Portion': p.principalPortion,
+        'Interest Portion': p.interestPortion,
+        Date: p.date.split('T')[0],
+        Status: p.status.toUpperCase(),
+      }));
+      const worksheetEmi = XLSX.utils.json_to_sheet(emiSheetData);
+
+      // 5. Subscriptions
+      const subscriptionsSheetData = subscriptions.map((s: Subscription) => ({
+        Name: s.name,
+        Provider: s.provider || '',
+        Amount: s.amount,
+        'Billing Cycle': s.billingCycle,
+        'Next Payment Date': s.nextPaymentDate ? s.nextPaymentDate.split('T')[0] : '',
+        Color: s.color || '#00C9A7',
+        Logo: s.logo || s.icon || '',
+        'Linked Account': s.linkedAccountId ? accountMap.get(s.linkedAccountId) || '' : '',
+        Category: s.category || '',
+        'Is Active': s.isActive ? 'YES' : 'NO',
+      }));
+      const worksheetSubscriptions = XLSX.utils.json_to_sheet(subscriptionsSheetData);
+
+      // 6. Subscription Payments
+      const subMap = new Map(subscriptions.map((s: Subscription) => [s.id, s.name]));
+      const subPaymentsSheetData = subscriptionPayments.map((p: SubscriptionPayment) => ({
+        'Subscription Name': subMap.get(p.subscriptionId) || 'Unknown Subscription',
+        Amount: p.amount,
+        Date: p.date.split('T')[0],
+        Status: p.status.toUpperCase(),
+      }));
+      const worksheetSubPayments = XLSX.utils.json_to_sheet(subPaymentsSheetData);
+
+      // 7. Budgets
       const budgetsSheetData: any[] = [];
       moneyBudgets.forEach((b) => {
         if (b.categories.length === 0) {
@@ -396,7 +739,7 @@ export default function ProfileScreen() {
       });
       const worksheetBudgets = XLSX.utils.json_to_sheet(budgetsSheetData);
 
-      // 5. Categories
+      // 8. Categories
       const categoriesSheetData: any[] = [];
       (storeCategories.income || []).forEach((name) => {
         categoriesSheetData.push({ Type: 'INCOME', 'Category Name': name });
@@ -406,52 +749,32 @@ export default function ProfileScreen() {
       });
       const worksheetCategories = XLSX.utils.json_to_sheet(categoriesSheetData);
 
-      // 6. EMI Payments
-      const loanMap = new Map(moneyLoans.map((l) => [l.id, l.name]));
-      const emiSheetData = moneyEmiPayments.map((p) => ({
-        'Loan Name': loanMap.get(p.loanId) || 'Unknown Loan',
-        Amount: p.amount,
-        'Principal Portion': p.principalPortion,
-        'Interest Portion': p.interestPortion,
-        Date: p.date.split('T')[0],
-        Status: p.status.toUpperCase(),
+      // 9. Goals
+      const goalsSheetData = moneyGoals.map((g: FinancialGoal) => ({
+        Name: g.name,
+        Description: g.description || '',
+        Category: g.category,
+        Icon: g.icon || 'ShieldCheck',
+        Color: g.color || '#00C9A7',
+        Formula: g.formula,
+        'Target Value': g.targetValue,
+        'Targets (comma-separated)': Array.isArray(g.targets) ? g.targets.join(', ') : '',
+        Unit: g.unit,
+        Operator: g.operator,
+        'Is Completed': g.isManuallyCompleted ? 'YES' : 'NO',
       }));
-      const worksheetEmi = XLSX.utils.json_to_sheet(emiSheetData);
-
-      // 7. Subscriptions
-      const subscriptionsSheetData = subscriptions.map((s: Subscription) => ({
-        Name: s.name,
-        Amount: s.amount,
-        'Billing Cycle': s.billingCycle,
-        'Next Payment Date': s.nextPaymentDate ? s.nextPaymentDate.split('T')[0] : '',
-        Color: s.color || '#00C9A7',
-        Logo: s.logo || '',
-        'Linked Account': s.linkedAccountId ? accountMap.get(s.linkedAccountId) || '' : '',
-        'Is Active': s.isActive ? 'YES' : 'NO',
-        Provider: s.provider || '',
-        Category: s.category || '',
-      }));
-      const worksheetSubscriptions = XLSX.utils.json_to_sheet(subscriptionsSheetData);
-
-      // 8. Subscription Payments
-      const subMap = new Map(subscriptions.map((s: Subscription) => [s.id, s.name]));
-      const subPaymentsSheetData = subscriptionPayments.map((p: SubscriptionPayment) => ({
-        'Subscription Name': subMap.get(p.subscriptionId) || 'Unknown Subscription',
-        Amount: p.amount,
-        Date: p.date.split('T')[0],
-        Status: p.status.toUpperCase(),
-      }));
-      const worksheetSubPayments = XLSX.utils.json_to_sheet(subPaymentsSheetData);
+      const worksheetGoals = XLSX.utils.json_to_sheet(goalsSheetData);
 
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheetTxs, 'Transactions');
       XLSX.utils.book_append_sheet(workbook, worksheetAccs, 'Accounts');
       XLSX.utils.book_append_sheet(workbook, worksheetLoans, 'Loans');
-      XLSX.utils.book_append_sheet(workbook, worksheetBudgets, 'Budgets');
-      XLSX.utils.book_append_sheet(workbook, worksheetCategories, 'Categories');
       XLSX.utils.book_append_sheet(workbook, worksheetEmi, 'EMIPayments');
       XLSX.utils.book_append_sheet(workbook, worksheetSubscriptions, 'Subscriptions');
       XLSX.utils.book_append_sheet(workbook, worksheetSubPayments, 'SubscriptionPayments');
+      XLSX.utils.book_append_sheet(workbook, worksheetBudgets, 'Budgets');
+      XLSX.utils.book_append_sheet(workbook, worksheetCategories, 'Categories');
+      XLSX.utils.book_append_sheet(workbook, worksheetGoals, 'Goals');
 
       const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
       const filename = `Gainbase_Money_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -464,7 +787,7 @@ export default function ProfileScreen() {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(fileUri, {
           mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          dialogTitle: 'Backup Money Transactions',
+          dialogTitle: 'Backup Money Manager Data',
           UTI: 'com.microsoft.excel.xlsx',
         });
       } else {
@@ -503,6 +826,7 @@ export default function ProfileScreen() {
       let emiDataList: any[] = [];
       let subscriptionsDataList: any[] = [];
       let subPaymentsDataList: any[] = [];
+      let goalsDataList: any[] = [];
 
       if (!isCsv) {
         const fileContent = await FileSystem.readAsStringAsync(fileUri, {
@@ -528,6 +852,7 @@ export default function ProfileScreen() {
         emiDataList = getSheetData('emi');
         subscriptionsDataList = getSheetData('subscription');
         subPaymentsDataList = getSheetData('subscriptionpayment');
+        goalsDataList = getSheetData('goal');
       } else {
         const fileContent = await FileSystem.readAsStringAsync(fileUri, {
           encoding: FileSystem.EncodingType.UTF8,
@@ -536,7 +861,7 @@ export default function ProfileScreen() {
         transactionsDataList = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]) || [];
       }
 
-      if (transactionsDataList.length === 0 && accountsDataList.length === 0) {
+      if (transactionsDataList.length === 0 && accountsDataList.length === 0 && loansDataList.length === 0 && subscriptionsDataList.length === 0 && goalsDataList.length === 0) {
         Alert.alert('Empty File', 'The imported file contains no data.');
         return;
       }
@@ -951,7 +1276,37 @@ export default function ProfileScreen() {
         });
       }
 
-      if (newTransactions.length > 0 || accountsDataList.length > 0 || loansDataList.length > 0 || budgetsDataList.length > 0 || subscriptionsDataList.length > 0) {
+      // 9. Financial Goals
+      if (goalsDataList.length > 0) {
+        const newGoals: FinancialGoal[] = goalsDataList.map((row: any) => {
+          const name = String(row.Name || row.name || '').trim();
+          const targetVal = Number(row['Target Value'] || row.targetValue || 0);
+          const rawTargets = String(row['Targets (comma-separated)'] || row.targets || `${targetVal}`);
+          const targets = rawTargets.split(',').map((t: string) => Number(t.trim())).filter((n: number) => !isNaN(n) && n > 0);
+          return {
+            id: `goal-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            name: name || 'Financial Milestone',
+            description: row.Description || row.description || undefined,
+            category: (row.Category || row.category || 'savings').toLowerCase() as any,
+            icon: row.Icon || row.icon || 'ShieldCheck',
+            color: row.Color || row.color || '#00C9A7',
+            formula: row.Formula || row.formula || 'Cash + Savings',
+            targetValue: targetVal > 0 ? targetVal : (targets[targets.length - 1] || 100000),
+            targets: targets.length > 0 ? targets : [targetVal || 100000],
+            unit: (row.Unit || row.unit || 'currency').toLowerCase() as any,
+            operator: (row.Operator || row.operator || '>=').trim() as any,
+            isManuallyCompleted: String(row['Is Completed'] || row.isCompleted || 'NO').trim().toUpperCase() === 'YES',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        }).filter((g: FinancialGoal) => g.name);
+
+        if (newGoals.length > 0) {
+          useGoalStore.setState({ goals: newGoals });
+        }
+      }
+
+      if (newTransactions.length > 0 || accountsDataList.length > 0 || loansDataList.length > 0 || budgetsDataList.length > 0 || subscriptionsDataList.length > 0 || goalsDataList.length > 0) {
         restoreMoneyData({
           accounts: newAccounts,
           transactions: newTransactions,
@@ -965,7 +1320,7 @@ export default function ProfileScreen() {
 
         Alert.alert(
           'Success',
-          `Successfully restored all Money Manager accounts, transactions, loans, EMIs, budgets, categories, subscriptions, and subscription payments.`,
+          `Successfully restored all Money Manager accounts, transactions, loans, EMIs, budgets, categories, subscriptions, and financial goals.`,
         );
       } else {
         Alert.alert(
@@ -1047,6 +1402,7 @@ export default function ProfileScreen() {
           onPress: () => {
             clearAllData();
             clearAllMoneyData();
+            useGoalStore.getState().resetToDefaults();
             Alert.alert(
               'Data Cleared',
               'All local data has been cleared from this device. You can restore your data from the cloud at any time by triggering Cloud Sync.',
@@ -1087,6 +1443,33 @@ export default function ProfileScreen() {
       const worksheet = XLSX.utils.json_to_sheet(exportData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Transactions');
+
+      // Add Holdings Summary sheet if available
+      try {
+        const holdings = usePortfolioStore.getState().getHoldingsData();
+        if (holdings && holdings.length > 0) {
+          const holdingsData = holdings.map((h) => ({
+            Symbol: h.symbol,
+            'Company Name': h.companyName || '-',
+            'Asset Type': h.assetType || '-',
+            Sector: h.sector || '-',
+            Broker: h.broker || '-',
+            Quantity: h.quantity,
+            'Avg Buy Price': h.avgPrice,
+            'Current Price': h.currentPrice,
+            'Invested Value': h.investedValue,
+            'Current Value': h.currentValue,
+            'Total P&L': h.pnl,
+            'Total Return (%)': Number(h.pnlPercentage.toFixed(2)),
+            'Day Change': h.dayChange,
+            'Day Change (%)': Number(h.dayChangePercentage.toFixed(2)),
+          }));
+          const holdingsWorksheet = XLSX.utils.json_to_sheet(holdingsData);
+          XLSX.utils.book_append_sheet(workbook, holdingsWorksheet, 'Holdings Summary');
+        }
+      } catch (e) {
+        console.log('Holdings export skipped:', e);
+      }
 
       const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
       const filename = `Portfolio_Transactions_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -1432,13 +1815,13 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* Investment Portfolio Section */}
+          {/* Data Management Section */}
           <ThemedText style={[styles.sectionHeading, { color: currColors.textSecondary }]}>
-            INVESTMENT PORTFOLIO (STOCKS)
+            DATA & BACKUPS
           </ThemedText>
           <View
             style={[
-              styles.actionGridContainer,
+              styles.settingsCardContainer,
               {
                 backgroundColor: currColors.card,
                 borderColor: currColors.border,
@@ -1446,226 +1829,51 @@ export default function ProfileScreen() {
               },
             ]}
           >
-            <View style={styles.gridRow}>
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  handleHaptic();
-                  handleDownloadSample();
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: currColors.cardSecondary },
-                  ]}
-                >
-                  <FileText size={24} color={currColors.tint} />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  Sample
+            {/* Investments Data */}
+            <TouchableOpacity
+              style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
+              activeOpacity={0.7}
+              onPress={() => {
+                handleHaptic();
+                setDataSheetType('investments');
+              }}
+            >
+              <View style={[styles.settingsIconWrap, { backgroundColor: currColors.cardSecondary }]}>
+                <TrendingUp size={20} color={currColors.tint} />
+              </View>
+              <View style={styles.settingsTextWrap}>
+                <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
+                  Investments
                 </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  handleHaptic();
-                  handleImport();
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: currColors.cardSecondary },
-                  ]}
-                >
-                  <Upload size={24} color={currColors.tint} />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  Import
+                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
+                  Sample template, import, backup & export
                 </ThemedText>
-              </TouchableOpacity>
+              </View>
+              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  handleHaptic();
-                  handleBackup();
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: currColors.cardSecondary },
-                  ]}
-                >
-                  <Database size={24} color={currColors.tint} />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  Backup
+            {/* Money Manager Data */}
+            <TouchableOpacity
+              style={[styles.settingsRow, { borderBottomWidth: 0 }]}
+              activeOpacity={0.7}
+              onPress={() => {
+                handleHaptic();
+                setDataSheetType('money_manager');
+              }}
+            >
+              <View style={[styles.settingsIconWrap, { backgroundColor: 'rgba(0, 201, 167, 0.1)' }]}>
+                <Wallet size={20} color="#00C9A7" />
+              </View>
+              <View style={styles.settingsTextWrap}>
+                <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
+                  Money Manager
                 </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  handleHaptic();
-                  handleExport();
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: currColors.cardSecondary },
-                  ]}
-                >
-                  <Download size={24} color={currColors.tint} />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  Export
+                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
+                  Sample template, import, backup & export
                 </ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Money Manager Section */}
-          <ThemedText style={[styles.sectionHeading, { color: currColors.textSecondary, marginTop: 12 }]}>
-            MONEY MANAGER (CASHFLOW)
-          </ThemedText>
-          <View
-            style={[
-              styles.actionGridContainer,
-              {
-                backgroundColor: currColors.card,
-                borderColor: currColors.border,
-                marginTop: 8,
-              },
-            ]}
-          >
-            <View style={styles.gridRow}>
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  handleHaptic();
-                  handleDownloadMoneySample();
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: currColors.cardSecondary },
-                  ]}
-                >
-                  <FileText size={24} color={currColors.tint} />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  Sample
-                </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  handleHaptic();
-                  handleImportMoney();
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: currColors.cardSecondary },
-                  ]}
-                >
-                  <Upload size={24} color={currColors.tint} />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  Import
-                </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  handleHaptic();
-                  handleBackupMoney();
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: currColors.cardSecondary },
-                  ]}
-                >
-                  <Database size={24} color={currColors.tint} />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  Backup
-                </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  handleHaptic();
-                  handleExportMoney();
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: currColors.cardSecondary },
-                  ]}
-                >
-                  <Download size={24} color={currColors.tint} />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  Export
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Cloud Sync Section */}
-          <ThemedText style={[styles.sectionHeading, { color: currColors.textSecondary, marginTop: 12 }]}>
-            CLOUD SERVICES
-          </ThemedText>
-          <View
-            style={[
-              styles.actionGridContainer,
-              {
-                backgroundColor: currColors.card,
-                borderColor: currColors.border,
-                marginTop: 8,
-              },
-            ]}
-          >
-            <View style={styles.gridRow}>
-              <TouchableOpacity
-                style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 4 }}
-                onPress={() => {
-                  handleHaptic();
-                  router.push('/cloud-backup');
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: 'rgba(0, 201, 167, 0.1)', marginRight: 16, marginBottom: 0 },
-                  ]}
-                >
-                  <Cloud size={24} color="#00C9A7" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <ThemedText style={[styles.gridLabel, { color: currColors.text, textAlign: 'left', fontSize: 16, fontWeight: '500' }]}>
-                    Cloud Backup & Sync
-                  </ThemedText>
-                  <ThemedText style={{ color: currColors.textSecondary, fontSize: 12, marginTop: 2 }}>
-                    Sync accounts, transactions and portfolios automatically
-                  </ThemedText>
-                </View>
-              </TouchableOpacity>
-            </View>
+              </View>
+              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
+            </TouchableOpacity>
           </View>
 
           {/* Settings & Preferences Section */}
@@ -1674,7 +1882,7 @@ export default function ProfileScreen() {
           </ThemedText>
           <View
             style={[
-              styles.actionGridContainer,
+              styles.settingsCardContainer,
               {
                 backgroundColor: currColors.card,
                 borderColor: currColors.border,
@@ -1682,92 +1890,305 @@ export default function ProfileScreen() {
               },
             ]}
           >
-            <View style={styles.gridRow}>
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  handleHaptic();
-                  router.push('/settings');
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: currColors.cardSecondary },
-                  ]}
-                >
-                  <Settings size={24} color={currColors.tint} />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
+            {/* Settings */}
+            <TouchableOpacity
+              style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
+              activeOpacity={0.7}
+              onPress={() => {
+                handleHaptic();
+                router.push('/settings');
+              }}
+            >
+              <View style={[styles.settingsIconWrap, { backgroundColor: currColors.cardSecondary }]}>
+                <Settings size={20} color={currColors.tint} />
+              </View>
+              <View style={styles.settingsTextWrap}>
+                <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
                   Settings
                 </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  handleHaptic();
-                  router.push('/manage-categories');
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: currColors.cardSecondary },
-                  ]}
-                >
-                  <Tag size={24} color={currColors.tint} />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  Categories
+                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
+                  App preferences, currency & security
                 </ThemedText>
-              </TouchableOpacity>
+              </View>
+              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  handleHaptic();
-                  Linking.openURL(
-                    'https://chat.whatsapp.com/INyTPVgPq908dEMWgFiq44?mode=gi_t',
-                  );
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: 'rgba(37, 211, 102, 0.1)' },
-                  ]}
-                >
-                  <MessageCircle size={24} color="#25D366" />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  WhatsApp
+            {/* Cloud Backup & Sync */}
+            <TouchableOpacity
+              style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
+              activeOpacity={0.7}
+              onPress={() => {
+                handleHaptic();
+                router.push('/cloud-backup');
+              }}
+            >
+              <View style={[styles.settingsIconWrap, { backgroundColor: 'rgba(0, 201, 167, 0.1)' }]}>
+                <Cloud size={20} color="#00C9A7" />
+              </View>
+              <View style={styles.settingsTextWrap}>
+                <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
+                  Cloud Backup & Sync
                 </ThemedText>
-              </TouchableOpacity>
+                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
+                  Auto-sync portfolios, accounts & transactions
+                </ThemedText>
+              </View>
+              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.gridButton}
-                onPress={() => {
-                  handleHaptic();
-                  handleDeleteData();
-                }}
-              >
-                <View
-                  style={[
-                    styles.gridIconBox,
-                    { backgroundColor: 'rgba(255, 59, 48, 0.1)' },
-                  ]}
-                >
-                  <Trash2 size={24} color="#FF3B30" />
-                </View>
-                <ThemedText style={[styles.gridLabel, { color: currColors.text }]}>
-                  Delete Data
+            {/* Categories */}
+            <TouchableOpacity
+              style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
+              activeOpacity={0.7}
+              onPress={() => {
+                handleHaptic();
+                router.push('/manage-categories');
+              }}
+            >
+              <View style={[styles.settingsIconWrap, { backgroundColor: currColors.cardSecondary }]}>
+                <Tag size={20} color={currColors.tint} />
+              </View>
+              <View style={styles.settingsTextWrap}>
+                <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
+                  Manage Categories
                 </ThemedText>
-              </TouchableOpacity>
-            </View>
+                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
+                  Expense & income transaction tags
+                </ThemedText>
+              </View>
+              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
+            </TouchableOpacity>
+
+            {/* WhatsApp Community */}
+            <TouchableOpacity
+              style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
+              activeOpacity={0.7}
+              onPress={() => {
+                handleHaptic();
+                Linking.openURL('https://chat.whatsapp.com/INyTPVgPq908dEMWgFiq44?mode=gi_t');
+              }}
+            >
+              <View style={[styles.settingsIconWrap, { backgroundColor: 'rgba(37, 211, 102, 0.1)' }]}>
+                <MessageCircle size={20} color="#25D366" />
+              </View>
+              <View style={styles.settingsTextWrap}>
+                <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
+                  WhatsApp Community
+                </ThemedText>
+                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
+                  Join discussion & share early feedback
+                </ThemedText>
+              </View>
+              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
+            </TouchableOpacity>
+
+            {/* Delete All Data */}
+            <TouchableOpacity
+              style={[styles.settingsRow, { borderBottomWidth: 0 }]}
+              activeOpacity={0.7}
+              onPress={() => {
+                handleHaptic();
+                handleDeleteData();
+              }}
+            >
+              <View style={[styles.settingsIconWrap, { backgroundColor: 'rgba(255, 59, 48, 0.1)' }]}>
+                <Trash2 size={20} color="#FF3B30" />
+              </View>
+              <View style={styles.settingsTextWrap}>
+                <ThemedText style={[styles.settingsTitle, { color: '#FF3B30' }]}>
+                  Delete All Data
+                </ThemedText>
+                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
+                  Reset local transactions and accounts
+                </ThemedText>
+              </View>
+              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
+            </TouchableOpacity>
           </View>
 
+          {/* Minimal Version & OTA Update Check Footer */}
+          <VersionCheckFooter />
+
         </ScrollView>
+
+        {/* Data Actions Bottom Sheet Modal */}
+        <Modal
+          visible={dataSheetType !== null}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setDataSheetType(null)}
+        >
+          <View
+            style={[
+              styles.modalOverlay,
+              {
+                backgroundColor:
+                  theme === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.4)',
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.modalContent,
+                { backgroundColor: currColors.card },
+              ]}
+            >
+              <View
+                style={[
+                  styles.modalHeader,
+                  { borderBottomColor: currColors.border },
+                ]}
+              >
+                <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
+                  {dataSheetType === 'investments' ? 'Investments Data' : 'Money Manager Data'}
+                </ThemedText>
+                <TouchableOpacity
+                  onPress={() => setDataSheetType(null)}
+                  style={styles.closeButton}
+                >
+                  <X size={24} color={currColors.text} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ padding: 16 }}>
+                <View
+                  style={[
+                    styles.settingsCardContainer,
+                    {
+                      backgroundColor: currColors.cardSecondary,
+                      borderColor: currColors.border,
+                      marginBottom: 0,
+                    },
+                  ]}
+                >
+                  {/* Download Sample */}
+                  <TouchableOpacity
+                    style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      handleHaptic();
+                      const type = dataSheetType;
+                      setDataSheetType(null);
+                      if (type === 'investments') {
+                        handleDownloadSample();
+                      } else {
+                        handleDownloadMoneySample();
+                      }
+                    }}
+                  >
+                    <View style={[styles.settingsIconWrap, { backgroundColor: currColors.card }]}>
+                      <FileText size={20} color={dataSheetType === 'investments' ? currColors.tint : currColors.tintMoney} />
+                    </View>
+                    <View style={styles.settingsTextWrap}>
+                      <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
+                        Download Sample Format
+                      </ThemedText>
+                      <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
+                        {dataSheetType === 'investments'
+                          ? 'Template format for stock transactions (.xlsx)'
+                          : 'Template format for cashflow transactions (.xlsx)'}
+                      </ThemedText>
+                    </View>
+                    <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
+                  </TouchableOpacity>
+
+                  {/* Import */}
+                  <TouchableOpacity
+                    style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      handleHaptic();
+                      const type = dataSheetType;
+                      setDataSheetType(null);
+                      if (type === 'investments') {
+                        handleImport();
+                      } else {
+                        handleImportMoney();
+                      }
+                    }}
+                  >
+                    <View style={[styles.settingsIconWrap, { backgroundColor: currColors.card }]}>
+                      <Upload size={20} color={dataSheetType === 'investments' ? currColors.tint : currColors.tintMoney} />
+                    </View>
+                    <View style={styles.settingsTextWrap}>
+                      <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
+                        Import Transactions
+                      </ThemedText>
+                      <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
+                        {dataSheetType === 'investments'
+                          ? 'Bulk import stock trades from Excel (.xlsx)'
+                          : 'Bulk import income & expense records (.xlsx)'}
+                      </ThemedText>
+                    </View>
+                    <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
+                  </TouchableOpacity>
+
+                  {/* Backup */}
+                  <TouchableOpacity
+                    style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      handleHaptic();
+                      const type = dataSheetType;
+                      setDataSheetType(null);
+                      if (type === 'investments') {
+                        handleBackup();
+                      } else {
+                        handleBackupMoney();
+                      }
+                    }}
+                  >
+                    <View style={[styles.settingsIconWrap, { backgroundColor: currColors.card }]}>
+                      <Database size={20} color={dataSheetType === 'investments' ? currColors.tint : currColors.tintMoney} />
+                    </View>
+                    <View style={styles.settingsTextWrap}>
+                      <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
+                        {dataSheetType === 'investments' ? 'Backup Portfolio Data' : 'Backup Cashflow Data'}
+                      </ThemedText>
+                      <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
+                        {dataSheetType === 'investments'
+                          ? 'Save local snapshot of portfolio (.json)'
+                          : 'Save snapshot of accounts, loans & budgets (.json)'}
+                      </ThemedText>
+                    </View>
+                    <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
+                  </TouchableOpacity>
+
+                  {/* Export */}
+                  <TouchableOpacity
+                    style={[styles.settingsRow, { borderBottomWidth: 0 }]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      handleHaptic();
+                      const type = dataSheetType;
+                      setDataSheetType(null);
+                      if (type === 'investments') {
+                        handleExport();
+                      } else {
+                        handleExportMoney();
+                      }
+                    }}
+                  >
+                    <View style={[styles.settingsIconWrap, { backgroundColor: currColors.card }]}>
+                      <Download size={20} color={dataSheetType === 'investments' ? currColors.tint : currColors.tintMoney} />
+                    </View>
+                    <View style={styles.settingsTextWrap}>
+                      <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
+                        Export to Excel
+                      </ThemedText>
+                      <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
+                        {dataSheetType === 'investments'
+                          ? 'Download complete stock trade ledger (.xlsx)'
+                          : 'Download cashflow ledger & accounts (.xlsx)'}
+                      </ThemedText>
+                    </View>
+                    <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* Edit Profile Modal */}
         <Modal
@@ -2026,6 +2447,40 @@ const styles = StyleSheet.create({
   gridLabel: {
     fontSize: 12,
     fontWeight: '400',
+  },
+  settingsCardContainer: {
+    borderRadius: 24,
+    borderWidth: 1,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  settingsIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  settingsTextWrap: {
+    flex: 1,
+    marginRight: 8,
+  },
+  settingsTitle: {
+    fontSize: 15,
+    fontFamily: 'Outfit_500Medium',
+  },
+  settingsSubtitle: {
+    fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
+    marginTop: 2,
   },
   // Modal Styles
   modalOverlay: {
