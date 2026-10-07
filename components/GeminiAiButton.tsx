@@ -17,6 +17,7 @@ import Svg, {
 import * as Haptics from 'expo-haptics';
 
 import { useColorScheme } from './useColorScheme';
+import Colors from '../constants/Colors';
 
 interface GeminiAiButtonProps {
   onPress: () => void;
@@ -26,6 +27,7 @@ interface GeminiAiButtonProps {
 export function GeminiAiButton({ onPress, size = 40 }: GeminiAiButtonProps) {
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
+  const currColors = Colors[colorScheme];
 
   const pulse = useSharedValue(1);
   const rotate = useSharedValue(0);
@@ -74,12 +76,8 @@ export function GeminiAiButton({ onPress, size = 40 }: GeminiAiButtonProps) {
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: isDark
-            ? 'rgba(255, 255, 255, 0.05)'
-            : 'rgba(0, 0, 0, 0.04)',
-          borderColor: isDark
-            ? 'rgba(255, 255, 255, 0.08)'
-            : 'rgba(0, 0, 0, 0.06)',
+          backgroundColor: currColors.card,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : currColors.border,
         },
       ]}
     >
@@ -93,7 +91,7 @@ export function GeminiAiButton({ onPress, size = 40 }: GeminiAiButtonProps) {
             <SvgLinearGradient id="geminiGrad" x1="0" y1="0" x2="1" y2="1">
               <Stop offset="0%" stopColor="#4285F4" />
               <Stop offset="50%" stopColor="#9333EA" />
-              <Stop offset="100%" stopColor="#00C9A7" />
+              <Stop offset="100%" stopColor={isDark ? '#00C9A7' : '#00876E'} />
             </SvgLinearGradient>
           </Defs>
           <Path
@@ -113,7 +111,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.10,
     shadowRadius: 4,
     elevation: 2,
   },

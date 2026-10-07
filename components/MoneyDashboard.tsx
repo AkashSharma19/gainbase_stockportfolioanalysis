@@ -538,7 +538,7 @@ export function MoneyDashboard() {
       gradeColor = '#34C759';
     } else if (totalScore >= 70) {
       grade = 'B';
-      gradeColor = '#00C9A7';
+      gradeColor = currColors.tintMoney;
     } else if (totalScore >= 55) {
       grade = 'C';
       gradeColor = '#FF9500';
@@ -605,7 +605,7 @@ export function MoneyDashboard() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const activeFilterBg = '#00C9A7';
+  const activeFilterBg = currColors.tintMoney;
 
   return (
     <View style={[styles.container, { backgroundColor: currColors.background }]}>

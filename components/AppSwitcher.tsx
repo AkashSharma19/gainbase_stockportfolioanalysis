@@ -47,8 +47,8 @@ export function AppSwitcher() {
           style={[
             styles.chip,
             !isInvestments && {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+              backgroundColor: currColors.card,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : currColors.border,
             },
           ]}
           activeOpacity={0.8}
@@ -69,7 +69,7 @@ export function AppSwitcher() {
                 styles.iconBadge,
                 isInvestments
                   ? { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
-                  : { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)' },
+                  : { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : currColors.cardSecondary },
               ]}
             >
               <TrendingUp
@@ -97,8 +97,8 @@ export function AppSwitcher() {
           style={[
             styles.chip,
             isInvestments && {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+              backgroundColor: currColors.card,
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : currColors.border,
             },
           ]}
           activeOpacity={0.8}
@@ -106,7 +106,7 @@ export function AppSwitcher() {
         >
           {!isInvestments && (
             <LinearGradient
-              colors={['#00C9A7', '#028E75']}
+              colors={isDark ? ['#00C9A7', '#028E75'] : ['#00A887', '#007A63']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={[StyleSheet.absoluteFill, styles.gradientFill]}
@@ -119,7 +119,7 @@ export function AppSwitcher() {
                 styles.iconBadge,
                 !isInvestments
                   ? { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
-                  : { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)' },
+                  : { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : currColors.cardSecondary },
               ]}
             >
               <Wallet

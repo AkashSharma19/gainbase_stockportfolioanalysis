@@ -41,10 +41,12 @@ function CustomFloatingTabBar({ state, navigation }: any) {
   const { activeMode } = useAppModeStore();
   const isInvestMode = activeMode === 'investments';
 
-  const activeColor = isInvestMode ? '#0A84FF' : '#00C9A7';
+  const activeColor = isInvestMode ? '#0A84FF' : currColors.tintMoney;
   const activeGradient = isInvestMode
     ? (['#0A84FF', '#005AC1'] as const)
-    : (['#00C9A7', '#028E75'] as const);
+    : isDark
+      ? (['#00C9A7', '#028E75'] as const)
+      : (['#00A887', '#007A63'] as const);
 
   const investTabs: TabDefinition[] = [
     {
@@ -129,7 +131,7 @@ function CustomFloatingTabBar({ state, navigation }: any) {
       style={[
         styles.dockWrapper,
         {
-          bottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 12) + 2 : 16,
+          bottom: Math.max(insets.bottom, 12) + (Platform.OS === 'ios' ? 2 : 8),
         },
       ]}
     >
@@ -173,7 +175,7 @@ function CustomFloatingTabBar({ state, navigation }: any) {
           }
 
           const isFocused = currentRoute?.name === tab.name;
-          const iconColor = isFocused ? activeColor : currColors.textSecondary;
+          const iconColor = isFocused ? activeColor : (isDark ? currColors.textSecondary : currColors.tabIconDefault);
 
           return (
             <TouchableOpacity
@@ -202,7 +204,7 @@ function CustomFloatingTabBar({ state, navigation }: any) {
                       : 'rgba(10, 132, 255, 0.10)'
                     : isDark
                       ? 'rgba(0, 201, 167, 0.16)'
-                      : 'rgba(0, 201, 167, 0.10)',
+                      : 'rgba(0, 135, 110, 0.12)',
                 },
               ]}
             >

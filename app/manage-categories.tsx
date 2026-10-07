@@ -439,13 +439,6 @@ export default function ManageCategoriesScreen() {
           >
             <ArrowUpDown size={17} color={isReorderMode ? '#00C9A7' : currColors.text} strokeWidth={2.2} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.headerAddBtn, { backgroundColor: currColors.tintMoney }]}
-            onPress={openAddDrawer}
-            activeOpacity={0.8}
-          >
-            <Plus size={19} color="#FFFFFF" strokeWidth={2.5} />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -545,7 +538,7 @@ export default function ManageCategoriesScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{
-              paddingBottom: Math.max(insets.bottom, 20),
+              paddingBottom: Math.max(insets.bottom, 20) + 76,
             }}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
@@ -558,13 +551,30 @@ export default function ManageCategoriesScreen() {
         </View>
       </View>
 
+      {/* Floating Add Category Action Button (Hover Bottom-Right) */}
+      {drawerMode === null && !isReorderMode && (
+        <TouchableOpacity
+          style={[
+            styles.floatingAddBtn,
+            {
+              backgroundColor: currColors.tintMoney,
+              bottom: Math.max(insets.bottom, 20) + 12,
+            },
+          ]}
+          onPress={openAddDrawer}
+          activeOpacity={0.85}
+        >
+          <Plus size={24} color="#FFFFFF" strokeWidth={2.6} />
+        </TouchableOpacity>
+      )}
+
       {/* ========================================================================= */}
       {/* BOTTOM SHEET DRAWER OVERLAY FOR ADD & EDIT (IN-TREE, KEYBOARD SAFE) */}
       {/* ========================================================================= */}
       {drawerMode !== null && (
         <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.drawerOverlay}
           >
             {/* Dismiss backdrop on tap */}
@@ -849,12 +859,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerAddBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  floatingAddBtn: {
+    position: 'absolute',
+    right: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 40,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -999,6 +1017,7 @@ const styles = StyleSheet.create({
   // Bottom Sheet Drawer Styles
   drawerOverlay: {
     flex: 1,
+    width: '100%',
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
