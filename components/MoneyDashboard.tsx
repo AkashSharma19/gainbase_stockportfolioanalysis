@@ -107,6 +107,238 @@ const getCategoryBadgeTint = (category: string, type: 'income' | 'expense' | 'tr
   return { bg: isDark ? '#8E8E9324' : '#F2F2F7' };
 };
 
+function hexToHSL(hex: string): { h: number; s: number; l: number } {
+  let r = 0, g = 0, b = 0;
+  const cleanHex = hex.replace('#', '');
+  if (cleanHex.length === 3) {
+    r = parseInt(cleanHex[0] + cleanHex[0], 16) / 255;
+    g = parseInt(cleanHex[1] + cleanHex[1], 16) / 255;
+    b = parseInt(cleanHex[2] + cleanHex[2], 16) / 255;
+  } else if (cleanHex.length >= 6) {
+    r = parseInt(cleanHex.substring(0, 2), 16) / 255;
+    g = parseInt(cleanHex.substring(2, 4), 16) / 255;
+    b = parseInt(cleanHex.substring(4, 6), 16) / 255;
+  }
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  l /= 100;
+  const a = (s * Math.min(l, 1 - l)) / 100;
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
+}
+
+function getPastelPaletteFromHex(hex: string) {
+  try {
+    const { h, s } = hexToHSL(hex);
+    const sat = Math.max(45, Math.min(85, s));
+    const bg = hslToHex(h, sat, 90);
+    const text = hslToHex(h, Math.min(95, sat + 15), 18);
+    const sub = hslToHex(h, Math.min(90, sat + 10), 32);
+    return { bg, text, sub };
+  } catch {
+    return { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' };
+  }
+}
+
+const ICON_3D_PALETTES: Record<string, { bg: string; text: string; sub: string }> = {
+  // Music & Audio -> Mint Green
+  music: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
+  headphones: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
+  musical_notes: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
+  spotify: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
+
+  // Video & OTT -> Lilac / Purple
+  tv: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
+  netflix: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
+  popcorn: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
+  clapperboard: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
+  film_projector: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
+
+  // Apple & Warm Gadgets -> Butter Yellow
+  apple: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
+  star: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
+  trophy: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
+  medal: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
+  electric: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
+
+  // Gym, Gaming & Fitness -> Soft Rose / Magenta
+  gym: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
+  fitness: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
+  video_game: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
+  game: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
+  youtube: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
+  heart: { bg: '#FFE4E6', text: '#9F1239', sub: '#BE123C' },
+
+  // Food & Fast Food -> Sunset Peach / Orange
+  food: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
+  grocery: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
+  pizza: { bg: '#FED7AA', text: '#7C2D12', sub: '#9A3412' },
+  burger: { bg: '#FED7AA', text: '#7C2D12', sub: '#9A3412' },
+  cake: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
+  cookie: { bg: '#FEF3C7', text: '#78350F', sub: '#92400E' },
+  coffee: { bg: '#FEF3C7', text: '#78350F', sub: '#92400E' },
+  beverage: { bg: '#FFE4E6', text: '#881337', sub: '#9F1239' },
+  carrot: { bg: '#FFEDD5', text: '#7C2D12', sub: '#9A3412' },
+  broccoli: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
+
+  // Internet, Cloud, Tech & Car -> Sky Blue / Cyan
+  cloud: { bg: '#BAE6FD', text: '#0C4A6E', sub: '#0369A1' },
+  internet: { bg: '#BAE6FD', text: '#0C4A6E', sub: '#0369A1' },
+  wifi: { bg: '#BAE6FD', text: '#0C4A6E', sub: '#0369A1' },
+  laptop: { bg: '#E0E7FF', text: '#312E81', sub: '#4338CA' },
+  phone: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
+  car: { bg: '#BAE6FD', text: '#0C4A6E', sub: '#0369A1' },
+  fuel: { bg: '#FFEDD5', text: '#7C2D12', sub: '#9A3412' },
+  water: { bg: '#CFFAFE', text: '#164E63', sub: '#0E7490' },
+  travel: { bg: '#CCFBF1', text: '#115E59', sub: '#0F766E' },
+  compass: { bg: '#CCFBF1', text: '#115E59', sub: '#0F766E' },
+
+  // Home & Bills -> Warm Butter Amber
+  house: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
+  receipt: { bg: '#CFFAFE', text: '#164E63', sub: '#0E7490' },
+  credit_card: { bg: '#EDE9FE', text: '#581C87', sub: '#6D28D9' },
+  wallet: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
+  money: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
+  banknote: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
+  coin: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
+  investments: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
+  shopping: { bg: '#FED7AA', text: '#7C2D12', sub: '#9A3412' },
+  clothes: { bg: '#E0E7FF', text: '#312E81', sub: '#4338CA' },
+  medical: { bg: '#E0F2FE', text: '#075985', sub: '#0284C7' },
+  shield: { bg: '#CCFBF1', text: '#115E59', sub: '#0F766E' },
+  education: { bg: '#EDE9FE', text: '#581C87', sub: '#6D28D9' },
+  books: { bg: '#EDE9FE', text: '#581C87', sub: '#6D28D9' },
+  briefcase: { bg: '#F5F5F4', text: '#1C1917', sub: '#44403C' },
+  umbrella: { bg: '#CCFBF1', text: '#115E59', sub: '#0F766E' },
+  gift: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
+  sparkles: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
+  transfer: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
+  target: { bg: '#FFE4E6', text: '#9F1239', sub: '#BE123C' },
+  rocket: { bg: '#FFEDD5', text: '#7C2D12', sub: '#9A3412' },
+};
+
+function stringToHue(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash;
+  }
+  return Math.abs(hash) % 360;
+}
+
+function getPastelFromHue(hue: number) {
+  const bg = hslToHex(hue, 75, 90);
+  const text = hslToHex(hue, 85, 18);
+  const sub = hslToHex(hue, 80, 32);
+  return { bg, text, sub };
+}
+
+function getCardPaletteFromItem(payment: {
+  color?: string;
+  type: string;
+  loanType?: string;
+  icon?: string;
+  category?: string;
+  name?: string;
+}) {
+  const iconKey = (payment.icon || payment.category || payment.name || '').toLowerCase().trim();
+
+  // 1. Direct match in comprehensive 3D icon catalog
+  if (ICON_3D_PALETTES[iconKey]) {
+    return ICON_3D_PALETTES[iconKey];
+  }
+
+  for (const [key, palette] of Object.entries(ICON_3D_PALETTES)) {
+    if (iconKey.includes(key)) {
+      return palette;
+    }
+  }
+
+  // 2. If item has explicit hex color code (e.g. sub.color or loan.color)
+  if (payment.color && payment.color.startsWith('#')) {
+    return getPastelPaletteFromHex(payment.color);
+  }
+
+  // 3. Dynamic: deterministic pastel palette from the icon chosen
+  const dynamicHue = stringToHue(iconKey || 'gainbase');
+  return getPastelFromHue(dynamicHue);
+}
+
+function CircularProgress3DIcon({
+  name,
+  icon,
+  progress = 0,
+  color,
+  size = 36,
+  iconSize = 22,
+}: {
+  name: string;
+  icon?: string;
+  progress: number;
+  color: string;
+  size?: number;
+  iconSize?: number;
+}) {
+  const strokeWidth = 2.2;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const clampedProgress = Math.max(0.04, Math.min(1, progress));
+  const strokeDashoffset = circumference - clampedProgress * circumference;
+
+  return (
+    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+      <Svg
+        width={size}
+        height={size}
+        style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}
+      >
+        {/* Background Track */}
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={color + '22'}
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        {/* Progress Arc */}
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          fill="none"
+        />
+      </Svg>
+      <Category3DIcon name={name} icon={icon} size={iconSize} />
+    </View>
+  );
+}
+
+
 interface DonutChartProps {
   warnings: number;
   tips: number;
@@ -345,6 +577,7 @@ export function MoneyDashboard() {
       loanType?: string;
       category?: string;
       icon?: string;
+      progress?: number;
     }> = [];
 
     // 1. Process active loans for EMIs
@@ -352,6 +585,8 @@ export function MoneyDashboard() {
       if (loan.isActive && loan.emiAmount > 0) {
         const nextDue = getNextLoanDuePayment(loan, emiPayments, today);
         if (nextDue && nextDue >= thirtyDaysAgo && nextDue <= fourteenDaysLater) {
+          const paidAmount = Math.max(0, loan.principalAmount - loan.outstandingAmount);
+          const progress = loan.principalAmount > 0 ? Math.min(1, paidAmount / loan.principalAmount) : 0;
           list.push({
             id: `emi-${loan.id}`,
             targetId: loan.id,
@@ -362,6 +597,7 @@ export function MoneyDashboard() {
             loanType: loan.type,
             icon: loan.icon,
             color: loan.type === 'home' ? '#FF9500' : loan.type === 'car' ? '#007AFF' : '#AF52DE',
+            progress,
           });
         }
       }
@@ -912,24 +1148,16 @@ export function MoneyDashboard() {
         {/* ─── Financial Goals & Milestones Analytics Card ─── */}
         <FinancialGoalsCard />
 
-        {/* ─── Upcoming Payments (EMI + Subscriptions) ─── */}
-        <View
-          style={[
-            styles.accordionContainer,
-            {
-              backgroundColor: currColors.card,
-              borderColor: currColors.border,
-            },
-          ]}
-        >
-          <View style={styles.headerWithAction}>
+        {/* ─── Upcoming Payments / Bills (Pastel Horizontal Carousel) ─── */}
+        <View style={styles.upcomingSectionWrapper}>
+          <View style={styles.upcomingHeaderRow}>
             <ThemedText
               style={[
                 styles.innerSectionTitle,
                 { color: currColors.textSecondary },
               ]}
             >
-              UPCOMING PAYMENTS (14 DAYS)
+              UPCOMING BILLS
             </ThemedText>
             <TouchableOpacity
               onPress={() => {
@@ -937,6 +1165,7 @@ export function MoneyDashboard() {
                 router.push('/(tabs)/money-loans');
               }}
               style={styles.viewMoreButton}
+              activeOpacity={0.7}
             >
               <View
                 style={[
@@ -944,14 +1173,29 @@ export function MoneyDashboard() {
                   { backgroundColor: currColors.cardSecondary },
                 ]}
               >
-                <ChevronRight size={14} color={currColors.tint} />
+                <ArrowRight size={14} color={currColors.tint} />
               </View>
             </TouchableOpacity>
           </View>
 
           {upcomingPayments.length === 0 ? (
-            <View style={{ paddingVertical: 18, alignItems: 'center' }}>
-              <ThemedText style={{ color: currColors.textSecondary, fontSize: 13, fontFamily: 'Outfit_400Regular', marginBottom: 10 }}>
+            <View
+              style={[
+                styles.emptyUpcomingCard,
+                {
+                  backgroundColor: currColors.card,
+                  borderColor: currColors.border,
+                },
+              ]}
+            >
+              <ThemedText
+                style={{
+                  color: currColors.textSecondary,
+                  fontSize: 13,
+                  fontFamily: 'Outfit_400Regular',
+                  marginBottom: 10,
+                }}
+              >
                 No payments due in the next 14 days.
               </ThemedText>
               <TouchableOpacity
@@ -967,78 +1211,125 @@ export function MoneyDashboard() {
                 }}
                 activeOpacity={0.7}
               >
-                <ThemedText style={{ fontSize: 12, color: '#00C9A7', fontFamily: 'Outfit_600SemiBold' }}>
+                <ThemedText
+                  style={{
+                    fontSize: 12,
+                    color: '#00C9A7',
+                    fontFamily: 'Outfit_600SemiBold',
+                  }}
+                >
                   + Add Loan or Subscription
                 </ThemedText>
               </TouchableOpacity>
             </View>
           ) : (
-            upcomingPayments.map((payment, index, arr) => {
-              const isLast = index === arr.length - 1;
-              const d1 = new Date(payment.date);
-              d1.setHours(0, 0, 0, 0);
-              const d2 = new Date();
-              d2.setHours(0, 0, 0, 0);
-              const diffDays = Math.round((d1.getTime() - d2.getTime()) / (24 * 60 * 60 * 1000));
-              
-              let dueLabel = `Due in ${diffDays} days`;
-              let dueColor = currColors.textSecondary;
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.upcomingScrollContent}
+            >
+              {upcomingPayments.map((payment) => {
+                const iconName =
+                  payment.type === 'emi'
+                    ? payment.icon ||
+                      LOAN_3D_ICON_MAP[payment.loanType || ''] ||
+                      'loan'
+                    : payment.category || payment.name;
+                const palette = getCardPaletteFromItem({
+                  ...payment,
+                  icon: iconName,
+                });
+                const d1 = new Date(payment.date);
+                d1.setHours(0, 0, 0, 0);
+                const d2 = new Date();
+                d2.setHours(0, 0, 0, 0);
+                const diffDays = Math.round(
+                  (d1.getTime() - d2.getTime()) / (24 * 60 * 60 * 1000)
+                );
 
-              if (diffDays === 0) {
-                dueLabel = 'Due today';
-                dueColor = '#FF9500';
-              } else if (diffDays === 1) {
-                dueLabel = 'Due tomorrow';
-                dueColor = '#FF9500';
-              } else if (diffDays < 0) {
-                dueLabel = `Overdue by ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? 'day' : 'days'}`;
-                dueColor = '#FF3B30';
-              }
+                let dueLabel = `${diffDays} days left`;
+                if (diffDays === 0) {
+                  dueLabel = 'Due today';
+                } else if (diffDays === 1) {
+                  dueLabel = 'Due tomorrow';
+                } else if (diffDays < 0) {
+                  dueLabel = `${Math.abs(diffDays)}d overdue`;
+                }
 
-              const iconName = payment.type === 'emi'
-                ? (payment.icon || LOAN_3D_ICON_MAP[payment.loanType || ''] || 'loan')
-                : (payment.category || payment.name);
-
-              return (
-                <TouchableOpacity
-                  key={payment.id}
-                  style={[
-                    styles.accountRow,
-                    { borderBottomColor: currColors.border },
-                    isLast && { borderBottomWidth: 0 },
-                  ]}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    handleHaptic();
-                    if (payment.type === 'emi') {
-                      router.push(`/loan-details/${payment.targetId}`);
-                    } else {
-                      router.push(`/subscription-details/${payment.targetId}`);
-                    }
-                  }}
-                >
-                  <View style={[styles.accountRowLeft, { flex: 1, marginRight: 16 }]}>
-                    <Category3DIcon
-                      name={iconName}
-                      icon={payment.type === 'emi' ? payment.icon : payment.logo}
-                      size={36}
-                      style={{ marginRight: 12 }}
-                    />
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <ThemedText style={{ color: currColors.text, fontSize: 14, fontFamily: 'Outfit_500Medium' }} numberOfLines={1}>
-                        {payment.name}
-                      </ThemedText>
-                      <ThemedText style={{ fontSize: 11, color: dueColor, fontFamily: 'Outfit_400Regular' }} numberOfLines={1}>
-                        {dueLabel} • {payment.date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                      </ThemedText>
+                return (
+                  <TouchableOpacity
+                    key={payment.id}
+                    style={[
+                      styles.pastelBillCard,
+                      { backgroundColor: palette.bg },
+                    ]}
+                    activeOpacity={0.82}
+                    onPress={() => {
+                      handleHaptic();
+                      if (payment.type === 'emi') {
+                        router.push(`/loan-details/${payment.targetId}`);
+                      } else {
+                        router.push(
+                          `/subscription-details/${payment.targetId}`
+                        );
+                      }
+                    }}
+                  >
+                    {/* Top Row: Icon (with Circular Progress for EMIs) + Amount & Due */}
+                    <View style={styles.pastelCardTop}>
+                      {payment.type === 'emi' ? (
+                        <CircularProgress3DIcon
+                          name={iconName}
+                          icon={payment.icon}
+                          progress={payment.progress ?? 0}
+                          color={palette.text}
+                          size={36}
+                          iconSize={22}
+                        />
+                      ) : (
+                        <Category3DIcon
+                          name={iconName}
+                          icon={payment.logo}
+                          size={30}
+                        />
+                      )}
+                      <View style={styles.pastelCardAmountCol}>
+                        <ThemedText
+                          style={[
+                            styles.pastelCardAmount,
+                            { color: palette.text },
+                          ]}
+                        >
+                          {isPrivacyMode
+                            ? '••••••'
+                            : formatAmount(payment.amount)}
+                        </ThemedText>
+                        <ThemedText
+                          style={[
+                            styles.pastelCardDueLabel,
+                            { color: palette.sub },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {dueLabel}
+                        </ThemedText>
+                      </View>
                     </View>
-                  </View>
-                  <ThemedText style={[styles.accountRowValue, { color: currColors.text, fontFamily: 'Outfit_600SemiBold', flexShrink: 0 }]}>
-                    {formatAmount(payment.amount)}
-                  </ThemedText>
-                </TouchableOpacity>
-              );
-            })
+
+                    {/* Bottom: Service / Bill Name */}
+                    <ThemedText
+                      style={[
+                        styles.pastelCardName,
+                        { color: palette.text },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {payment.name}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           )}
         </View>
 
@@ -1467,5 +1758,68 @@ const styles = StyleSheet.create({
   txAmount: {
     fontSize: 14,
     fontFamily: 'Outfit_600SemiBold',
+  },
+
+  // ─── Upcoming Pastel Cards ───
+  upcomingSectionWrapper: {
+    marginBottom: 16,
+    marginHorizontal: -16,
+  },
+  upcomingHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  emptyUpcomingCard: {
+    marginHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingVertical: 18,
+    alignItems: 'center',
+  },
+  upcomingScrollContent: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  pastelBillCard: {
+    width: 154,
+    height: 106,
+    borderRadius: 22,
+    padding: 13,
+    justifyContent: 'space-between',
+  },
+  pastelCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pastelIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pastelCardAmountCol: {
+    alignItems: 'flex-end',
+    flex: 1,
+    marginLeft: 8,
+  },
+  pastelCardAmount: {
+    fontSize: 15,
+    fontFamily: 'Outfit_700Bold',
+    lineHeight: 18,
+  },
+  pastelCardDueLabel: {
+    fontSize: 10.5,
+    fontFamily: 'Outfit_500Medium',
+    marginTop: 1,
+  },
+  pastelCardName: {
+    fontSize: 13.5,
+    fontFamily: 'Outfit_700Bold',
+    marginTop: 6,
   },
 });

@@ -359,15 +359,6 @@ export function PortfolioScreen() {
                   >
                     <PieChart size={16} color={currColors.text} />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleShare}
-                    style={[
-                      styles.iconButton,
-                      { backgroundColor: currColors.cardSecondary },
-                    ]}
-                  >
-                    <Share2 size={16} color={currColors.text} />
-                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -678,16 +669,6 @@ export function PortfolioScreen() {
                   style={styles.viewMoreButton}
                   activeOpacity={0.7}
                 >
-                  <ThemedText
-                    style={{
-                      fontSize: 12,
-                      fontFamily: 'Outfit_500Medium',
-                      color: currColors.tint,
-                      marginRight: 4,
-                    }}
-                  >
-                    View All
-                  </ThemedText>
                   <View
                     style={[
                       styles.iconCircle,
