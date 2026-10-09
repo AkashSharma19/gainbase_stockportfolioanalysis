@@ -7,10 +7,11 @@ import {
   AppStateStatus,
   Animated,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { Sparkles, RefreshCw, X } from 'lucide-react-native';
+import { Sparkles, RefreshCw, Zap } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -32,9 +33,9 @@ export function OTAUpdateNotification() {
 
   const [isUpdateReady, setIsUpdateReady] = useState(false);
   const [isReloading, setIsReloading] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
 
-  const slideAnim = useRef(new Animated.Value(-120)).current;
+  const slideAnim = useRef(new Animated.Value(400)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   const lastCheckTimeRef = useRef<number>(0);
   const isCheckingRef = useRef<boolean>(false);
 
@@ -49,9 +50,9 @@ export function OTAUpdateNotification() {
   const checkForOTAUpdates = async () => {
     if (__DEV__ || isCheckingRef.current || isUpdateReady) return;
 
-    // Throttle checks to once every 15 minutes
+    // Throttle checks to once every 10 minutes
     const now = Date.now();
-    if (now - lastCheckTimeRef.current < 15 * 60 * 1000) {
+    if (now - lastCheckTimeRef.current < 10 * 60 * 1000) {
       return;
     }
 
@@ -67,10 +68,9 @@ export function OTAUpdateNotification() {
         // Fetch the update in background
         await Updates.fetchUpdateAsync();
         setIsUpdateReady(true);
-        setIsDismissed(false);
       }
     } catch (e) {
-      // Silent catch so it never disturbs user experience
+      // Silent catch so it never disrupts user experience
       console.log('OTA background check error:', e);
     } finally {
       isCheckingRef.current = false;
@@ -78,10 +78,10 @@ export function OTAUpdateNotification() {
   };
 
   useEffect(() => {
-    // Initial check after app finishes bootstrap (3s delay)
+    // Initial check after app finishes bootstrap (2s delay)
     const timer = setTimeout(() => {
       checkForOTAUpdates();
-    }, 3000);
+    }, 2000);
 
     // Check on app resume from background
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
@@ -96,27 +96,42 @@ export function OTAUpdateNotification() {
     };
   }, []);
 
-  // Slide animation
+  // Slide up animation from bottom when update is ready
   useEffect(() => {
-    if (isUpdateReady && !isDismissed) {
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 50,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
+    if (isUpdateReady) {
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 65,
+          friction: 9,
+          useNativeDriver: true,
+        }),
+      ]).start();
     } else {
-      Animated.timing(slideAnim, {
-        toValue: -140,
-        duration: 250,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 400,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
-  }, [isUpdateReady, isDismissed]);
+  }, [isUpdateReady]);
 
   const handleRestart = async () => {
     if (isReloading) return;
-    triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+    triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
     setIsReloading(true);
 
     try {
@@ -129,153 +144,176 @@ export function OTAUpdateNotification() {
     }
   };
 
-  const handleDismiss = () => {
-    triggerHaptic(Haptics.ImpactFeedbackStyle.Light);
-    setIsDismissed(true);
-  };
-
-  if (!isUpdateReady || isDismissed) {
+  if (!isUpdateReady) {
     return null;
   }
 
   return (
-    <Animated.View
-      style={[
-        styles.wrapper,
-        {
-          top: insets.top > 0 ? insets.top + 6 : 16,
-          transform: [{ translateY: slideAnim }],
-        },
-      ]}
+    <Modal
+      transparent
+      visible={isUpdateReady}
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={() => {
+        // Mandatory update: do not allow back button dismiss on Android
+      }}
     >
-      <View
-        style={[
-          styles.container,
-          {
-            backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-            borderColor: currColors.border,
-            shadowColor: colorScheme === 'dark' ? '#000000' : '#8E8E93',
-          },
-        ]}
-      >
-        {/* Left Icon Badge */}
-        <View style={[styles.iconBadge, { backgroundColor: currColors.tintMoney + '18' }]}>
-          <Sparkles size={16} color={currColors.tintMoney} />
-        </View>
+      <View style={styles.modalOverlay}>
+        {/* Blurred / Darkened Backdrop */}
+        <Animated.View
+          style={[
+            styles.backdrop,
+            {
+              opacity: fadeAnim,
+              backgroundColor: colorScheme === 'dark' ? 'rgba(0,0,0,0.78)' : 'rgba(0,0,0,0.55)',
+            },
+          ]}
+        />
 
-        {/* Content */}
-        <View style={styles.textContainer}>
+        {/* Bottom Sheet Card */}
+        <Animated.View
+          style={[
+            styles.sheetContainer,
+            {
+              backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+              borderColor: currColors.border,
+              paddingBottom: insets.bottom > 0 ? insets.bottom + 12 : 28,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          {/* Top Indicator Handle */}
+          <View style={[styles.handleBar, { backgroundColor: currColors.border }]} />
+
+          {/* Hero Icon Badge */}
+          <View
+            style={[
+              styles.heroIconBadge,
+              { backgroundColor: currColors.tintMoney + '18', borderColor: currColors.tintMoney + '30' },
+            ]}
+          >
+            <Sparkles size={28} color={currColors.tintMoney} />
+          </View>
+
+          {/* Mandatory Badge */}
+          <View style={[styles.mandatoryBadge, { backgroundColor: currColors.tintMoney + '15' }]}>
+            <Zap size={12} color={currColors.tintMoney} strokeWidth={2.5} />
+            <ThemedText style={[styles.mandatoryText, { color: currColors.tintMoney }]}>
+              MANDATORY UPDATE
+            </ThemedText>
+          </View>
+
+          {/* Title & Description */}
           <ThemedText style={[styles.title, { color: currColors.text }]}>
-            Update Ready
+            Update Ready to Install
           </ThemedText>
-          <ThemedText style={[styles.subtitle, { color: currColors.textSecondary }]} numberOfLines={1}>
-            Restart now to apply the latest version.
+          <ThemedText style={[styles.description, { color: currColors.textSecondary }]}>
+            A new update has been downloaded. Restart the app now to apply essential performance upgrades and latest features.
           </ThemedText>
-        </View>
 
-        {/* Actions */}
-        <View style={styles.actions}>
+          {/* Primary Action Button */}
           <TouchableOpacity
             style={[styles.restartButton, { backgroundColor: currColors.tintMoney }]}
             onPress={handleRestart}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             disabled={isReloading}
           >
             {isReloading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" style={{ transform: [{ scale: 0.7 }] }} />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <View style={styles.btnRow}>
-                <RefreshCw size={12} color="#FFFFFF" strokeWidth={2.5} />
-                <ThemedText style={styles.restartBtnText}>Restart</ThemedText>
+                <RefreshCw size={16} color="#FFFFFF" strokeWidth={2.5} />
+                <ThemedText style={styles.restartBtnText}>Restart App Now</ThemedText>
               </View>
             )}
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.dismissButton, { backgroundColor: currColors.cardSecondary }]}
-            onPress={handleDismiss}
-            activeOpacity={0.7}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <X size={13} color={currColors.textSecondary} strokeWidth={2.2} />
-          </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
-    </Animated.View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    zIndex: 99999,
-    elevation: 10,
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
   },
-  container: {
+  backdrop: {
+    ...StyleSheet.absoluteFill,
+  },
+  sheetContainer: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingTop: 12,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 20,
+    elevation: 24,
+  },
+  handleBar: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    marginBottom: 18,
+  },
+  heroIconBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  mandatoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 18,
-    borderWidth: 1,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  iconBadge: {
-    width: 34,
-    height: 34,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
+    marginBottom: 10,
   },
-  textContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    marginRight: 8,
+  mandatoryText: {
+    fontSize: 10.5,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.8,
   },
   title: {
-    fontSize: 13,
-    fontFamily: 'Outfit_600SemiBold',
-    lineHeight: 16,
+    fontSize: 19,
+    fontFamily: 'Outfit_700Bold',
+    textAlign: 'center',
+    marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 11,
+  description: {
+    fontSize: 13.5,
     fontFamily: 'Outfit_400Regular',
-    marginTop: 1,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 24,
+    paddingHorizontal: 8,
   },
   restartButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+    width: '100%',
+    height: 48,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: 28,
   },
   btnRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
   },
   restartBtnText: {
     color: '#FFFFFF',
-    fontSize: 11.5,
+    fontSize: 15,
     fontFamily: 'Outfit_600SemiBold',
-  },
-  dismissButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    justifyContent: 'center',
-    alignItems: 'center',
+    letterSpacing: 0.2,
   },
 });
