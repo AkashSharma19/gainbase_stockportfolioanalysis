@@ -16,6 +16,8 @@ export const ActivityCalendar = ({ transactions }: ActivityCalendarProps) => {
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const theme = useColorScheme() ?? 'dark';
   const currColors = Colors[theme];
+  const activeTodayColor = theme === 'dark' ? '#00C9A7' : '#00876E';
+
   // Group transactions by date
   const dailyStats = useMemo(() => {
     const stats: Record<string, { buy: number; sell: number }> = {};
@@ -33,7 +35,7 @@ export const ActivityCalendar = ({ transactions }: ActivityCalendarProps) => {
       if (!stats[dateStr]) {
         stats[dateStr] = { buy: 0, sell: 0 };
       }
-      const value = t.quantity * t.price;
+      const value = (t.quantity || 0) * (t.price || 0);
       if (t.type === 'BUY') {
         stats[dateStr].buy += value;
       } else {
@@ -44,30 +46,43 @@ export const ActivityCalendar = ({ transactions }: ActivityCalendarProps) => {
     return stats;
   }, [transactions]);
 
+  // Clean compact badge formatter (e.g. +10K, -1.5L, +2Cr)
+  const formatBadgeAmount = (val: number) => {
+    if (isPrivacyMode) return '••';
+    if (val >= 10000000) {
+      const cr = val / 10000000;
+      return cr >= 10 ? `${cr.toFixed(0)}Cr` : `${cr.toFixed(1)}Cr`;
+    }
+    if (val >= 100000) {
+      const l = val / 100000;
+      return l >= 10 ? `${l.toFixed(0)}L` : `${l.toFixed(1)}L`;
+    }
+    if (val >= 1000) {
+      const k = val / 1000;
+      return k >= 10 ? `${k.toFixed(0)}K` : `${k.toFixed(1)}K`;
+    }
+    return val.toFixed(0);
+  };
+
   const renderDay = (day: DateData & { state?: string | undefined }) => {
     const dateStr = day.dateString;
     const stat = dailyStats[dateStr];
     const isToday = dateStr === format(new Date(), 'yyyy-MM-dd');
 
-    // Skip rendering for days outside the month if needed,
-    // but react-native-calendars usually handles 'disabled' state visually.
-    // We'll just render the content if it's a valid day object.
     if (!day) return <View />;
 
-    const buyValue = stat?.buy || 0;
-    const sellValue = stat?.sell || 0;
+    const buyVal = stat?.buy || 0;
+    const sellVal = stat?.sell || 0;
 
     return (
       <View style={styles.dayContainer}>
-        {/* Top: Sell (Negative) */}
+        {/* Top: Sell (Realized Outflow) */}
         <View style={styles.statContainer}>
-          {sellValue > 0 && (
+          {sellVal > 0 ? (
             <ThemedText style={styles.sellText} numberOfLines={1}>
-              {isPrivacyMode
-                ? '••••••'
-                : `-${sellValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+              +{formatBadgeAmount(sellVal)}
             </ThemedText>
-          )}
+          ) : null}
         </View>
 
         {/* Center: Date */}
@@ -75,24 +90,22 @@ export const ActivityCalendar = ({ transactions }: ActivityCalendarProps) => {
           style={[
             styles.dayText,
             { color: currColors.text },
-            isToday && styles.todayText,
+            isToday && [styles.todayText, { color: activeTodayColor }],
             day.state === 'disabled' && {
-              color: theme === 'dark' ? '#333' : '#D1D1D6',
+              color: theme === 'dark' ? '#333336' : '#D1D1D6',
             },
           ]}
         >
           {day.day}
         </ThemedText>
 
-        {/* Bottom: Buy (Positive) */}
+        {/* Bottom: Buy (Invested Inflow) */}
         <View style={styles.statContainer}>
-          {buyValue > 0 && (
+          {buyVal > 0 ? (
             <ThemedText style={styles.buyText} numberOfLines={1}>
-              {isPrivacyMode
-                ? '••••••'
-                : `+${buyValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+              -{formatBadgeAmount(buyVal)}
             </ThemedText>
-          )}
+          ) : null}
         </View>
       </View>
     );
@@ -105,11 +118,11 @@ export const ActivityCalendar = ({ transactions }: ActivityCalendarProps) => {
         { backgroundColor: currColors.card, borderColor: currColors.border },
       ]}
     >
-      <ThemedText style={[styles.title, { color: currColors.textSecondary }]}>
-        CALENDAR VIEW
+      <ThemedText type="bold" style={[styles.title, { color: currColors.textSecondary }]}>
+        INVESTMENT ACTIVITY CALENDAR
       </ThemedText>
       <Calendar
-        key={`calendar-${theme}`}
+        key={`invest-calendar-${theme}`}
         dayComponent={({
           date,
           state,
@@ -131,17 +144,17 @@ export const ActivityCalendar = ({ transactions }: ActivityCalendarProps) => {
             textSectionTitleColor: currColors.textSecondary,
             selectedDayBackgroundColor: 'transparent',
             selectedDayTextColor: currColors.text,
-            todayTextColor: '#2ac4c7',
+            todayTextColor: activeTodayColor,
             dayTextColor: currColors.text,
-            textDisabledColor: theme === 'dark' ? '#333' : '#D1D1D6',
+            textDisabledColor: theme === 'dark' ? '#333336' : '#D1D1D6',
             dotColor: '#00adf5',
             selectedDotColor: currColors.text,
             arrowColor: currColors.textSecondary,
             monthTextColor: currColors.text,
             indicatorColor: currColors.text,
             textDayFontFamily: 'Outfit_400Regular',
-            textMonthFontFamily: 'Outfit_600SemiBold',
-            textDayHeaderFontFamily: 'Outfit_600SemiBold',
+            textMonthFontFamily: 'Outfit_700Bold',
+            textDayHeaderFontFamily: 'Outfit_700Bold',
             textDayFontSize: 14,
             textMonthFontSize: 16,
             textDayHeaderFontSize: 11,
@@ -160,47 +173,48 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 16,
     paddingTop: 20,
-    marginBottom: 0,
+    marginBottom: 16,
     borderWidth: 1,
   },
   dayContainer: {
     width: 36,
-    height: 36,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dayText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontFamily: 'Outfit_500Medium',
     marginBottom: 0,
   },
   todayText: {
-    color: '#2ac4c7', // Cyan-ish for today
-    fontWeight: '700',
-  },
-  disabledText: {
-    color: '#444',
+    fontFamily: 'Outfit_700Bold',
   },
   statContainer: {
-    height: 10, // Fixed height to prevent jitter
+    height: 9.5,
+    minHeight: 9.5,
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
   },
   sellText: {
-    fontSize: 7,
-    color: '#8E8E93', // Gray as requested for sells (or use Red #FF453A if preferred)
+    fontSize: 7.8,
+    color: '#34C759',
     textAlign: 'center',
+    fontFamily: 'Outfit_600SemiBold',
+    lineHeight: 9.5,
   },
   buyText: {
-    fontSize: 7,
-    color: '#2ac4c7', // Cyan/Green for buys
+    fontSize: 7.8,
+    color: '#FF3B30',
     textAlign: 'center',
+    fontFamily: 'Outfit_600SemiBold',
+    lineHeight: 9.5,
   },
   title: {
     fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 1.0,
     textTransform: 'uppercase',
     marginBottom: 12,
   },

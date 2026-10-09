@@ -362,7 +362,7 @@ export default function StockDetailsScreen() {
             {holding.companyName}
           </ThemedText>
         </View>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 38 }} />
       </View>
 
       <ScrollView

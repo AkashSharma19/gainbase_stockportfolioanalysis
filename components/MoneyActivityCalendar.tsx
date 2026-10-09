@@ -16,6 +16,7 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const theme = useColorScheme() ?? 'dark';
   const currColors = Colors[theme];
+  const activeTodayColor = theme === 'dark' ? '#00C9A7' : '#00876E';
 
   // Group transactions by date
   const dailyStats = useMemo(() => {
@@ -45,17 +46,20 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
   }, [transactions]);
 
   const formatBadgeAmount = (val: number) => {
-    if (isPrivacyMode) return '**';
+    if (isPrivacyMode) return '••';
     if (val >= 10000000) {
-      return `${(val / 10000000).toFixed(0)}Cr`;
+      const cr = val / 10000000;
+      return cr >= 10 ? `${cr.toFixed(0)}Cr` : `${cr.toFixed(1)}Cr`;
     }
     if (val >= 100000) {
-      return `${(val / 100000).toFixed(0)}L`;
+      const l = val / 100000;
+      return l >= 10 ? `${l.toFixed(0)}L` : `${l.toFixed(1)}L`;
     }
     if (val >= 1000) {
-      return `${(val / 1000).toFixed(0)}K`;
+      const k = val / 1000;
+      return k >= 10 ? `${k.toFixed(0)}K` : `${k.toFixed(1)}K`;
     }
-    return val.toString();
+    return val.toFixed(0);
   };
 
   const renderDay = (day: DateData & { state?: string | undefined }) => {
@@ -72,11 +76,11 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
       <View style={styles.dayContainer}>
         {/* Top: Expense */}
         <View style={styles.statContainer}>
-          {expenseVal > 0 && (
+          {expenseVal > 0 ? (
             <ThemedText style={styles.expenseText} numberOfLines={1}>
               -{formatBadgeAmount(expenseVal)}
             </ThemedText>
-          )}
+          ) : null}
         </View>
 
         {/* Center: Date */}
@@ -84,9 +88,9 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
           style={[
             styles.dayText,
             { color: currColors.text },
-            isToday && styles.todayText,
+            isToday && [styles.todayText, { color: activeTodayColor }],
             day.state === 'disabled' && {
-              color: theme === 'dark' ? '#333' : '#D1D1D6',
+              color: theme === 'dark' ? '#333336' : '#D1D1D6',
             },
           ]}
         >
@@ -95,11 +99,11 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
 
         {/* Bottom: Income */}
         <View style={styles.statContainer}>
-          {incomeVal > 0 && (
+          {incomeVal > 0 ? (
             <ThemedText style={styles.incomeText} numberOfLines={1}>
               +{formatBadgeAmount(incomeVal)}
             </ThemedText>
-          )}
+          ) : null}
         </View>
       </View>
     );
@@ -138,9 +142,9 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
             textSectionTitleColor: currColors.textSecondary,
             selectedDayBackgroundColor: 'transparent',
             selectedDayTextColor: currColors.text,
-            todayTextColor: '#00C9A7',
+            todayTextColor: activeTodayColor,
             dayTextColor: currColors.text,
-            textDisabledColor: theme === 'dark' ? '#333' : '#D1D1D6',
+            textDisabledColor: theme === 'dark' ? '#333336' : '#D1D1D6',
             dotColor: '#00adf5',
             selectedDotColor: currColors.text,
             arrowColor: currColors.textSecondary,
@@ -177,35 +181,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayText: {
-    fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
+    fontSize: 13,
+    fontFamily: 'Outfit_500Medium',
     marginBottom: 0,
   },
   todayText: {
-    color: '#00C9A7',
     fontFamily: 'Outfit_700Bold',
   },
   statContainer: {
-    height: 10,
+    height: 9.5,
+    minHeight: 9.5,
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
   },
   expenseText: {
-    fontSize: 7,
+    fontSize: 7.8,
     color: '#FF3B30',
     textAlign: 'center',
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: 'Outfit_600SemiBold',
+    lineHeight: 9.5,
   },
   incomeText: {
-    fontSize: 7,
+    fontSize: 7.8,
     color: '#34C759',
     textAlign: 'center',
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: 'Outfit_600SemiBold',
+    lineHeight: 9.5,
   },
   title: {
     fontSize: 10,
-    letterSpacing: 1,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 1.0,
     textTransform: 'uppercase',
     marginBottom: 12,
   },

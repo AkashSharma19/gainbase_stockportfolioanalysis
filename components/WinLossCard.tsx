@@ -379,20 +379,20 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 1.0,
   },
   rateContainer: {
     alignItems: 'flex-end',
   },
   rateValue: {
     fontSize: 20,
-    fontWeight: '400',
+    fontFamily: 'Outfit_400Regular',
     lineHeight: 24,
   },
   rateLabel: {
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: 'Outfit_500Medium',
   },
   barContainer: {
     flexDirection: 'row',
@@ -430,15 +430,15 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
   },
   statLabel: {
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: 'Outfit_500Medium',
   },
   statAmount: {
     fontSize: 10,
-    fontWeight: '500',
+    fontFamily: 'Outfit_500Medium',
     marginTop: 0,
     flexShrink: 1,
   },
@@ -469,7 +469,6 @@ const styles = StyleSheet.create({
   compactFooterBadgeText: {
     fontSize: 9,
     fontFamily: 'Outfit_700Bold',
-    fontWeight: '700',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },

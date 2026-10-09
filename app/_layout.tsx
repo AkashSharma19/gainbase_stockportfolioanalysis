@@ -24,6 +24,7 @@ import Colors from '@/constants/Colors';
 import { registerBackgroundFetchAsync } from '../tasks/backgroundFetch';
 import { useMoneyStore } from '../store/useMoneyStore';
 import { usePortfolioStore } from '../store/usePortfolioStore';
+import { OTAUpdateNotification } from '@/components/OTAUpdateNotification';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -257,6 +258,7 @@ function RootLayoutNav() {
             options={{ animation: 'slide_from_right', headerShown: false }}
           />
         </Stack>
+        <OTAUpdateNotification />
       </ThemeProvider>
     </GestureHandlerRootView>
   );

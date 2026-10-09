@@ -347,7 +347,7 @@ export default function GoalsScreen() {
           onPress={openAddModal}
           activeOpacity={0.7}
         >
-          <Plus size={20} color="#00C9A7" />
+          <Plus size={20} color={currColors.tintMoney} />
         </TouchableOpacity>
       </View>
 
@@ -367,14 +367,14 @@ export default function GoalsScreen() {
               <View
                 style={[
                   styles.badgePill,
-                  { backgroundColor: summary.pct === 100 ? 'rgba(52, 199, 89, 0.15)' : 'rgba(0, 201, 167, 0.15)' },
+                  { backgroundColor: summary.pct === 100 ? 'rgba(52, 199, 89, 0.15)' : (colorScheme === 'dark' ? 'rgba(0, 201, 167, 0.15)' : 'rgba(0, 135, 110, 0.15)') },
                 ]}
               >
                 <ThemedText
                   style={{
                     fontSize: 11,
                     fontFamily: 'Outfit_600SemiBold',
-                    color: summary.pct === 100 ? '#34C759' : '#00C9A7',
+                    color: summary.pct === 100 ? '#34C759' : currColors.tintMoney,
                   }}
                 >
                   {summary.pct.toFixed(0)}% Done
@@ -388,7 +388,7 @@ export default function GoalsScreen() {
                   styles.progressFill,
                   {
                     width: `${Math.min(100, summary.pct)}%`,
-                    backgroundColor: summary.pct === 100 ? '#34C759' : '#00C9A7',
+                    backgroundColor: summary.pct === 100 ? '#34C759' : currColors.tintMoney,
                   },
                 ]}
               />
@@ -429,8 +429,8 @@ export default function GoalsScreen() {
                   style={[
                     styles.filterChip,
                     {
-                      backgroundColor: isActive ? '#00C9A7' : currColors.card,
-                      borderColor: isActive ? '#00C9A7' : currColors.border,
+                      backgroundColor: isActive ? currColors.tintMoney : currColors.card,
+                      borderColor: isActive ? currColors.tintMoney : currColors.border,
                     },
                   ]}
                   onPress={() => {
@@ -456,7 +456,7 @@ export default function GoalsScreen() {
 
         {/* Section Header */}
         <View style={styles.sectionHeader}>
-          <ThemedText type="medium" style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+          <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
             TARGET GOALS ({filteredGoals.length})
           </ThemedText>
         </View>
@@ -474,7 +474,7 @@ export default function GoalsScreen() {
                 : 'Create dynamic goals with custom formulas like Net Worth, Emergency Fund, or Portfolio targets.'}
             </ThemedText>
             <TouchableOpacity
-              style={[styles.emptyActionBtn, { backgroundColor: '#00C9A7' }]}
+              style={[styles.emptyActionBtn, { backgroundColor: currColors.tintMoney }]}
               onPress={openAddModal}
               activeOpacity={0.8}
             >
@@ -514,16 +514,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
   addBtn: {
     width: 38,
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
   summarySubTitle: {
     fontSize: 10,
     fontFamily: 'Outfit_700Bold',
-    letterSpacing: 0.8,
+    letterSpacing: 1.0,
     marginBottom: 2,
   },
   summaryVal: {
@@ -612,9 +612,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: 0.5,
+    fontSize: 10,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 1.0,
     textTransform: 'uppercase',
   },
 

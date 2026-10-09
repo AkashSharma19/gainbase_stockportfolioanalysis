@@ -73,7 +73,7 @@ const MiniMetric = ({
         </Svg>
       </View>
       <View>
-        <ThemedText style={{ color: '#FFF', fontSize: 13, fontWeight: '600' }}>
+        <ThemedText type="semiBold" style={{ color: '#FFF', fontSize: 13 }}>
           {score.toFixed(0)}
           {isPercent ? '%' : ''}
         </ThemedText>
@@ -81,7 +81,7 @@ const MiniMetric = ({
           style={{
             color: '#8E8E93',
             fontSize: 7,
-            fontWeight: '700',
+            fontFamily: 'Outfit_700Bold',
             letterSpacing: 0.5,
           }}
         >
@@ -239,13 +239,13 @@ const styles = StyleSheet.create({
   brandTitle: {
     color: '#FFF',
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 2,
   },
   dateText: {
     color: '#48484A',
     fontSize: 9,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 0.5,
   },
   heroSection: {
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   heroValue: {
     color: '#FFF',
     fontSize: 48,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: -1,
     marginBottom: 12,
   },
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   subValue: {
     color: '#8E8E93',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
   },
   dot: {
     width: 3,
@@ -296,13 +296,13 @@ const styles = StyleSheet.create({
   personaLabel: {
     color: '#48484A',
     fontSize: 8,
-    fontWeight: '800',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1,
   },
   personaValue: {
     color: '#FFF',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
     letterSpacing: 0.5,
   },
   footerBranding: {
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   footerText: {
     color: '#2C2C2E',
     fontSize: 8,
-    fontWeight: '800',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 1.5,
   },
 });

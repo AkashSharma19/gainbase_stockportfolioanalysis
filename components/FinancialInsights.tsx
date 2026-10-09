@@ -23,8 +23,8 @@ export function FinancialInsights() {
   };
 
   const themeStyles = {
-    bg: colorScheme === 'dark' ? 'rgba(0, 201, 167, 0.08)' : 'rgba(0, 201, 167, 0.05)',
-    border: colorScheme === 'dark' ? 'rgba(0, 201, 167, 0.2)' : 'rgba(0, 201, 167, 0.1)',
+    bg: colorScheme === 'dark' ? 'rgba(0, 201, 167, 0.08)' : 'rgba(0, 135, 110, 0.06)',
+    border: colorScheme === 'dark' ? 'rgba(0, 201, 167, 0.2)' : 'rgba(0, 135, 110, 0.15)',
   };
 
   // When no insights have been generated yet, render an inviting AI generation CTA
@@ -43,7 +43,7 @@ export function FinancialInsights() {
       >
         <View style={styles.topRow}>
           <View style={styles.titleRow}>
-            <View style={[styles.iconContainer, { backgroundColor: '#00C9A7' }]}>
+            <View style={[styles.iconContainer, { backgroundColor: currColors.tintMoney }]}>
               <Sparkles size={14} color="#FFF" />
             </View>
             <View style={{ flex: 1 }}>
@@ -55,10 +55,10 @@ export function FinancialInsights() {
               </ThemedText>
             </View>
           </View>
-          <View style={styles.generateBadge}>
-            <Sparkles size={10} color="#00C9A7" />
-            <ThemedText style={styles.generateBadgeText}>Analyze</ThemedText>
-            <ChevronRight size={12} color="#00C9A7" />
+          <View style={[styles.generateBadge, { borderColor: colorScheme === 'dark' ? 'rgba(0, 201, 167, 0.3)' : 'rgba(0, 135, 110, 0.3)' }]}>
+            <Sparkles size={10} color={currColors.tintMoney} />
+            <ThemedText style={[styles.generateBadgeText, { color: currColors.tintMoney }]}>Analyze</ThemedText>
+            <ChevronRight size={12} color={currColors.tintMoney} />
           </View>
         </View>
       </TouchableOpacity>
@@ -79,7 +79,7 @@ export function FinancialInsights() {
     >
       <View style={styles.topRow}>
         <View style={styles.titleRow}>
-          <View style={[styles.iconContainer, { backgroundColor: '#00C9A7' }]}>
+          <View style={[styles.iconContainer, { backgroundColor: currColors.tintMoney }]}>
             <Sparkles size={14} color="#FFF" />
           </View>
           <ThemedText style={[styles.title, { color: currColors.text }]}>
@@ -94,7 +94,7 @@ export function FinancialInsights() {
           <View style={styles.categoryChip}>
             <View style={[styles.categoryDot, { backgroundColor: '#FF3B30' }]} />
             <ThemedText style={[styles.categoryText, { color: currColors.textSecondary }]}>
-              <ThemedText style={{ color: '#FF3B30', fontWeight: '700' }}>
+              <ThemedText type="bold" style={{ color: '#FF3B30' }}>
                 {countByType.warning}
               </ThemedText>{' '}
               Alerts
@@ -105,7 +105,7 @@ export function FinancialInsights() {
           <View style={styles.categoryChip}>
             <View style={[styles.categoryDot, { backgroundColor: '#FF9500' }]} />
             <ThemedText style={[styles.categoryText, { color: currColors.textSecondary }]}>
-              <ThemedText style={{ color: '#FF9500', fontWeight: '700' }}>
+              <ThemedText type="bold" style={{ color: '#FF9500' }}>
                 {countByType.tip}
               </ThemedText>{' '}
               Tips
@@ -114,9 +114,9 @@ export function FinancialInsights() {
         )}
         {countByType.success > 0 && (
           <View style={styles.categoryChip}>
-            <View style={[styles.categoryDot, { backgroundColor: '#00C9A7' }]} />
+            <View style={[styles.categoryDot, { backgroundColor: currColors.tintMoney }]} />
             <ThemedText style={[styles.categoryText, { color: currColors.textSecondary }]}>
-              <ThemedText style={{ color: '#00C9A7', fontWeight: '700' }}>
+              <ThemedText type="bold" style={{ color: currColors.tintMoney }}>
                 {countByType.success}
               </ThemedText>{' '}
               Achievements

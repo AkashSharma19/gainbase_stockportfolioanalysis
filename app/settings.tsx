@@ -45,7 +45,7 @@ export default function SettingsScreen() {
         <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
           Settings
         </ThemedText>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 38 }} />
       </View>
 
       <ScrollView
@@ -104,7 +104,7 @@ export default function SettingsScreen() {
                   size={16}
                   color={
                     theme === 'light'
-                      ? currColors.tint
+                      ? currColors.tintMoney
                       : currColors.textSecondary
                   }
                 />
@@ -141,7 +141,7 @@ export default function SettingsScreen() {
                   size={16}
                   color={
                     theme === 'dark'
-                      ? currColors.tint
+                      ? currColors.tintMoney
                       : currColors.textSecondary
                   }
                 />
@@ -178,7 +178,7 @@ export default function SettingsScreen() {
                   size={16}
                   color={
                     theme === 'system'
-                      ? currColors.tint
+                      ? currColors.tintMoney
                       : currColors.textSecondary
                   }
                 />
@@ -222,7 +222,7 @@ export default function SettingsScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   toggleCurrencySymbol();
                 }}
-                trackColor={{ false: '#767577', true: '#007AFF' }}
+                trackColor={{ false: '#767577', true: currColors.tintMoney }}
                 thumbColor={
                   Platform.OS === 'ios'
                     ? '#FFFFFF'
@@ -253,9 +253,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
   content: {
     flex: 1,
@@ -273,11 +273,12 @@ const styles = StyleSheet.create({
   },
   settingTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
     marginBottom: 4,
   },
   settingDescription: {
-    fontSize: 11,
+    fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
   },
   separator: {
     height: 1,
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
   },
   themeText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Outfit_500Medium',
   },
   footerVersionWrap: {
     marginTop: 36,

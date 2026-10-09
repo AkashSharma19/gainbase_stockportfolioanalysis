@@ -61,18 +61,19 @@ export const SummaryCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     width: '48%',
     marginBottom: 16,
   },
   label: {
     fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
     marginBottom: 8,
   },
   value: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Outfit_700Bold',
   },
   trendContainer: {
     flexDirection: 'row',
@@ -82,6 +83,6 @@ const styles = StyleSheet.create({
   },
   trendText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
   },
 });

@@ -128,11 +128,12 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
     marginBottom: 4,
   },
   description: {
     fontSize: 13,
+    fontFamily: 'Outfit_400Regular',
     lineHeight: 18,
   },
   headerRight: {
@@ -146,11 +147,11 @@ const styles = StyleSheet.create({
   },
   score: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
   },
   maxScore: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
   },
   progressTrack: {
     height: 8,
@@ -181,8 +182,8 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 1.0,
     textTransform: 'uppercase',
     marginBottom: 4,
   },
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
   },
   statusIcon: {
     marginLeft: 4,
@@ -209,6 +210,7 @@ const styles = StyleSheet.create({
   },
   insightText: {
     fontSize: 14,
+    fontFamily: 'Outfit_400Regular',
     lineHeight: 20,
     flex: 1,
   },
@@ -223,8 +225,8 @@ const styles = StyleSheet.create({
   },
   recsTitle: {
     fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 1.0,
     opacity: 0.6,
   },
   recItem: {

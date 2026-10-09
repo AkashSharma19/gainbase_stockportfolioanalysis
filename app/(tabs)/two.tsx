@@ -1,10 +1,16 @@
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors from '@/constants/Colors';
-import { usePortfolioStore } from '@/store/usePortfolioStore';
-import { Ticker, Transaction } from '@/types';
-import { format, parseISO } from 'date-fns';
-import * as Haptics from 'expo-haptics';
+import React, { memo, useMemo, useState, useRef } from 'react';
+import {
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -13,35 +19,51 @@ import {
   Plus,
   Search,
   XCircle,
+  Info,
+  Layers,
 } from 'lucide-react-native';
-import { BackButton } from '@/components/BackButton';
-import React, { memo, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  Image,
-  ScrollView,
-  SectionList,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 
 import { ThemedText } from '@/components/ThemedText';
-import { Swipeable } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { BackButton } from '@/components/BackButton';
+import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
+import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { Ticker, Transaction } from '@/types';
+import { getCompanyLogoUrl } from '@/services/logoService';
 
-// STANDALONE COMPONENTS FOR PERFORMANCE
-const TransactionIcon = memo(
+// Human-friendly date group label helper
+const getGroupDateLabel = (dateStr: string) => {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const txDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  const diffDays = Math.round((today.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+
+  return d.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric',
+  });
+};
+
+// Company Logo / Stock Ticker Icon Component matching Investment > Analytics > Company
+const StockTransactionIcon = memo(
   ({
     ticker,
     isBuy,
     symbol,
+    displayName,
     currColors,
   }: {
     ticker?: Ticker;
     isBuy: boolean;
     symbol: string;
+    displayName: string;
     currColors: any;
   }) => {
     const symbolLetter =
@@ -49,22 +71,26 @@ const TransactionIcon = memo(
       symbol[0]?.toUpperCase() ||
       '?';
 
+    const logoUri = ticker?.Logo || getCompanyLogoUrl(symbol, displayName);
+    const [imgError, setImgError] = useState(false);
+
     return (
-      <View style={[styles.assetIcon, { backgroundColor: currColors.card }]}>
-        {ticker?.Logo ? (
-          <View
-            style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 2 }}
-          >
+      <View style={styles.assetIconContainer}>
+        {logoUri && !imgError ? (
+          <View style={styles.logoWrapper}>
             <Image
-              source={{ uri: ticker.Logo }}
-              style={{ width: 40, height: 40, borderRadius: 10 }}
+              source={{ uri: logoUri }}
+              style={styles.logoImage}
               resizeMode="contain"
+              onError={() => setImgError(true)}
             />
           </View>
         ) : (
-          <ThemedText style={[styles.iconLetter, { color: currColors.text }]}>
-            {symbolLetter}
-          </ThemedText>
+          <View style={[styles.fallbackIconWrapper, { backgroundColor: currColors.cardSecondary }]}>
+            <ThemedText style={[styles.iconLetter, { color: currColors.text }]}>
+              {symbolLetter}
+            </ThemedText>
+          </View>
         )}
         <View
           style={[
@@ -83,169 +109,9 @@ const TransactionIcon = memo(
   },
 );
 
-const TransactionItem = memo(
-  ({
-    item,
-    ticker,
-    onEdit,
-    onDelete,
-    onPress,
-    isPrivacyMode,
-    showCurrencySymbol,
-    currColors,
-  }: {
-    item: Transaction;
-    ticker?: Ticker;
-    onEdit: (id: string) => void;
-    onDelete: (id: string) => void;
-    onPress: (symbol: string) => void;
-    isPrivacyMode: boolean;
-    showCurrencySymbol: boolean;
-    currColors: any;
-  }) => {
-    const swipeableRef = useRef<Swipeable>(null);
-    const isBuy = item.type === 'BUY';
-    const totalValue = item.quantity * item.price;
-    const displayName = ticker?.['Company Name'] || item.symbol;
-
-    const handlePressEdit = () => {
-      swipeableRef.current?.close();
-      onEdit(String(item.id));
-    };
-
-    const handlePressDelete = () => {
-      swipeableRef.current?.close();
-      onDelete(String(item.id));
-    };
-
-    const handleLongPress = () => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      Alert.alert(
-        `${displayName} (${item.type})`,
-        `Qty: ${item.quantity} @ ${showCurrencySymbol ? '₹' : ''}${item.price.toLocaleString()}\nTotal: ${showCurrencySymbol ? '₹' : ''}${totalValue.toLocaleString()}${item.broker?.trim() ? `\nBroker: ${item.broker.trim()}` : ''}`,
-        [
-          {
-            text: 'View Company Details',
-            onPress: () => onPress(item.symbol),
-          },
-          {
-            text: 'Edit Transaction',
-            onPress: () => onEdit(String(item.id)),
-          },
-          {
-            text: 'Delete Transaction',
-            style: 'destructive',
-            onPress: () => onDelete(String(item.id)),
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-        ],
-      );
-    };
-
-    const renderRightActions = () => (
-      <View style={styles.rightActions}>
-        <TouchableOpacity
-          activeOpacity={0.8}
-          style={[styles.actionButton, styles.editButton]}
-          onPress={handlePressEdit}
-        >
-          <Edit2 size={18} color="#FFF" />
-          <ThemedText style={styles.actionText}>Edit</ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          activeOpacity={0.8}
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={handlePressDelete}
-        >
-          <Trash2 size={18} color="#FFF" />
-          <ThemedText style={styles.actionText}>Delete</ThemedText>
-        </TouchableOpacity>
-      </View>
-    );
-
-    let formattedDate = '';
-    try {
-      formattedDate = format(
-        parseISO(
-          typeof item.date === 'string'
-            ? item.date
-            : new Date(item.date).toISOString(),
-        ),
-        'MMM dd',
-      );
-    } catch {
-      formattedDate = 'N/A';
-    }
-
-    return (
-      <Swipeable
-        ref={swipeableRef}
-        renderRightActions={renderRightActions}
-        friction={2}
-        rightThreshold={30}
-        overshootRight={false}
-        containerStyle={{ backgroundColor: currColors.background }}
-      >
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => onPress(item.symbol)}
-          onLongPress={handleLongPress}
-          delayLongPress={350}
-          style={[
-            styles.transactionItem,
-            {
-              borderBottomColor: currColors.border,
-              backgroundColor: currColors.background,
-            },
-          ]}
-        >
-          <TransactionIcon
-            ticker={ticker}
-            isBuy={isBuy}
-            symbol={item.symbol}
-            currColors={currColors}
-          />
-
-          <View style={styles.infoCol}>
-            <ThemedText
-              style={[styles.symbolText, { color: currColors.text }]}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {displayName}
-            </ThemedText>
-            <ThemedText
-              style={[styles.dateText, { color: currColors.textSecondary }]}
-              numberOfLines={1}
-            >
-              {formattedDate}
-              {item.broker?.trim() ? ` • ${item.broker.trim()}` : ''}
-            </ThemedText>
-          </View>
-
-          <View style={styles.rightCol}>
-            <ThemedText style={[styles.amountText, { color: currColors.text }]}>
-              {isPrivacyMode
-                ? '••••••'
-                : `${showCurrencySymbol ? '₹' : ''}${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            </ThemedText>
-            <ThemedText
-              style={[styles.quantityText, { color: currColors.textSecondary }]}
-            >
-              Qty: {item.quantity}
-            </ThemedText>
-          </View>
-        </TouchableOpacity>
-      </Swipeable>
-    );
-  },
-);
-
-export default function HistoryScreen() {
+export default function InvestmentsTransactionsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const {
     transactions,
     tickers,
@@ -257,21 +123,22 @@ export default function HistoryScreen() {
 
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
+  const activeFilterBg = colorScheme === 'dark' ? '#00C9A7' : '#00876E';
 
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [activeTypeFilter, setActiveTypeFilter] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
+  const [activeAssetType, setActiveAssetType] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const tickerMap = useMemo(() => {
     return new Map(tickers.map((t) => [t.Tickers.toUpperCase(), t]));
   }, [tickers]);
 
-  const categories = useMemo(() => {
-    // Allocation Data is already sorted by value in the store
+  const assetTypeCategories = useMemo(() => {
     const allocation = getAllocationData('Asset Type');
     return ['All', ...allocation.map((a) => a.name)];
   }, [getAllocationData, transactions, tickers]);
 
+  // Filtered transactions sorted by date descending
   const filteredTransactions = useMemo(() => {
     let result = [...transactions].sort((a, b) => {
       const dateA = typeof a.date === 'string' ? a.date : '';
@@ -279,17 +146,22 @@ export default function HistoryScreen() {
       return dateB.localeCompare(dateA);
     });
 
-    // Category Filter
-    if (activeCategory !== 'All') {
+    // Type Filter (BUY/SELL)
+    if (activeTypeFilter !== 'ALL') {
+      result = result.filter((t) => t.type === activeTypeFilter);
+    }
+
+    // Asset Type Filter
+    if (activeAssetType !== 'All') {
       result = result.filter((t) => {
         const ticker = tickerMap.get(t.symbol.toUpperCase());
-        return ticker?.['Asset Type'] === activeCategory;
+        return ticker?.['Asset Type'] === activeAssetType;
       });
     }
 
-    // Search Filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    // Search Query Filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
       result = result.filter((t) => {
         const ticker = tickerMap.get(t.symbol.toUpperCase());
         const companyName = ticker?.['Company Name'] || t.symbol;
@@ -303,45 +175,53 @@ export default function HistoryScreen() {
     }
 
     return result;
-  }, [transactions, activeCategory, searchQuery, tickerMap]);
+  }, [transactions, activeTypeFilter, activeAssetType, searchQuery, tickerMap]);
 
+  // Date-grouped transactions matching Money Manager architecture
   const groupedTransactions = useMemo(() => {
-    const groups: { [key: string]: Transaction[] } = {};
+    const map: Record<string, Transaction[]> = {};
+    const order: string[] = [];
 
-    filteredTransactions.forEach((t) => {
-      let date: Date;
-      try {
-        date = parseISO(
-          typeof t.date === 'string' ? t.date : new Date(t.date).toISOString(),
-        );
-        if (isNaN(date.getTime())) {
-          date = new Date();
-        }
-      } catch {
-        date = new Date();
+    filteredTransactions.forEach((tx) => {
+      const d = new Date(tx.date);
+      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (!map[dateKey]) {
+        map[dateKey] = [];
+        order.push(dateKey);
       }
-      const monthYear = format(date, 'MMMM yyyy');
-      if (!groups[monthYear]) {
-        groups[monthYear] = [];
-      }
-      groups[monthYear].push(t);
+      map[dateKey].push(tx);
     });
 
-    return Object.keys(groups).map((monthYear) => ({
-      title: monthYear,
-      data: groups[monthYear],
+    return order.map((dateKey) => ({
+      dateKey,
+      label: getGroupDateLabel(map[dateKey][0].date),
+      data: map[dateKey],
     }));
   }, [filteredTransactions]);
+
+  const formatAmount = (val: number) => {
+    if (isPrivacyMode) return '••••••';
+    const formatted = Math.abs(val).toLocaleString('en-IN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+    const symbol = showCurrencySymbol ? '₹' : '';
+    return `${symbol}${formatted}`;
+  };
+
+  const handleHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
 
   const handleEdit = (id: string) => {
     router.push({ pathname: '/add-transaction', params: { id } });
   };
 
-  const handleRemove = (id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const handleDelete = (id: string, name: string) => {
+    handleHaptic();
     Alert.alert(
       'Delete Transaction',
-      'Are you sure you want to delete this transaction?',
+      `Are you sure you want to delete this transaction for ${name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -356,52 +236,23 @@ export default function HistoryScreen() {
   };
 
   const handlePressSymbol = (symbol: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    handleHaptic();
     router.push(`/stock-details/${symbol}`);
   };
-
-  const renderItem = ({ item }: { item: Transaction }) => {
-    return (
-      <TransactionItem
-        item={item}
-        ticker={tickerMap.get(item.symbol.toUpperCase())}
-        onEdit={handleEdit}
-        onDelete={handleRemove}
-        onPress={handlePressSymbol}
-        isPrivacyMode={isPrivacyMode}
-        showCurrencySymbol={showCurrencySymbol}
-        currColors={currColors}
-      />
-    );
-  };
-
-  const renderSectionHeader = ({
-    section: { title },
-  }: {
-    section: { title: string };
-  }) => (
-    <View
-      style={[styles.sectionHeader, { backgroundColor: currColors.background }]}
-    >
-      <ThemedText style={[styles.sectionTitle, { color: currColors.text }]}>
-        {title}
-      </ThemedText>
-    </View>
-  );
 
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: currColors.background }]}
       edges={['top', 'left', 'right']}
     >
-      {/* Search Header */}
+      {/* Search & Header Row */}
       <View style={styles.header}>
         <View style={styles.searchRow}>
           <BackButton />
           <View
             style={[
               styles.searchContainer,
-              { backgroundColor: currColors.card, flex: 1 },
+              { backgroundColor: currColors.card, borderColor: currColors.border, borderWidth: 1, flex: 1 },
             ]}
           >
             <Search
@@ -411,14 +262,12 @@ export default function HistoryScreen() {
             />
             <TextInput
               style={[styles.searchInput, { color: currColors.text }]}
-              placeholder="Search companies or symbols"
+              placeholder="Search investments or brokers..."
               placeholderTextColor={currColors.textSecondary}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"
               autoCorrect={false}
-              onFocus={() => setIsSearchFocused(true)}
-              onBlur={() => setIsSearchFocused(false)}
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity
@@ -434,90 +283,261 @@ export default function HistoryScreen() {
             )}
           </View>
           <TouchableOpacity
-            style={[styles.addBtn, { backgroundColor: currColors.cardSecondary }]}
+            style={[styles.addBtn, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border, borderWidth: 1 }]}
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              handleHaptic();
               router.push('/add-transaction');
             }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Plus size={20} color="#00C9A7" />
+            <Plus size={20} color={activeFilterBg} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
+      {/* Filter Chips matching Money Manager Tabs */}
+      <View style={styles.filterStripWrapper}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsScroll}
+          contentContainerStyle={styles.filterStripScroll}
           bounces={false}
         >
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setActiveCategory(category);
-              }}
-              style={styles.tabItem}
-            >
-              <ThemedText
+          {/* BUY/SELL Segment Chips */}
+          {(['ALL', 'BUY', 'SELL'] as const).map((typeKey) => {
+            const isSelected = activeTypeFilter === typeKey;
+            const label = typeKey === 'ALL' ? 'All Types' : typeKey === 'BUY' ? 'Bought (Buy)' : 'Sold (Sell)';
+            return (
+              <TouchableOpacity
+                key={typeKey}
                 style={[
-                  styles.tabText,
+                  styles.filterChip,
                   {
-                    color:
-                      activeCategory === category
-                        ? currColors.text
-                        : currColors.textSecondary,
+                    backgroundColor: isSelected ? activeFilterBg : currColors.card,
+                    borderColor: isSelected ? activeFilterBg : currColors.border,
                   },
-                  activeCategory === category && styles.activeTabText,
                 ]}
+                onPress={() => {
+                  handleHaptic();
+                  setActiveTypeFilter(typeKey);
+                }}
+                activeOpacity={0.7}
               >
-                {category}
-              </ThemedText>
-              {activeCategory === category && (
-                <View
+                <ThemedText
                   style={[
-                    styles.activeIndicator,
-                    { backgroundColor: currColors.text },
+                    styles.filterChipText,
+                    { color: isSelected ? '#FFFFFF' : currColors.textSecondary },
+                    isSelected && { fontFamily: 'Outfit_600SemiBold' },
                   ]}
-                />
-              )}
-            </TouchableOpacity>
-          ))}
+                >
+                  {label}
+                </ThemedText>
+              </TouchableOpacity>
+            );
+          })}
+
+          {/* Asset Type Categories */}
+          {assetTypeCategories.length > 2 &&
+            assetTypeCategories
+              .filter((c) => c !== 'All')
+              .map((cat) => {
+                const isSelected = activeAssetType === cat;
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[
+                      styles.filterChip,
+                      {
+                        backgroundColor: isSelected ? activeFilterBg : currColors.card,
+                        borderColor: isSelected ? activeFilterBg : currColors.border,
+                      },
+                    ]}
+                    onPress={() => {
+                      handleHaptic();
+                      setActiveAssetType(isSelected ? 'All' : cat);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.filterChipText,
+                        { color: isSelected ? '#FFFFFF' : currColors.textSecondary },
+                        isSelected && { fontFamily: 'Outfit_600SemiBold' },
+                      ]}
+                    >
+                      {cat}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
         </ScrollView>
       </View>
 
-      <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 24) + 100 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Transactions List */}
         {filteredTransactions.length === 0 ? (
-          <View style={styles.emptyState}>
-            <ThemedText
-              style={[styles.emptyText, { color: currColors.textSecondary }]}
-            >
-              No transactions found.
+          <View style={[styles.emptyCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+            <Info size={36} color={currColors.textSecondary} style={{ marginBottom: 12 }} />
+            <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', lineHeight: 22 }}>
+              No investment transactions match the selected filter.
             </ThemedText>
           </View>
         ) : (
-          <SectionList
-            sections={groupedTransactions}
-            keyExtractor={(item, index) =>
-              item.id ? String(item.id) : `tx-${item.symbol}-${index}`
-            }
-            renderItem={renderItem}
-            renderSectionHeader={renderSectionHeader}
-            contentContainerStyle={styles.listContent}
-            stickySectionHeadersEnabled={false}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-            initialNumToRender={15}
-            maxToRenderPerBatch={15}
-            windowSize={15}
-            removeClippedSubviews={false}
-          />
+          <View style={styles.groupsContainer}>
+            {groupedTransactions.map((group) => (
+              <View key={group.dateKey} style={styles.dateGroupWrapper}>
+                <ThemedText style={[styles.dateGroupHeader, { color: currColors.text }]}>
+                  {group.label}
+                </ThemedText>
+
+                <View
+                  style={[
+                    styles.dateGroupCard,
+                    {
+                      backgroundColor: currColors.card,
+                      borderColor: currColors.border,
+                    },
+                  ]}
+                >
+                  {group.data.map((tx, index) => {
+                    const symUpper = (tx.symbol || '').toString().trim().toUpperCase();
+                    const ticker = tickerMap.get(symUpper);
+                    const isBuy = tx.type === 'BUY';
+                    const isLast = index === group.data.length - 1;
+                    const totalValue = (tx.quantity || 0) * (tx.price || 0);
+                    const displayName = ticker?.['Company Name'] || tx.symbol || 'Unknown';
+                    const brokerInfo = tx.broker?.trim() ? ` • ${tx.broker.trim()}` : '';
+
+                    const renderRightActions = () => (
+                      <View style={styles.rightActions}>
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          style={[styles.actionButton, styles.editButton]}
+                          onPress={() => handleEdit(String(tx.id))}
+                        >
+                          <Edit2 size={16} color="#FFF" />
+                          <ThemedText style={styles.actionText}>Edit</ThemedText>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          style={[styles.actionButton, styles.deleteButton]}
+                          onPress={() => handleDelete(String(tx.id), displayName)}
+                        >
+                          <Trash2 size={16} color="#FFF" />
+                          <ThemedText style={styles.actionText}>Delete</ThemedText>
+                        </TouchableOpacity>
+                      </View>
+                    );
+
+                    return (
+                      <Swipeable
+                        key={tx.id}
+                        renderRightActions={renderRightActions}
+                        friction={2}
+                        rightThreshold={30}
+                        overshootRight={false}
+                        containerStyle={{ backgroundColor: currColors.card }}
+                      >
+                        <TouchableOpacity
+                          style={[
+                            styles.txRowItem,
+                            {
+                              borderBottomColor: currColors.border,
+                              borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
+                            },
+                          ]}
+                          activeOpacity={0.7}
+                          onPress={() => handlePressSymbol(tx.symbol)}
+                          onLongPress={() => {
+                            handleHaptic();
+                            Alert.alert(
+                              `${displayName} (${tx.type})`,
+                              `Qty: ${tx.quantity} @ ${showCurrencySymbol ? '₹' : ''}${tx.price.toLocaleString('en-IN')}\nTotal: ${showCurrencySymbol ? '₹' : ''}${totalValue.toLocaleString('en-IN')}${brokerInfo ? `\nBroker: ${tx.broker.trim()}` : ''}`,
+                              [
+                                {
+                                  text: 'View Stock Details',
+                                  onPress: () => handlePressSymbol(tx.symbol),
+                                },
+                                {
+                                  text: 'Edit Transaction',
+                                  onPress: () => handleEdit(String(tx.id)),
+                                },
+                                {
+                                  text: 'Delete Transaction',
+                                  style: 'destructive',
+                                  onPress: () => handleDelete(String(tx.id), displayName),
+                                },
+                                {
+                                  text: 'Cancel',
+                                  style: 'cancel',
+                                },
+                              ],
+                            );
+                          }}
+                        >
+                          <View style={styles.txRowLeft}>
+                            <StockTransactionIcon
+                              ticker={ticker}
+                              isBuy={isBuy}
+                              symbol={tx.symbol}
+                              displayName={displayName}
+                              currColors={currColors}
+                            />
+                            <View style={styles.txInfoCol}>
+                              <ThemedText style={[styles.txPrimaryText, { color: currColors.text }]} numberOfLines={1}>
+                                {displayName}
+                              </ThemedText>
+                              <ThemedText style={[styles.txSecondaryText, { color: currColors.textSecondary }]} numberOfLines={1}>
+                                Qty: {tx.quantity} @ {showCurrencySymbol ? '₹' : ''}{tx.price.toLocaleString('en-IN')}{brokerInfo}
+                              </ThemedText>
+                            </View>
+                          </View>
+
+                          <View style={styles.txRowRight}>
+                            <ThemedText
+                              style={[
+                                styles.txAmountDisplay,
+                                {
+                                  color: isBuy ? '#34C759' : '#FF3B30',
+                                },
+                              ]}
+                            >
+                              {isBuy ? '+' : '-'}{formatAmount(totalValue)}
+                            </ThemedText>
+                            <View
+                              style={[
+                                styles.typeBadgePill,
+                                {
+                                  backgroundColor: isBuy ? 'rgba(52, 199, 89, 0.12)' : 'rgba(255, 59, 48, 0.12)',
+                                },
+                              ]}
+                            >
+                              <ThemedText
+                                style={[
+                                  styles.typeBadgeText,
+                                  { color: isBuy ? '#34C759' : '#FF3B30' },
+                                ]}
+                              >
+                                {isBuy ? 'BUY' : 'SELL'}
+                              </ThemedText>
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+                      </Swipeable>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+          </View>
         )}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -526,18 +546,34 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  container: {
-    flex: 1,
-  },
   header: {
-    paddingTop: 16,
-    paddingBottom: 15,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     gap: 10,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    height: '100%',
+    fontFamily: 'Outfit_400Regular',
+  },
+  clearButton: {
+    padding: 4,
   },
   addBtn: {
     width: 38,
@@ -546,132 +582,171 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
+  filterStripWrapper: {
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  filterStripScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+    paddingBottom: 4,
+  },
+  filterChip: {
     paddingHorizontal: 12,
-    height: 44,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
   },
-  searchIcon: {
-    marginRight: 8,
+  filterChipText: {
+    fontSize: 12,
+    fontFamily: 'Outfit_500Medium',
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    height: '100%',
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  heroCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 16,
+  },
+  heroRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  heroRowLabel: {
+    fontSize: 13,
     fontFamily: 'Outfit_400Regular',
   },
-  clearButton: {
-    padding: 4,
+  heroRowValue: {
+    fontSize: 15,
+    fontFamily: 'Outfit_600SemiBold',
   },
-  headerIcon: {
+  dashedDivider: {
+    borderBottomWidth: 1,
+    borderStyle: 'dashed',
+  },
+  emptyCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+  },
+  groupsContainer: {
+    gap: 4,
+  },
+  dateGroupWrapper: {
+    marginBottom: 12,
+  },
+  dateGroupHeader: {
+    fontSize: 11,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  dateGroupCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  txRowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  txRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  assetIconContainer: {
+    width: 42,
+    height: 42,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    position: 'relative',
+  },
+  logoWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 2,
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '400',
+  logoImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
   },
-  tabsContainer: {
-    marginBottom: 10,
-  },
-  tabsScroll: {
-    paddingHorizontal: 16,
-    gap: 24,
-    paddingBottom: 8,
-  },
-  tabItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 40,
-  },
-  tabText: {
-    fontSize: 16,
-    fontWeight: '400',
-  },
-  activeTabText: {
-    fontWeight: '400',
-  },
-  activeIndicator: {
-    height: 2,
-    width: '100%',
-    position: 'absolute',
-    bottom: -8,
-    borderRadius: 1,
-  },
-  sectionHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginTop: 8,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '400',
-  },
-  listContent: {
-    paddingBottom: 110,
-  },
-  transactionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  assetIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+  fallbackIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
-    position: 'relative',
   },
   iconLetter: {
-    fontSize: 18,
-    fontWeight: '400',
+    fontSize: 16,
+    fontFamily: 'Outfit_700Bold',
   },
   badgeContainer: {
     position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    bottom: -1,
+    right: -1,
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
     borderColor: '#FFF',
   },
-  infoCol: {
+  txInfoCol: {
     flex: 1,
   },
-  symbolText: {
+  txPrimaryText: {
     fontSize: 14,
-    fontWeight: '400',
+    fontFamily: 'Outfit_600SemiBold',
     marginBottom: 2,
   },
-  dateText: {
-    fontSize: 12,
+  txSecondaryText: {
+    fontSize: 11,
+    fontFamily: 'Outfit_400Regular',
   },
-  rightCol: {
+  txRowRight: {
     alignItems: 'flex-end',
-    minWidth: 80,
   },
-  amountText: {
+  txAmountDisplay: {
     fontSize: 14,
-    fontWeight: '400',
-    marginBottom: 2,
+    fontFamily: 'Outfit_600SemiBold',
+    marginBottom: 3,
   },
-  quantityText: {
-    fontSize: 12,
+  typeBadgePill: {
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+  },
+  typeBadgeText: {
+    fontSize: 9.5,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.5,
   },
   rightActions: {
     flexDirection: 'row',
-    width: 140,
-    height: '100%',
+    width: 130,
   },
   actionButton: {
     flex: 1,
@@ -679,7 +754,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editButton: {
-    backgroundColor: '#00C9A7',
+    backgroundColor: '#007AFF',
   },
   deleteButton: {
     backgroundColor: '#FF3B30',
@@ -687,14 +762,7 @@ const styles = StyleSheet.create({
   actionText: {
     color: '#FFF',
     fontSize: 11,
-    marginTop: 4,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 14,
+    marginTop: 3,
+    fontFamily: 'Outfit_500Medium',
   },
 });

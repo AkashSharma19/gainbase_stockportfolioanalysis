@@ -29,6 +29,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react-native';
 import { useGoalStore } from '@/store/useGoalStore';
+import { getCompanyLogoUrl } from '@/services/logoService';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -725,14 +726,27 @@ export function PortfolioScreen() {
                     symUpper[0] ||
                     '?';
                   const displayName = ticker?.['Company Name'] || tx.symbol || 'Unknown';
-                  const formattedDate = new Date(tx.date).toLocaleDateString(
-                    'en-IN',
-                    {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                    },
-                  );
+                  const logoUri = ticker?.Logo || getCompanyLogoUrl(symUpper, displayName);
+
+                  const getRelativeDateLabel = (dateStr: string) => {
+                    const d = new Date(dateStr);
+                    d.setHours(0, 0, 0, 0);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    yesterday.setHours(0, 0, 0, 0);
+
+                    if (d.getTime() === today.getTime()) {
+                      return 'Today';
+                    } else if (d.getTime() === yesterday.getTime()) {
+                      return 'Yesterday';
+                    } else {
+                      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                    }
+                  };
+
+                  const formattedDate = getRelativeDateLabel(tx.date);
 
                   return (
                     <TouchableOpacity
@@ -741,7 +755,7 @@ export function PortfolioScreen() {
                         styles.recentTxItem,
                         {
                           borderBottomColor: currColors.border,
-                          borderBottomWidth: isLast ? 0 : 1,
+                          borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
                         },
                       ]}
                       activeOpacity={0.7}
@@ -751,36 +765,46 @@ export function PortfolioScreen() {
                       }}
                     >
                       {/* Logo / Initial with Buy/Sell Arrow Badge */}
-                      <View
-                        style={[
-                          styles.assetIconSmall,
-                          { backgroundColor: currColors.cardSecondary },
-                        ]}
-                      >
-                        {ticker?.Logo ? (
+                      <View style={styles.assetIconSmall}>
+                        {logoUri ? (
                           <View
                             style={{
                               backgroundColor: '#FFFFFF',
-                              borderRadius: 8,
+                              borderRadius: 12,
                               padding: 2,
+                              width: 40,
+                              height: 40,
+                              justifyContent: 'center',
+                              alignItems: 'center',
                             }}
                           >
                             <Image
-                              source={{ uri: ticker.Logo }}
-                              style={{ width: 32, height: 32, borderRadius: 6 }}
+                              source={{ uri: logoUri }}
+                              style={{ width: 36, height: 36, borderRadius: 10 }}
                               resizeMode="contain"
                             />
                           </View>
                         ) : (
-                          <ThemedText
+                          <View
                             style={{
-                              fontSize: 14,
-                              fontFamily: 'Outfit_600SemiBold',
-                              color: currColors.text,
+                              backgroundColor: currColors.cardSecondary,
+                              borderRadius: 12,
+                              width: 40,
+                              height: 40,
+                              justifyContent: 'center',
+                              alignItems: 'center',
                             }}
                           >
-                            {symbolLetter}
-                          </ThemedText>
+                            <ThemedText
+                              style={{
+                                fontSize: 16,
+                                fontFamily: 'Outfit_700Bold',
+                                color: currColors.text,
+                              }}
+                            >
+                              {symbolLetter}
+                            </ThemedText>
+                          </View>
                         )}
                         <View
                           style={[
@@ -809,7 +833,7 @@ export function PortfolioScreen() {
                         <ThemedText
                           style={{
                             fontSize: 14,
-                            fontFamily: 'Outfit_500Medium',
+                            fontFamily: 'Outfit_600SemiBold',
                             color: currColors.text,
                           }}
                           numberOfLines={1}
@@ -825,7 +849,7 @@ export function PortfolioScreen() {
                           }}
                           numberOfLines={1}
                         >
-                          {formattedDate} {tx.broker ? `• ${tx.broker}` : ''}
+                          {formattedDate} • Qty: {tx.quantity} {tx.broker ? `• ${tx.broker}` : ''}
                         </ThemedText>
                       </View>
 
@@ -834,23 +858,24 @@ export function PortfolioScreen() {
                         <ThemedText
                           style={{
                             fontSize: 14,
-                            fontFamily: 'Outfit_500Medium',
-                            color: currColors.text,
+                            fontFamily: 'Outfit_600SemiBold',
+                            color: isBuy ? '#34C759' : '#FF3B30',
                           }}
                         >
                           {isPrivacyMode
                             ? '••••••'
-                            : `${showCurrencySymbol ? '₹' : ''}${totalValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                            : `${isBuy ? '+' : '-'}${showCurrencySymbol ? '₹' : ''}${totalValue.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                         </ThemedText>
                         <ThemedText
                           style={{
-                            fontSize: 11,
-                            fontFamily: 'Outfit_400Regular',
+                            fontSize: 10,
+                            fontFamily: 'Outfit_700Bold',
                             color: isBuy ? '#34C759' : '#FF3B30',
+                            letterSpacing: 0.5,
                             marginTop: 2,
                           }}
                         >
-                          {isBuy ? 'Buy' : 'Sell'} • {tx.quantity} qty
+                          {isBuy ? 'BUY' : 'SELL'}
                         </ThemedText>
                       </View>
                     </TouchableOpacity>
@@ -1404,24 +1429,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   assetIconSmall: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 42,
+    height: 42,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
   badgeContainerSmall: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    bottom: -1,
+    right: -1,
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#1C1C1E',
+    borderColor: '#FFF',
   },
   accordionItem: {
     borderBottomWidth: 1,

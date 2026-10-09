@@ -60,7 +60,7 @@ export const InsightsSummaryCard = () => {
             <ThemedText
               style={[styles.categoryText, { color: currColors.textSecondary }]}
             >
-              <ThemedText style={{ color: '#34C759', fontWeight: '700' }}>
+              <ThemedText type="bold" style={{ color: '#34C759' }}>
                 {countByCategory['Buy']}
               </ThemedText>{' '}
               Buy
@@ -75,7 +75,7 @@ export const InsightsSummaryCard = () => {
             <ThemedText
               style={[styles.categoryText, { color: currColors.textSecondary }]}
             >
-              <ThemedText style={{ color: '#FF3B30', fontWeight: '700' }}>
+              <ThemedText type="bold" style={{ color: '#FF3B30' }}>
                 {countByCategory['Sell']}
               </ThemedText>{' '}
               Sell
@@ -90,7 +90,7 @@ export const InsightsSummaryCard = () => {
             <ThemedText
               style={[styles.categoryText, { color: currColors.textSecondary }]}
             >
-              <ThemedText style={{ color: '#FF9500', fontWeight: '700' }}>
+              <ThemedText type="bold" style={{ color: '#FF9500' }}>
                 {countByCategory['Hold']}
               </ThemedText>{' '}
               Hold
@@ -105,7 +105,7 @@ export const InsightsSummaryCard = () => {
             <ThemedText
               style={[styles.categoryText, { color: currColors.textSecondary }]}
             >
-              <ThemedText style={{ color: '#007AFF', fontWeight: '700' }}>
+              <ThemedText type="bold" style={{ color: '#007AFF' }}>
                 {countByCategory['Not Sure']}
               </ThemedText>{' '}
               Not Sure
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Outfit_600SemiBold',
   },
   categoryRow: {
     flexDirection: 'row',
@@ -163,5 +163,6 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
+    fontFamily: 'Outfit_400Regular',
   },
 });
