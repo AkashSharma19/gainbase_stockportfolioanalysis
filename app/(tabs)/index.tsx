@@ -885,9 +885,8 @@ export function PortfolioScreen() {
             </View>
           </View>
 
-          <View style={[styles.section, { marginBottom: 16 }]}>
-            <ActivityCalendar transactions={transactions} />
-          </View>
+          {/* ─── Activity Calendar ─── */}
+          <ActivityCalendar transactions={transactions} />
 
           <View style={[styles.section, { marginBottom: 16 }]}>
             {yearlyAnalysis.length > 0 ? (
@@ -1116,7 +1115,7 @@ export function PortfolioScreen() {
           </View>
 
           {/* Monthly Analysis Section */}
-          <View style={[styles.section, { marginBottom: 40 }]}>
+          <View style={[styles.section, { marginBottom: 16 }]}>
             {monthlyAnalysis.length > 0 ? (
               <View
                 style={[
@@ -1386,7 +1385,7 @@ const styles = StyleSheet.create({
 
   // Accordion Styles
   accordionContainer: {
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
   },

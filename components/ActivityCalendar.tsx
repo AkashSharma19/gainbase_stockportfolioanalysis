@@ -170,7 +170,7 @@ export const ActivityCalendar = ({ transactions }: ActivityCalendarProps) => {
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 24,
+    borderRadius: 20,
     padding: 16,
     paddingTop: 20,
     marginBottom: 16,
