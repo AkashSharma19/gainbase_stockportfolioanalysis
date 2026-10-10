@@ -12,7 +12,7 @@
     "bump:patch": "node scripts/bump-version.js patch",
     "bump:minor": "node scripts/bump-version.js minor",
     "bump:build": "node scripts/bump-version.js build",
-    "ota:publish": "npx eas-cli update --branch production --auto"
+    "ota:publish": "npx eas-cli update --branch production --environment production --auto"
   },
   "dependencies": {
     "@expo-google-fonts/outfit": "^0.4.3",
