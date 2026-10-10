@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
   Edit2,
@@ -38,15 +38,26 @@ import { Subscription, SubscriptionPayment } from '@/types/money';
 import { Category3DIcon } from '@/components/Category3DIcon';
 import { AccountPickerModal } from '@/components/AccountPickerModal';
 import { AccountSelectCard } from '@/components/AccountSelectCard';
+import { FolderDetailsCard, CircularProgress3DIcon } from '@/components/FolderDetailsCard';
+import { getCardPaletteFromItem } from '@/constants/folderTheme';
 import { advanceDateByCycle } from '@/lib/finance';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
-type ScheduleTab = 'upcoming' | 'paid' | 'all';
+type ScheduleTab = 'upcoming' | 'paid';
 
-export default function SubscriptionDetailsScreen() {
+export interface SubscriptionDetailsProps {
+  subscriptionId?: string;
+  onBack?: () => void;
+}
+
+export function SubscriptionDetailsContent({ subscriptionId, onBack }: SubscriptionDetailsProps) {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string }>();
+  const id = subscriptionId || params.id;
+  const insets = useSafeAreaInsets();
+  const headerTopPadding = Math.max(insets.top, Platform.OS === 'ios' ? 56 : 32);
   const colorScheme = useColorScheme() ?? 'dark';
+  const isDark = colorScheme === 'dark';
   const currColors = Colors[colorScheme];
 
   const {
@@ -68,6 +79,17 @@ export default function SubscriptionDetailsScreen() {
   const subscription = useMemo(() => {
     return subscriptions.find((s) => s.id === id);
   }, [id, subscriptions]);
+
+  const palette = useMemo(() => {
+    if (!subscription) return { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' };
+    return getCardPaletteFromItem({
+      type: 'subscription',
+      name: subscription.name,
+      category: subscription.category,
+      icon: subscription.logo,
+      color: subscription.color,
+    });
+  }, [subscription]);
 
   const payments = useMemo(() => {
     return subscriptionPayments
@@ -193,7 +215,11 @@ interface ScheduleRow {
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             removeSubscription(subscription.id);
-            router.back();
+            if (onBack) {
+              onBack();
+            } else {
+              router.back();
+            }
           },
         },
       ]
@@ -332,14 +358,14 @@ interface ScheduleRow {
 
   if (!subscription) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]}>
-        <View style={styles.header}>
-          <BackButton />
+      <View style={[styles.container, { backgroundColor: currColors.background }]}>
+        <View style={[styles.header, { paddingTop: headerTopPadding, paddingBottom: 12 }]}>
+          <BackButton onPress={onBack} />
         </View>
         <View style={styles.centered}>
           <ThemedText style={{ color: currColors.textSecondary }}>Subscription not found.</ThemedText>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -364,106 +390,135 @@ interface ScheduleRow {
       ? '/qtr'
       : '/yr';
 
+  const cycleLabel = subscription.billingCycle
+    ? subscription.billingCycle.charAt(0).toUpperCase() + subscription.billingCycle.slice(1)
+    : 'Monthly';
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: currColors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <BackButton />
-        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]} numberOfLines={1}>
-          {subscription.name}
-        </ThemedText>
-        <View style={styles.headerRight}>
+      <View style={[styles.header, { paddingTop: headerTopPadding, paddingBottom: 12 }]}>
+        <BackButton onPress={onBack} />
+        
+        <View style={{ flex: 1 }} />
+
+        {/* Joined Edit & Delete Action Capsule */}
+        <View
+          style={[
+            styles.actionCapsule,
+            {
+              backgroundColor: currColors.cardSecondary,
+              borderColor: currColors.border,
+            },
+          ]}
+        >
           <TouchableOpacity
-            style={[styles.headerIconBtn, { backgroundColor: currColors.cardSecondary }]}
+            style={styles.capsuleBtn}
             onPress={() => {
               handleHaptic();
               router.push({ pathname: '/add-subscription', params: { id: subscription.id } });
             }}
+            activeOpacity={0.7}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 4 }}
           >
-            <Edit2 size={18} color={themeColor} />
+            <Edit2 size={16} color={currColors.text} strokeWidth={2.2} />
           </TouchableOpacity>
+
+          <View style={[styles.capsuleDivider, { backgroundColor: currColors.border }]} />
+
           <TouchableOpacity
-            style={[styles.headerIconBtn, { backgroundColor: 'rgba(255, 59, 48, 0.1)' }]}
+            style={styles.capsuleBtn}
             onPress={handleDeleteSubscription}
+            activeOpacity={0.7}
+            hitSlop={{ top: 6, bottom: 6, left: 4, right: 6 }}
           >
-            <Trash2 size={18} color="#FF3B30" />
+            <Trash2 size={16} color="#FF3B30" strokeWidth={2.2} />
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
-        {/* ─── 1. Unified Hero Card ─── */}
-        <View style={[styles.heroCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-          <View style={styles.heroHeaderRow}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Category3DIcon
-                name={subscription.category || subscription.name}
-                icon={subscription.logo}
-                size={24}
-              />
-              <ThemedText style={[styles.heroLabel, { color: currColors.textSecondary }]}>
-                SUBSCRIPTION COST
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 24) + 32 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        {/* ─── 1. Folder Dossier Hero Card (Matching Folder Details UI) ─── */}
+        <FolderDetailsCard
+          palette={palette}
+          headerTitle={subscription.name}
+          headerSubtitle={
+            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: palette.sub }}>
+              {formatAmount(subscription.amount)}{cycleSuffix}
+            </ThemedText>
+          }
+          tabRightContent={
+            <CircularProgress3DIcon
+              name={subscription.category || subscription.name}
+              icon={subscription.logo}
+              progress={subscription.isActive ? 1 : 0}
+              color={palette.text}
+              size={48}
+              iconSize={28}
+            />
+          }
+        >
+          {/* Top Row with Amount and Status */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+              <ThemedText style={[styles.heroValue, { color: palette.text, fontFamily: 'Outfit_700Bold', fontSize: 28 }]}>
+                {formatAmount(subscription.amount)}
+              </ThemedText>
+              <ThemedText style={[styles.heroValueSuffix, { color: palette.sub }]}>
+                {cycleSuffix}
               </ThemedText>
             </View>
-            <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-              <View style={[styles.indicatorPill, { backgroundColor: `${themeColor}15` }]}>
-                <ThemedText style={[styles.indicatorText, { color: themeColor }]}>
-                  {subscription.category.toUpperCase()}
-                </ThemedText>
-              </View>
-              <View
+            <View
+              style={[
+                styles.statusPill,
+                {
+                  backgroundColor: subscription.isActive
+                    ? isDark ? 'rgba(52, 199, 89, 0.2)' : 'rgba(52, 199, 89, 0.15)'
+                    : isDark ? 'rgba(255, 59, 48, 0.2)' : 'rgba(255, 59, 48, 0.15)',
+                },
+              ]}
+            >
+              <ThemedText
                 style={[
-                  styles.indicatorPill,
-                  {
-                    backgroundColor: subscription.isActive
-                      ? 'rgba(52, 199, 89, 0.12)'
-                      : 'rgba(255, 59, 48, 0.12)',
-                  },
+                  styles.statusPillText,
+                  { color: subscription.isActive ? '#15803D' : '#B91C1C' },
                 ]}
               >
-                <ThemedText
-                  style={[
-                    styles.indicatorText,
-                    { color: subscription.isActive ? '#34C759' : '#FF3B30' },
-                  ]}
-                >
-                  {subscription.isActive ? 'ACTIVE' : 'CANCELLED'}
-                </ThemedText>
-              </View>
+                {subscription.isActive ? 'ACTIVE' : 'CANCELLED'}
+              </ThemedText>
             </View>
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-            <ThemedText style={[styles.heroValue, { color: currColors.text }]}>
-              {formatAmount(subscription.amount)}
-            </ThemedText>
-            <ThemedText style={[styles.heroValueSuffix, { color: currColors.textSecondary }]}>
-              {cycleSuffix}
-            </ThemedText>
-          </View>
-
-          <View style={[styles.dashedDivider, { borderColor: currColors.border }]} />
+          {/* Dashed Divider */}
+          <View style={[styles.dashedDivider, { borderColor: palette.sub + '28' }]} />
 
           {/* Clean Stat Rows */}
           <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
               Billing cycle
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: themeColor }]}>
-              {subscription.billingCycle.charAt(0).toUpperCase() + subscription.billingCycle.slice(1)}
+            <ThemedText style={[styles.heroRowValue, { color: palette.text, fontFamily: 'Outfit_600SemiBold' }]}>
+              {cycleLabel}
             </ThemedText>
           </View>
 
           <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
               Next renewal
             </ThemedText>
             <ThemedText
               style={[
                 styles.heroRowValue,
-                { color: nextDueDateInfo?.isDueSoon ? '#FF9500' : currColors.text },
+                { color: nextDueDateInfo?.isDueSoon ? '#FF9500' : palette.text },
               ]}
             >
               {nextDueDateInfo
@@ -472,67 +527,61 @@ interface ScheduleRow {
             </ThemedText>
           </View>
 
-          <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+          <View style={[styles.heroRow, { marginBottom: 0 }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
               Yearly cost
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: currColors.text }]}>
+            <ThemedText style={[styles.heroRowValue, { color: palette.text }]}>
               {formatAmount(yearlyCost)}/yr
             </ThemedText>
           </View>
 
-          <View style={[styles.heroRow, { marginBottom: 0 }]}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
-              Paid from
-            </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: currColors.text }]} numberOfLines={1}>
-              {linkedAccount?.name || 'Not linked'}
-            </ThemedText>
+          {/* Integrated Dossier Action Buttons */}
+          <View style={[styles.cardActionsRow, { borderTopColor: palette.sub + '22' }]}>
+            {subscription.isActive ? (
+              <>
+                <TouchableOpacity
+                  style={[styles.primaryActionBtn, { backgroundColor: palette.text }]}
+                  activeOpacity={0.85}
+                  onPress={handleLogPayment}
+                >
+                  <Calendar size={15} color={palette.bg} />
+                  <ThemedText style={[styles.primaryActionBtnText, { color: palette.bg }]}>
+                    Log Payment ({formatAmount(subscription.amount)})
+                  </ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.secondaryActionBtn,
+                    {
+                      backgroundColor: isDark ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.7)',
+                      borderColor: palette.sub + '35',
+                    },
+                  ]}
+                  activeOpacity={0.85}
+                  onPress={handleCancelSubscription}
+                >
+                  <Ban size={15} color="#FF3B30" />
+                  <ThemedText style={[styles.secondaryActionBtnText, { color: '#FF3B30' }]}>
+                    Cancel
+                  </ThemedText>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity
+                style={[styles.primaryActionBtn, { backgroundColor: palette.text, flex: 1 }]}
+                activeOpacity={0.85}
+                onPress={handleReactivateSubscription}
+              >
+                <RotateCcw size={15} color={palette.bg} />
+                <ThemedText style={[styles.primaryActionBtnText, { color: palette.bg }]}>
+                  Reactivate Subscription
+                </ThemedText>
+              </TouchableOpacity>
+            )}
           </View>
-        </View>
-
-        {/* ─── 2. Quick Action Pills Bar ─── */}
-        <View style={styles.actionPillRow}>
-          {subscription.isActive ? (
-            <>
-              <TouchableOpacity
-                style={[styles.primaryActionPill, { backgroundColor: themeColor }]}
-                activeOpacity={0.8}
-                onPress={handleLogPayment}
-              >
-                <Calendar size={16} color="#FFFFFF" />
-                <ThemedText style={styles.primaryActionText}>
-                  Log Payment ({formatAmount(subscription.amount)})
-                </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.secondaryActionPill,
-                  { backgroundColor: currColors.card, borderColor: 'rgba(255, 59, 48, 0.35)' },
-                ]}
-                activeOpacity={0.8}
-                onPress={handleCancelSubscription}
-              >
-                <Ban size={16} color="#FF3B30" />
-                <ThemedText style={[styles.secondaryActionText, { color: '#FF3B30' }]}>
-                  Cancel
-                </ThemedText>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity
-              style={[styles.primaryActionPill, { backgroundColor: '#34C759', flex: 1 }]}
-              activeOpacity={0.8}
-              onPress={handleReactivateSubscription}
-            >
-              <RotateCcw size={16} color="#FFFFFF" />
-              <ThemedText style={styles.primaryActionText}>
-                Reactivate Subscription
-              </ThemedText>
-            </TouchableOpacity>
-          )}
-        </View>
+        </FolderDetailsCard>
 
         {/* ─── 3. Tabbed Renewal & Payment Schedule ─── */}
         <View style={styles.scheduleHeaderRow}>
@@ -541,9 +590,23 @@ interface ScheduleRow {
           </ThemedText>
 
           {/* Segmented Filter Pills */}
-          <View style={[styles.scheduleToggleBar, { backgroundColor: currColors.cardSecondary }]}>
+          <View
+            style={[
+              styles.scheduleToggleBar,
+              {
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+              },
+            ]}
+          >
             <TouchableOpacity
-              style={[styles.scheduleTogglePill, scheduleTab === 'upcoming' && { backgroundColor: currColors.card }]}
+              style={[
+                styles.scheduleTogglePill,
+                scheduleTab === 'upcoming' && [
+                  styles.scheduleTogglePillActive,
+                  { backgroundColor: currColors.card },
+                ],
+              ]}
               onPress={() => {
                 handleHaptic();
                 setScheduleTab('upcoming');
@@ -552,15 +615,21 @@ interface ScheduleRow {
               <ThemedText
                 style={{
                   fontSize: 11,
-                  color: scheduleTab === 'upcoming' ? '#00C9A7' : currColors.textSecondary,
-                  fontFamily: 'Outfit_500Medium',
+                  color: scheduleTab === 'upcoming' ? currColors.text : currColors.textSecondary,
+                  fontFamily: scheduleTab === 'upcoming' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
                 }}
               >
                 Upcoming ({upcomingCount})
               </ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.scheduleTogglePill, scheduleTab === 'paid' && { backgroundColor: currColors.card }]}
+              style={[
+                styles.scheduleTogglePill,
+                scheduleTab === 'paid' && [
+                  styles.scheduleTogglePillActive,
+                  { backgroundColor: currColors.card },
+                ],
+              ]}
               onPress={() => {
                 handleHaptic();
                 setScheduleTab('paid');
@@ -569,28 +638,11 @@ interface ScheduleRow {
               <ThemedText
                 style={{
                   fontSize: 11,
-                  color: scheduleTab === 'paid' ? '#00C9A7' : currColors.textSecondary,
-                  fontFamily: 'Outfit_500Medium',
+                  color: scheduleTab === 'paid' ? currColors.text : currColors.textSecondary,
+                  fontFamily: scheduleTab === 'paid' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
                 }}
               >
                 Paid ({payments.length})
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.scheduleTogglePill, scheduleTab === 'all' && { backgroundColor: currColors.card }]}
-              onPress={() => {
-                handleHaptic();
-                setScheduleTab('all');
-              }}
-            >
-              <ThemedText
-                style={{
-                  fontSize: 11,
-                  color: scheduleTab === 'all' ? '#00C9A7' : currColors.textSecondary,
-                  fontFamily: 'Outfit_500Medium',
-                }}
-              >
-                All
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -613,73 +665,112 @@ interface ScheduleRow {
             </ThemedText>
           </View>
         ) : (
-          <View style={[styles.paymentListCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <View style={styles.scheduleListContainer}>
             {filteredSchedule.map((row, index) => {
-              const isLast = index === filteredSchedule.length - 1;
+              const [dayStr, monthStr, yearStr] = (row.dateFormatted || '').split(' ');
+              const monthAbbr = (monthStr || '').slice(0, 3).toUpperCase();
+
               return (
                 <View
                   key={row.id || index}
                   style={[
-                    styles.paymentRow,
-                    !isLast && { borderBottomWidth: 1, borderBottomColor: currColors.border },
-                    row.isUpcoming && { backgroundColor: 'rgba(0, 201, 167, 0.04)' },
+                    styles.scheduleCard,
+                    {
+                      backgroundColor: currColors.card,
+                      borderColor: row.isUpcoming
+                        ? (isDark ? 'rgba(255, 255, 255, 0.12)' : currColors.border)
+                        : currColors.border,
+                    },
                   ]}
                 >
-                  <View style={styles.paymentLeft}>
-                    <View
-                      style={[
-                        styles.statusIconWrapper,
-                        {
-                          backgroundColor: row.isPaid
-                            ? 'rgba(52, 199, 89, 0.12)'
-                            : row.isUpcoming
-                            ? 'rgba(0, 201, 167, 0.12)'
-                            : currColors.cardSecondary,
-                        },
-                      ]}
-                    >
-                      <ThemedText
-                        style={{
-                          fontSize: 12,
-                          fontFamily: 'Outfit_600SemiBold',
-                          color: row.isPaid
-                            ? '#34C759'
-                            : row.isUpcoming
-                            ? '#00C9A7'
-                            : currColors.textSecondary,
-                        }}
-                      >
-                        {row.cycleNumber}
-                      </ThemedText>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <ThemedText style={[styles.paymentDate, { color: currColors.text }]}>
-                          {row.dateFormatted}
+                  {/* Left: Date / Status Tile */}
+                  <View
+                    style={[
+                      styles.dateTile,
+                      {
+                        backgroundColor: row.isPaid
+                          ? (isDark ? 'rgba(52, 199, 89, 0.16)' : 'rgba(52, 199, 89, 0.12)')
+                          : row.isUpcoming
+                          ? (isDark ? currColors.cardSecondary : palette.bg)
+                          : currColors.cardSecondary,
+                        borderWidth: row.isUpcoming && isDark ? 1 : 0,
+                        borderColor: row.isUpcoming && isDark ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+                      },
+                    ]}
+                  >
+                    {row.isPaid ? (
+                      <Check size={18} color="#34C759" strokeWidth={2.5} />
+                    ) : (
+                      <View style={{ alignItems: 'center' }}>
+                        <ThemedText
+                          style={[
+                            styles.dateTileMonth,
+                            { color: row.isUpcoming ? (isDark ? palette.bg : palette.text) : currColors.textSecondary },
+                          ]}
+                        >
+                          {monthAbbr || `CYCLE`}
                         </ThemedText>
-                        {row.isUpcoming && (
-                          <View style={[styles.upcomingBadge, { backgroundColor: 'rgba(0, 201, 167, 0.15)' }]}>
-                            <ThemedText style={styles.upcomingBadgeText}>NEXT</ThemedText>
-                          </View>
-                        )}
+                        <ThemedText
+                          style={[
+                            styles.dateTileYear,
+                            { color: row.isUpcoming ? (isDark ? '#FFFFFF' : palette.text) : currColors.textSecondary },
+                          ]}
+                        >
+                          {dayStr || `#${row.cycleNumber}`}
+                        </ThemedText>
                       </View>
-                      <ThemedText style={[styles.paymentSubtitle, { color: currColors.textSecondary }]}>
-                        {row.isPaid ? 'Payment Confirmed' : `Cycle: ${subscription.billingCycle}`}
-                      </ThemedText>
-                    </View>
+                    )}
                   </View>
 
-                  <View style={styles.paymentRight}>
+                  {/* Center Details */}
+                  <View style={styles.cardDetailsCol}>
+                    <View style={styles.titleWithBadgeRow}>
+                      <ThemedText style={[styles.cardMonthTitle, { color: currColors.text }]}>
+                        {row.dateFormatted}
+                      </ThemedText>
+                      {row.isUpcoming ? (
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : palette.bg },
+                          ]}
+                        >
+                          <ThemedText
+                            style={[
+                              styles.statusBadgeText,
+                              { color: isDark ? palette.bg : palette.text },
+                            ]}
+                          >
+                            NEXT RENEWAL
+                          </ThemedText>
+                        </View>
+                      ) : row.isPaid ? (
+                        <View style={[styles.statusBadge, { backgroundColor: 'rgba(52, 199, 89, 0.14)' }]}>
+                          <ThemedText style={[styles.statusBadgeText, { color: '#34C759' }]}>PAID</ThemedText>
+                        </View>
+                      ) : null}
+                    </View>
+                    <ThemedText style={[styles.cardBreakdownText, { color: currColors.textSecondary }]}>
+                      {row.isPaid
+                        ? 'Payment Confirmed'
+                        : subscription.billingCycle
+                        ? `${subscription.billingCycle.charAt(0).toUpperCase() + subscription.billingCycle.slice(1)} Renewal`
+                        : 'Upcoming Renewal'}
+                    </ThemedText>
+                  </View>
+
+                  {/* Right Amount & Status */}
+                  <View style={styles.cardAmountCol}>
                     <ThemedText
                       style={[
-                        styles.paymentAmount,
+                        styles.cardAmountText,
                         { color: row.isPaid ? '#34C759' : currColors.text },
                       ]}
                     >
                       {formatAmount(row.amount)}
                     </ThemedText>
-                    <ThemedText style={[styles.paymentStatusText, { color: currColors.textSecondary }]}>
-                      {row.isPaid ? 'Paid' : 'Upcoming'}
+                    <ThemedText style={[styles.cardBalanceText, { color: currColors.textSecondary }]}>
+                      {row.isPaid ? 'Completed' : 'Upcoming'}
                     </ThemedText>
                   </View>
 
@@ -689,7 +780,7 @@ interface ScheduleRow {
                       style={styles.deletePaymentBtn}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <Trash2 size={14} color="#FF3B30" />
+                      <Trash2 size={13} color="#FF3B30" />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -775,7 +866,7 @@ interface ScheduleRow {
           />
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -812,6 +903,31 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     gap: 8,
+  },
+  actionCapsule: {
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  capsuleBtn: {
+    width: 36,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  capsuleDivider: {
+    width: 1,
+    height: 16,
+    opacity: 0.8,
   },
   headerIconBtn: {
     width: 38,
@@ -886,38 +1002,61 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     fontFamily: 'Outfit_400Regular',
   },
-  actionPillRow: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    gap: 10,
-    marginBottom: 16,
+  // Category badge & status pills
+  categoryBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-  primaryActionPill: {
-    flex: 1.5,
-    height: 44,
+  categoryBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: 0.5,
+  },
+  statusPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  statusPillText: {
+    fontSize: 9,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.5,
+  },
+
+  // Dossier Integrated Action Buttons
+  cardActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+    paddingTop: 14,
+    borderTopWidth: 1,
+  },
+  primaryActionBtn: {
+    flex: 1.6,
+    height: 42,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 7,
   },
-  primaryActionText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+  primaryActionBtnText: {
+    fontSize: 13,
     fontFamily: 'Outfit_600SemiBold',
   },
-  secondaryActionPill: {
+  secondaryActionBtn: {
     flex: 1,
-    height: 44,
+    height: 42,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
   },
-  secondaryActionText: {
-    fontSize: 14,
+  secondaryActionBtnText: {
+    fontSize: 13,
     fontFamily: 'Outfit_600SemiBold',
   },
   scheduleHeaderRow: {
@@ -925,8 +1064,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginHorizontal: 16,
-    marginBottom: 10,
-    marginTop: 4,
+    marginBottom: 12,
+    marginTop: 8,
   },
   sectionTitle: {
     fontSize: 10,
@@ -936,70 +1075,94 @@ const styles = StyleSheet.create({
   },
   scheduleToggleBar: {
     flexDirection: 'row',
-    borderRadius: 8,
-    padding: 2,
+    borderRadius: 20,
+    padding: 3,
+    borderWidth: 1,
   },
   scheduleTogglePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
   },
-  paymentListCard: {
+  scheduleTogglePillActive: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  scheduleListContainer: {
+    paddingBottom: 24,
+  },
+  scheduleCard: {
     marginHorizontal: 16,
+    marginBottom: 8,
     borderRadius: 16,
     borderWidth: 1,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  paymentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 14,
-  },
-  paymentLeft: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  statusIconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  dateTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
   },
-  paymentDate: {
+  dateTileMonth: {
+    fontSize: 9,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.5,
+  },
+  dateTileYear: {
     fontSize: 13,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Outfit_600SemiBold',
   },
-  upcomingBadge: {
+  cardDetailsCol: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  titleWithBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 3,
+  },
+  cardMonthTitle: {
+    fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  statusBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 6,
   },
-  upcomingBadgeText: {
+  statusBadgeText: {
     fontSize: 9,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 0.5,
-    color: '#00C9A7',
   },
-  paymentSubtitle: {
+  cardBreakdownText: {
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
-    marginTop: 2,
   },
-  paymentRight: {
+  cardAmountCol: {
     alignItems: 'flex-end',
     marginLeft: 8,
   },
-  paymentAmount: {
-    fontSize: 14,
-    fontFamily: 'Outfit_500Medium',
+  cardAmountText: {
+    fontSize: 15,
+    fontFamily: 'Outfit_600SemiBold',
   },
-  paymentStatusText: {
+  cardBalanceText: {
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
     marginTop: 2,
@@ -1085,3 +1248,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
 });
+
+export default function SubscriptionDetailsScreen() {
+  const router = useRouter();
+  return <SubscriptionDetailsContent onBack={() => router.back()} />;
+}
+

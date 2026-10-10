@@ -37,10 +37,12 @@ import { Category3DIcon } from '@/components/Category3DIcon';
 import { LOAN_3D_ICON_MAP } from '@/constants/Category3DIcons';
 import { AccountPickerModal } from '@/components/AccountPickerModal';
 import { AccountSelectCard } from '@/components/AccountSelectCard';
+import { FolderDetailsCard, CircularProgress3DIcon } from '@/components/FolderDetailsCard';
+import { getCardPaletteFromItem } from '@/constants/folderTheme';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 import { getNextLoanDuePayment } from '@/lib/finance';
 
-const TYPE_CONFIG = {
+const TYPE_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
   home: { label: 'Home Loan', color: '#007AFF', emoji: '🏠' },
   car: { label: 'Car Loan', color: '#34C759', emoji: '🚗' },
   personal: { label: 'Personal Loan', color: '#FF9500', emoji: '💰' },
@@ -48,12 +50,21 @@ const TYPE_CONFIG = {
   other: { label: 'Other Loan', color: '#8E8E93', emoji: '🏦' },
 };
 
-type ScheduleTab = 'upcoming' | 'paid' | 'all';
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-export default function LoanDetailsScreen() {
+type ScheduleTab = 'upcoming' | 'paid';
+
+export interface LoanDetailsProps {
+  loanId?: string;
+  onBack?: () => void;
+}
+
+export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string }>();
+  const id = loanId || params.id;
   const insets = useSafeAreaInsets();
+  const headerTopPadding = Math.max(insets.top, Platform.OS === 'ios' ? 56 : 32);
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
 
@@ -73,9 +84,21 @@ export default function LoanDetailsScreen() {
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
 
+  const isDark = colorScheme === 'dark';
+
   const loan = useMemo(() => {
     return loans.find((l) => l.id === id);
   }, [id, loans]);
+
+  const palette = useMemo(() => {
+    if (!loan) return { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' };
+    return getCardPaletteFromItem({
+      type: 'loan',
+      loanType: loan.type,
+      name: loan.name,
+      icon: loan.icon || LOAN_3D_ICON_MAP[loan.type],
+    });
+  }, [loan]);
 
   const loanPayments = useMemo(() => {
     return emiPayments
@@ -211,7 +234,7 @@ export default function LoanDetailsScreen() {
       const endBalance = startBalance - (p.principalPortion || p.amount);
 
       const labelDate = new Date(p.date);
-      const monthLabel = labelDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+      const monthLabel = `${MONTH_NAMES[labelDate.getMonth()]} ${labelDate.getFullYear()}`;
 
       // Identify prepayment: 0 interest portion or explicit prepayment
       const isPrepayment = (loan.interestRate > 0 && p.interestPortion === 0) ||
@@ -258,6 +281,9 @@ export default function LoanDetailsScreen() {
       nextUnpaidDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
     }
 
+    const baseYear = nextUnpaidDate.getFullYear();
+    const baseMonth = nextUnpaidDate.getMonth();
+
     let i = 0;
     while (balance > 0.01 && i < 480) {
       const interestPortion = balance * rate;
@@ -265,8 +291,10 @@ export default function LoanDetailsScreen() {
       const startBalance = balance;
       balance = Math.max(0, balance - principalPortion);
 
-      const labelDate = new Date(nextUnpaidDate.getFullYear(), nextUnpaidDate.getMonth() + i, 1);
-      const monthLabel = labelDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+      const mIdx = baseMonth + i;
+      const year = baseYear + Math.floor(mIdx / 12);
+      const monthName = MONTH_NAMES[((mIdx % 12) + 12) % 12];
+      const monthLabel = `${monthName} ${year}`;
 
       schedule.push({
         id: `projected-${i}`,
@@ -303,6 +331,19 @@ export default function LoanDetailsScreen() {
     return amortizationSchedule;
   }, [amortizationSchedule, scheduleTab]);
 
+  const INITIAL_ROW_COUNT = 24;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_ROW_COUNT);
+
+  // Reset pagination when switching tabs
+  useEffect(() => {
+    setVisibleCount(INITIAL_ROW_COUNT);
+  }, [scheduleTab]);
+
+  // Progressive windowing: only render visible rows to keep mount time < 10ms
+  const displayedSchedule = useMemo(() => {
+    return filteredSchedule.slice(0, visibleCount);
+  }, [filteredSchedule, visibleCount]);
+
   const config = loan ? (TYPE_CONFIG[loan.type] || TYPE_CONFIG.other) : TYPE_CONFIG.other;
 
   const formatAmount = (val: number) => {
@@ -335,7 +376,11 @@ export default function LoanDetailsScreen() {
           onPress: () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             removeLoan(loan.id);
-            router.back();
+            if (onBack) {
+              onBack();
+            } else {
+              router.back();
+            }
           },
         },
       ]
@@ -443,14 +488,14 @@ export default function LoanDetailsScreen() {
 
   if (!loan) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]}>
-        <View style={styles.header}>
-          <BackButton />
+      <View style={[styles.container, { backgroundColor: currColors.background }]}>
+        <View style={[styles.header, { paddingTop: headerTopPadding, paddingBottom: 12 }]}>
+          <BackButton onPress={onBack} />
         </View>
         <View style={styles.centered}>
           <ThemedText style={{ color: currColors.textSecondary }}>Loan not found.</ThemedText>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -459,28 +504,44 @@ export default function LoanDetailsScreen() {
   const linkedAccount = accounts.find((a) => a.id === loan.linkedAccountId);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: currColors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <BackButton />
-        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]} numberOfLines={1}>
-          {loan.name}
-        </ThemedText>
-        <View style={styles.headerRight}>
+      <View style={[styles.header, { paddingTop: headerTopPadding, paddingBottom: 12 }]}>
+        <BackButton onPress={onBack} />
+        
+        <View style={{ flex: 1 }} />
+
+        {/* Joined Edit & Delete Action Capsule */}
+        <View
+          style={[
+            styles.actionCapsule,
+            {
+              backgroundColor: currColors.cardSecondary,
+              borderColor: currColors.border,
+            },
+          ]}
+        >
           <TouchableOpacity
-            style={[styles.headerIconBtn, { backgroundColor: currColors.cardSecondary }]}
+            style={styles.capsuleBtn}
             onPress={() => {
               handleHaptic();
               router.push({ pathname: '/add-loan', params: { id: loan.id } });
             }}
+            activeOpacity={0.7}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 4 }}
           >
-            <Edit2 size={18} color={config.color} />
+            <Edit2 size={16} color={currColors.text} strokeWidth={2.2} />
           </TouchableOpacity>
+
+          <View style={[styles.capsuleDivider, { backgroundColor: currColors.border }]} />
+
           <TouchableOpacity
-            style={[styles.headerIconBtn, { backgroundColor: 'rgba(255, 59, 48, 0.1)' }]}
+            style={styles.capsuleBtn}
             onPress={handleDeleteLoan}
+            activeOpacity={0.7}
+            hitSlop={{ top: 6, bottom: 6, left: 4, right: 6 }}
           >
-            <Trash2 size={18} color="#FF3B30" />
+            <Trash2 size={16} color="#FF3B30" strokeWidth={2.2} />
           </TouchableOpacity>
         </View>
       </View>
@@ -492,39 +553,38 @@ export default function LoanDetailsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ─── 1. Unified Hero Card (Outstanding, Progress Bar & Metrics in 1 Card) ─── */}
-        <View style={[styles.outstandingCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-          {/* Header & Lender */}
-          <View style={styles.heroHeaderRow}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Category3DIcon
-                name={loan.icon || LOAN_3D_ICON_MAP[loan.type] || 'loan'}
-                size={24}
-              />
-              <ThemedText style={[styles.heroLabel, { color: currColors.textSecondary }]}>
-                OUTSTANDING BALANCE
-              </ThemedText>
-            </View>
-            <View style={[styles.indicatorPill, { backgroundColor: `${config.color}15` }]}>
-              <ThemedText style={[styles.indicatorText, { color: config.color }]}>
-                {loan.lenderName.toUpperCase()}
-              </ThemedText>
-            </View>
-          </View>
-
+        {/* ─── 1. Folder Dossier Hero Card (Matching Folder Details UI) ─── */}
+        <FolderDetailsCard
+          palette={palette}
+          headerTitle={loan.name}
+          headerSubtitle={
+            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: palette.sub }}>
+              {formatAmount(loan.emiAmount)}/monthly
+            </ThemedText>
+          }
+          tabRightContent={
+            <CircularProgress3DIcon
+              name={loan.icon || LOAN_3D_ICON_MAP[loan.type] || 'loan'}
+              progress={paidPercentage / 100}
+              color={palette.text}
+              size={48}
+              iconSize={28}
+            />
+          }
+        >
           {/* Outstanding Balance */}
-          <ThemedText style={[styles.heroValue, { color: currColors.text }]}>
+          <ThemedText style={[styles.heroValue, { color: palette.text, fontFamily: 'Outfit_700Bold', fontSize: 28, marginBottom: 10 }]}>
             {formatAmount(effectiveOutstanding)}
           </ThemedText>
 
           {/* Progress Bar */}
-          <View style={[styles.progressBarBG, { backgroundColor: currColors.cardSecondary }]}>
+          <View style={[styles.progressBarBG, { backgroundColor: isDark ? 'rgba(0,0,0,0.18)' : palette.sub + '22' }]}>
             <View
               style={[
                 styles.progressBarFill,
                 {
                   width: `${Math.min(100, Math.max(2, paidPercentage))}%`,
-                  backgroundColor: config.color,
+                  backgroundColor: palette.text,
                 },
               ]}
             />
@@ -532,84 +592,81 @@ export default function LoanDetailsScreen() {
 
           {/* Progress Micro Labels */}
           <View style={styles.progressMetaRow}>
-            <ThemedText style={[styles.progressMetaText, { color: currColors.textSecondary }]}>
+            <ThemedText style={[styles.progressMetaText, { color: palette.sub }]}>
               {paidPercentage.toFixed(0)}% paid ({formatAmount(totalPrincipalPaid)})
             </ThemedText>
-            <ThemedText style={[styles.progressMetaText, { color: currColors.textSecondary }]}>
+            <ThemedText style={[styles.progressMetaText, { color: palette.sub }]}>
               {monthsRemaining} of {loan.tenureMonths} mos left
             </ThemedText>
           </View>
 
           {/* Dashed Divider */}
-          <View style={[styles.dashedDivider, { borderColor: currColors.border }]} />
+          <View style={[styles.dashedDivider, { borderColor: palette.sub + '28' }]} />
 
           {/* Metrics Rows */}
           <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
-              Monthly EMI
-            </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: config.color }]}>
-              {formatAmount(loan.emiAmount)}/mo
-            </ThemedText>
-          </View>
-
-          <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
               Interest rate
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: currColors.text }]}>
+            <ThemedText style={[styles.heroRowValue, { color: palette.text }]}>
               {loan.interestRate}% p.a.
             </ThemedText>
           </View>
 
           <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
               Original loan
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: currColors.text }]}>
+            <ThemedText style={[styles.heroRowValue, { color: palette.text }]}>
               {formatAmount(loan.principalAmount)}
             </ThemedText>
           </View>
 
           <View style={[styles.heroRow, { marginBottom: 0 }]}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
               Next due
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: nextDueDateInfo?.isDueSoon ? '#FF9500' : currColors.text }]}>
+            <ThemedText style={[styles.heroRowValue, { color: nextDueDateInfo?.isDueSoon ? '#FF9500' : palette.text }]}>
               {nextDueDateInfo ? `${nextDueDateInfo.dateFormatted} (${nextDueDateInfo.daysLeft > 0 ? `in ${nextDueDateInfo.daysLeft}d` : 'Today'})` : 'Paid off'}
             </ThemedText>
           </View>
-        </View>
 
-        {/* ─── 2. Quick Action Pills Bar ─── */}
-        {effectiveOutstanding > 0 && (
-          <View style={styles.actionPillRow}>
-            <TouchableOpacity
-              style={[styles.primaryActionPill, { backgroundColor: config.color }]}
-              activeOpacity={0.8}
-              onPress={handleLogPayment}
-            >
-              <Calendar size={16} color="#FFFFFF" />
-              <ThemedText style={styles.primaryActionText}>
-                Log EMI ({formatAmount(loan.emiAmount)})
-              </ThemedText>
-            </TouchableOpacity>
+          {/* Integrated Dossier Action Buttons */}
+          {effectiveOutstanding > 0 && (
+            <View style={[styles.cardActionsRow, { borderTopColor: palette.sub + '22' }]}>
+              <TouchableOpacity
+                style={[styles.primaryActionBtn, { backgroundColor: palette.text }]}
+                activeOpacity={0.85}
+                onPress={handleLogPayment}
+              >
+                <Calendar size={15} color={palette.bg} />
+                <ThemedText style={[styles.primaryActionBtnText, { color: palette.bg }]}>
+                  Log EMI ({formatAmount(loan.emiAmount)})
+                </ThemedText>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.secondaryActionPill, { backgroundColor: currColors.card, borderColor: '#00C9A740' }]}
-              activeOpacity={0.8}
-              onPress={() => {
-                handleHaptic();
-                router.push(`/prepay-loan/${loan.id}`);
-              }}
-            >
-              <Zap size={16} color="#00C9A7" />
-              <ThemedText style={[styles.secondaryActionText, { color: '#00C9A7' }]}>
-                Prepay
-              </ThemedText>
-            </TouchableOpacity>
-          </View>
-        )}
+              <TouchableOpacity
+                style={[
+                  styles.secondaryActionBtn,
+                  {
+                    backgroundColor: isDark ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.7)',
+                    borderColor: palette.sub + '35',
+                  },
+                ]}
+                activeOpacity={0.85}
+                onPress={() => {
+                  handleHaptic();
+                  router.push(`/prepay-loan/${loan.id}`);
+                }}
+              >
+                <Zap size={15} color={palette.text} />
+                <ThemedText style={[styles.secondaryActionBtnText, { color: palette.text }]}>
+                  Prepay
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          )}
+        </FolderDetailsCard>
 
         {/* ─── 3. Tabbed Amortization Schedule & History ─── */}
         <View style={styles.scheduleHeaderRow}>
@@ -617,38 +674,59 @@ export default function LoanDetailsScreen() {
             PAYMENT SCHEDULE ({filteredSchedule.length})
           </ThemedText>
           {/* Segmented Filter Pills */}
-          <View style={[styles.scheduleToggleBar, { backgroundColor: currColors.cardSecondary }]}>
+          <View
+            style={[
+              styles.scheduleToggleBar,
+              {
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+              },
+            ]}
+          >
             <TouchableOpacity
-              style={[styles.scheduleTogglePill, scheduleTab === 'upcoming' && { backgroundColor: currColors.card }]}
+              style={[
+                styles.scheduleTogglePill,
+                scheduleTab === 'upcoming' && [
+                  styles.scheduleTogglePillActive,
+                  { backgroundColor: currColors.card },
+                ],
+              ]}
               onPress={() => {
                 handleHaptic();
                 setScheduleTab('upcoming');
               }}
             >
-              <ThemedText style={{ fontSize: 11, color: scheduleTab === 'upcoming' ? '#00C9A7' : currColors.textSecondary, fontFamily: 'Outfit_500Medium' }}>
+              <ThemedText
+                style={{
+                  fontSize: 11,
+                  color: scheduleTab === 'upcoming' ? currColors.text : currColors.textSecondary,
+                  fontFamily: scheduleTab === 'upcoming' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                }}
+              >
                 Upcoming ({upcomingCount})
               </ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.scheduleTogglePill, scheduleTab === 'paid' && { backgroundColor: currColors.card }]}
+              style={[
+                styles.scheduleTogglePill,
+                scheduleTab === 'paid' && [
+                  styles.scheduleTogglePillActive,
+                  { backgroundColor: currColors.card },
+                ],
+              ]}
               onPress={() => {
                 handleHaptic();
                 setScheduleTab('paid');
               }}
             >
-              <ThemedText style={{ fontSize: 11, color: scheduleTab === 'paid' ? '#00C9A7' : currColors.textSecondary, fontFamily: 'Outfit_500Medium' }}>
+              <ThemedText
+                style={{
+                  fontSize: 11,
+                  color: scheduleTab === 'paid' ? currColors.text : currColors.textSecondary,
+                  fontFamily: scheduleTab === 'paid' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                }}
+              >
                 Paid ({loanPayments.length})
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.scheduleTogglePill, scheduleTab === 'all' && { backgroundColor: currColors.card }]}
-              onPress={() => {
-                handleHaptic();
-                setScheduleTab('all');
-              }}
-            >
-              <ThemedText style={{ fontSize: 11, color: scheduleTab === 'all' ? '#00C9A7' : currColors.textSecondary, fontFamily: 'Outfit_500Medium' }}>
-                All
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -662,84 +740,120 @@ export default function LoanDetailsScreen() {
             </ThemedText>
           </View>
         ) : (
-          <View style={[styles.paymentListCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            {filteredSchedule.map((row, index) => {
-              const isLast = index === filteredSchedule.length - 1;
+          <View style={styles.scheduleListContainer}>
+            {displayedSchedule.map((row) => {
+              const [rawMonth, rawYear] = (row.monthLabel || '').split(' ');
+              const monthAbbr = (rawMonth || '').slice(0, 3).toUpperCase();
+              const yearShort = rawYear ? `'${rawYear.slice(-2)}` : (row.emiNumber ? `#${row.emiNumber}` : '');
+
               return (
                 <View
                   key={row.id || row.monthLabel}
                   style={[
-                    styles.paymentRow,
-                    !isLast && { borderBottomWidth: 1, borderBottomColor: currColors.border },
-                    row.isUpcoming && { backgroundColor: 'rgba(0, 201, 167, 0.04)' },
+                    styles.scheduleCard,
+                    {
+                      backgroundColor: currColors.card,
+                      borderColor: row.isPrepayment
+                        ? (isDark ? 'rgba(255, 149, 0, 0.4)' : '#FDBA74')
+                        : row.isUpcoming
+                        ? (isDark ? 'rgba(255, 255, 255, 0.12)' : currColors.border)
+                        : currColors.border,
+                    },
                   ]}
                 >
-                  <View style={styles.paymentLeft}>
-                    <View
-                      style={[
-                        styles.statusIconWrapper,
-                        {
-                          backgroundColor: row.isPrepayment
-                            ? 'rgba(255, 149, 0, 0.12)'
-                            : row.isPaid
-                            ? 'rgba(52, 199, 89, 0.12)'
-                            : row.isUpcoming
-                            ? 'rgba(0, 201, 167, 0.12)'
-                            : currColors.cardSecondary,
-                        },
-                      ]}
-                    >
-                      {row.isPrepayment ? (
-                        <Zap size={14} color="#FF9500" />
-                      ) : (
+                  {/* Left: Date / Status Tile */}
+                  <View
+                    style={[
+                      styles.dateTile,
+                      {
+                        backgroundColor: row.isPrepayment
+                          ? (isDark ? 'rgba(255, 149, 0, 0.16)' : '#FEF3C7')
+                          : row.isPaid
+                          ? (isDark ? 'rgba(52, 199, 89, 0.16)' : 'rgba(52, 199, 89, 0.12)')
+                          : row.isUpcoming
+                          ? (isDark ? currColors.cardSecondary : palette.bg)
+                          : currColors.cardSecondary,
+                        borderWidth: row.isUpcoming && isDark ? 1 : 0,
+                        borderColor: row.isUpcoming && isDark ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+                      },
+                    ]}
+                  >
+                    {row.isPrepayment ? (
+                      <Zap size={18} color="#FF9500" />
+                    ) : row.isPaid ? (
+                      <Check size={18} color="#34C759" strokeWidth={2.5} />
+                    ) : (
+                      <View style={{ alignItems: 'center' }}>
                         <ThemedText
-                          style={{
-                            fontSize: 12,
-                            fontFamily: 'Outfit_600SemiBold',
-                            color: row.isPaid
-                              ? '#34C759'
-                              : row.isUpcoming
-                              ? '#00C9A7'
-                              : currColors.textSecondary,
-                          }}
+                          style={[
+                            styles.dateTileMonth,
+                            { color: row.isUpcoming ? (isDark ? palette.bg : palette.text) : currColors.textSecondary },
+                          ]}
                         >
-                          {row.emiNumber}
+                          {monthAbbr}
                         </ThemedText>
-                      )}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <ThemedText style={[styles.paymentMonth, { color: currColors.text }]}>
-                          {row.monthLabel}
+                        <ThemedText
+                          style={[
+                            styles.dateTileYear,
+                            { color: row.isUpcoming ? (isDark ? '#FFFFFF' : palette.text) : currColors.textSecondary },
+                          ]}
+                        >
+                          {yearShort}
                         </ThemedText>
-                        {row.isPrepayment ? (
-                          <View style={[styles.upcomingBadge, { backgroundColor: 'rgba(255, 149, 0, 0.15)' }]}>
-                            <ThemedText style={[styles.upcomingBadgeText, { color: '#FF9500' }]}>PREPAY</ThemedText>
-                          </View>
-                        ) : row.isUpcoming ? (
-                          <View style={[styles.upcomingBadge, { backgroundColor: 'rgba(0, 201, 167, 0.15)' }]}>
-                            <ThemedText style={styles.upcomingBadgeText}>NEXT</ThemedText>
-                          </View>
-                        ) : null}
                       </View>
-                      <ThemedText style={[styles.paymentBreakdown, { color: currColors.textSecondary }]}>
-                        {row.isPrepayment
-                          ? `Principal Prepayment: ${formatAmount(row.principalPortion)}`
-                          : `Principal: ${formatAmount(row.principalPortion)} • Interest: ${formatAmount(row.interestPortion)}`}
-                      </ThemedText>
-                    </View>
+                    )}
                   </View>
 
-                  <View style={styles.paymentRight}>
+                  {/* Center Details */}
+                  <View style={styles.cardDetailsCol}>
+                    <View style={styles.titleWithBadgeRow}>
+                      <ThemedText style={[styles.cardMonthTitle, { color: currColors.text }]}>
+                        {row.monthLabel}
+                      </ThemedText>
+                      {row.isPrepayment ? (
+                        <View style={[styles.statusBadge, { backgroundColor: 'rgba(255, 149, 0, 0.16)' }]}>
+                          <ThemedText style={[styles.statusBadgeText, { color: '#FF9500' }]}>PREPAY</ThemedText>
+                        </View>
+                      ) : row.isUpcoming ? (
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : palette.bg },
+                          ]}
+                        >
+                          <ThemedText
+                            style={[
+                              styles.statusBadgeText,
+                              { color: isDark ? palette.bg : palette.text },
+                            ]}
+                          >
+                            NEXT EMI
+                          </ThemedText>
+                        </View>
+                      ) : row.isPaid ? (
+                        <View style={[styles.statusBadge, { backgroundColor: 'rgba(52, 199, 89, 0.14)' }]}>
+                          <ThemedText style={[styles.statusBadgeText, { color: '#34C759' }]}>PAID</ThemedText>
+                        </View>
+                      ) : null}
+                    </View>
+                    <ThemedText style={[styles.cardBreakdownText, { color: currColors.textSecondary }]}>
+                      {row.isPrepayment
+                        ? `Principal Prepayment: ${formatAmount(row.principalPortion)}`
+                        : `P: ${formatAmount(row.principalPortion)} • I: ${formatAmount(row.interestPortion)}`}
+                    </ThemedText>
+                  </View>
+
+                  {/* Right Amount & Balance */}
+                  <View style={styles.cardAmountCol}>
                     <ThemedText
                       style={[
-                        styles.paymentAmount,
+                        styles.cardAmountText,
                         { color: row.isPaid ? '#34C759' : currColors.text },
                       ]}
                     >
                       {formatAmount(row.emi)}
                     </ThemedText>
-                    <ThemedText style={[styles.paymentBalance, { color: currColors.textSecondary }]}>
+                    <ThemedText style={[styles.cardBalanceText, { color: currColors.textSecondary }]}>
                       Bal: {formatAmount(row.endBalance)}
                     </ThemedText>
                   </View>
@@ -750,12 +864,56 @@ export default function LoanDetailsScreen() {
                       style={styles.deletePaymentBtn}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <Trash2 size={14} color="#FF3B30" />
+                      <Trash2 size={13} color="#FF3B30" />
                     </TouchableOpacity>
                   )}
                 </View>
               );
             })}
+
+            {/* Progressive Loading Controls */}
+            {filteredSchedule.length > visibleCount && (
+              <View style={styles.loadMoreRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.loadMoreBtn,
+                    {
+                      backgroundColor: currColors.card,
+                      borderColor: currColors.border,
+                    },
+                  ]}
+                  onPress={() => {
+                    handleHaptic();
+                    setVisibleCount((prev) => prev + 36);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'Outfit_500Medium', color: currColors.text }}>
+                    Show more ({Math.min(36, filteredSchedule.length - visibleCount)})
+                  </ThemedText>
+                  <ChevronDown size={14} color={currColors.textSecondary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.loadMoreBtn,
+                    {
+                      backgroundColor: isDark ? palette.bg + '18' : palette.bg,
+                      borderColor: isDark ? palette.sub + '40' : palette.sub + '35',
+                    },
+                  ]}
+                  onPress={() => {
+                    handleHaptic();
+                    setVisibleCount(filteredSchedule.length);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'Outfit_600SemiBold', color: isDark ? palette.bg : palette.text }}>
+                    Show all ({filteredSchedule.length})
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -921,7 +1079,7 @@ export default function LoanDetailsScreen() {
           />
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -958,6 +1116,31 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     gap: 8,
+  },
+  actionCapsule: {
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  capsuleBtn: {
+    width: 36,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  capsuleDivider: {
+    width: 1,
+    height: 16,
+    opacity: 0.8,
   },
   headerIconBtn: {
     width: 38,
@@ -1049,39 +1232,51 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_400Regular',
   },
 
-  // Action Pills Row
-  actionPillRow: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    gap: 10,
-    marginBottom: 16,
+  // Lender badge in header
+  lenderBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-  primaryActionPill: {
-    flex: 1.5,
-    height: 44,
+  lenderBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: 0.5,
+  },
+
+  // Dossier Integrated Action Buttons
+  cardActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+    paddingTop: 14,
+    borderTopWidth: 1,
+  },
+  primaryActionBtn: {
+    flex: 1.6,
+    height: 42,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 7,
   },
-  primaryActionText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+  primaryActionBtnText: {
+    fontSize: 13,
     fontFamily: 'Outfit_600SemiBold',
   },
-  secondaryActionPill: {
+  secondaryActionBtn: {
     flex: 1,
-    height: 44,
+    height: 42,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
   },
-  secondaryActionText: {
-    fontSize: 14,
+  secondaryActionBtnText: {
+    fontSize: 13,
     fontFamily: 'Outfit_600SemiBold',
   },
 
@@ -1091,8 +1286,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginHorizontal: 16,
-    marginBottom: 10,
-    marginTop: 4,
+    marginBottom: 12,
+    marginTop: 8,
   },
   sectionTitle: {
     fontSize: 10,
@@ -1102,70 +1297,94 @@ const styles = StyleSheet.create({
   },
   scheduleToggleBar: {
     flexDirection: 'row',
-    borderRadius: 8,
-    padding: 2,
+    borderRadius: 20,
+    padding: 3,
+    borderWidth: 1,
   },
   scheduleTogglePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
   },
-  paymentListCard: {
+  scheduleTogglePillActive: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  scheduleListContainer: {
+    paddingBottom: 24,
+  },
+  scheduleCard: {
     marginHorizontal: 16,
+    marginBottom: 8,
     borderRadius: 16,
     borderWidth: 1,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  paymentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 14,
-  },
-  paymentLeft: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  statusIconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  dateTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
   },
-  paymentMonth: {
+  dateTileMonth: {
+    fontSize: 9,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.5,
+  },
+  dateTileYear: {
     fontSize: 13,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Outfit_600SemiBold',
   },
-  upcomingBadge: {
+  cardDetailsCol: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  titleWithBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 3,
+  },
+  cardMonthTitle: {
+    fontSize: 14,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  statusBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 6,
   },
-  upcomingBadgeText: {
+  statusBadgeText: {
     fontSize: 9,
-    fontWeight: '700',
+    fontFamily: 'Outfit_700Bold',
     letterSpacing: 0.5,
-    color: '#00C9A7',
   },
-  paymentBreakdown: {
+  cardBreakdownText: {
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
-    marginTop: 2,
   },
-  paymentRight: {
+  cardAmountCol: {
     alignItems: 'flex-end',
     marginLeft: 8,
   },
-  paymentAmount: {
-    fontSize: 14,
-    fontFamily: 'Outfit_500Medium',
+  cardAmountText: {
+    fontSize: 15,
+    fontFamily: 'Outfit_600SemiBold',
   },
-  paymentBalance: {
+  cardBalanceText: {
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
     marginTop: 2,
@@ -1173,6 +1392,22 @@ const styles = StyleSheet.create({
   deletePaymentBtn: {
     padding: 6,
     marginLeft: 6,
+  },
+  loadMoreRow: {
+    marginHorizontal: 16,
+    marginTop: 6,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  loadMoreBtn: {
+    flex: 1,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
   emptyCard: {
     marginHorizontal: 16,
@@ -1263,3 +1498,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
 });
+
+export default function LoanDetailsScreen() {
+  const router = useRouter();
+  return <LoanDetailsContent onBack={() => router.back()} />;
+}

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
 import {
@@ -40,6 +40,15 @@ import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Loan, Subscription } from '@/types/money';
 import { Category3DIcon } from '@/components/Category3DIcon';
 import { LOAN_3D_ICON_MAP } from '@/constants/Category3DIcons';
+import {
+  FolderPalette,
+  getCardPaletteFromItem,
+  getInterlockingCardPath,
+  getTicketCardPath,
+} from '@/constants/folderTheme';
+import { ExpandedFolderContainer } from '@/components/ExpandedFolderContainer';
+import { LoanDetailsContent } from '@/app/loan-details/[id]';
+import { SubscriptionDetailsContent } from '@/app/subscription-details/[id]';
 
 const getSubscriptionIcon = (logoName: string | undefined) => {
   switch (logoName) {
@@ -72,271 +81,10 @@ const TYPE_CONFIG = {
   other: { label: 'Other Loan', emoji: '🏦', icon: Landmark, color: '#8E8E93' },
 };
 
-const ICON_3D_PALETTES: Record<string, { bg: string; text: string; sub: string }> = {
-  // Music & Audio -> Mint Green
-  music: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  headphones: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  musical_notes: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  spotify: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-
-  // Video & OTT -> Lilac / Purple
-  tv: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
-  netflix: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
-  popcorn: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
-  clapperboard: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
-  film_projector: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
-
-  // Apple & Warm Gadgets -> Butter Yellow
-  apple: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  star: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  trophy: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  medal: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  electric: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-
-  // Gym, Gaming & Fitness -> Soft Rose / Magenta
-  gym: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  fitness: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  video_game: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  game: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  youtube: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  heart: { bg: '#FFE4E6', text: '#9F1239', sub: '#BE123C' },
-
-  // Food & Fast Food -> Sunset Peach / Orange
-  food: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  grocery: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
-  pizza: { bg: '#FED7AA', text: '#7C2D12', sub: '#9A3412' },
-  burger: { bg: '#FED7AA', text: '#7C2D12', sub: '#9A3412' },
-  cake: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  cookie: { bg: '#FEF3C7', text: '#78350F', sub: '#92400E' },
-  coffee: { bg: '#FEF3C7', text: '#78350F', sub: '#92400E' },
-  beverage: { bg: '#FFE4E6', text: '#881337', sub: '#9F1239' },
-  carrot: { bg: '#FFEDD5', text: '#7C2D12', sub: '#9A3412' },
-  broccoli: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
-
-  // Internet, Cloud, Tech & Car -> Sky Blue / Cyan
-  cloud: { bg: '#BAE6FD', text: '#0C4A6E', sub: '#0369A1' },
-  internet: { bg: '#BAE6FD', text: '#0C4A6E', sub: '#0369A1' },
-  wifi: { bg: '#BAE6FD', text: '#0C4A6E', sub: '#0369A1' },
-  laptop: { bg: '#E0E7FF', text: '#312E81', sub: '#4338CA' },
-  phone: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  car: { bg: '#BAE6FD', text: '#0C4A6E', sub: '#0369A1' },
-  fuel: { bg: '#FFEDD5', text: '#7C2D12', sub: '#9A3412' },
-  water: { bg: '#CFFAFE', text: '#164E63', sub: '#0E7490' },
-  travel: { bg: '#CCFBF1', text: '#115E59', sub: '#0F766E' },
-  compass: { bg: '#CCFBF1', text: '#115E59', sub: '#0F766E' },
-
-  // Home & Bills -> Warm Butter Amber
-  house: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  receipt: { bg: '#CFFAFE', text: '#164E63', sub: '#0E7490' },
-  credit_card: { bg: '#EDE9FE', text: '#581C87', sub: '#6D28D9' },
-  wallet: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  money: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
-  banknote: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
-  coin: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  investments: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
-  shopping: { bg: '#FED7AA', text: '#7C2D12', sub: '#9A3412' },
-  clothes: { bg: '#E0E7FF', text: '#312E81', sub: '#4338CA' },
-  medical: { bg: '#E0F2FE', text: '#075985', sub: '#0284C7' },
-  shield: { bg: '#CCFBF1', text: '#115E59', sub: '#0F766E' },
-  education: { bg: '#EDE9FE', text: '#581C87', sub: '#6D28D9' },
-  books: { bg: '#EDE9FE', text: '#581C87', sub: '#6D28D9' },
-  briefcase: { bg: '#F5F5F4', text: '#1C1917', sub: '#44403C' },
-  umbrella: { bg: '#CCFBF1', text: '#115E59', sub: '#0F766E' },
-  gift: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  sparkles: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  transfer: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  target: { bg: '#FFE4E6', text: '#9F1239', sub: '#BE123C' },
-  rocket: { bg: '#FFEDD5', text: '#7C2D12', sub: '#9A3412' },
-};
-
-function hexToHSL(hex: string): { h: number; s: number; l: number } {
-  let r = 0, g = 0, b = 0;
-  const cleanHex = hex.replace('#', '');
-  if (cleanHex.length === 3) {
-    r = parseInt(cleanHex[0] + cleanHex[0], 16) / 255;
-    g = parseInt(cleanHex[1] + cleanHex[1], 16) / 255;
-    b = parseInt(cleanHex[2] + cleanHex[2], 16) / 255;
-  } else if (cleanHex.length >= 6) {
-    r = parseInt(cleanHex.substring(0, 2), 16) / 255;
-    g = parseInt(cleanHex.substring(2, 4), 16) / 255;
-    b = parseInt(cleanHex.substring(4, 6), 16) / 255;
-  }
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0, s = 0;
-  const l = (max + min) / 2;
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
-    }
-    h /= 6;
-  }
-  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
-}
-
-function hslToHex(h: number, s: number, l: number): string {
-  l /= 100;
-  const a = (s * Math.min(l, 1 - l)) / 100;
-  const f = (n: number) => {
-    const k = (n + h / 30) % 12;
-    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-    return Math.round(255 * color).toString(16).padStart(2, '0');
-  };
-  return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
-}
-
-function getPastelPaletteFromHex(hex: string) {
-  try {
-    const { h, s } = hexToHSL(hex);
-    const sat = Math.max(45, Math.min(85, s));
-    const bg = hslToHex(h, sat, 90);
-    const text = hslToHex(h, Math.min(95, sat + 15), 18);
-    const sub = hslToHex(h, Math.min(90, sat + 10), 32);
-    return { bg, text, sub };
-  } catch {
-    return { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' };
-  }
-}
-
-function stringToHue(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    hash = hash & hash;
-  }
-  return Math.abs(hash) % 360;
-}
-
-function getPastelFromHue(hue: number) {
-  const bg = hslToHex(hue, 75, 90);
-  const text = hslToHex(hue, 85, 18);
-  const sub = hslToHex(hue, 80, 32);
-  return { bg, text, sub };
-}
-
-function getCardPaletteFromItem(payment: {
-  color?: string;
-  type: string;
-  loanType?: string;
-  icon?: string;
-  category?: string;
-  name?: string;
-}) {
-  const iconKey = (payment.icon || payment.category || payment.name || '').toLowerCase().trim();
-
-  // 1. Direct match in comprehensive 3D icon catalog
-  if (ICON_3D_PALETTES[iconKey]) {
-    return ICON_3D_PALETTES[iconKey];
-  }
-
-  for (const [key, palette] of Object.entries(ICON_3D_PALETTES)) {
-    if (iconKey.includes(key)) {
-      return palette;
-    }
-  }
-
-  // 2. If item has explicit hex color code (e.g. sub.color or loan.color)
-  if (payment.color && payment.color.startsWith('#')) {
-    return getPastelPaletteFromHex(payment.color);
-  }
-
-  // 3. Dynamic: deterministic pastel palette from the icon chosen
-  const dynamicHue = stringToHue(iconKey || 'gainbase');
-  return getPastelFromHue(dynamicHue);
-}
-
-function getInterlockingCardPath(
-  w: number,
-  hBody: number = 60,
-  tabW: number = 96,
-  tabH: number = 20,
-  curveR: number = 16,
-  isFirst: boolean = false,
-  isLast: boolean = false,
-  rCorner: number = 22
-): string {
-  if (w <= 0) return '';
-  const startX = Math.max(0, w - tabW - curveR);
-  const midX = w - tabW;
-  const endX = Math.min(w, w - tabW + curveR);
-  const totalH = hBody + tabH;
-
-  let path = '';
-
-  if (isFirst) {
-    path += `M 0 ${tabH + rCorner} A ${rCorner} ${rCorner} 0 0 1 ${rCorner} ${tabH} `;
-  } else {
-    path += `M 0 ${tabH} `;
-  }
-
-  // Top edge flat section
-  path += `L ${startX} ${tabH} `;
-  // Top S-curve going UP to y=0
-  path += `C ${midX} ${tabH}, ${midX} 0, ${endX} 0 `;
-
-  if (isFirst) {
-    path += `L ${w - rCorner} 0 A ${rCorner} ${rCorner} 0 0 1 ${w} ${rCorner} `;
-  } else {
-    path += `L ${w} 0 `;
-  }
-
-  // Right edge down to hBody
-  path += `L ${w} ${hBody} `;
-
-  if (isLast) {
-    path += `A ${rCorner} ${rCorner} 0 0 1 ${w - rCorner} ${totalH} `;
-    path += `L ${rCorner} ${totalH} `;
-    path += `A ${rCorner} ${rCorner} 0 0 1 0 ${totalH - rCorner} `;
-  } else {
-    // Bottom S-curve stepping DOWN to totalH
-    path += `L ${endX} ${hBody} `;
-    path += `C ${midX} ${hBody}, ${midX} ${totalH}, ${startX} ${totalH} `;
-    path += `L 0 ${totalH} `;
-  }
-
-  // Left edge going up to start
-  if (isFirst) {
-    path += `L 0 ${tabH + rCorner} `;
-  } else {
-    path += `L 0 ${tabH} `;
-  }
-
-  path += `Z`;
-  return path.replace(/\s+/g, ' ').trim();
-}
-
 function getRemainingEMIsCount(loan: Loan): number {
   if (!loan.outstandingAmount || loan.outstandingAmount <= 0) return 0;
   if (!loan.emiAmount || loan.emiAmount <= 0) return 0;
   return Math.ceil(loan.outstandingAmount / loan.emiAmount);
-}
-
-function getTicketCardPath(
-  w: number,
-  h: number = 136,
-  notchY: number = 86,
-  notchR: number = 9,
-  rCorner: number = 20
-): string {
-  if (w <= 0 || h <= 0) return '';
-  let path = `M 0 ${rCorner} `;
-  path += `A ${rCorner} ${rCorner} 0 0 1 ${rCorner} 0 `;
-  path += `L ${w - rCorner} 0 `;
-  path += `A ${rCorner} ${rCorner} 0 0 1 ${w} ${rCorner} `;
-  path += `L ${w} ${notchY - notchR} `;
-  path += `A ${notchR} ${notchR} 0 0 0 ${w} ${notchY + notchR} `;
-  path += `L ${w} ${h - rCorner} `;
-  path += `A ${rCorner} ${rCorner} 0 0 1 ${w - rCorner} ${h} `;
-  path += `L ${rCorner} ${h} `;
-  path += `A ${rCorner} ${rCorner} 0 0 1 0 ${h - rCorner} `;
-  path += `L 0 ${notchY + notchR} `;
-  path += `A ${notchR} ${notchR} 0 0 0 0 ${notchY - notchR} `;
-  path += `L 0 ${rCorner} `;
-  path += `Z`;
-  return path.replace(/\s+/g, ' ').trim();
 }
 
 function CircularProgress3DIcon({
@@ -396,13 +144,34 @@ function CircularProgress3DIcon({
 
 type ObligationTab = 'loans' | 'subscriptions';
 
+interface ExpandedItemState {
+  type: 'loan' | 'subscription';
+  id: string;
+  origin: { x: number; y: number; width: number; height: number };
+  palette: FolderPalette;
+  item: Loan | Subscription;
+  isFirst?: boolean;
+  isLast?: boolean;
+}
+
 export default function LoansScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
+  const navigation = useNavigation();
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
   const currColors = Colors[colorScheme];
   const [activeTab, setActiveTab] = useState<ObligationTab>('loans');
   const [cardWidth, setCardWidth] = useState<number>(Dimensions.get('window').width - 32);
+  const [expandedItem, setExpandedItem] = useState<ExpandedItemState | null>(null);
+  const cardRefs = useRef<{ [key: string]: View | null }>({});
+
+  // Hide bottom tab bar dock while folder details is expanded
+  useEffect(() => {
+    navigation.setOptions({
+      tabBarStyle: { display: expandedItem ? 'none' : undefined },
+    });
+  }, [expandedItem, navigation]);
 
   const { loans, getMonthlyEMIBurden, subscriptions, getMonthlySubscriptionBurden } = useMoneyStore();
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
@@ -419,6 +188,20 @@ export default function LoansScreen() {
   const totalOutstanding = useMemo(() => {
     return activeLoans.reduce((acc, l) => acc + l.outstandingAmount, 0);
   }, [activeLoans]);
+
+  const totalPrincipal = useMemo(() => {
+    return activeLoans.reduce((acc, l) => acc + (l.principalAmount || 0), 0);
+  }, [activeLoans]);
+
+  const totalSubscriptionAmount = useMemo(() => {
+    return activeSubscriptions.reduce((acc, s) => acc + (s.amount || 0), 0);
+  }, [activeSubscriptions]);
+
+  const overallDebtProgress = useMemo(() => {
+    if (totalPrincipal <= 0) return 0;
+    const paid = Math.max(0, totalPrincipal - totalOutstanding);
+    return Math.min(1, paid / totalPrincipal);
+  }, [totalPrincipal, totalOutstanding]);
 
   const formatAmount = (val: number) => {
     if (isPrivacyMode) return '••••••';
@@ -444,32 +227,206 @@ export default function LoansScreen() {
     }
   };
 
+  const handleCardPress = (
+    item: Loan | Subscription,
+    type: 'loan' | 'subscription',
+    palette: FolderPalette,
+    isFirst: boolean = false,
+    isLast: boolean = false
+  ) => {
+    handleHaptic();
+    const ref = cardRefs.current[item.id];
+    if (ref && (ref as any).measureInWindow) {
+      (ref as any).measureInWindow((x: number, y: number, width: number, height: number) => {
+        if (width > 0 && height > 0) {
+          setExpandedItem({
+            type,
+            id: item.id,
+            origin: { x, y, width, height },
+            palette,
+            item,
+            isFirst,
+            isLast,
+          });
+        } else {
+          setExpandedItem({
+            type,
+            id: item.id,
+            origin: { x: 16, y: 220, width: cardWidth, height: 118 },
+            palette,
+            item,
+            isFirst,
+            isLast,
+          });
+        }
+      });
+    } else {
+      setExpandedItem({
+        type,
+        id: item.id,
+        origin: { x: 16, y: 220, width: cardWidth, height: 118 },
+        palette,
+        item,
+        isFirst,
+        isLast,
+      });
+    }
+  };
+
+  const renderExpandedCardPreview = (expanded: ExpandedItemState) => {
+    const palette = expanded.palette;
+    const w = expanded.origin.width || cardWidth;
+    const hBody = 92;
+    const tabH = 26;
+    const tabW = 90;
+    const totalH = hBody + tabH;
+    const isFirst = expanded.isFirst ?? false;
+    const isLast = expanded.isLast ?? false;
+    const path = getInterlockingCardPath(w, hBody, tabW, tabH, 18, isFirst, isLast, 24);
+
+    if (expanded.type === 'loan') {
+      const loan = expanded.item as Loan;
+      const paidAmount = Math.max(0, loan.principalAmount - loan.outstandingAmount);
+      const loanProgress = loan.principalAmount > 0 ? Math.min(1, paidAmount / loan.principalAmount) : 0;
+      return (
+        <View style={{ width: w, height: totalH, alignSelf: 'center' }}>
+          <Svg width={w} height={totalH}>
+            <Path
+              d={path}
+              fill={palette.bg}
+              stroke={isDark ? 'transparent' : palette.sub + '55'}
+              strokeWidth={1.2}
+            />
+          </Svg>
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              right: 14,
+              width: tabW - 14,
+              height: hBody,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <CircularProgress3DIcon
+              name={loan.icon || LOAN_3D_ICON_MAP[loan.type] || 'loan'}
+              progress={loanProgress}
+              color={palette.text}
+              size={50}
+              iconSize={30}
+            />
+          </View>
+          <View
+            style={{
+              position: 'absolute',
+              top: tabH,
+              left: 20,
+              height: hBody,
+              justifyContent: 'center',
+              paddingRight: tabW + 12,
+            }}
+          >
+            <ThemedText style={[styles.curvedCardTitle, { color: palette.text }]} numberOfLines={1}>
+              {loan.name}
+            </ThemedText>
+            <ThemedText style={[styles.curvedCardSubtitle, { color: palette.sub }]} numberOfLines={1}>
+              {formatAmount(loan.emiAmount)}/monthly
+            </ThemedText>
+          </View>
+        </View>
+      );
+    } else {
+      const sub = expanded.item as Subscription;
+      const cycleLabel = sub.billingCycle
+        ? sub.billingCycle.charAt(0).toUpperCase() + sub.billingCycle.slice(1)
+        : 'Monthly';
+      return (
+        <View style={{ width: w, height: totalH, alignSelf: 'center' }}>
+          <Svg width={w} height={totalH}>
+            <Path
+              d={path}
+              fill={palette.bg}
+              stroke={isDark ? 'transparent' : palette.sub + '55'}
+              strokeWidth={1.2}
+            />
+          </Svg>
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              right: 14,
+              width: tabW - 14,
+              height: hBody,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Category3DIcon
+              name={sub.category || sub.name}
+              icon={sub.logo}
+              size={32}
+            />
+          </View>
+          <View
+            style={{
+              position: 'absolute',
+              top: tabH,
+              left: 20,
+              height: hBody,
+              justifyContent: 'center',
+              paddingRight: tabW + 12,
+            }}
+          >
+            <ThemedText style={[styles.curvedCardTitle, { color: palette.text }]} numberOfLines={1}>
+              {sub.name}
+            </ThemedText>
+            <ThemedText style={[styles.curvedCardSubtitle, { color: palette.sub }]} numberOfLines={1}>
+              {formatAmount(sub.amount)}/{cycleLabel.toLowerCase()}
+            </ThemedText>
+          </View>
+        </View>
+      );
+    }
+  };
+
   const isLoansView = activeTab === 'loans';
 
-  const renderTicketBurdenCard = () => {
-    const h = 124;
-    const notchY = 76;
+  const renderTicketHeroCard = () => {
+    const h = 132;
+    const notchY = 82;
     const notchR = 9;
-    const path = getTicketCardPath(cardWidth, h, notchY, notchR, 20);
+    const path = getTicketCardPath(cardWidth, h, notchY, notchR, 22);
 
     const isLoans = isLoansView;
+    const palette = isLoans
+      ? { bg: '#FEF08A', text: '#713F12', sub: '#854D0E', border: '#CA8A04' }
+      : { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE', border: '#9333EA' };
+
     const title = isLoans ? 'MONTHLY EMI' : 'MONTHLY SUBSCRIPTIONS';
     const mainAmount = isLoans ? monthlyEMI : monthlySubBurden;
-    const stubLabel = isLoans ? 'Total Outstanding' : 'Active Subscriptions';
-    const stubValue = isLoans ? formatAmount(totalOutstanding) : `${activeSubscriptions.length}`;
-    const stubValueColor = isLoans ? '#FF3B30' : currColors.text;
+    const stubLabel = isLoans ? 'Total Outstanding' : 'Total Amount';
+    const stubValue = isLoans
+      ? formatAmount(totalOutstanding)
+      : formatAmount(totalSubscriptionAmount);
 
     return (
       <View
+        onLayout={(e) => {
+          const w = e.nativeEvent.layout.width;
+          if (w > 0 && Math.abs(w - cardWidth) > 1) {
+            setCardWidth(w);
+          }
+        }}
         style={{
           marginHorizontal: 16,
           marginBottom: 16,
           marginTop: 4,
           height: h,
-          shadowColor: '#000000',
+          shadowColor: isDark ? '#000000' : palette.sub,
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 6,
+          shadowOpacity: isDark ? 0.06 : 0.12,
+          shadowRadius: isDark ? 4 : 8,
           elevation: 2,
         }}
       >
@@ -478,9 +435,9 @@ export default function LoansScreen() {
           <Svg width={cardWidth} height={h}>
             <Path
               d={path}
-              fill={currColors.card}
-              stroke={currColors.border}
-              strokeWidth={1}
+              fill={palette.bg}
+              stroke={isDark ? 'transparent' : palette.border}
+              strokeWidth={1.5}
             />
             {/* Perforated dashed divider line */}
             <Line
@@ -488,8 +445,8 @@ export default function LoansScreen() {
               y1={notchY}
               x2={cardWidth - notchR - 6}
               y2={notchY}
-              stroke={currColors.border}
-              strokeWidth={1}
+              stroke={isDark ? palette.text + '35' : palette.sub + 'B0'}
+              strokeWidth={1.5}
               strokeDasharray="5, 4"
             />
           </Svg>
@@ -500,35 +457,36 @@ export default function LoansScreen() {
           style={{
             height: notchY,
             paddingHorizontal: 20,
-            paddingTop: 14,
-            justifyContent: 'center',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}
         >
-          <ThemedText
-            style={{
-              fontSize: 10,
-              fontWeight: '700',
-              fontFamily: 'Outfit_700Bold',
-              letterSpacing: 1,
-              color: currColors.textSecondary,
-              textTransform: 'uppercase',
-              marginBottom: 4,
-            }}
-            numberOfLines={1}
-          >
-            {title}
-          </ThemedText>
-          <ThemedText
-            style={{
-              fontSize: 24,
-              fontWeight: '400',
-              fontFamily: 'Outfit_400Regular',
-              color: currColors.text,
-            }}
-            numberOfLines={1}
-          >
-            {formatAmount(mainAmount)}
-          </ThemedText>
+          <View style={{ flex: 1 }}>
+            <ThemedText
+              style={{
+                fontSize: 10,
+                fontFamily: 'Outfit_700Bold',
+                letterSpacing: 0.8,
+                color: palette.sub,
+                textTransform: 'uppercase',
+                marginBottom: 2,
+              }}
+              numberOfLines={1}
+            >
+              {title}
+            </ThemedText>
+            <ThemedText
+              style={{
+                fontSize: 24,
+                fontFamily: 'Outfit_400Regular',
+                color: palette.text,
+              }}
+              numberOfLines={1}
+            >
+              {formatAmount(mainAmount)}
+            </ThemedText>
+          </View>
         </View>
 
         {/* Bottom Ticket Stub */}
@@ -545,7 +503,7 @@ export default function LoansScreen() {
             style={{
               fontSize: 14,
               fontFamily: 'Outfit_400Regular',
-              color: currColors.textSecondary,
+              color: palette.sub,
             }}
           >
             {stubLabel}
@@ -555,7 +513,7 @@ export default function LoansScreen() {
               fontSize: 14,
               fontWeight: '400',
               fontFamily: 'Outfit_400Regular',
-              color: stubValueColor,
+              color: palette.text,
             }}
           >
             {stubValue}
@@ -578,15 +536,18 @@ export default function LoansScreen() {
     const paidAmount = Math.max(0, item.principalAmount - item.outstandingAmount);
     const loanProgress = item.principalAmount > 0 ? Math.min(1, paidAmount / item.principalAmount) : 0;
 
-    const hBody = 76;
-    const tabH = 24;
-    const tabW = 88;
+    const hBody = 92;
+    const tabH = 26;
+    const tabW = 90;
     const totalH = hBody + tabH;
     const path = getInterlockingCardPath(cardWidth, hBody, tabW, tabH, 18, isFirst, isLast, 24);
 
     return (
       <TouchableOpacity
         key={item.id}
+        ref={(r) => {
+          cardRefs.current[item.id] = r;
+        }}
         style={{
           height: totalH,
           marginTop: isFirst ? 0 : -tabH,
@@ -597,15 +558,19 @@ export default function LoansScreen() {
           shadowRadius: 3,
           elevation: 1,
         }}
-        activeOpacity={0.88}
+        activeOpacity={0.82}
         onPress={() => {
-          handleHaptic();
-          router.push(`/loan-details/${item.id}`);
+          handleCardPress(item, 'loan', palette, isFirst, isLast);
         }}
       >
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <Svg width={cardWidth} height={totalH}>
-            <Path d={path} fill={palette.bg} />
+            <Path
+              d={path}
+              fill={palette.bg}
+              stroke={isDark ? 'transparent' : palette.sub + '55'}
+              strokeWidth={1.2}
+            />
           </Svg>
         </View>
 
@@ -626,8 +591,8 @@ export default function LoansScreen() {
             name={item.icon || LOAN_3D_ICON_MAP[item.type] || 'loan'}
             progress={loanProgress}
             color={palette.text}
-            size={46}
-            iconSize={28}
+            size={50}
+            iconSize={30}
           />
         </View>
 
@@ -665,15 +630,18 @@ export default function LoansScreen() {
 
     const cycleLabel = item.billingCycle ? item.billingCycle.charAt(0).toUpperCase() + item.billingCycle.slice(1) : 'Monthly';
 
-    const hBody = 76;
-    const tabH = 24;
-    const tabW = 88;
+    const hBody = 92;
+    const tabH = 26;
+    const tabW = 90;
     const totalH = hBody + tabH;
     const path = getInterlockingCardPath(cardWidth, hBody, tabW, tabH, 18, isFirst, isLast, 24);
 
     return (
       <TouchableOpacity
         key={item.id}
+        ref={(r) => {
+          cardRefs.current[item.id] = r;
+        }}
         style={{
           height: totalH,
           marginTop: isFirst ? 0 : -tabH,
@@ -684,15 +652,19 @@ export default function LoansScreen() {
           shadowRadius: 3,
           elevation: 1,
         }}
-        activeOpacity={0.88}
+        activeOpacity={0.82}
         onPress={() => {
-          handleHaptic();
-          router.push(`/subscription-details/${item.id}`);
+          handleCardPress(item, 'subscription', palette, isFirst, isLast);
         }}
       >
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <Svg width={cardWidth} height={totalH}>
-            <Path d={path} fill={palette.bg} />
+            <Path
+              d={path}
+              fill={palette.bg}
+              stroke={isDark ? 'transparent' : palette.sub + '55'}
+              strokeWidth={1.2}
+            />
           </Svg>
         </View>
 
@@ -712,7 +684,7 @@ export default function LoansScreen() {
           <Category3DIcon
             name={item.category || item.name}
             icon={item.logo}
-            size={28}
+            size={32}
           />
         </View>
 
@@ -739,41 +711,65 @@ export default function LoansScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
-          {isLoansView ? 'Loans & EMIs' : 'Subscriptions'}
-        </ThemedText>
-        <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: currColors.cardSecondary }]}
-          onPress={handleAdd}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Plus size={20} color="#00C9A7" />
-        </TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: currColors.background }]}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+              {isLoansView ? 'Loans' : 'Subscriptions'}
+            </ThemedText>
+          <View
+            style={{
+              paddingHorizontal: 8,
+              paddingVertical: 2.5,
+              borderRadius: 12,
+              backgroundColor: isLoansView ? '#FEF08A' : '#E9D5FF',
+              borderWidth: isDark ? 0 : 1,
+              borderColor: isLoansView ? '#CA8A04' : '#9333EA',
+            }}
+          >
+            <ThemedText
+              style={{
+                fontSize: 11,
+                fontFamily: 'Outfit_600SemiBold',
+                color: isLoansView ? '#713F12' : '#581C87',
+              }}
+            >
+              {isLoansView ? activeLoans.length : activeSubscriptions.length}
+            </ThemedText>
+          </View>
+        </View>
       </View>
 
-      {/* Tab Toggle */}
+      {/* Tab Switcher */}
       <View
         style={[
           styles.toggleBar,
           {
-            backgroundColor: isDark ? currColors.cardSecondary : '#E8E8ED',
-            borderColor: currColors.border,
+            backgroundColor: isDark ? currColors.card : '#FFFFFF',
+            borderColor: isDark ? currColors.border : '#E2E8F0',
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: isDark ? 0 : 0.05,
+            shadowRadius: 3,
+            elevation: isDark ? 0 : 1,
           },
         ]}
       >
         <TouchableOpacity
           style={[
             styles.toggleOption,
-            isLoansView && [
-              styles.toggleOptionActive,
-              {
-                backgroundColor: currColors.card,
-                borderColor: isDark ? 'transparent' : currColors.border,
-              },
-            ],
+            isLoansView && {
+              backgroundColor: '#FEF08A',
+              borderWidth: isDark ? 0 : 1.5,
+              borderColor: '#CA8A04',
+              shadowColor: isDark ? '#000000' : '#CA8A04',
+              shadowOffset: { width: 0, height: 1.5 },
+              shadowOpacity: isDark ? 0.08 : 0.22,
+              shadowRadius: 3,
+              elevation: 2,
+            },
           ]}
           onPress={() => {
             handleHaptic();
@@ -785,8 +781,8 @@ export default function LoansScreen() {
             style={[
               styles.toggleText,
               {
-                color: isLoansView ? (isDark ? '#00C9A7' : '#00876E') : currColors.textSecondary,
-                fontFamily: isLoansView ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                color: isLoansView ? '#713F12' : isDark ? currColors.textSecondary : '#64748B',
+                fontFamily: isLoansView ? 'Outfit_700Bold' : 'Outfit_600SemiBold',
               },
             ]}
           >
@@ -796,13 +792,16 @@ export default function LoansScreen() {
         <TouchableOpacity
           style={[
             styles.toggleOption,
-            !isLoansView && [
-              styles.toggleOptionActive,
-              {
-                backgroundColor: currColors.card,
-                borderColor: isDark ? 'transparent' : currColors.border,
-              },
-            ],
+            !isLoansView && {
+              backgroundColor: '#E9D5FF',
+              borderWidth: isDark ? 0 : 1.5,
+              borderColor: '#9333EA',
+              shadowColor: isDark ? '#000000' : '#9333EA',
+              shadowOffset: { width: 0, height: 1.5 },
+              shadowOpacity: isDark ? 0.08 : 0.22,
+              shadowRadius: 3,
+              elevation: 2,
+            },
           ]}
           onPress={() => {
             handleHaptic();
@@ -814,8 +813,8 @@ export default function LoansScreen() {
             style={[
               styles.toggleText,
               {
-                color: !isLoansView ? (isDark ? '#00C9A7' : '#00876E') : currColors.textSecondary,
-                fontFamily: !isLoansView ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                color: !isLoansView ? '#581C87' : isDark ? currColors.textSecondary : '#64748B',
+                fontFamily: !isLoansView ? 'Outfit_700Bold' : 'Outfit_600SemiBold',
               },
             ]}
           >
@@ -825,7 +824,7 @@ export default function LoansScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
-        {renderTicketBurdenCard()}
+        {renderTicketHeroCard()}
 
         {isLoansView ? (
           <>
@@ -851,10 +850,28 @@ export default function LoansScreen() {
             {/* Completed Loans */}
             {completedLoans.length > 0 ? (
               <View style={{ marginTop: 24 }}>
-                <View style={styles.sectionHeader}>
-                  <ThemedText type="semiBold" style={[styles.sectionMainTitle, { color: currColors.text }]}>
-                    Completed Loans ({completedLoans.length})
+                <View style={[styles.sectionHeader, { marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                  <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+                    COMPLETED LOANS
                   </ThemedText>
+                  <View
+                    style={{
+                      paddingHorizontal: 7,
+                      paddingVertical: 1.5,
+                      borderRadius: 10,
+                      backgroundColor: isDark ? currColors.cardSecondary : '#E2E8F0',
+                    }}
+                  >
+                    <ThemedText
+                      style={{
+                        fontSize: 10,
+                        fontFamily: 'Outfit_700Bold',
+                        color: currColors.textSecondary,
+                      }}
+                    >
+                      {completedLoans.length}
+                    </ThemedText>
+                  </View>
                 </View>
                 <View style={styles.cardListContainer}>
                   {completedLoans.map((item, index) => renderLoanCard(item, index, completedLoans.length))}
@@ -886,10 +903,28 @@ export default function LoansScreen() {
             {/* Completed / Cancelled Subscriptions */}
             {completedSubscriptions.length > 0 ? (
               <View style={{ marginTop: 24 }}>
-                <View style={styles.sectionHeader}>
-                  <ThemedText type="semiBold" style={[styles.sectionMainTitle, { color: currColors.text }]}>
-                    Cancelled / Past Subscriptions ({completedSubscriptions.length})
+                <View style={[styles.sectionHeader, { marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                  <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+                    CANCELLED / PAST
                   </ThemedText>
+                  <View
+                    style={{
+                      paddingHorizontal: 7,
+                      paddingVertical: 1.5,
+                      borderRadius: 10,
+                      backgroundColor: isDark ? currColors.cardSecondary : '#E2E8F0',
+                    }}
+                  >
+                    <ThemedText
+                      style={{
+                        fontSize: 10,
+                        fontFamily: 'Outfit_700Bold',
+                        color: currColors.textSecondary,
+                      }}
+                    >
+                      {completedSubscriptions.length}
+                    </ThemedText>
+                  </View>
                 </View>
                 <View style={styles.cardListContainer}>
                   {completedSubscriptions.map((item, index) => renderSubscriptionCard(item, index, completedSubscriptions.length))}
@@ -899,7 +934,54 @@ export default function LoansScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+
+        {/* Floating Add Button above Nav Bar Dock */}
+        {!expandedItem && (
+          <TouchableOpacity
+            style={[
+              styles.floatingAddBtn,
+              {
+                bottom: Math.max(insets.bottom, 12) + 74,
+                backgroundColor: isLoansView ? '#FEF08A' : '#E9D5FF',
+                borderWidth: isDark ? 0 : 1.5,
+                borderColor: isLoansView ? '#CA8A04' : '#9333EA',
+                shadowColor: isDark ? '#000000' : (isLoansView ? '#CA8A04' : '#9333EA'),
+              },
+            ]}
+            onPress={handleAdd}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            activeOpacity={0.82}
+          >
+            <Plus size={24} color={isLoansView ? '#713F12' : '#581C87'} strokeWidth={2.6} />
+          </TouchableOpacity>
+        )}
+      </SafeAreaView>
+
+      {/* ─── Seamless Folder Expanding & Collapsing Container ─── */}
+      {expandedItem && (
+        <ExpandedFolderContainer
+          isOpen={!!expandedItem}
+          origin={expandedItem.origin}
+          palette={expandedItem.palette}
+          cardPreview={renderExpandedCardPreview(expandedItem)}
+          onClose={() => setExpandedItem(null)}
+        >
+          {(triggerClose) =>
+            expandedItem.type === 'loan' ? (
+              <LoanDetailsContent
+                loanId={expandedItem.id}
+                onBack={triggerClose}
+              />
+            ) : (
+              <SubscriptionDetailsContent
+                subscriptionId={expandedItem.id}
+                onBack={triggerClose}
+              />
+            )
+          }
+        </ExpandedFolderContainer>
+      )}
+    </View>
   );
 }
 
@@ -910,7 +992,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -919,40 +1001,39 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_600SemiBold',
     letterSpacing: -0.5,
   },
-  addBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
+  floatingAddBtn: {
+    position: 'absolute',
+    right: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    elevation: 6,
   },
   toggleBar: {
     flexDirection: 'row',
     marginHorizontal: 16,
-    borderRadius: 14,
-    padding: 3,
+    borderRadius: 24,
+    padding: 4,
     marginBottom: 16,
     borderWidth: 1,
   },
   toggleOption: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 11,
-  },
-  toggleOptionActive: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1.5 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-    borderWidth: 0.5,
+    borderRadius: 20,
   },
   toggleText: {
     fontSize: 13,
   },
   scrollContent: {
-    paddingBottom: 110,
+    paddingBottom: 160,
   },
   burdenCard: {
     marginHorizontal: 16,
@@ -1012,9 +1093,9 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   sectionTitle: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontSize: 11,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   emptyCard: {
@@ -1049,13 +1130,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   curvedCardTitle: {
-    fontSize: 16,
+    fontSize: 16.5,
     fontFamily: 'Outfit_700Bold',
     letterSpacing: -0.2,
-    marginBottom: 3,
+    marginBottom: 4,
   },
   curvedCardSubtitle: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontFamily: 'Outfit_500Medium',
   },
   actionCircle: {

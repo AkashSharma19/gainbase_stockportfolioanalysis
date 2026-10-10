@@ -32,7 +32,12 @@ interface TabDefinition {
   isCenterAdd?: boolean;
 }
 
-function CustomFloatingTabBar({ state, navigation }: any) {
+function CustomFloatingTabBar({ state, descriptors, navigation }: any) {
+  const currentRoute = state.routes[state.index];
+  const descriptor = descriptors ? descriptors[currentRoute.key] : null;
+  const isTabBarHidden = descriptor?.options?.tabBarStyle?.display === 'none';
+  if (isTabBarHidden) return null;
+
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'dark';
@@ -123,7 +128,6 @@ function CustomFloatingTabBar({ state, navigation }: any) {
   ];
 
   const currentTabs = isInvestMode ? investTabs : moneyTabs;
-  const currentRoute = state.routes[state.index];
 
   return (
     <View
