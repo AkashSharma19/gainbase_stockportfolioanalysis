@@ -340,28 +340,44 @@ function CircularProgress3DIcon({
 
 
 interface DonutChartProps {
-  warnings: number;
-  tips: number;
-  success: number;
+  critical?: number;
+  warning?: number;
+  moderate?: number;
+  positive?: number;
+  // legacy backward compat
+  warnings?: number;
+  tips?: number;
+  success?: number;
   size: number;
   trackColor: string;
   textColor: string;
+  centerColor?: string;
   isPrivacyMode: boolean;
 }
 
 const MoneyInsightsDonut = ({
+  critical = 0,
+  warning = 0,
+  moderate = 0,
+  positive = 0,
   warnings,
   tips,
   success,
   size,
   trackColor,
   textColor,
+  centerColor,
   isPrivacyMode,
 }: DonutChartProps) => {
   const r = size * 0.38;
   const center = size / 2;
   const circum = 2 * Math.PI * r;
-  const total = warnings + tips + success;
+
+  const cCrit = critical;
+  const cWarn = warning || (warnings ?? 0);
+  const cMod = moderate || (tips ?? 0);
+  const cPos = positive || (success ?? 0);
+  const total = cCrit + cWarn + cMod + cPos;
 
   if (total === 0) {
     return (
@@ -372,14 +388,14 @@ const MoneyInsightsDonut = ({
             cy={center}
             r={r}
             stroke={trackColor}
-            strokeWidth={size * 0.08}
+            strokeWidth={size * 0.085}
             strokeDasharray="4 4"
             fill="none"
           />
         </Svg>
         <View style={styles.chartCenterBox}>
           <Sparkles size={18} color="#00C9A7" />
-          <ThemedText style={[styles.chartCenterSub, { color: textColor, marginTop: 2 }]}>
+          <ThemedText style={[styles.chartCenterSub, { color: textColor, marginTop: 2, letterSpacing: 0.5 }]}>
             AI AUDIT
           </ThemedText>
         </View>
@@ -387,69 +403,113 @@ const MoneyInsightsDonut = ({
     );
   }
 
-  const warnStroke = (warnings / total) * circum;
-  const tipsStroke = (tips / total) * circum;
-  const successStroke = (success / total) * circum;
+  const activeTiersCount = (cCrit > 0 ? 1 : 0) + (cWarn > 0 ? 1 : 0) + (cMod > 0 ? 1 : 0) + (cPos > 0 ? 1 : 0);
+  const gap = activeTiersCount > 1 ? 4 : 0;
+
+  const critStroke = cCrit > 0 ? Math.max(1, (cCrit / total) * circum - gap) : 0;
+  const warnStroke = cWarn > 0 ? Math.max(1, (cWarn / total) * circum - gap) : 0;
+  const modStroke = cMod > 0 ? Math.max(1, (cMod / total) * circum - gap) : 0;
+  const posStroke = cPos > 0 ? Math.max(1, (cPos / total) * circum - gap) : 0;
+
+  const critArcLen = (cCrit / total) * circum;
+  const warnArcLen = (cWarn / total) * circum;
+  const modArcLen = (cMod / total) * circum;
+
+  const centerNumColor =
+    cCrit > 0 ? '#EF4444' : cWarn > 0 ? '#F97316' : cMod > 0 ? '#EAB308' : '#22C55E';
 
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center', width: size, height: size }}>
       <Svg width={size} height={size}>
+        {/* Track background */}
         <Circle
           cx={center}
           cy={center}
           r={r}
           stroke={trackColor}
-          strokeWidth={size * 0.08}
+          strokeWidth={size * 0.085}
           fill="none"
         />
-        {warnings > 0 && (
+
+        {/* Tier 1: Critical (🔴 Red) */}
+        {cCrit > 0 && (
           <Circle
             cx={center}
             cy={center}
             r={r}
-            stroke="#FF3B30"
-            strokeWidth={size * 0.08}
+            stroke="#EF4444"
+            strokeWidth={size * 0.085}
+            strokeDasharray={`${critStroke} ${circum}`}
+            strokeLinecap={activeTiersCount === 1 ? 'round' : 'butt'}
+            fill="none"
+            transform={`rotate(-90 ${center} ${center})`}
+          />
+        )}
+
+        {/* Tier 2: Warning (🟠 Orange) */}
+        {cWarn > 0 && (
+          <Circle
+            cx={center}
+            cy={center}
+            r={r}
+            stroke="#F97316"
+            strokeWidth={size * 0.085}
             strokeDasharray={`${warnStroke} ${circum}`}
-            strokeLinecap="round"
+            strokeDashoffset={-critArcLen}
+            strokeLinecap={activeTiersCount === 1 ? 'round' : 'butt'}
             fill="none"
             transform={`rotate(-90 ${center} ${center})`}
           />
         )}
-        {tips > 0 && (
+
+        {/* Tier 3: Opportunity / Moderate (🟡 Yellow) */}
+        {cMod > 0 && (
           <Circle
             cx={center}
             cy={center}
             r={r}
-            stroke="#00C9A7"
-            strokeWidth={size * 0.08}
-            strokeDasharray={`${tipsStroke} ${circum}`}
-            strokeDashoffset={-warnStroke}
-            strokeLinecap="round"
+            stroke="#EAB308"
+            strokeWidth={size * 0.085}
+            strokeDasharray={`${modStroke} ${circum}`}
+            strokeDashoffset={-(critArcLen + warnArcLen)}
+            strokeLinecap={activeTiersCount === 1 ? 'round' : 'butt'}
             fill="none"
             transform={`rotate(-90 ${center} ${center})`}
           />
         )}
-        {success > 0 && (
+
+        {/* Tier 4: On Track / Positive (🟢 Green) */}
+        {cPos > 0 && (
           <Circle
             cx={center}
             cy={center}
             r={r}
-            stroke="#34C759"
-            strokeWidth={size * 0.08}
-            strokeDasharray={`${successStroke} ${circum}`}
-            strokeDashoffset={-(warnStroke + tipsStroke)}
-            strokeLinecap="round"
+            stroke="#22C55E"
+            strokeWidth={size * 0.085}
+            strokeDasharray={`${posStroke} ${circum}`}
+            strokeDashoffset={-(critArcLen + warnArcLen + modArcLen)}
+            strokeLinecap={activeTiersCount === 1 ? 'round' : 'butt'}
             fill="none"
             transform={`rotate(-90 ${center} ${center})`}
           />
         )}
       </Svg>
       <View style={styles.chartCenterBox}>
-        <ThemedText style={[styles.chartCenterNum, { color: '#00C9A7' }]}>
-          {isPrivacyMode ? '**' : total}
+        <ThemedText
+          style={[
+            styles.chartCenterNum,
+            { color: centerColor || centerNumColor, fontFamily: 'Outfit_700Bold' },
+          ]}
+        >
+          {isPrivacyMode ? '••' : total}
         </ThemedText>
-        <ThemedText style={[styles.chartCenterSub, { color: textColor }]}>
-          SIGNALS
+        <ThemedText
+          style={[
+            styles.chartCenterSub,
+            { color: textColor, fontFamily: 'Outfit_600SemiBold', fontSize: 9, letterSpacing: 0.6 },
+          ]}
+        >
+          FINDINGS
         </ThemedText>
       </View>
     </View>
@@ -541,7 +601,7 @@ export function MoneyDashboard() {
   const togglePrivacyMode = usePortfolioStore((state) => state.togglePrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
   const goals = useGoalStore((state) => state.goals);
-  const { count: insightsCount, countByType } = useMoneyInsights();
+  const { count: insightsCount, criticalityCounts, countByType } = useMoneyInsights();
 
   // Subscribe to portfolio transactions and tickers so net worth updates live
   const portfolioTransactions = usePortfolioStore((state) => state.transactions);
@@ -1029,8 +1089,10 @@ export function MoneyDashboard() {
             style={[
               styles.compactDashboardCard,
               {
-                backgroundColor: currColors.card,
-                borderColor: currColors.border,
+                backgroundColor: '#FEF08A',
+                borderWidth: isDark ? 0 : 1,
+                borderColor: isDark ? 'transparent' : '#CA8A04',
+                borderRadius: 22,
               },
             ]}
             activeOpacity={0.75}
@@ -1042,24 +1104,36 @@ export function MoneyDashboard() {
           >
             <View style={styles.compactCardHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Sparkles size={12} color={currColors.textSecondary} />
-                <ThemedText style={[styles.compactCardSectionLabel, { color: currColors.textSecondary }]}>
+                <Sparkles size={12} color="#713F12" />
+                <ThemedText
+                  style={[
+                    styles.compactCardSectionLabel,
+                    { color: '#854D0E' },
+                  ]}
+                >
                   AI INSIGHTS
                 </ThemedText>
               </View>
-              <View style={[styles.iconCircleSmall, { backgroundColor: currColors.cardSecondary }]}>
-                <ArrowRight size={12} color={currColors.tint} />
+              <View
+                style={[
+                  styles.iconCircleSmall,
+                  { backgroundColor: 'rgba(113, 63, 18, 0.12)' },
+                ]}
+              >
+                <ArrowRight size={12} color="#713F12" />
               </View>
             </View>
 
             <View style={[styles.compactMain, { flex: 1, justifyContent: 'center' }]}>
               <MoneyInsightsDonut
-                warnings={countByType.warning}
-                tips={countByType.tip}
-                success={countByType.success}
+                critical={criticalityCounts.critical}
+                warning={criticalityCounts.warning}
+                moderate={criticalityCounts.moderate}
+                positive={criticalityCounts.positive}
                 size={insightsCardWidth * 0.85}
-                trackColor={isDark ? '#2C2C2E' : '#E5E5EA'}
-                textColor={currColors.textSecondary}
+                trackColor="rgba(113, 63, 18, 0.12)"
+                textColor="#854D0E"
+                centerColor="#713F12"
                 isPrivacyMode={isPrivacyMode}
               />
               <View
@@ -1067,22 +1141,34 @@ export function MoneyDashboard() {
                   styles.compactFooterBadge,
                   {
                     backgroundColor:
-                      insightsCount > 0
-                        ? 'rgba(0, 201, 167, 0.12)'
-                        : currColors.cardSecondary,
+                      criticalityCounts.critical > 0
+                        ? 'rgba(239, 68, 68, 0.16)'
+                        : 'rgba(113, 63, 18, 0.12)',
                   },
                 ]}
               >
                 <ThemedText
                   style={[
                     styles.compactFooterBadgeText,
-                    { color: insightsCount > 0 ? '#00C9A7' : currColors.textSecondary },
+                    {
+                      color:
+                        criticalityCounts.critical > 0
+                          ? '#B91C1C'
+                          : '#713F12',
+                      fontFamily: 'Outfit_600SemiBold',
+                    },
                   ]}
                   numberOfLines={1}
                 >
-                  {insightsCount > 0
-                    ? `${countByType.warning > 0 ? `${countByType.warning}W • ` : ''}${countByType.tip + countByType.success} TIPS`
-                    : 'RUN AI AUDIT'}
+                  {criticalityCounts.critical > 0
+                    ? `${criticalityCounts.critical} IMMEDIATE RISK${criticalityCounts.critical > 1 ? 'S' : ''}`
+                    : criticalityCounts.warning > 0
+                      ? `${criticalityCounts.warning} WARNING${criticalityCounts.warning > 1 ? 'S' : ''}`
+                      : criticalityCounts.moderate > 0
+                        ? `${criticalityCounts.moderate} OPPORTUNIT${criticalityCounts.moderate > 1 ? 'IES' : 'Y'}`
+                        : criticalityCounts.positive > 0
+                          ? 'ALL ON TRACK'
+                          : 'RUN AI AUDIT'}
                 </ThemedText>
               </View>
             </View>

@@ -31,6 +31,7 @@ interface Props {
   cardPreview: React.ReactNode;
   children: (onClose: () => void) => React.ReactNode;
   onClose: () => void;
+  disableBackGesture?: boolean;
 }
 
 export function ExpandedFolderContainer({
@@ -40,6 +41,7 @@ export function ExpandedFolderContainer({
   cardPreview,
   children,
   onClose,
+  disableBackGesture = false,
 }: Props) {
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
@@ -55,8 +57,8 @@ export function ExpandedFolderContainer({
     progress.value = withTiming(
       0,
       {
-        duration: 360,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        duration: 240,
+        easing: Easing.in(Easing.cubic),
       },
       (finished) => {
         if (finished) {
@@ -80,8 +82,8 @@ export function ExpandedFolderContainer({
       progress.value = withTiming(
         1,
         {
-          duration: 420,
-          easing: Easing.bezier(0.16, 1, 0.3, 1),
+          duration: 280,
+          easing: Easing.out(Easing.cubic),
         },
         (finished) => {
           if (finished) {
@@ -98,13 +100,21 @@ export function ExpandedFolderContainer({
   // Handle hardware back on Android
   useEffect(() => {
     if (Platform.OS === 'android' && isRendered) {
+      if (disableBackGesture) {
+        // Block Android back gesture while expanded details is open
+        const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+          return true; // consumed, do not go back
+        });
+        return () => sub.remove();
+      }
+
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
         triggerClose();
         return true;
       });
       return () => sub.remove();
     }
-  }, [isRendered]);
+  }, [isRendered, disableBackGesture]);
 
   const targetBg = isDark ? '#000000' : '#F2F2F7';
 

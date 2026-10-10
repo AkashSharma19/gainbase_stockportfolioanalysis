@@ -446,6 +446,7 @@ interface ScheduleRow {
         ]}
         showsVerticalScrollIndicator={false}
         bounces={false}
+        overScrollMode="never"
       >
         {/* ─── 1. Folder Dossier Hero Card (Matching Folder Details UI) ─── */}
         <FolderDetailsCard

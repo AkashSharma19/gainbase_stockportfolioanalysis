@@ -222,6 +222,8 @@ export default function AccountDetailsScreen() {
           { paddingBottom: Math.max(insets.bottom, 24) + 32 },
         ]}
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
       >
         {/* Balance Hero Card */}
         <View style={[styles.balanceCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>

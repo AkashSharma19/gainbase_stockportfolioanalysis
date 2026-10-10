@@ -371,6 +371,8 @@ export default function StockDetailsScreen() {
           { paddingBottom: Math.max(insets.bottom, 24) + 40 },
         ]}
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
       >
         {/* Hero Chart (7 Day Trend) */}
 

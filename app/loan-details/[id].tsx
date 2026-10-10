@@ -552,6 +552,8 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
           { paddingBottom: Math.max(insets.bottom, 24) + 32 },
         ]}
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
       >
         {/* ─── 1. Folder Dossier Hero Card (Matching Folder Details UI) ─── */}
         <FolderDetailsCard

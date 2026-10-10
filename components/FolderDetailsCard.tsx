@@ -1,11 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, LayoutChangeEvent, StyleProp, ViewStyle } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  interpolate,
-} from 'react-native-reanimated';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { FolderPalette, getFolderDetailsCardPath } from '@/constants/folderTheme';
 import { ThemedText } from '@/components/ThemedText';
@@ -152,19 +146,19 @@ export function FolderDetailsCard({
         {tabRightContent}
       </View>
 
-      {/* ─── Top-Left Header Content (Title & Subtitle matching Outer Card) ─── */}
+      {/* ─── Top-Left Header Content (In normal flow with right padding for tab lobe) ─── */}
       <View
         style={{
-          position: 'absolute',
-          top: tabHeight + 8,
-          left: 20,
-          right: tabWidth + 14,
+          paddingTop: tabHeight + 8,
+          paddingLeft: 20,
+          paddingRight: tabWidth + 14,
+          paddingBottom: 8,
           zIndex: 10,
         }}
       >
         <ThemedText
           style={[styles.headerTitle, { color: palette.text }]}
-          numberOfLines={1}
+          numberOfLines={2}
         >
           {headerTitle}
         </ThemedText>
@@ -173,10 +167,9 @@ export function FolderDetailsCard({
         ) : null}
       </View>
 
-      {/* ─── Main Folder Dossier Body Content (Reveals below header) ─── */}
+      {/* ─── Main Folder Dossier Body Content (Reveals below header without overlap) ─── */}
       <View
         style={{
-          paddingTop: tabHeight + 68,
           paddingHorizontal: 18,
           paddingBottom: 20,
         }}

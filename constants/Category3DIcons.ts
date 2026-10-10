@@ -359,7 +359,10 @@ export const CATEGORY_3D_ICONS_LIST: Category3DItem[] = [
     name: 'Security Shield',
     group: 'Tech & Work',
     path: 'Shield/3D/shield_3d.png',
-    keywords: ['shield', 'security', 'vpn', 'antivirus', 'nordvpn', 'expressvpn', 'surfshark', 'protection', 'safe', 'privacy', 'cyber']
+    keywords: [
+      'shield', 'security', 'vpn', 'antivirus', 'protection', 'safe', 'privacy',
+      'emergency', 'emergency fund', 'fd', 'fixed deposit', 'runway', 'buffer', 'cushion'
+    ]
   },
   {
     id: 'bell',
@@ -521,7 +524,14 @@ export const CATEGORY_3D_ICONS_LIST: Category3DItem[] = [
     name: 'Credit Card',
     group: 'Finance & Money',
     path: 'Credit%20card/3D/credit_card_3d.png',
-    keywords: ['credit card', 'debit card', 'card bill', 'visa', 'mastercard', 'emi', 'cred', 'amex', 'card']
+    keywords: ['credit card', 'debit card', 'card bill', 'visa', 'mastercard', 'cred', 'amex', 'card', 'card balance']
+  },
+  {
+    id: 'loan',
+    name: 'Loan & EMI',
+    group: 'Finance & Money',
+    path: 'Money%20bag/3D/money_bag_3d.png',
+    keywords: ['loan', 'loans', 'emi', 'debt', 'mortgage', 'prepay', 'prepayment', 'lender', 'borrow', 'principal', 'home loan', 'car loan', 'personal loan', 'consumer goods loan', 'emi burden']
   },
   {
     id: 'receipt',
@@ -584,10 +594,10 @@ export const CATEGORY_3D_ICONS_LIST: Category3DItem[] = [
   },
   {
     id: 'lock',
-    name: 'Fixed Deposit',
+    name: 'Fixed Deposit / Vault',
     group: 'Finance & Goals',
     path: 'Locked/3D/locked_3d.png',
-    keywords: ['lock', 'locked', 'fd', 'fixed deposit', 'security', 'safe', 'vault', 'bond']
+    keywords: ['lock', 'locked', 'security', 'safe', 'vault', 'bond']
   },
 
   // 8. Appliances
@@ -619,7 +629,7 @@ export const CATEGORY_3D_ICONS_LIST: Category3DItem[] = [
     name: 'Accounts Receivable',
     group: 'Peer Finance',
     path: 'Handshake/3D/handshake_3d.png',
-    keywords: ['receivable', 'receive', 'owed', 'lent', 'loan given', 'iou', 'collect', 'peer', 'friend', 'borrowed by', 'due from']
+    keywords: ['receivable', 'receive', 'owed', 'lent', 'loan given', 'iou', 'collect', 'peer', 'friend', 'borrowed by', 'due from', 'recover', 'personal payment', 'personal payments', 'repay']
   },
 ];
 
@@ -690,7 +700,7 @@ export function findBest3DIconForText(query: string): string {
   if (suggestions && suggestions.length > 0) {
     return suggestions[0].id;
   }
-  return 'food';
+  return 'wallet';
 }
 
 export const LOAN_3D_ICON_MAP: Record<string, string> = {

@@ -60,6 +60,8 @@ export interface AiMoneyInsight {
   metric?: string;
   icon?: string;
   color?: string;
+  potentialSavings?: string;
+  category?: string;
 }
 
 interface AiState {

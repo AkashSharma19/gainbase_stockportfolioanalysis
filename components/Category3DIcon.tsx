@@ -21,9 +21,11 @@ const KEYWORD_TO_ID: Record<string, string> = {
   'rent & bills': 'receipt',
   'rent and bills': 'receipt',
   'electricity bill': 'electric',
-  'emi payments': 'credit_card',
-  'emi payment': 'credit_card',
-  'emi': 'credit_card',
+  'emi payments': 'loan',
+  'emi payment': 'loan',
+  'emi': 'loan',
+  'loans': 'loan',
+  'loan': 'loan',
 
   // Travel & Holiday
   holiday: 'holiday', vacation: 'holiday', beach: 'holiday',
@@ -74,7 +76,7 @@ const KEYWORD_TO_ID: Record<string, string> = {
   it: 'laptop', technology: 'laptop', tech: 'laptop', software: 'laptop',
   refineries: 'fuel', refinery: 'fuel', oil: 'fuel', petroleum: 'fuel', petrochemicals: 'gas',
   'mutual fund': 'investments', mutual_fund: 'investments', trading: 'investments',
-  fmcg: 'grocery', consumer: 'grocery', goods: 'package',
+  fmcg: 'grocery', 'consumer goods': 'shopping', consumer: 'shopping', goods: 'package',
   automobile: 'car', vehicles: 'car', motors: 'car',
   gold: 'coin', metal: 'hammer', mining: 'wrench',
   communications: 'phone', telecom: 'phone', telecommunication: 'phone',
@@ -98,16 +100,16 @@ const KEYWORD_TO_ID: Record<string, string> = {
   target: 'target', bullseye: 'target', goal: 'target',
   rocket: 'rocket', star: 'star',
   umbrella: 'umbrella', insurance: 'umbrella',
-  lock: 'lock', fd: 'lock',
+  lock: 'lock', fd: 'shield', 'fixed deposit': 'shield', emergency: 'shield', 'emergency fund': 'shield',
   // Special
   users: 'users', people: 'users', person: 'users',
-  loan: 'loan', handcoins: 'loan',
+  handcoins: 'loan',
   // Appliances
   ac: 'ac', 'air conditioner': 'ac', aircon: 'ac', cooling: 'ac', snowflake: 'ac',
   refrigerator: 'refrigerator', fridge: 'refrigerator', freezer: 'refrigerator',
   // Peer finance
   payable: 'payable', owe: 'payable', borrowed: 'payable',
-  receivable: 'receivable', lent: 'receivable', iou: 'receivable',
+  receivable: 'receivable', lent: 'receivable', iou: 'receivable', 'personal payment': 'receivable', 'personal payments': 'receivable', recover: 'receivable',
 };
 
 function resolveSingleKey(str: string): string | null {
