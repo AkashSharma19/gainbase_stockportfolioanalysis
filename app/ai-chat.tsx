@@ -312,7 +312,7 @@ export default function GeminiChatScreen() {
 - Current Value: ${summary.totalValue.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}
 - Unrealized Gain/Loss: ${summary.unrealizedReturn.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })} (${summary.profitPercentage.toFixed(2)}%)
 - Day Gain/Loss: ${summary.dayChange.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })} (${summary.dayChangePercentage.toFixed(2)}%)
-- XIRR: ${summary.xirr ? (summary.xirr * 100).toFixed(2) + '%' : 'N/A'}`;
+- XIRR: ${typeof summary.xirr === 'number' && !isNaN(summary.xirr) ? summary.xirr.toFixed(2) + '%' : 'N/A'}`;
 
     // Watchlist symbols
     const watchlistText = watchlist.length > 0 ? watchlist.join(', ') : 'None';
@@ -876,7 +876,9 @@ Return JSON:
             <View style={styles.pastelMetricCol}>
               <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: palette.sub, letterSpacing: 0.5 }}>XIRR</ThemedText>
               <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: palette.text, marginTop: 2 }}>
-                {summary.xirr ? `${(summary.xirr * 100).toFixed(1)}%` : 'N/A'}
+                {typeof summary.xirr === 'number' && !isNaN(summary.xirr)
+                  ? `${summary.xirr.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%`
+                  : 'N/A'}
               </ThemedText>
             </View>
           </View>
