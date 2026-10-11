@@ -453,8 +453,8 @@ interface ScheduleRow {
           palette={palette}
           headerTitle={subscription.name}
           headerSubtitle={
-            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: palette.sub }}>
-              {formatAmount(subscription.amount)}{cycleSuffix}
+            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: palette.sub }} numberOfLines={1}>
+              {formatAmount(subscription.amount)}{cycleSuffix}{linkedAccount?.name ? ` · ${linkedAccount.name}` : ''}
             </ThemedText>
           }
           tabRightContent={

@@ -687,6 +687,13 @@ export function MoneyDashboard() {
     return list.sort((a, b) => a.date.getTime() - b.date.getTime());
   }, [loans, subscriptions, emiPayments]);
 
+  // Check if user has any active loan or subscription
+  const hasActiveBills = useMemo(() => {
+    const hasActiveLoan = loans.some((l) => l.isActive && l.emiAmount > 0);
+    const hasActiveSub = subscriptions.some((s) => s.isActive && s.amount > 0);
+    return hasActiveLoan || hasActiveSub;
+  }, [loans, subscriptions]);
+
   // Monthly income/expense computations
   const monthlyStats = useMemo(() => {
     const now = new Date();
@@ -1235,189 +1242,191 @@ export function MoneyDashboard() {
         <FinancialGoalsCard />
 
         {/* ─── Upcoming Payments / Bills (Pastel Horizontal Carousel) ─── */}
-        <View style={styles.upcomingSectionWrapper}>
-          <View style={styles.upcomingHeaderRow}>
-            <ThemedText
-              style={[
-                styles.innerSectionTitle,
-                { color: currColors.textSecondary },
-              ]}
-            >
-              UPCOMING BILLS
-            </ThemedText>
-            <TouchableOpacity
-              onPress={() => {
-                handleHaptic();
-                router.push('/(tabs)/money-loans');
-              }}
-              style={styles.viewMoreButton}
-              activeOpacity={0.7}
-            >
-              <View
+        {hasActiveBills ? (
+          <View style={styles.upcomingSectionWrapper}>
+            <View style={styles.upcomingHeaderRow}>
+              <ThemedText
                 style={[
-                  styles.iconCircle,
-                  { backgroundColor: currColors.cardSecondary },
+                  styles.innerSectionTitle,
+                  { color: currColors.textSecondary },
                 ]}
               >
-                <ArrowRight size={14} color={currColors.tint} />
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {upcomingPayments.length === 0 ? (
-            <View
-              style={[
-                styles.emptyUpcomingCard,
-                {
-                  backgroundColor: currColors.card,
-                  borderColor: currColors.border,
-                },
-              ]}
-            >
-              <ThemedText
-                style={{
-                  color: currColors.textSecondary,
-                  fontSize: 13,
-                  fontFamily: 'Outfit_400Regular',
-                  marginBottom: 10,
-                }}
-              >
-                No payments due in the next 14 days.
+                UPCOMING BILLS
               </ThemedText>
               <TouchableOpacity
                 onPress={() => {
                   handleHaptic();
                   router.push('/(tabs)/money-loans');
                 }}
-                style={{
-                  paddingVertical: 6,
-                  paddingHorizontal: 14,
-                  borderRadius: 16,
-                  backgroundColor: currColors.cardSecondary,
-                }}
+                style={styles.viewMoreButton}
                 activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.iconCircle,
+                    { backgroundColor: currColors.cardSecondary },
+                  ]}
+                >
+                  <ArrowRight size={14} color={currColors.tint} />
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {upcomingPayments.length === 0 ? (
+              <View
+                style={[
+                  styles.emptyUpcomingCard,
+                  {
+                    backgroundColor: currColors.card,
+                    borderColor: currColors.border,
+                  },
+                ]}
               >
                 <ThemedText
                   style={{
-                    fontSize: 12,
-                    color: '#00C9A7',
-                    fontFamily: 'Outfit_600SemiBold',
+                    color: currColors.textSecondary,
+                    fontSize: 13,
+                    fontFamily: 'Outfit_400Regular',
+                    marginBottom: 10,
                   }}
                 >
-                  + Add Loan or Subscription
+                  No payments due in the next 14 days.
                 </ThemedText>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.upcomingScrollContent}
-            >
-              {upcomingPayments.map((payment) => {
-                const iconName =
-                  payment.type === 'emi'
-                    ? payment.icon ||
-                      LOAN_3D_ICON_MAP[payment.loanType || ''] ||
-                      'loan'
-                    : payment.category || payment.name;
-                const palette = getCardPaletteFromItem({
-                  ...payment,
-                  icon: iconName,
-                });
-                const d1 = new Date(payment.date);
-                d1.setHours(0, 0, 0, 0);
-                const d2 = new Date();
-                d2.setHours(0, 0, 0, 0);
-                const diffDays = Math.round(
-                  (d1.getTime() - d2.getTime()) / (24 * 60 * 60 * 1000)
-                );
-
-                let dueLabel = `${diffDays} days left`;
-                if (diffDays === 0) {
-                  dueLabel = 'Due today';
-                } else if (diffDays === 1) {
-                  dueLabel = 'Due tomorrow';
-                } else if (diffDays < 0) {
-                  dueLabel = `${Math.abs(diffDays)}d overdue`;
-                }
-
-                return (
-                  <TouchableOpacity
-                    key={payment.id}
-                    style={[
-                      styles.pastelBillCard,
-                      { backgroundColor: palette.bg },
-                    ]}
-                    activeOpacity={0.82}
-                    onPress={() => {
-                      handleHaptic();
-                      if (payment.type === 'emi') {
-                        router.push(`/loan-details/${payment.targetId}`);
-                      } else {
-                        router.push(
-                          `/subscription-details/${payment.targetId}`
-                        );
-                      }
+                <TouchableOpacity
+                  onPress={() => {
+                    handleHaptic();
+                    router.push('/(tabs)/money-loans');
+                  }}
+                  style={{
+                    paddingVertical: 6,
+                    paddingHorizontal: 14,
+                    borderRadius: 16,
+                    backgroundColor: currColors.cardSecondary,
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText
+                    style={{
+                      fontSize: 12,
+                      color: '#00C9A7',
+                      fontFamily: 'Outfit_600SemiBold',
                     }}
                   >
-                    {/* Top Row: Icon (with Circular Progress for EMIs) + Amount & Due */}
-                    <View style={styles.pastelCardTop}>
-                      {payment.type === 'emi' ? (
-                        <CircularProgress3DIcon
-                          name={iconName}
-                          icon={payment.icon}
-                          progress={payment.progress ?? 0}
-                          color={palette.text}
-                          size={36}
-                          iconSize={22}
-                        />
-                      ) : (
-                        <Category3DIcon
-                          name={iconName}
-                          icon={payment.logo}
-                          size={30}
-                        />
-                      )}
-                      <View style={styles.pastelCardAmountCol}>
-                        <ThemedText
-                          style={[
-                            styles.pastelCardAmount,
-                            { color: palette.text },
-                          ]}
-                        >
-                          {isPrivacyMode
-                            ? '••••••'
-                            : formatAmount(payment.amount)}
-                        </ThemedText>
-                        <ThemedText
-                          style={[
-                            styles.pastelCardDueLabel,
-                            { color: palette.sub },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {dueLabel}
-                        </ThemedText>
-                      </View>
-                    </View>
+                    View All Bills
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.upcomingScrollContent}
+              >
+                {upcomingPayments.map((payment) => {
+                  const iconName =
+                    payment.type === 'emi'
+                      ? payment.icon ||
+                        LOAN_3D_ICON_MAP[payment.loanType || ''] ||
+                        'loan'
+                      : payment.category || payment.name;
+                  const palette = getCardPaletteFromItem({
+                    ...payment,
+                    icon: iconName,
+                  });
+                  const d1 = new Date(payment.date);
+                  d1.setHours(0, 0, 0, 0);
+                  const d2 = new Date();
+                  d2.setHours(0, 0, 0, 0);
+                  const diffDays = Math.round(
+                    (d1.getTime() - d2.getTime()) / (24 * 60 * 60 * 1000)
+                  );
 
-                    {/* Bottom: Service / Bill Name */}
-                    <ThemedText
+                  let dueLabel = `${diffDays} days left`;
+                  if (diffDays === 0) {
+                    dueLabel = 'Due today';
+                  } else if (diffDays === 1) {
+                    dueLabel = 'Due tomorrow';
+                  } else if (diffDays < 0) {
+                    dueLabel = `${Math.abs(diffDays)}d overdue`;
+                  }
+
+                  return (
+                    <TouchableOpacity
+                      key={payment.id}
                       style={[
-                        styles.pastelCardName,
-                        { color: palette.text },
+                        styles.pastelBillCard,
+                        { backgroundColor: palette.bg },
                       ]}
-                      numberOfLines={1}
+                      activeOpacity={0.82}
+                      onPress={() => {
+                        handleHaptic();
+                        if (payment.type === 'emi') {
+                          router.push(`/loan-details/${payment.targetId}`);
+                        } else {
+                          router.push(
+                            `/subscription-details/${payment.targetId}`
+                          );
+                        }
+                      }}
                     >
-                      {payment.name}
-                    </ThemedText>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          )}
-        </View>
+                      {/* Top Row: Icon (with Circular Progress for EMIs) + Amount & Due */}
+                      <View style={styles.pastelCardTop}>
+                        {payment.type === 'emi' ? (
+                          <CircularProgress3DIcon
+                            name={iconName}
+                            icon={payment.icon}
+                            progress={payment.progress ?? 0}
+                            color={palette.text}
+                            size={36}
+                            iconSize={22}
+                          />
+                        ) : (
+                          <Category3DIcon
+                            name={iconName}
+                            icon={payment.logo}
+                            size={30}
+                          />
+                        )}
+                        <View style={styles.pastelCardAmountCol}>
+                          <ThemedText
+                            style={[
+                              styles.pastelCardAmount,
+                              { color: palette.text },
+                            ]}
+                          >
+                            {isPrivacyMode
+                              ? '••••••'
+                              : formatAmount(payment.amount)}
+                          </ThemedText>
+                          <ThemedText
+                            style={[
+                              styles.pastelCardDueLabel,
+                              { color: palette.sub },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {dueLabel}
+                          </ThemedText>
+                        </View>
+                      </View>
+
+                      {/* Bottom: Service / Bill Name */}
+                      <ThemedText
+                        style={[
+                          styles.pastelCardName,
+                          { color: palette.text },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {payment.name}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        ) : null}
 
         {/* ─── Recent Transactions Card ─── */}
         <View

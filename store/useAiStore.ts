@@ -9,7 +9,10 @@ export interface ChatAction {
     | 'add_transaction'
     | 'create_account'
     | 'pay_emi'
-    | 'pay_subscription';
+    | 'pay_subscription'
+    | 'show_investments'
+    | 'show_loans'
+    | 'show_subscriptions';
   accountName: string;
   accountType: 'receivable' | 'payable' | 'wallet' | 'savings' | 'credit_card' | 'investment';
   amount: number;
@@ -70,6 +73,8 @@ interface AiState {
   messages: ChatMessage[];
   aiStockInsights: AiInsight[];
   aiMoneyInsights: AiMoneyInsight[];
+  lastAiInsightsRunTimestamp: number;
+  isAiGeneratingBackground: boolean;
   setGeminiApiKey: (key: string) => void;
   setSelectedModel: (model: string) => void;
   addMessage: (role: 'user' | 'model', content: string, action?: ChatAction) => void;
@@ -79,6 +84,8 @@ interface AiState {
   clearAiStockInsights: () => void;
   setAiMoneyInsights: (insights: AiMoneyInsight[]) => void;
   clearAiMoneyInsights: () => void;
+  setLastAiInsightsRunTimestamp: (timestamp: number) => void;
+  setIsAiGeneratingBackground: (isGenerating: boolean) => void;
 }
 
 export const useAiStore = create<AiState>()(
@@ -89,6 +96,8 @@ export const useAiStore = create<AiState>()(
       messages: [],
       aiStockInsights: [],
       aiMoneyInsights: [],
+      lastAiInsightsRunTimestamp: 0,
+      isAiGeneratingBackground: false,
       setGeminiApiKey: (key) => set({ geminiApiKey: key }),
       setSelectedModel: (model) => set({ selectedModel: model }),
       addMessage: (role, content, action) =>
@@ -117,6 +126,10 @@ export const useAiStore = create<AiState>()(
       clearAiStockInsights: () => set({ aiStockInsights: [] }),
       setAiMoneyInsights: (insights) => set({ aiMoneyInsights: insights }),
       clearAiMoneyInsights: () => set({ aiMoneyInsights: [] }),
+      setLastAiInsightsRunTimestamp: (timestamp) =>
+        set({ lastAiInsightsRunTimestamp: timestamp }),
+      setIsAiGeneratingBackground: (isGenerating) =>
+        set({ isAiGeneratingBackground: isGenerating }),
     }),
     {
       name: 'ai-storage',

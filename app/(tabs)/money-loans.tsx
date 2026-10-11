@@ -173,7 +173,7 @@ export default function LoansScreen() {
     });
   }, [expandedItem, navigation]);
 
-  const { loans, getMonthlyEMIBurden, subscriptions, getMonthlySubscriptionBurden } = useMoneyStore();
+  const { loans, getMonthlyEMIBurden, subscriptions, getMonthlySubscriptionBurden, accounts } = useMoneyStore();
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
 
@@ -288,6 +288,8 @@ export default function LoansScreen() {
       const loan = expanded.item as Loan;
       const paidAmount = Math.max(0, loan.principalAmount - loan.outstandingAmount);
       const loanProgress = loan.principalAmount > 0 ? Math.min(1, paidAmount / loan.principalAmount) : 0;
+      const linkedAccount = loan.linkedAccountId ? accounts.find((a) => a.id === loan.linkedAccountId) : null;
+      const accountSuffix = linkedAccount?.name ? ` · ${linkedAccount.name}` : '';
       return (
         <View style={{ width: w, height: totalH, alignSelf: 'center' }}>
           <Svg width={w} height={totalH}>
@@ -331,7 +333,7 @@ export default function LoansScreen() {
               {loan.name}
             </ThemedText>
             <ThemedText style={[styles.curvedCardSubtitle, { color: palette.sub }]} numberOfLines={1}>
-              {formatAmount(loan.emiAmount)}/monthly
+              {formatAmount(loan.emiAmount)}/monthly{accountSuffix}
             </ThemedText>
           </View>
         </View>
@@ -341,6 +343,8 @@ export default function LoansScreen() {
       const cycleLabel = sub.billingCycle
         ? sub.billingCycle.charAt(0).toUpperCase() + sub.billingCycle.slice(1)
         : 'Monthly';
+      const linkedAccount = sub.linkedAccountId ? accounts.find((a) => a.id === sub.linkedAccountId) : null;
+      const accountSuffix = linkedAccount?.name ? ` · ${linkedAccount.name}` : '';
       return (
         <View style={{ width: w, height: totalH, alignSelf: 'center' }}>
           <Svg width={w} height={totalH}>
@@ -382,7 +386,7 @@ export default function LoansScreen() {
               {sub.name}
             </ThemedText>
             <ThemedText style={[styles.curvedCardSubtitle, { color: palette.sub }]} numberOfLines={1}>
-              {formatAmount(sub.amount)}/{cycleLabel.toLowerCase()}
+              {formatAmount(sub.amount)}/{cycleLabel.toLowerCase()}{accountSuffix}
             </ThemedText>
           </View>
         </View>
@@ -535,6 +539,8 @@ export default function LoansScreen() {
 
     const paidAmount = Math.max(0, item.principalAmount - item.outstandingAmount);
     const loanProgress = item.principalAmount > 0 ? Math.min(1, paidAmount / item.principalAmount) : 0;
+    const linkedAccount = item.linkedAccountId ? accounts.find((a) => a.id === item.linkedAccountId) : null;
+    const accountSuffix = linkedAccount?.name ? ` · ${linkedAccount.name}` : '';
 
     const hBody = 92;
     const tabH = 26;
@@ -611,7 +617,7 @@ export default function LoansScreen() {
             {item.name}
           </ThemedText>
           <ThemedText style={[styles.curvedCardSubtitle, { color: palette.sub }]} numberOfLines={1}>
-            {formatAmount(item.emiAmount)}/monthly
+            {formatAmount(item.emiAmount)}/monthly{accountSuffix}
           </ThemedText>
         </View>
       </TouchableOpacity>
@@ -629,6 +635,8 @@ export default function LoansScreen() {
     });
 
     const cycleLabel = item.billingCycle ? item.billingCycle.charAt(0).toUpperCase() + item.billingCycle.slice(1) : 'Monthly';
+    const linkedAccount = item.linkedAccountId ? accounts.find((a) => a.id === item.linkedAccountId) : null;
+    const accountSuffix = linkedAccount?.name ? ` · ${linkedAccount.name}` : '';
 
     const hBody = 92;
     const tabH = 26;
@@ -703,7 +711,7 @@ export default function LoansScreen() {
             {item.name}
           </ThemedText>
           <ThemedText style={[styles.curvedCardSubtitle, { color: palette.sub }]} numberOfLines={1}>
-            {formatAmount(item.amount)}/{cycleLabel.toLowerCase()}
+            {formatAmount(item.amount)}/{cycleLabel.toLowerCase()}{accountSuffix}
           </ThemedText>
         </View>
       </TouchableOpacity>
@@ -829,10 +837,10 @@ export default function LoansScreen() {
         {isLoansView ? (
           <>
             {activeLoans.length === 0 ? (
-              <View style={[styles.emptyCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                <Info size={44} color={currColors.textSecondary} style={{ marginBottom: 12 }} />
+              <View style={styles.emptyCard}>
+                <Info size={44} color={currColors.textSecondary} style={{ marginBottom: 12, opacity: 0.8 }} />
                 <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', lineHeight: 22, paddingHorizontal: 16 }}>
-                  No active loans tracked. Tap the '+' button above to log a Home loan, Car loan, or other EMIs.
+                  No active loans tracked. Tap the '+' button to log a Home loan, Car loan, or other EMIs.
                 </ThemedText>
               </View>
             ) : (
@@ -882,10 +890,10 @@ export default function LoansScreen() {
         ) : (
           <>
             {activeSubscriptions.length === 0 ? (
-              <View style={[styles.emptyCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                <Info size={44} color={currColors.textSecondary} style={{ marginBottom: 12 }} />
+              <View style={styles.emptyCard}>
+                <Info size={44} color={currColors.textSecondary} style={{ marginBottom: 12, opacity: 0.8 }} />
                 <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', lineHeight: 22, paddingHorizontal: 16 }}>
-                  No subscriptions tracked yet. Tap the '+' button above to add Netflix, Spotify, or other recurring subscriptions.
+                  No subscriptions tracked yet. Tap the '+' button to add Netflix, Spotify, or other recurring subscriptions.
                 </ThemedText>
               </View>
             ) : (
@@ -1099,12 +1107,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   emptyCard: {
-    marginHorizontal: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 24,
+    paddingVertical: 48,
+    paddingHorizontal: 24,
     alignItems: 'center',
-    borderStyle: 'dashed',
+    justifyContent: 'center',
   },
   cardListContainer: {
     marginHorizontal: 16,

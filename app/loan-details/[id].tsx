@@ -560,8 +560,8 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
           palette={palette}
           headerTitle={loan.name}
           headerSubtitle={
-            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: palette.sub }}>
-              {formatAmount(loan.emiAmount)}/monthly
+            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: palette.sub }} numberOfLines={1}>
+              {formatAmount(loan.emiAmount)}/monthly{linkedAccount?.name ? ` · ${linkedAccount.name}` : ''}
             </ThemedText>
           }
           tabRightContent={

@@ -15,7 +15,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
@@ -24,6 +24,7 @@ import Colors from '@/constants/Colors';
 import { registerBackgroundFetchAsync } from '../tasks/backgroundFetch';
 import { useMoneyStore } from '../store/useMoneyStore';
 import { usePortfolioStore } from '../store/usePortfolioStore';
+import { useAiStore } from '../store/useAiStore';
 import { OTAUpdateNotification } from '@/components/OTAUpdateNotification';
 
 export {
@@ -61,17 +62,30 @@ export default function RootLayout() {
         registerBackgroundFetchAsync();
       }
 
-      // Check if both local stores have hydrated before running the sync
+      // Check if local stores have hydrated before running sync & 12h AI Insights
       const checkHydrationAndSync = async () => {
         const moneyHydrated = useMoneyStore.persist.hasHydrated();
         const portfolioHydrated = usePortfolioStore.persist.hasHydrated();
+        const aiHydrated = useAiStore.persist.hasHydrated();
 
-        if (moneyHydrated && portfolioHydrated) {
+        if (moneyHydrated && portfolioHydrated && aiHydrated) {
           try {
             const { syncAllData } = await import('../utils/syncEngine');
             syncAllData().catch((err) => console.error('Auto sync error:', err));
           } catch (e) {
             console.error('Failed to import syncEngine:', e);
+          }
+
+          // Trigger 12-hour background AI Insights evaluation
+          try {
+            const { runBackgroundAiInsightsIfNeeded } = await import(
+              '../services/AiBackgroundService'
+            );
+            runBackgroundAiInsightsIfNeeded().catch((err) =>
+              console.error('Background AI Insights error on start:', err),
+            );
+          } catch (e) {
+            console.error('Failed to import AiBackgroundService:', e);
           }
         } else {
           setTimeout(checkHydrationAndSync, 100);
@@ -79,6 +93,25 @@ export default function RootLayout() {
       };
 
       checkHydrationAndSync();
+
+      // Trigger 12-hour background AI Insights check when returning to app foreground
+      const appStateSub = AppState.addEventListener('change', (nextAppState) => {
+        if (nextAppState === 'active') {
+          import('../services/AiBackgroundService')
+            .then(({ runBackgroundAiInsightsIfNeeded }) => {
+              runBackgroundAiInsightsIfNeeded().catch((err) =>
+                console.error('Background AI Insights error on resume:', err),
+              );
+            })
+            .catch((err) =>
+              console.error('Failed to import AiBackgroundService on resume:', err),
+            );
+        }
+      });
+
+      return () => {
+        appStateSub.remove();
+      };
     }
   }, [loaded]);
 
