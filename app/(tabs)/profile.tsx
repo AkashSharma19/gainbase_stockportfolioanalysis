@@ -27,19 +27,30 @@ import {
   Cloud,
   ArrowRightLeft,
   ChevronRight,
+  ChevronLeft,
   TrendingUp,
   Wallet,
+  ArrowUpRight,
+  Eye,
+  EyeOff,
+  Key,
+  Sparkles,
 } from 'lucide-react-native';
+import { useAiStore } from '@/store/useAiStore';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { useGoalStore } from '@/store/useGoalStore';
 import { AccountType, Account, Loan, EMIPayment, Budget } from '../../types/money';
 import { Subscription, SubscriptionPayment } from '../../types/money';
 import { FinancialGoal } from '../../types/goals';
+import Svg, { Path, Line } from 'react-native-svg';
+import { getTicketCardPath } from '@/constants/folderTheme';
+import { Category3DIcon } from '@/components/Category3DIcon';
 
 
 import React, { useMemo, useState } from 'react';
 import {
   Alert,
+  Dimensions,
   Image,
   KeyboardAvoidingView,
   Linking,
@@ -55,7 +66,7 @@ import {
 import { ThemedText } from '@/components/ThemedText';
 import { VersionCheckFooter } from '@/components/VersionCheckFooter';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as XLSX from 'xlsx';
 
 export default function ProfileScreen() {
@@ -80,10 +91,16 @@ export default function ProfileScreen() {
   const clearAllData = usePortfolioStore((state) => state.clearAllData);
 
   const colorScheme = useColorScheme() ?? 'dark';
+  const isDark = colorScheme === 'dark';
   const currColors = Colors[colorScheme];
+  const insets = useSafeAreaInsets();
+  const [cardWidth, setCardWidth] = useState<number>(Dimensions.get('window').width - 32);
 
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [dataSheetType, setDataSheetType] = useState<'investments' | 'money_manager' | null>(null);
+
+  // AI Store State
+  const { geminiApiKey, selectedModel } = useAiStore();
 
   // Modal Edit State
   const [editName, setEditName] = useState(userName);
@@ -1347,6 +1364,378 @@ export default function ProfileScreen() {
     [transactions, tickers, calculateSummary],
   );
 
+  const renderTicketProfileCard = () => {
+    const h = 156;
+    const notchY = 100;
+    const notchR = 9;
+    const path = getTicketCardPath(cardWidth, h, notchY, notchR, 22);
+
+    const ticketPalette = {
+      bg: '#D1F5EC',
+      text: '#064E3B',
+      sub: '#047857',
+      border: '#34D399',
+    };
+
+    return (
+      <View
+        onLayout={(e) => {
+          const w = e.nativeEvent.layout.width;
+          if (w > 0 && Math.abs(w - cardWidth) > 1) {
+            setCardWidth(w);
+          }
+        }}
+        style={{
+          marginHorizontal: 16,
+          marginBottom: 16,
+          marginTop: 4,
+          height: h,
+          shadowColor: isDark ? '#000000' : ticketPalette.sub,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isDark ? 0.06 : 0.12,
+          shadowRadius: isDark ? 4 : 8,
+          elevation: 2,
+        }}
+      >
+        {/* SVG Ticket Shape Background */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Svg width={cardWidth} height={h}>
+            <Path
+              d={path}
+              fill={ticketPalette.bg}
+              stroke={isDark ? 'transparent' : ticketPalette.border}
+              strokeWidth={1.5}
+            />
+            {/* Perforated dashed divider line */}
+            <Line
+              x1={notchR + 6}
+              y1={notchY}
+              x2={cardWidth - notchR - 6}
+              y2={notchY}
+              stroke={isDark ? ticketPalette.text + '35' : ticketPalette.sub + 'B0'}
+              strokeWidth={1.5}
+              strokeDasharray="5, 4"
+            />
+          </Svg>
+        </View>
+
+        {/* Top Ticket Section */}
+        <View
+          style={{
+            height: notchY,
+            paddingHorizontal: 18,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 }}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleOpenEditModal}
+              style={{
+                width: 54,
+                height: 54,
+                borderRadius: 27,
+                backgroundColor: '#FFFFFF',
+                padding: 2,
+                marginRight: 14,
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.1,
+                shadowRadius: 3,
+                elevation: 2,
+              }}
+            >
+              <Image
+                source={{
+                  uri:
+                    userImage ||
+                    `https://api.dicebear.com/7.x/avataaars/svg?seed=${userName || 'User'}`,
+                }}
+                style={{ width: '100%', height: '100%', borderRadius: 25 }}
+              />
+              <View
+                style={{
+                  position: 'absolute',
+                  bottom: -1,
+                  right: -1,
+                  backgroundColor: ticketPalette.sub,
+                  width: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  borderWidth: 1.5,
+                  borderColor: '#FFFFFF',
+                }}
+              >
+                <Edit2 size={9} color="#FFFFFF" />
+              </View>
+            </TouchableOpacity>
+
+            <View style={{ flex: 1 }}>
+              <ThemedText
+                style={{
+                  fontSize: 10,
+                  fontFamily: 'Outfit_700Bold',
+                  letterSpacing: 0.8,
+                  color: ticketPalette.sub,
+                  textTransform: 'uppercase',
+                  marginBottom: 2,
+                }}
+                numberOfLines={1}
+              >
+                INVESTOR PROFILE
+              </ThemedText>
+              <ThemedText
+                style={{
+                  fontSize: 19,
+                  fontFamily: 'Outfit_700Bold',
+                  color: ticketPalette.text,
+                  letterSpacing: -0.3,
+                }}
+                numberOfLines={1}
+              >
+                {userName || 'Set up your profile'}
+              </ThemedText>
+              <ThemedText
+                style={{
+                  fontSize: 12,
+                  fontFamily: 'Outfit_400Regular',
+                  color: ticketPalette.sub,
+                  marginTop: 2,
+                }}
+                numberOfLines={1}
+              >
+                {userEmail || userMobile || 'Tap edit to customize'}
+              </ThemedText>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleOpenEditModal}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 14,
+              backgroundColor: '#FFFFFF',
+              borderWidth: 1,
+              borderColor: ticketPalette.border,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <Edit2 size={12} color={ticketPalette.text} />
+            <ThemedText
+              style={{
+                fontSize: 12,
+                fontFamily: 'Outfit_600SemiBold',
+                color: ticketPalette.text,
+              }}
+            >
+              Edit
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+
+        {/* Bottom Ticket Stub */}
+        <View
+          style={{
+            height: h - notchY,
+            paddingHorizontal: 20,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <View style={{ flex: 1, alignItems: 'flex-start' }}>
+            <ThemedText
+              style={{
+                fontSize: 9,
+                fontFamily: 'Outfit_700Bold',
+                letterSpacing: 0.8,
+                color: ticketPalette.sub,
+                textTransform: 'uppercase',
+                marginBottom: 2,
+              }}
+            >
+              INVESTMENT TRADES
+            </ThemedText>
+            <ThemedText
+              style={{
+                fontSize: 14,
+                fontFamily: 'Outfit_600SemiBold',
+                color: ticketPalette.text,
+              }}
+            >
+              {isPrivacyMode ? '••••' : transactions.length}
+            </ThemedText>
+          </View>
+
+          <View style={{ width: 1, height: 24, backgroundColor: ticketPalette.sub + '30' }} />
+
+          <View style={{ flex: 1.2, alignItems: 'center' }}>
+            <ThemedText
+              style={{
+                fontSize: 9,
+                fontFamily: 'Outfit_700Bold',
+                letterSpacing: 0.8,
+                color: ticketPalette.sub,
+                textTransform: 'uppercase',
+                marginBottom: 2,
+              }}
+            >
+              NET ASSETS
+            </ThemedText>
+            <ThemedText
+              style={{
+                fontSize: 14,
+                fontFamily: 'Outfit_600SemiBold',
+                color: ticketPalette.text,
+              }}
+            >
+              {isPrivacyMode
+                ? '••••••'
+                : `${showCurrencySymbol ? '₹' : ''}${summary.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
+            </ThemedText>
+          </View>
+
+          <View style={{ width: 1, height: 24, backgroundColor: ticketPalette.sub + '30' }} />
+
+          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+            <ThemedText
+              style={{
+                fontSize: 9,
+                fontFamily: 'Outfit_700Bold',
+                letterSpacing: 0.8,
+                color: ticketPalette.sub,
+                textTransform: 'uppercase',
+                marginBottom: 2,
+              }}
+            >
+              CASHFLOW LOGS
+            </ThemedText>
+            <ThemedText
+              style={{
+                fontSize: 14,
+                fontFamily: 'Outfit_600SemiBold',
+                color: ticketPalette.text,
+              }}
+            >
+              {isPrivacyMode ? '••••' : moneyTransactions.length}
+            </ThemedText>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderColoredGridBox = ({
+    title,
+    subtitle,
+    icon3D,
+    customIcon,
+    palette,
+    onPress,
+  }: {
+    title: string;
+    subtitle: string;
+    icon3D?: string;
+    customIcon?: React.ReactNode;
+    palette: { bg: string; text: string; sub: string; border: string };
+    onPress: () => void;
+  }) => {
+    return (
+      <TouchableOpacity
+        key={title}
+        activeOpacity={0.82}
+        onPress={() => {
+          handleHaptic();
+          onPress();
+        }}
+        style={{
+          flex: 1,
+          borderRadius: 20,
+          backgroundColor: palette.bg,
+          borderWidth: isDark ? 0 : 1.2,
+          borderColor: palette.border,
+          padding: 14,
+          minHeight: 120,
+          justifyContent: 'space-between',
+          shadowColor: isDark ? '#000000' : palette.sub,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isDark ? 0.06 : 0.1,
+          shadowRadius: 4,
+          elevation: 2,
+        }}
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <View
+            style={{
+              width: 38,
+              height: 38,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            {icon3D ? (
+              <Category3DIcon name={icon3D} size={36} />
+            ) : (
+              customIcon
+            )}
+          </View>
+          <View
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 12,
+              backgroundColor: palette.text + '18',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <ChevronRight size={14} color={palette.text} />
+          </View>
+        </View>
+
+        <View style={{ marginTop: 8 }}>
+          <ThemedText
+            style={{
+              fontSize: 14,
+              fontFamily: 'Outfit_600SemiBold',
+              color: palette.text,
+              letterSpacing: -0.2,
+            }}
+            numberOfLines={1}
+          >
+            {title}
+          </ThemedText>
+          <ThemedText
+            style={{
+              fontSize: 11,
+              fontFamily: 'Outfit_400Regular',
+              color: palette.sub,
+              marginTop: 2,
+              lineHeight: 14,
+            }}
+            numberOfLines={2}
+          >
+            {subtitle}
+          </ThemedText>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   const handleOpenEditModal = () => {
     handleHaptic();
     setEditName(userName);
@@ -1706,309 +2095,185 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: currColors.background }]}
-      edges={['top', 'left', 'right']}
-    >
-      <View
+    <View style={[styles.container, { backgroundColor: currColors.background }]}>
+      <SafeAreaView
         style={[styles.container, { backgroundColor: currColors.background }]}
+        edges={['top']}
       >
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
 
+        {/* ─── 1. Header (Matching EMIs: Clean Left Title, No Back Button) ─── */}
+        <View style={styles.header}>
+          <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+            Profile
+          </ThemedText>
+        </View>
+
+        {/* ─── 2. Scrollable Body ─── */}
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + 100 },
+          ]}
           showsVerticalScrollIndicator={false}
           bounces={false}
           overScrollMode="never"
         >
-          {/* Consolidated User Info & Stats Box */}
-          <View
-            style={[
-              styles.userInfoContainer,
-              {
-                backgroundColor: currColors.card,
-                borderColor: currColors.border,
-              },
-            ]}
-          >
-            <View style={styles.profileRow}>
-              <View
-                style={[
-                  styles.avatarContainer,
-                  { backgroundColor: currColors.card },
-                ]}
-              >
-                <Image
-                  source={{
-                    uri:
-                      userImage ||
-                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${userName || 'User'}`,
-                  }}
-                  style={styles.avatar}
-                />
-              </View>
-              <View style={styles.nameContainer}>
-                <ThemedText style={[styles.nameText, { color: currColors.text }]}>
-                  {userName || 'Set up your profile'}
-                </ThemedText>
-                {userEmail ? (
-                  <ThemedText
-                    style={[
-                      styles.emailText,
-                      { color: currColors.textSecondary },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {userEmail}
-                  </ThemedText>
-                ) : (
-                  <ThemedText
-                    style={[
-                      styles.emailText,
-                      { color: currColors.textSecondary },
-                    ]}
-                  >
-                    Tap the edit icon to get started
-                  </ThemedText>
-                )}
-              </View>
-              <TouchableOpacity
-                style={[
-                  styles.mainEditIcon,
-                  { backgroundColor: currColors.cardSecondary },
-                ]}
-                onPress={handleOpenEditModal}
-              >
-                <Edit2 size={20} color={currColors.tint} />
-              </TouchableOpacity>
-            </View>
+          {/* Ticket Style Profile Hero Card */}
+          {renderTicketProfileCard()}
 
-            <View style={styles.statsBar}>
-              <View style={styles.statItem}>
-                <ThemedText style={[styles.statValue, { color: currColors.text }]}>
-                  {isPrivacyMode ? '••••••' : transactions.length}
-                </ThemedText>
-                <ThemedText
-                  style={[
-                    styles.statLabel,
-                    { color: currColors.textSecondary },
-                  ]}
-                >
-                  Transactions
-                </ThemedText>
-              </View>
-              <View style={styles.statItem}>
-                <ThemedText style={[styles.statValue, { color: currColors.text }]}>
-                  {isPrivacyMode
-                    ? '••••••'
-                    : `${showCurrencySymbol ? '₹' : ''}${summary.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
-                </ThemedText>
-                <ThemedText
-                  style={[
-                    styles.statLabel,
-                    { color: currColors.textSecondary },
-                  ]}
-                >
-                  Net assets
-                </ThemedText>
-              </View>
-            </View>
-          </View>
-
-          {/* Data Management Section */}
+          {/* Section: Data & Backups */}
           <ThemedText style={[styles.sectionHeading, { color: currColors.textSecondary }]}>
             DATA & BACKUPS
           </ThemedText>
-          <View
-            style={[
-              styles.settingsCardContainer,
-              {
-                backgroundColor: currColors.card,
-                borderColor: currColors.border,
-                marginTop: 8,
+          <View style={styles.gridRow}>
+            {renderColoredGridBox({
+              title: 'Investments',
+              subtitle: 'Sample, import & export',
+              icon3D: 'investments',
+              palette: {
+                bg: '#D1F5EC',
+                text: '#064E3B',
+                sub: '#047857',
+                border: '#34D399',
               },
-            ]}
-          >
-            {/* Investments Data */}
-            <TouchableOpacity
-              style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
-              activeOpacity={0.7}
-              onPress={() => {
-                handleHaptic();
-                setDataSheetType('investments');
-              }}
-            >
-              <View style={[styles.settingsIconWrap, { backgroundColor: currColors.cardSecondary }]}>
-                <TrendingUp size={20} color={currColors.tint} />
-              </View>
-              <View style={styles.settingsTextWrap}>
-                <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
-                  Investments
-                </ThemedText>
-                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
-                  Sample template, import, backup & export
-                </ThemedText>
-              </View>
-              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
-            </TouchableOpacity>
+              onPress: () => setDataSheetType('investments'),
+            })}
 
-            {/* Money Manager Data */}
-            <TouchableOpacity
-              style={[styles.settingsRow, { borderBottomWidth: 0 }]}
-              activeOpacity={0.7}
-              onPress={() => {
-                handleHaptic();
-                setDataSheetType('money_manager');
-              }}
-            >
-              <View style={[styles.settingsIconWrap, { backgroundColor: 'rgba(0, 201, 167, 0.1)' }]}>
-                <Wallet size={20} color="#00C9A7" />
-              </View>
-              <View style={styles.settingsTextWrap}>
-                <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
-                  Money Manager
-                </ThemedText>
-                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
-                  Sample template, import, backup & export
-                </ThemedText>
-              </View>
-              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
-            </TouchableOpacity>
+            {renderColoredGridBox({
+              title: 'Money Manager',
+              subtitle: 'Cashflow, ledgers & sample',
+              icon3D: 'wallet',
+              palette: {
+                bg: '#BAE6FD',
+                text: '#0C4A6E',
+                sub: '#0369A1',
+                border: '#38BDF8',
+              },
+              onPress: () => setDataSheetType('money_manager'),
+            })}
           </View>
 
-          {/* Settings & Preferences Section */}
-          <ThemedText style={[styles.sectionHeading, { color: currColors.textSecondary, marginTop: 12 }]}>
+          {/* Section: Settings & Preferences */}
+          <ThemedText style={[styles.sectionHeading, { color: currColors.textSecondary, marginTop: 14 }]}>
             SETTINGS & PREFERENCES
           </ThemedText>
-          <View
-            style={[
-              styles.settingsCardContainer,
-              {
-                backgroundColor: currColors.card,
-                borderColor: currColors.border,
-                marginTop: 8,
+          <View style={styles.gridRow}>
+            {renderColoredGridBox({
+              title: 'Settings',
+              subtitle: 'Preferences & PIN',
+              icon3D: 'laptop',
+              palette: {
+                bg: '#E9D5FF',
+                text: '#581C87',
+                sub: '#7E22CE',
+                border: '#C084FC',
               },
-            ]}
-          >
-            {/* Settings */}
-            <TouchableOpacity
-              style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
-              activeOpacity={0.7}
-              onPress={() => {
-                handleHaptic();
-                router.push('/settings');
-              }}
-            >
-              <View style={[styles.settingsIconWrap, { backgroundColor: currColors.cardSecondary }]}>
-                <Settings size={20} color={currColors.tint} />
-              </View>
-              <View style={styles.settingsTextWrap}>
-                <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
-                  Settings
-                </ThemedText>
-                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
-                  App preferences, currency & security
-                </ThemedText>
-              </View>
-              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
-            </TouchableOpacity>
+              onPress: () => router.push('/settings'),
+            })}
 
-            {/* Cloud Backup & Sync */}
-            <TouchableOpacity
-              style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
-              activeOpacity={0.7}
-              onPress={() => {
-                handleHaptic();
-                router.push('/cloud-backup');
-              }}
-            >
-              <View style={[styles.settingsIconWrap, { backgroundColor: 'rgba(0, 201, 167, 0.1)' }]}>
-                <Cloud size={20} color="#00C9A7" />
-              </View>
-              <View style={styles.settingsTextWrap}>
-                <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
-                  Cloud Backup & Sync
-                </ThemedText>
-                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
-                  Auto-sync portfolios, accounts & transactions
-                </ThemedText>
-              </View>
-              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
-            </TouchableOpacity>
+            {renderColoredGridBox({
+              title: 'Cloud Sync',
+              subtitle: 'Auto-sync portfolios',
+              icon3D: 'cloud',
+              palette: {
+                bg: '#E0E7FF',
+                text: '#312E81',
+                sub: '#4338CA',
+                border: '#818CF8',
+              },
+              onPress: () => router.push('/cloud-backup'),
+            })}
+          </View>
 
-            {/* Categories */}
-            <TouchableOpacity
-              style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
-              activeOpacity={0.7}
-              onPress={() => {
-                handleHaptic();
-                router.push('/manage-categories');
-              }}
-            >
-              <View style={[styles.settingsIconWrap, { backgroundColor: currColors.cardSecondary }]}>
-                <Tag size={20} color={currColors.tint} />
-              </View>
-              <View style={styles.settingsTextWrap}>
-                <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
-                  Manage Categories
-                </ThemedText>
-                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
-                  Expense & income transaction tags
-                </ThemedText>
-              </View>
-              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
-            </TouchableOpacity>
+          <View style={styles.gridRow}>
+            {renderColoredGridBox({
+              title: 'Categories',
+              subtitle: 'Expense & income tags',
+              icon3D: 'package',
+              palette: {
+                bg: '#FEF08A',
+                text: '#713F12',
+                sub: '#854D0E',
+                border: '#FACC15',
+              },
+              onPress: () => router.push('/manage-categories'),
+            })}
 
-            {/* WhatsApp Community */}
-            <TouchableOpacity
-              style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
-              activeOpacity={0.7}
-              onPress={() => {
-                handleHaptic();
-                Linking.openURL('https://chat.whatsapp.com/INyTPVgPq908dEMWgFiq44?mode=gi_t');
-              }}
-            >
-              <View style={[styles.settingsIconWrap, { backgroundColor: 'rgba(37, 211, 102, 0.1)' }]}>
-                <MessageCircle size={20} color="#25D366" />
-              </View>
-              <View style={styles.settingsTextWrap}>
-                <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
-                  WhatsApp Community
-                </ThemedText>
-                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
-                  Join discussion & share early feedback
-                </ThemedText>
-              </View>
-              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
-            </TouchableOpacity>
+            {renderColoredGridBox({
+              title: 'Community',
+              subtitle: 'WhatsApp discussion group',
+              customIcon: (
+                <View
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 17,
+                    backgroundColor: '#25D366',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <MessageCircle size={18} color="#FFFFFF" />
+                </View>
+              ),
+              palette: {
+                bg: '#DCFCE7',
+                text: '#14532D',
+                sub: '#15803D',
+                border: '#4ADE80',
+              },
+              onPress: () => Linking.openURL('https://chat.whatsapp.com/INyTPVgPq908dEMWgFiq44?mode=gi_t'),
+            })}
+          </View>
 
-            {/* Delete All Data */}
-            <TouchableOpacity
-              style={[styles.settingsRow, { borderBottomWidth: 0 }]}
-              activeOpacity={0.7}
-              onPress={() => {
-                handleHaptic();
-                handleDeleteData();
-              }}
-            >
-              <View style={[styles.settingsIconWrap, { backgroundColor: 'rgba(255, 59, 48, 0.1)' }]}>
-                <Trash2 size={20} color="#FF3B30" />
-              </View>
-              <View style={styles.settingsTextWrap}>
-                <ThemedText style={[styles.settingsTitle, { color: '#FF3B30' }]}>
-                  Delete All Data
-                </ThemedText>
-                <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
-                  Reset local transactions and accounts
-                </ThemedText>
-              </View>
-              <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
-            </TouchableOpacity>
+          {/* Section: AI & Actions */}
+          <ThemedText style={[styles.sectionHeading, { color: currColors.textSecondary, marginTop: 14 }]}>
+            AI & ACTIONS
+          </ThemedText>
+          <View style={styles.gridRow}>
+            {renderColoredGridBox({
+              title: 'AI Model & Keys',
+              subtitle: geminiApiKey ? selectedModel.replace('gemini-', '') : 'Configure Gemini Key',
+              icon3D: 'sparkles',
+              palette: {
+                bg: '#FDF4FF',
+                text: '#701A75',
+                sub: '#86198F',
+                border: '#E879F9',
+              },
+              onPress: () => router.push('/ai-settings'),
+            })}
+
+            {renderColoredGridBox({
+              title: 'Delete Data',
+              subtitle: 'Reset local data & trades',
+              customIcon: (
+                <View
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 17,
+                    backgroundColor: '#DC2626',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Trash2 size={18} color="#FFFFFF" />
+                </View>
+              ),
+              palette: {
+                bg: '#FFE4E6',
+                text: '#9F1239',
+                sub: '#BE123C',
+                border: '#FDA4AF',
+              },
+              onPress: handleDeleteData,
+            })}
           </View>
 
           {/* Minimal Version & OTA Update Check Footer */}
           <VersionCheckFooter />
-
         </ScrollView>
 
         {/* Data Actions Bottom Sheet Modal */}
@@ -2022,8 +2287,7 @@ export default function ProfileScreen() {
             style={[
               styles.modalOverlay,
               {
-                backgroundColor:
-                  theme === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.4)',
+                backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.45)',
               },
             ]}
           >
@@ -2033,10 +2297,11 @@ export default function ProfileScreen() {
                 { backgroundColor: currColors.card },
               ]}
             >
+              <View style={styles.modalGrabHandle} />
               <View
                 style={[
                   styles.modalHeader,
-                  { borderBottomColor: currColors.border },
+                  { borderBottomColor: isDark ? currColors.border : '#F1F5F9' },
                 ]}
               >
                 <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
@@ -2045,28 +2310,40 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   onPress={() => setDataSheetType(null)}
                   style={styles.closeButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <X size={24} color={currColors.text} />
+                  <X size={20} color={currColors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
               <View style={{ padding: 16 }}>
-                <View
-                  style={[
-                    styles.settingsCardContainer,
-                    {
-                      backgroundColor: currColors.cardSecondary,
-                      borderColor: currColors.border,
-                      marginBottom: 0,
+                <View style={styles.modalGridRow}>
+                  {renderColoredGridBox({
+                    title: 'Download Sample',
+                    subtitle: dataSheetType === 'investments'
+                      ? 'Stock template (.xlsx)'
+                      : 'Cashflow template (.xlsx)',
+                    customIcon: (
+                      <View
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 17,
+                          backgroundColor: '#FFFFFF90',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <FileText size={18} color="#064E3B" />
+                      </View>
+                    ),
+                    palette: {
+                      bg: '#D1F5EC',
+                      text: '#064E3B',
+                      sub: '#047857',
+                      border: '#34D399',
                     },
-                  ]}
-                >
-                  {/* Download Sample */}
-                  <TouchableOpacity
-                    style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      handleHaptic();
+                    onPress: () => {
                       const type = dataSheetType;
                       setDataSheetType(null);
                       if (type === 'investments') {
@@ -2074,30 +2351,35 @@ export default function ProfileScreen() {
                       } else {
                         handleDownloadMoneySample();
                       }
-                    }}
-                  >
-                    <View style={[styles.settingsIconWrap, { backgroundColor: currColors.card }]}>
-                      <FileText size={20} color={dataSheetType === 'investments' ? currColors.tint : currColors.tintMoney} />
-                    </View>
-                    <View style={styles.settingsTextWrap}>
-                      <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
-                        Download Sample Format
-                      </ThemedText>
-                      <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
-                        {dataSheetType === 'investments'
-                          ? 'Template format for stock transactions (.xlsx)'
-                          : 'Template format for cashflow transactions (.xlsx)'}
-                      </ThemedText>
-                    </View>
-                    <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
-                  </TouchableOpacity>
+                    },
+                  })}
 
-                  {/* Import */}
-                  <TouchableOpacity
-                    style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      handleHaptic();
+                  {renderColoredGridBox({
+                    title: 'Import Data',
+                    subtitle: dataSheetType === 'investments'
+                      ? 'Bulk stock trades (.xlsx)'
+                      : 'Cashflow records (.xlsx)',
+                    customIcon: (
+                      <View
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 17,
+                          backgroundColor: '#FFFFFF90',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Upload size={18} color="#0C4A6E" />
+                      </View>
+                    ),
+                    palette: {
+                      bg: '#BAE6FD',
+                      text: '#0C4A6E',
+                      sub: '#0369A1',
+                      border: '#38BDF8',
+                    },
+                    onPress: () => {
                       const type = dataSheetType;
                       setDataSheetType(null);
                       if (type === 'investments') {
@@ -2105,30 +2387,37 @@ export default function ProfileScreen() {
                       } else {
                         handleImportMoney();
                       }
-                    }}
-                  >
-                    <View style={[styles.settingsIconWrap, { backgroundColor: currColors.card }]}>
-                      <Upload size={20} color={dataSheetType === 'investments' ? currColors.tint : currColors.tintMoney} />
-                    </View>
-                    <View style={styles.settingsTextWrap}>
-                      <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
-                        Import Transactions
-                      </ThemedText>
-                      <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
-                        {dataSheetType === 'investments'
-                          ? 'Bulk import stock trades from Excel (.xlsx)'
-                          : 'Bulk import income & expense records (.xlsx)'}
-                      </ThemedText>
-                    </View>
-                    <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
-                  </TouchableOpacity>
+                    },
+                  })}
+                </View>
 
-                  {/* Backup */}
-                  <TouchableOpacity
-                    style={[styles.settingsRow, { borderBottomColor: currColors.border }]}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      handleHaptic();
+                <View style={[styles.modalGridRow, { marginTop: 10 }]}>
+                  {renderColoredGridBox({
+                    title: 'Backup Data',
+                    subtitle: dataSheetType === 'investments'
+                      ? 'Portfolio snapshot (.json)'
+                      : 'Cashflow & loans (.json)',
+                    customIcon: (
+                      <View
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 17,
+                          backgroundColor: '#FFFFFF90',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Database size={18} color="#581C87" />
+                      </View>
+                    ),
+                    palette: {
+                      bg: '#E9D5FF',
+                      text: '#581C87',
+                      sub: '#7E22CE',
+                      border: '#C084FC',
+                    },
+                    onPress: () => {
                       const type = dataSheetType;
                       setDataSheetType(null);
                       if (type === 'investments') {
@@ -2136,30 +2425,35 @@ export default function ProfileScreen() {
                       } else {
                         handleBackupMoney();
                       }
-                    }}
-                  >
-                    <View style={[styles.settingsIconWrap, { backgroundColor: currColors.card }]}>
-                      <Database size={20} color={dataSheetType === 'investments' ? currColors.tint : currColors.tintMoney} />
-                    </View>
-                    <View style={styles.settingsTextWrap}>
-                      <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
-                        {dataSheetType === 'investments' ? 'Backup Portfolio Data' : 'Backup Cashflow Data'}
-                      </ThemedText>
-                      <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
-                        {dataSheetType === 'investments'
-                          ? 'Save local snapshot of portfolio (.json)'
-                          : 'Save snapshot of accounts, loans & budgets (.json)'}
-                      </ThemedText>
-                    </View>
-                    <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
-                  </TouchableOpacity>
+                    },
+                  })}
 
-                  {/* Export */}
-                  <TouchableOpacity
-                    style={[styles.settingsRow, { borderBottomWidth: 0 }]}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      handleHaptic();
+                  {renderColoredGridBox({
+                    title: 'Export Excel',
+                    subtitle: dataSheetType === 'investments'
+                      ? 'Complete stock ledger (.xlsx)'
+                      : 'Accounts & cashflow (.xlsx)',
+                    customIcon: (
+                      <View
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 17,
+                          backgroundColor: '#FFFFFF90',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Download size={18} color="#713F12" />
+                      </View>
+                    ),
+                    palette: {
+                      bg: '#FEF08A',
+                      text: '#713F12',
+                      sub: '#854D0E',
+                      border: '#FACC15',
+                    },
+                    onPress: () => {
                       const type = dataSheetType;
                       setDataSheetType(null);
                       if (type === 'investments') {
@@ -2167,23 +2461,8 @@ export default function ProfileScreen() {
                       } else {
                         handleExportMoney();
                       }
-                    }}
-                  >
-                    <View style={[styles.settingsIconWrap, { backgroundColor: currColors.card }]}>
-                      <Download size={20} color={dataSheetType === 'investments' ? currColors.tint : currColors.tintMoney} />
-                    </View>
-                    <View style={styles.settingsTextWrap}>
-                      <ThemedText style={[styles.settingsTitle, { color: currColors.text }]}>
-                        Export to Excel
-                      </ThemedText>
-                      <ThemedText style={[styles.settingsSubtitle, { color: currColors.textSecondary }]}>
-                        {dataSheetType === 'investments'
-                          ? 'Download complete stock trade ledger (.xlsx)'
-                          : 'Download cashflow ledger & accounts (.xlsx)'}
-                      </ThemedText>
-                    </View>
-                    <ChevronRight size={18} color={currColors.textSecondary} opacity={0.6} />
-                  </TouchableOpacity>
+                    },
+                  })}
                 </View>
               </View>
             </View>
@@ -2202,8 +2481,7 @@ export default function ProfileScreen() {
             style={[
               styles.modalOverlay,
               {
-                backgroundColor:
-                  theme === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.4)',
+                backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.45)',
               },
             ]}
           >
@@ -2213,10 +2491,11 @@ export default function ProfileScreen() {
                 { backgroundColor: currColors.card },
               ]}
             >
+              <View style={styles.modalGrabHandle} />
               <View
                 style={[
                   styles.modalHeader,
-                  { borderBottomColor: currColors.border },
+                  { borderBottomColor: isDark ? currColors.border : '#F1F5F9' },
                 ]}
               >
                 <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
@@ -2225,8 +2504,9 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   onPress={() => setIsEditModalVisible(false)}
                   style={styles.closeButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <X size={24} color={currColors.text} />
+                  <X size={20} color={currColors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
@@ -2234,6 +2514,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   style={styles.modalAvatarContainer}
                   onPress={handlePickImage}
+                  activeOpacity={0.8}
                 >
                   <Image
                     source={{
@@ -2244,7 +2525,7 @@ export default function ProfileScreen() {
                     style={styles.modalAvatar}
                   />
                   <View style={[styles.editImageOverlay, { borderColor: currColors.card }]}>
-                    <Edit2 size={16} color="#FFF" />
+                    <Edit2 size={14} color="#FFF" />
                   </View>
                 </TouchableOpacity>
 
@@ -2252,13 +2533,13 @@ export default function ProfileScreen() {
                   style={[
                     styles.inputGroup,
                     {
-                      backgroundColor: currColors.card,
-                      borderColor: currColors.border,
+                      backgroundColor: isDark ? currColors.cardSecondary : '#F8FAFC',
+                      borderColor: isDark ? currColors.border : '#E2E8F0',
                     },
                   ]}
                 >
                   <View style={styles.inputIcon}>
-                    <User size={20} color={currColors.textSecondary} />
+                    <User size={18} color={currColors.textSecondary} />
                   </View>
                   <TextInput
                     style={[styles.modalInput, { color: currColors.text }]}
@@ -2273,13 +2554,13 @@ export default function ProfileScreen() {
                   style={[
                     styles.inputGroup,
                     {
-                      backgroundColor: currColors.card,
-                      borderColor: currColors.border,
+                      backgroundColor: isDark ? currColors.cardSecondary : '#F8FAFC',
+                      borderColor: isDark ? currColors.border : '#E2E8F0',
                     },
                   ]}
                 >
                   <View style={styles.inputIcon}>
-                    <Mail size={20} color={currColors.textSecondary} />
+                    <Mail size={18} color={currColors.textSecondary} />
                   </View>
                   <TextInput
                     style={[styles.modalInput, { color: currColors.text }]}
@@ -2296,13 +2577,13 @@ export default function ProfileScreen() {
                   style={[
                     styles.inputGroup,
                     {
-                      backgroundColor: currColors.card,
-                      borderColor: currColors.border,
+                      backgroundColor: isDark ? currColors.cardSecondary : '#F8FAFC',
+                      borderColor: isDark ? currColors.border : '#E2E8F0',
                     },
                   ]}
                 >
                   <View style={styles.inputIcon}>
-                    <Phone size={20} color={currColors.textSecondary} />
+                    <Phone size={18} color={currColors.textSecondary} />
                   </View>
                   <TextInput
                     style={[styles.modalInput, { color: currColors.text }]}
@@ -2315,8 +2596,9 @@ export default function ProfileScreen() {
                 </View>
 
                 <TouchableOpacity
-                  style={styles.saveButton}
+                  style={[styles.saveButton, { backgroundColor: currColors.tint }]}
                   onPress={handleSaveProfile}
+                  activeOpacity={0.8}
                 >
                   <ThemedText style={styles.saveButtonText}>Save Changes</ThemedText>
                 </TouchableOpacity>
@@ -2324,134 +2606,94 @@ export default function ProfileScreen() {
             </View>
           </KeyboardAvoidingView>
         </Modal>
-
-
-      </View>
-    </SafeAreaView>
-
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  headerText: {
-    fontSize: 28,
-    fontWeight: '600',
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    gap: 15,
+  headerLeftAction: {
+    width: 38,
+    alignItems: 'flex-start',
   },
   headerIconButton: {
-    padding: 4,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenterTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.5,
+    textAlign: 'center',
+  },
+  headerBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
+    borderRadius: 10,
+  },
+  headerBadgeText: {
+    fontSize: 11,
+    fontFamily: 'Outfit_700Bold',
+  },
+  headerRightAction: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerActionPill: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 110,
+    paddingTop: 4,
   },
-  userInfoContainer: {
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-  },
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 30,
-    paddingHorizontal: 4,
-  },
-  avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    overflow: 'hidden',
-    marginRight: 16,
-  },
-  avatar: {
-    width: '100%',
-    height: '100%',
-  },
-  nameContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  nameText: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  emailText: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginTop: 2,
-  },
-  mainEditIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statsBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 10,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#8E8E93',
-  },
-  actionGridContainer: {
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
+  sectionHeading: {
+    fontSize: 11,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    marginTop: 16,
   },
   gridRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    // gap removed to let space-between handle it
+    gap: 10,
+    marginHorizontal: 16,
+    marginBottom: 10,
   },
-  gridButton: {
-    alignItems: 'center',
-    width: 70,
-  },
-  gridIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  gridLabel: {
-    fontSize: 12,
-    fontWeight: '400',
+  modalGridRow: {
+    flexDirection: 'row',
+    gap: 10,
   },
   settingsCardContainer: {
-    borderRadius: 24,
+    marginHorizontal: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    marginBottom: 16,
     overflow: 'hidden',
   },
   settingsRow: {
@@ -2475,7 +2717,7 @@ const styles = StyleSheet.create({
   },
   settingsTitle: {
     fontSize: 15,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Outfit_600SemiBold',
   },
   settingsSubtitle: {
     fontSize: 12,
@@ -2485,65 +2727,78 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
     maxHeight: '90%',
+  },
+  modalGrabHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#8E8E9350',
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 6,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 18,
+    fontFamily: 'Outfit_600SemiBold',
   },
   closeButton: {
-    padding: 4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalBody: {
-    padding: 24,
+    padding: 20,
     alignItems: 'center',
   },
   modalAvatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 30,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    marginBottom: 24,
     position: 'relative',
   },
   modalAvatar: {
     width: '100%',
     height: '100%',
-    borderRadius: 50,
+    borderRadius: 44,
   },
   editImageOverlay: {
     position: 'absolute',
     bottom: 0,
     right: 0,
     backgroundColor: '#007AFF',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
+    borderWidth: 2.5,
   },
   inputGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    marginBottom: 16,
+    borderRadius: 14,
+    marginBottom: 14,
     width: '100%',
     paddingHorizontal: 16,
-    height: 56,
+    height: 52,
     borderWidth: 1,
   },
   inputIcon: {
@@ -2551,112 +2806,21 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
+    fontFamily: 'Outfit_400Regular',
   },
   saveButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    height: 56,
+    borderRadius: 14,
+    height: 52,
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 10,
   },
   saveButtonText: {
     color: '#FFF',
     fontSize: 16,
-    fontWeight: '600',
-  },
-  sectionHeading: {
-    fontSize: 12,
     fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: 1,
-    marginLeft: 4,
-    marginBottom: 4,
-  },
-  modalSegmentContainer: {
-
-    flexDirection: 'row',
-    height: 40,
-    borderRadius: 10,
-    padding: 3,
-    marginBottom: 16,
-  },
-  modalSegmentTab: {
-    flex: 1,
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-  },
-  modalSegmentLabel: {
-    fontSize: 12,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-  },
-  editRowContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  inlineInput: {
-    flex: 1,
-    height: 40,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 16,
-    fontFamily: 'Outfit_400Regular',
-    marginRight: 10,
-  },
-  inlineActionButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 6,
-  },
-  rowActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionIcon: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  addCategoryContainer: {
-    flexDirection: 'row',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    alignItems: 'center',
-  },
-  addCategoryInput: {
-    flex: 1,
-    height: 48,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    fontFamily: 'Outfit_400Regular',
-    marginRight: 12,
-  },
-  addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });
 
