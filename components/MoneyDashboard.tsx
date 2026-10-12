@@ -50,7 +50,7 @@ import { MoneyTransaction } from '../types/money';
 import { MoneyActivityCalendar } from './MoneyActivityCalendar';
 import { FinancialGoalsCard } from './FinancialGoalsCard';
 import { useMoneyInsights } from '../hooks/useMoneyInsights';
-import { getNextLoanDuePayment } from '../lib/finance';
+import { getNextLoanDuePayment, getEffectiveLoanOutstanding } from '../lib/finance';
 
 const getSubscriptionIcon = (logoName: string | undefined) => {
   switch (logoName) {
@@ -645,7 +645,7 @@ export function MoneyDashboard() {
       if (loan.isActive && loan.emiAmount > 0) {
         const nextDue = getNextLoanDuePayment(loan, emiPayments, today);
         if (nextDue && nextDue >= thirtyDaysAgo && nextDue <= fourteenDaysLater) {
-          const paidAmount = Math.max(0, loan.principalAmount - loan.outstandingAmount);
+          const paidAmount = Math.max(0, loan.principalAmount - getEffectiveLoanOutstanding(loan, emiPayments));
           const progress = loan.principalAmount > 0 ? Math.min(1, paidAmount / loan.principalAmount) : 0;
           list.push({
             id: `emi-${loan.id}`,
@@ -804,7 +804,7 @@ export function MoneyDashboard() {
       if (loan.isActive && loan.linkedAccountId) {
         const acc = accounts.find((a) => a.id === loan.linkedAccountId);
         if (acc && acc.type === 'credit_card') {
-          blockedEmiAmount += loan.outstandingAmount;
+          blockedEmiAmount += getEffectiveLoanOutstanding(loan, emiPayments);
         }
       }
     });

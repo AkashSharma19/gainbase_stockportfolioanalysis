@@ -31,6 +31,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { getEffectiveLoanOutstanding } from '@/lib/finance';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -43,6 +44,7 @@ export default function MoneyHealthScreen() {
     accounts,
     moneyTransactions,
     loans,
+    emiPayments,
     getMonthlyEMIBurden,
   } = useMoneyStore();
 
@@ -252,7 +254,7 @@ export default function MoneyHealthScreen() {
       if (loan.isActive && loan.linkedAccountId) {
         const acc = accounts.find((a) => a.id === loan.linkedAccountId);
         if (acc && acc.type === 'credit_card') {
-          blockedEmiAmount += loan.outstandingAmount;
+          blockedEmiAmount += getEffectiveLoanOutstanding(loan, emiPayments);
         }
       }
     });

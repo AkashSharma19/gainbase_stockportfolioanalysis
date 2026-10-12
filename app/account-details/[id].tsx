@@ -28,6 +28,7 @@ import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Category3DIcon } from '@/components/Category3DIcon';
+import { getEffectiveLoanOutstanding } from '@/lib/finance';
 
 const getCategoryBadgeTint = (category: string, type: 'income' | 'expense' | 'transfer', isDark: boolean) => {
   if (type === 'income') {
@@ -72,6 +73,7 @@ export default function AccountDetailsScreen() {
     accounts,
     moneyTransactions,
     loans,
+    emiPayments,
     removeAccount,
     removeMoneyTransaction,
   } = useMoneyStore();
@@ -113,8 +115,8 @@ export default function AccountDetailsScreen() {
     if (!account || account.type !== 'credit_card') return 0;
     return loans
       .filter((l) => l.isActive && l.linkedAccountId === account.id)
-      .reduce((sum, l) => sum + l.outstandingAmount, 0);
-  }, [account, loans]);
+      .reduce((sum, l) => sum + getEffectiveLoanOutstanding(l, emiPayments), 0);
+  }, [account, loans, emiPayments]);
 
   const utilization = useMemo(() => {
     if (!account || account.type !== 'credit_card' || !account.creditLimit || account.creditLimit <= 0) return 0;

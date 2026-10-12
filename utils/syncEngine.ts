@@ -688,6 +688,67 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
     );
 
     // ----------------------------------------------------
+    // RECONCILE MERGED LOANS WITH MERGED EMI PAYMENTS
+    // ----------------------------------------------------
+    loansMerge.mergedLocal = loansMerge.mergedLocal.map((loan) => {
+      const loanPayments = emisMerge.mergedLocal.filter(
+        (p) => p.loanId === loan.id && (p.status === 'paid' || !p.status)
+      );
+      if (loanPayments.length > 0) {
+        const totalPrincipalPaid = loanPayments.reduce(
+          (sum, p) => sum + (p.principalPortion !== undefined ? p.principalPortion : p.amount),
+          0
+        );
+        const expectedOutstanding = Math.max(0, loan.principalAmount - totalPrincipalPaid);
+        if (loan.outstandingAmount > expectedOutstanding + 0.01) {
+          const updatedLoan = {
+            ...loan,
+            outstandingAmount: expectedOutstanding,
+            updatedAt: nowStr,
+          };
+
+          let linkedAccId = updatedLoan.linkedAccountId || null;
+          if (linkedAccId && accountMerge.idRemap.has(linkedAccId)) {
+            linkedAccId = accountMerge.idRemap.get(linkedAccId)!;
+          }
+          if (linkedAccId && !validAccountIds.has(linkedAccId)) {
+            linkedAccId = null;
+          }
+
+          const remoteRow = {
+            id: updatedLoan.id,
+            user_id: userId,
+            name: updatedLoan.name || 'Loan',
+            lender_name: updatedLoan.lenderName || '',
+            principal_amount: Number(updatedLoan.principalAmount || 0),
+            outstanding_amount: Number(expectedOutstanding),
+            interest_rate: Number(updatedLoan.interestRate || 0),
+            emi_amount: Number(updatedLoan.emiAmount || 0),
+            tenure_months: Number(updatedLoan.tenureMonths || 0),
+            start_date: ensureTimestamp(updatedLoan.startDate, nowStr),
+            end_date: ensureTimestamp(updatedLoan.endDate, nowStr),
+            linked_account_id: linkedAccId,
+            type: updatedLoan.type || 'borrowed',
+            icon: updatedLoan.icon || mergedLoanIcons[updatedLoan.id] || null,
+            is_active: updatedLoan.isActive !== false,
+            is_deleted: false,
+            updated_at: nowStr,
+          };
+
+          const pushIdx = loansMerge.toPush.findIndex((p: any) => p.id === updatedLoan.id);
+          if (pushIdx >= 0) {
+            loansMerge.toPush[pushIdx] = remoteRow;
+          } else {
+            loansMerge.toPush.push(remoteRow);
+          }
+
+          return updatedLoan;
+        }
+      }
+      return loan;
+    });
+
+    // ----------------------------------------------------
     // TABLE 5: BUDGETS & BUDGET CATEGORIES
     // ----------------------------------------------------
     const localBudgets = forcePull ? [] : (useMoneyStore.getState().budgets || []);

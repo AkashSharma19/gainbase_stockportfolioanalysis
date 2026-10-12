@@ -34,6 +34,7 @@ import { Account, AccountType } from '@/types/money';
 import { BankLogo } from '@/components/BankLogo';
 import { Category3DIcon } from '@/components/Category3DIcon';
 import { CATEGORY_3D_ICONS_LIST } from '@/constants/Category3DIcons';
+import { getEffectiveLoanOutstanding } from '@/lib/finance';
 
 const TYPE_CONFIG: Record<AccountType, { label: string; color: string; icon: any }> = {
   savings: { label: 'Savings Accounts', color: '#007AFF', icon: Landmark },
@@ -62,6 +63,7 @@ export default function AccountsScreen() {
 
   const accounts = useMoneyStore((state) => state.accounts) || [];
   const loans = useMoneyStore((state) => state.loans) || [];
+  const emiPayments = useMoneyStore((state) => state.emiPayments) || [];
   const accountTypesOrder = useMoneyStore((state) => state.accountTypesOrder);
 
   const setAccountTypesOrder = (order: AccountType[]) => {
@@ -185,7 +187,9 @@ export default function AccountsScreen() {
 
     // Find outstanding principal blocked on this credit card from linked loans
     const blockedAmount = isCreditCard
-      ? loans.filter(l => l.isActive && l.linkedAccountId === item.id).reduce((sum, l) => sum + l.outstandingAmount, 0)
+      ? loans
+          .filter((l) => l.isActive && l.linkedAccountId === item.id)
+          .reduce((sum, l) => sum + getEffectiveLoanOutstanding(l, emiPayments), 0)
       : 0;
 
     // Utilization rate for credit cards (includes spent balance + blocked EMI amount)

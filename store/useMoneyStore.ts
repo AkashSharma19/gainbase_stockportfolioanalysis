@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { Account, MoneyTransaction, Loan, EMIPayment, Budget, AccountType, Subscription, SubscriptionPayment } from '../types/money';
 import { usePortfolioStore } from './usePortfolioStore';
-import { advanceDateByCycle } from '@/lib/finance';
+import { advanceDateByCycle, getEffectiveLoanOutstanding } from '@/lib/finance';
 
 interface MoneyState {
   accounts: Account[];
@@ -279,6 +279,7 @@ export const useMoneyStore = create<MoneyState>()(
                 return {
                   ...loan,
                   outstandingAmount: loan.outstandingAmount + matchedEmiPayment!.principalPortion,
+                  updatedAt: new Date().toISOString(),
                 };
               }
               return loan;
@@ -366,18 +367,23 @@ export const useMoneyStore = create<MoneyState>()(
         }),
       addEMIPayment: (payment) => {
         set((state) => {
+          const nowStr = new Date().toISOString();
           // Adjust outstanding amount of the loan
           const updatedLoans = state.loans.map((loan) => {
             if (loan.id === payment.loanId) {
               // outstandingAmount decreases when a payment is made (principal portion subtracted)
               const newOutstanding = Math.max(0, loan.outstandingAmount - payment.principalPortion);
-              return { ...loan, outstandingAmount: newOutstanding };
+              return {
+                ...loan,
+                outstandingAmount: newOutstanding,
+                updatedAt: nowStr,
+              };
             }
             return loan;
           });
 
           return {
-            emiPayments: [...state.emiPayments, payment],
+            emiPayments: [...state.emiPayments, { ...payment, updatedAt: payment.updatedAt || nowStr }],
             loans: updatedLoans,
           };
         });
@@ -387,20 +393,47 @@ export const useMoneyStore = create<MoneyState>()(
           const payment = state.emiPayments.find((p) => p.id === paymentId);
           if (!payment) return {};
 
+          const nowStr = new Date().toISOString();
           const updatedLoans = state.loans.map((loan) => {
             if (loan.id === payment.loanId) {
               return {
                 ...loan,
                 outstandingAmount: loan.outstandingAmount + payment.principalPortion,
+                updatedAt: nowStr,
               };
             }
             return loan;
           });
 
+          // Also revert any linked transaction and refund account balance
+          let updatedTxs = state.moneyTransactions;
+          let updatedAccs = state.accounts;
+          let deletedTxIds = state.deletedTransactionIds || [];
+          if (payment.transactionId) {
+            const linkedTx = state.moneyTransactions.find((t) => t.id === payment.transactionId);
+            if (linkedTx) {
+              updatedTxs = state.moneyTransactions.filter((t) => t.id !== payment.transactionId);
+              deletedTxIds = [...deletedTxIds, payment.transactionId];
+              updatedAccs = state.accounts.map((acc) => {
+                if (acc.id === linkedTx.accountId) {
+                  return {
+                    ...acc,
+                    balance: acc.balance + linkedTx.amount,
+                    updatedAt: nowStr,
+                  };
+                }
+                return acc;
+              });
+            }
+          }
+
           return {
             emiPayments: state.emiPayments.filter((p) => p.id !== paymentId),
             deletedEmiPaymentIds: [...(state.deletedEmiPaymentIds || []), paymentId],
             loans: updatedLoans,
+            moneyTransactions: updatedTxs,
+            accounts: updatedAccs,
+            deletedTransactionIds: deletedTxIds,
           };
         });
       },
@@ -668,7 +701,7 @@ export const useMoneyStore = create<MoneyState>()(
 
         const activeLoansOutstanding = loans
           .filter((l) => l.isActive)
-          .reduce((acc, current) => acc + current.outstandingAmount, 0);
+          .reduce((acc, current) => acc + getEffectiveLoanOutstanding(current, get().emiPayments || []), 0);
 
         return assetBalance - activeLoansOutstanding;
       },
@@ -725,6 +758,22 @@ export const useMoneyStore = create<MoneyState>()(
       storage: createJSONStorage(() => AsyncStorage),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+
+        // Auto-reconcile loans outstanding amounts with logged emiPayments
+        if (Array.isArray(state.loans) && Array.isArray(state.emiPayments)) {
+          state.loans = state.loans.map((loan) => {
+            if (!loan) return loan;
+            const effective = getEffectiveLoanOutstanding(loan, state.emiPayments);
+            if (loan.outstandingAmount > effective + 0.01) {
+              return {
+                ...loan,
+                outstandingAmount: effective,
+                updatedAt: new Date().toISOString(),
+              };
+            }
+            return loan;
+          });
+        }
 
         // Deduplicate moneyTransactions
         if (Array.isArray(state.moneyTransactions)) {

@@ -49,6 +49,7 @@ import {
 import { ExpandedFolderContainer } from '@/components/ExpandedFolderContainer';
 import { LoanDetailsContent } from '@/app/loan-details/[id]';
 import { SubscriptionDetailsContent } from '@/app/subscription-details/[id]';
+import { getEffectiveLoanOutstanding } from '@/lib/finance';
 
 const getSubscriptionIcon = (logoName: string | undefined) => {
   switch (logoName) {
@@ -81,10 +82,11 @@ const TYPE_CONFIG = {
   other: { label: 'Other Loan', emoji: '🏦', icon: Landmark, color: '#8E8E93' },
 };
 
-function getRemainingEMIsCount(loan: Loan): number {
-  if (!loan.outstandingAmount || loan.outstandingAmount <= 0) return 0;
+function getRemainingEMIsCount(loan: Loan, emiPayments: any[] = []): number {
+  const outstanding = getEffectiveLoanOutstanding(loan, emiPayments);
+  if (!outstanding || outstanding <= 0) return 0;
   if (!loan.emiAmount || loan.emiAmount <= 0) return 0;
-  return Math.ceil(loan.outstandingAmount / loan.emiAmount);
+  return Math.ceil(outstanding / loan.emiAmount);
 }
 
 function CircularProgress3DIcon({
@@ -173,7 +175,7 @@ export default function LoansScreen() {
     });
   }, [expandedItem, navigation]);
 
-  const { loans, getMonthlyEMIBurden, subscriptions, getMonthlySubscriptionBurden, accounts } = useMoneyStore();
+  const { loans, getMonthlyEMIBurden, subscriptions, getMonthlySubscriptionBurden, accounts, emiPayments = [] } = useMoneyStore();
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
 
@@ -186,8 +188,8 @@ export default function LoansScreen() {
   const completedSubscriptions = useMemo(() => subscriptions.filter((s) => !s.isActive), [subscriptions]);
 
   const totalOutstanding = useMemo(() => {
-    return activeLoans.reduce((acc, l) => acc + l.outstandingAmount, 0);
-  }, [activeLoans]);
+    return activeLoans.reduce((acc, l) => acc + getEffectiveLoanOutstanding(l, emiPayments), 0);
+  }, [activeLoans, emiPayments]);
 
   const totalPrincipal = useMemo(() => {
     return activeLoans.reduce((acc, l) => acc + (l.principalAmount || 0), 0);
@@ -537,7 +539,8 @@ export default function LoansScreen() {
       icon: item.icon || LOAN_3D_ICON_MAP[item.type],
     });
 
-    const paidAmount = Math.max(0, item.principalAmount - item.outstandingAmount);
+    const effectiveOutstanding = getEffectiveLoanOutstanding(item, emiPayments);
+    const paidAmount = Math.max(0, item.principalAmount - effectiveOutstanding);
     const loanProgress = item.principalAmount > 0 ? Math.min(1, paidAmount / item.principalAmount) : 0;
     const linkedAccount = item.linkedAccountId ? accounts.find((a) => a.id === item.linkedAccountId) : null;
     const accountSuffix = linkedAccount?.name ? ` · ${linkedAccount.name}` : '';

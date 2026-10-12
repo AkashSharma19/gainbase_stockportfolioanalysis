@@ -446,3 +446,35 @@ export function getNextLoanDuePayment(
 
   return nextDue;
 }
+
+/**
+ * Calculates the accurate effective outstanding balance of a loan,
+ * reconciling it against logged payments in emiPayments.
+ */
+export function getEffectiveLoanOutstanding(
+  loan: {
+    id: string;
+    principalAmount: number;
+    outstandingAmount: number;
+  },
+  emiPayments: Array<{
+    loanId: string;
+    amount: number;
+    principalPortion?: number;
+    status?: 'paid' | 'upcoming' | 'overdue';
+  }> = []
+): number {
+  if (!loan) return 0;
+  const loanPayments = emiPayments.filter(
+    (p) => p.loanId === loan.id && (p.status === 'paid' || !p.status)
+  );
+  if (loanPayments.length > 0) {
+    const totalPrincipalPaid = loanPayments.reduce(
+      (sum, p) => sum + (p.principalPortion !== undefined ? p.principalPortion : p.amount),
+      0
+    );
+    const expectedFromPrincipal = Math.max(0, loan.principalAmount - totalPrincipalPaid);
+    return Math.max(0, Math.min(loan.outstandingAmount, expectedFromPrincipal));
+  }
+  return Math.max(0, loan.outstandingAmount);
+}

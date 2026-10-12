@@ -124,7 +124,7 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
       if (loan.outstandingAmount > expectedOutstanding + 0.01) {
         useMoneyStore.setState((state) => ({
           loans: state.loans.map((l) =>
-            l.id === loan.id ? { ...l, outstandingAmount: expectedOutstanding } : l
+            l.id === loan.id ? { ...l, outstandingAmount: expectedOutstanding, updatedAt: new Date().toISOString() } : l
           ),
         }));
       }
