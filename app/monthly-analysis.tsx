@@ -10,7 +10,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   ScrollView,
-  ScrollViewInstance,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -43,7 +42,7 @@ export default function MonthlyAnalysisScreen() {
     [transactions, getMonthlyAnalysis, tickers],
   );
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
-  const chartScrollRef = useRef<ScrollViewInstance>(null);
+  const chartScrollRef = useRef<ScrollView>(null);
 
   const toggleMonth = (key: string) => {
     Haptics.selectionAsync();

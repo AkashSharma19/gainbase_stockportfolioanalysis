@@ -30,7 +30,6 @@ import {
   Image,
   RefreshControl,
   ScrollView,
-  ScrollViewInstance,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -86,7 +85,7 @@ export default function AnalyticsScreen() {
   const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('DESC');
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
 
-  const scrollRef = useRef<ScrollViewInstance>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const itemPositions = useRef<Map<number, number>>(new Map());
 
   const getHeatmapColor = (pnlPercentage: number) => {

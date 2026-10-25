@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  TextInputInstance,
   Modal,
   Alert,
   Platform,
@@ -199,7 +198,7 @@ export default function ManageCategoriesScreen() {
   const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
   const [iconPickerSearch, setIconPickerSearch] = useState('');
 
-  const drawerInputRef = useRef<TextInputInstance>(null);
+  const drawerInputRef = useRef<TextInput>(null);
 
   const handleHaptic = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
