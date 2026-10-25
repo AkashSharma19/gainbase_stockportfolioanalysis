@@ -46,17 +46,25 @@ export function AppSwitcher() {
         <TouchableOpacity
           style={[
             styles.chip,
-            !isInvestments && {
-              backgroundColor: currColors.card,
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : currColors.border,
-            },
+            isInvestments
+              ? {
+                  backgroundColor: '#BAE6FD',
+                  borderColor: '#38BDF8',
+                  shadowColor: '#0284C7',
+                  shadowOpacity: isDark ? 0.25 : 0.20,
+                }
+              : {
+                  backgroundColor: isDark ? currColors.card : '#FFFFFF',
+                  borderColor: isDark ? currColors.border : '#E2E8F0',
+                  shadowOpacity: isDark ? 0 : 0.05,
+                },
           ]}
           activeOpacity={0.8}
           onPress={() => handleSwitch('investments')}
         >
           {isInvestments && (
             <LinearGradient
-              colors={['#0A84FF', '#005AC1']}
+              colors={['#BAE6FD', '#A5F3FC']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={[StyleSheet.absoluteFill, styles.gradientFill]}
@@ -68,13 +76,13 @@ export function AppSwitcher() {
               style={[
                 styles.iconBadge,
                 isInvestments
-                  ? { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
+                  ? { backgroundColor: 'rgba(12, 74, 110, 0.12)' }
                   : { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : currColors.cardSecondary },
               ]}
             >
               <TrendingUp
                 size={14}
-                color={isInvestments ? '#FFFFFF' : currColors.textSecondary}
+                color={isInvestments ? '#0C4A6E' : isDark ? currColors.textSecondary : '#64748B'}
                 strokeWidth={isInvestments ? 2.5 : 2}
               />
             </View>
@@ -83,8 +91,8 @@ export function AppSwitcher() {
               style={[
                 styles.chipLabel,
                 isInvestments
-                  ? { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold' }
-                  : { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' },
+                  ? { color: '#0C4A6E', fontFamily: 'Outfit_600SemiBold' }
+                  : { color: isDark ? currColors.textSecondary : '#64748B', fontFamily: 'Outfit_500Medium' },
               ]}
             >
               Investments
@@ -96,17 +104,25 @@ export function AppSwitcher() {
         <TouchableOpacity
           style={[
             styles.chip,
-            isInvestments && {
-              backgroundColor: currColors.card,
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : currColors.border,
-            },
+            !isInvestments
+              ? {
+                  backgroundColor: '#D1F5EC',
+                  borderColor: '#34D399',
+                  shadowColor: '#059669',
+                  shadowOpacity: isDark ? 0.25 : 0.20,
+                }
+              : {
+                  backgroundColor: isDark ? currColors.card : '#FFFFFF',
+                  borderColor: isDark ? currColors.border : '#E2E8F0',
+                  shadowOpacity: isDark ? 0 : 0.05,
+                },
           ]}
           activeOpacity={0.8}
           onPress={() => handleSwitch('money')}
         >
           {!isInvestments && (
             <LinearGradient
-              colors={isDark ? ['#00C9A7', '#028E75'] : ['#00A887', '#007A63']}
+              colors={['#D1F5EC', '#A7F3D0']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={[StyleSheet.absoluteFill, styles.gradientFill]}
@@ -118,13 +134,13 @@ export function AppSwitcher() {
               style={[
                 styles.iconBadge,
                 !isInvestments
-                  ? { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
+                  ? { backgroundColor: 'rgba(6, 78, 59, 0.12)' }
                   : { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : currColors.cardSecondary },
               ]}
             >
               <Wallet
                 size={14}
-                color={!isInvestments ? '#FFFFFF' : currColors.textSecondary}
+                color={!isInvestments ? '#064E3B' : isDark ? currColors.textSecondary : '#64748B'}
                 strokeWidth={!isInvestments ? 2.5 : 2}
               />
             </View>
@@ -133,8 +149,8 @@ export function AppSwitcher() {
               style={[
                 styles.chipLabel,
                 !isInvestments
-                  ? { color: '#FFFFFF', fontFamily: 'Outfit_600SemiBold' }
-                  : { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' },
+                  ? { color: '#064E3B', fontFamily: 'Outfit_600SemiBold' }
+                  : { color: isDark ? currColors.textSecondary : '#64748B', fontFamily: 'Outfit_500Medium' },
               ]}
             >
               Money Manager
@@ -164,15 +180,15 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1.2,
     borderColor: 'transparent',
     overflow: 'hidden',
     position: 'relative',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1.5 },
     shadowOpacity: 0.12,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 2,
   },
   gradientFill: {

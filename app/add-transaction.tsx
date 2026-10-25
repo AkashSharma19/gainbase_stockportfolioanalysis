@@ -1139,7 +1139,7 @@ export default function AddTransactionScreen() {
                     );
                   })}
                 </View>
-              ) : null
+              ) : undefined
             }
             contentContainerStyle={styles.tickerList}
           />

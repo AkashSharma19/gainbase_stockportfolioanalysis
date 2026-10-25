@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Swipeable } from 'react-native-gesture-handler';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import * as Haptics from 'expo-haptics';
 import * as LucideIcons from 'lucide-react-native';
 import {
@@ -55,7 +55,7 @@ const GoalRowItem = memo(
     onDelete: (goal: FinancialGoal) => void;
     onToggleCompleted: (id: string) => void;
   }) => {
-    const swipeableRef = useRef<Swipeable>(null);
+    const swipeableRef = useRef<any>(null);
 
     const handlePressEdit = () => {
       swipeableRef.current?.close();

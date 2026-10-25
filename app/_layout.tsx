@@ -18,6 +18,9 @@ import { useEffect } from 'react';
 import { Platform, AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
+import { enableFreeze } from 'react-native-screens';
+
+enableFreeze(false);
 
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -34,7 +37,7 @@ export {
 
 export const unstable_settings = {
   // Ensure that reloading on `/add-transaction` keeps a back button present.
-  initialRouteName: '(tabs)',
+  anchor: '(tabs)',
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.

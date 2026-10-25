@@ -10,6 +10,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   ScrollView,
+  ScrollViewInstance,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -62,7 +63,7 @@ export default function YearlyAnalysisScreen() {
     [transactions, getYearlyAnalysis, tickers],
   );
   const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
-  const chartScrollRef = useRef<ScrollView>(null);
+  const chartScrollRef = useRef<ScrollViewInstance>(null);
 
   const barData = useMemo(() => {
     const sorted = [...yearlyAnalysis].reverse(); // Chronological order

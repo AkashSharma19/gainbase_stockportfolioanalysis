@@ -166,7 +166,7 @@ export default function LoansScreen() {
   const [activeTab, setActiveTab] = useState<ObligationTab>('loans');
   const [cardWidth, setCardWidth] = useState<number>(Dimensions.get('window').width - 32);
   const [expandedItem, setExpandedItem] = useState<ExpandedItemState | null>(null);
-  const cardRefs = useRef<{ [key: string]: View | null }>({});
+  const cardRefs = useRef<{ [key: string]: any }>({});
 
   // Hide bottom tab bar dock while folder details is expanded
   useEffect(() => {

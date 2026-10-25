@@ -850,7 +850,7 @@ export default function ExploreScreen() {
               />
             }
             ListEmptyComponent={
-              isSearchFocused && !searchQuery ? null : (
+              isSearchFocused && !searchQuery ? undefined : (
                 <View style={styles.emptyContainer}>
                   {isSearchingRemote ? (
                     <>
@@ -1117,7 +1117,7 @@ export default function ExploreScreen() {
                     );
                   })}
                 </View>
-              ) : null
+              ) : undefined
             }
           />
         )}

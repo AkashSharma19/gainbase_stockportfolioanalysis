@@ -1,5 +1,4 @@
 import { useColorScheme } from '@/components/useColorScheme';
-import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { MoneyTransaction } from '@/types/money';
 import { format, parseISO } from 'date-fns';
@@ -7,6 +6,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { Calendar, DateData } from 'react-native-calendars';
+import { Calendar as CalendarIcon } from 'lucide-react-native';
 
 interface MoneyActivityCalendarProps {
   transactions: MoneyTransaction[];
@@ -15,8 +15,14 @@ interface MoneyActivityCalendarProps {
 export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarProps) => {
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const theme = useColorScheme() ?? 'dark';
-  const currColors = Colors[theme];
-  const activeTodayColor = theme === 'dark' ? '#00C9A7' : '#00876E';
+  const isDark = theme === 'dark';
+
+  const palette = {
+    bg: '#D1F5EC',
+    text: '#064E3B',
+    sub: '#047857',
+    border: '#34D399',
+  };
 
   // Group transactions by date
   const dailyStats = useMemo(() => {
@@ -87,10 +93,10 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
         <ThemedText
           style={[
             styles.dayText,
-            { color: currColors.text },
-            isToday && [styles.todayText, { color: activeTodayColor }],
+            { color: palette.text },
+            isToday && [styles.todayText, { color: '#047857' }],
             day.state === 'disabled' && {
-              color: theme === 'dark' ? '#333336' : '#D1D1D6',
+              color: palette.sub + '55',
             },
           ]}
         >
@@ -112,13 +118,33 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
   return (
     <View
       style={[
-        styles.container,
-        { backgroundColor: currColors.card, borderColor: currColors.border },
+        styles.calendarCard,
+        {
+          backgroundColor: palette.bg,
+          borderColor: isDark ? 'transparent' : palette.border,
+        },
       ]}
     >
-      <ThemedText type="bold" style={[styles.title, { color: currColors.textSecondary }]}>
-        CASHFLOW CALENDAR
-      </ThemedText>
+      {/* Top Header Section */}
+      <View style={styles.headerRow}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+          <CalendarIcon size={14} color={palette.sub} />
+          <ThemedText
+            style={{
+              fontSize: 10,
+              fontFamily: 'Outfit_700Bold',
+              letterSpacing: 0.8,
+              color: palette.sub,
+              textTransform: 'uppercase',
+            }}
+          >
+            CASHFLOW CALENDAR
+          </ThemedText>
+        </View>
+
+      </View>
+
+      {/* Calendar Component */}
       <Calendar
         key={`money-calendar-${theme}`}
         dayComponent={({
@@ -132,29 +158,28 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
           return renderDay({ ...date, state });
         }}
         style={{
-          backgroundColor: currColors.card,
-          borderRadius: 24,
+          backgroundColor: 'transparent',
         }}
         theme={
           {
-            backgroundColor: currColors.card,
-            calendarBackground: currColors.card,
-            textSectionTitleColor: currColors.textSecondary,
+            backgroundColor: 'transparent',
+            calendarBackground: 'transparent',
+            textSectionTitleColor: palette.sub,
             selectedDayBackgroundColor: 'transparent',
-            selectedDayTextColor: currColors.text,
-            todayTextColor: activeTodayColor,
-            dayTextColor: currColors.text,
-            textDisabledColor: theme === 'dark' ? '#333336' : '#D1D1D6',
-            dotColor: '#00adf5',
-            selectedDotColor: currColors.text,
-            arrowColor: currColors.textSecondary,
-            monthTextColor: currColors.text,
-            indicatorColor: currColors.text,
+            selectedDayTextColor: palette.text,
+            todayTextColor: palette.text,
+            dayTextColor: palette.text,
+            textDisabledColor: palette.sub + '55',
+            dotColor: palette.text,
+            selectedDotColor: palette.text,
+            arrowColor: palette.sub,
+            monthTextColor: palette.text,
+            indicatorColor: palette.text,
             textDayFontFamily: 'Outfit_400Regular',
             textMonthFontFamily: 'Outfit_700Bold',
             textDayHeaderFontFamily: 'Outfit_700Bold',
             textDayFontSize: 14,
-            textMonthFontSize: 16,
+            textMonthFontSize: 15,
             textDayHeaderFontSize: 11,
           } as any
         }
@@ -167,12 +192,25 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
 };
 
 const styles = StyleSheet.create({
-  container: {
-    borderRadius: 20,
-    padding: 16,
-    paddingTop: 20,
+  calendarCard: {
+    borderRadius: 22,
+    borderWidth: 1.2,
+    paddingTop: 16,
+    paddingBottom: 14,
+    paddingHorizontal: 8,
     marginBottom: 16,
-    borderWidth: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    marginBottom: 6,
   },
   dayContainer: {
     width: 36,
@@ -197,23 +235,16 @@ const styles = StyleSheet.create({
   },
   expenseText: {
     fontSize: 7.8,
-    color: '#FF3B30',
+    color: '#B91C1C',
     textAlign: 'center',
     fontFamily: 'Outfit_600SemiBold',
     lineHeight: 9.5,
   },
   incomeText: {
     fontSize: 7.8,
-    color: '#34C759',
+    color: '#047857',
     textAlign: 'center',
     fontFamily: 'Outfit_600SemiBold',
     lineHeight: 9.5,
-  },
-  title: {
-    fontSize: 10,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: 1.0,
-    textTransform: 'uppercase',
-    marginBottom: 12,
   },
 });

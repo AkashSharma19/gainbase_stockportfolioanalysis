@@ -14,10 +14,10 @@ import Svg, {
   Stop,
   Path,
 } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
 import { useColorScheme } from './useColorScheme';
-import Colors from '../constants/Colors';
 
 interface GeminiAiButtonProps {
   onPress: () => void;
@@ -27,7 +27,6 @@ interface GeminiAiButtonProps {
 export function GeminiAiButton({ onPress, size = 40 }: GeminiAiButtonProps) {
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
-  const currColors = Colors[colorScheme];
 
   const pulse = useSharedValue(1);
   const rotate = useSharedValue(0);
@@ -76,11 +75,19 @@ export function GeminiAiButton({ onPress, size = 40 }: GeminiAiButtonProps) {
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: currColors.card,
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : currColors.border,
+          backgroundColor: '#E9D5FF',
+          borderColor: '#C084FC',
+          shadowColor: '#9333EA',
+          shadowOpacity: isDark ? 0.30 : 0.22,
         },
       ]}
     >
+      <LinearGradient
+        colors={['#E9D5FF', '#DDD6FE']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[StyleSheet.absoluteFill, { borderRadius: size / 2 }]}
+      />
       <Animated.View style={animatedIconStyle}>
         <Svg
           width={starSize}
@@ -89,9 +96,9 @@ export function GeminiAiButton({ onPress, size = 40 }: GeminiAiButtonProps) {
         >
           <Defs>
             <SvgLinearGradient id="geminiGrad" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0%" stopColor="#4285F4" />
+              <Stop offset="0%" stopColor="#6B21A8" />
               <Stop offset="50%" stopColor="#9333EA" />
-              <Stop offset="100%" stopColor={isDark ? '#00C9A7' : '#00876E'} />
+              <Stop offset="100%" stopColor="#4F46E5" />
             </SvgLinearGradient>
           </Defs>
           <Path
@@ -106,13 +113,14 @@ export function GeminiAiButton({ onPress, size = 40 }: GeminiAiButtonProps) {
 
 const styles = StyleSheet.create({
   button: {
-    borderWidth: 1,
+    borderWidth: 1.2,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowRadius: 3,
     elevation: 2,
+    overflow: 'hidden',
+    position: 'relative',
   },
 });
+

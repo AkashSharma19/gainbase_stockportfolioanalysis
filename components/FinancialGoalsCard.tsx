@@ -100,14 +100,23 @@ export function FinancialGoalsCard() {
     router.push('/goals');
   };
 
+  const palette = {
+    bg: '#BAE6FD',
+    text: '#0C4A6E',
+    sub: '#0369A1',
+    border: '#38BDF8',
+  };
+
   if (!featuredGoal) {
     return (
       <TouchableOpacity
         style={[
           styles.container,
           {
-            backgroundColor: currColors.card,
-            borderColor: currColors.border,
+            backgroundColor: palette.bg,
+            borderWidth: theme === 'dark' ? 0 : 1.2,
+            borderColor: palette.border,
+            borderRadius: 22,
           },
         ]}
         activeOpacity={0.8}
@@ -115,18 +124,18 @@ export function FinancialGoalsCard() {
       >
         <View style={styles.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Target size={12} color={currColors.textSecondary} />
-            <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+            <Target size={12} color={palette.sub} />
+            <ThemedText style={[styles.sectionTitle, { color: palette.sub }]}>
               FINANCIAL GOALS
             </ThemedText>
           </View>
-          <View style={[styles.iconCircle, { backgroundColor: currColors.cardSecondary }]}>
-            <ArrowRight size={12} color={currColors.tint} />
+          <View style={[styles.iconCircle, { backgroundColor: 'rgba(12, 74, 110, 0.12)' }]}>
+            <ArrowRight size={12} color={palette.text} />
           </View>
         </View>
 
         <View style={styles.emptyRow}>
-          <ThemedText style={[styles.emptyText, { color: currColors.textSecondary }]}>
+          <ThemedText style={[styles.emptyText, { color: palette.sub }]}>
             Track custom targets like Emergency Fund & Portfolio Value
           </ThemedText>
         </View>
@@ -134,15 +143,17 @@ export function FinancialGoalsCard() {
     );
   }
 
-  const goalColor = featuredGoal.color || '#00C9A7';
+  const goalColor = featuredGoal.color || '#0284C7';
 
   return (
     <TouchableOpacity
       style={[
         styles.container,
         {
-          backgroundColor: currColors.card,
-          borderColor: currColors.border,
+          backgroundColor: palette.bg,
+          borderWidth: theme === 'dark' ? 0 : 1.2,
+          borderColor: palette.border,
+          borderRadius: 22,
         },
       ]}
       activeOpacity={0.8}
@@ -151,20 +162,29 @@ export function FinancialGoalsCard() {
       {/* Minimal Header */}
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Target size={12} color={currColors.textSecondary} />
-          <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>
+          <Target size={12} color={palette.sub} />
+          <ThemedText style={[styles.sectionTitle, { color: palette.sub }]}>
             FINANCIAL GOALS
           </ThemedText>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {summary.total > 1 && (
-            <ThemedText style={{ fontSize: 11, color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }}>
-              {summary.achieved > 0 ? `${summary.achieved}/${summary.total} done` : `${summary.total} goals`}
-            </ThemedText>
+            <View
+              style={{
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 10,
+                backgroundColor: 'rgba(12, 74, 110, 0.12)',
+              }}
+            >
+              <ThemedText style={{ fontSize: 11, color: palette.text, fontFamily: 'Outfit_600SemiBold' }}>
+                {summary.achieved > 0 ? `${summary.achieved}/${summary.total} done` : `${summary.total} goals`}
+              </ThemedText>
+            </View>
           )}
-          <View style={[styles.iconCircle, { backgroundColor: currColors.cardSecondary }]}>
-            <ArrowRight size={12} color={currColors.tint} />
+          <View style={[styles.iconCircle, { backgroundColor: 'rgba(12, 74, 110, 0.12)' }]}>
+            <ArrowRight size={12} color={palette.text} />
           </View>
         </View>
       </View>
@@ -180,17 +200,17 @@ export function FinancialGoalsCard() {
               style={{ marginRight: 10 }}
             />
             <View style={{ flex: 1 }}>
-              <ThemedText style={[styles.goalName, { color: currColors.text }]} numberOfLines={1}>
+              <ThemedText style={[styles.goalName, { color: palette.text }]} numberOfLines={1}>
                 {featuredGoal.name}
               </ThemedText>
-              <ThemedText style={[styles.subValue, { color: currColors.textSecondary }]}>
+              <ThemedText style={[styles.subValue, { color: palette.sub }]}>
                 {formatValue(featuredGoal.currentValue, featuredGoal.unit)} of {formatValue(featuredGoal.targetValue, featuredGoal.unit)}
               </ThemedText>
             </View>
           </View>
 
-          <View style={[styles.progressBadge, { backgroundColor: `${goalColor}18` }]}>
-            <ThemedText style={[styles.progressBadgeText, { color: goalColor }]}>
+          <View style={[styles.progressBadge, { backgroundColor: 'rgba(12, 74, 110, 0.14)' }]}>
+            <ThemedText style={[styles.progressBadgeText, { color: palette.text }]}>
               {featuredGoal.isAchieved ? '100%' : `${featuredGoal.progressPercentage}%`}
             </ThemedText>
           </View>
@@ -206,7 +226,7 @@ export function FinancialGoalsCard() {
                   styles.segmentTrack,
                   {
                     flex: Math.max(0.04, seg.spanRatio ?? 1),
-                    backgroundColor: currColors.cardSecondary,
+                    backgroundColor: 'rgba(12, 74, 110, 0.15)',
                   },
                 ]}
               >
@@ -223,7 +243,7 @@ export function FinancialGoalsCard() {
             ))}
           </View>
         ) : (
-          <View style={[styles.progressBarTrack, { backgroundColor: currColors.cardSecondary }]}>
+          <View style={[styles.progressBarTrack, { backgroundColor: 'rgba(12, 74, 110, 0.15)' }]}>
             <View
               style={[
                 styles.progressBarFill,

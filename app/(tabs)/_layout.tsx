@@ -33,11 +33,6 @@ interface TabDefinition {
 }
 
 function CustomFloatingTabBar({ state, descriptors, navigation }: any) {
-  const currentRoute = state.routes[state.index];
-  const descriptor = descriptors ? descriptors[currentRoute.key] : null;
-  const isTabBarHidden = descriptor?.options?.tabBarStyle?.display === 'none';
-  if (isTabBarHidden) return null;
-
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'dark';
@@ -45,6 +40,11 @@ function CustomFloatingTabBar({ state, descriptors, navigation }: any) {
   const currColors = Colors[colorScheme];
   const { activeMode } = useAppModeStore();
   const isInvestMode = activeMode === 'investments';
+
+  const currentRoute = state.routes[state.index];
+  const descriptor = descriptors ? descriptors[currentRoute.key] : null;
+  const isTabBarHidden = descriptor?.options?.tabBarStyle?.display === 'none';
+  if (isTabBarHidden) return null;
 
   const activeColor = isInvestMode ? '#0A84FF' : currColors.tintMoney;
   const activeGradient = isInvestMode
@@ -157,7 +157,7 @@ function CustomFloatingTabBar({ state, descriptors, navigation }: any) {
                 key="center-add-button"
                 activeOpacity={0.82}
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
                   if (isInvestMode) {
                     router.push('/add-transaction');
                   } else {
@@ -186,17 +186,10 @@ function CustomFloatingTabBar({ state, descriptors, navigation }: any) {
               key={tab.name}
               activeOpacity={0.7}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                const route = state.routes.find((r: any) => r.name === tab.name);
-                if (route) {
-                  const event = navigation.emit({
-                    type: 'tabPress',
-                    target: route.key,
-                    canPreventDefault: true,
-                  });
-                  if (!isFocused && !event.defaultPrevented) {
-                    navigation.navigate(route.name);
-                  }
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                if (!isFocused) {
+                  const targetPath = tab.name === 'index' ? '/(tabs)' : `/(tabs)/${tab.name}`;
+                  router.navigate(targetPath as any);
                 }
               }}
               style={[
@@ -243,6 +236,7 @@ export default function TabLayout() {
         tabBar={(props) => <CustomFloatingTabBar {...props} />}
         screenOptions={{
           headerShown: false,
+          freezeOnBlur: false,
         }}
       >
         <Tabs.Screen name="index" />

@@ -77,7 +77,11 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.764532668669-npu54g1tpop5cc1nhloua5fbmh144sb5"
         }
-      ]
+      ],
+      "expo-sharing",
+      "expo-splash-screen",
+      "expo-sqlite",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true

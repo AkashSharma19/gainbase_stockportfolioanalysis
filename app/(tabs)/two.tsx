@@ -22,7 +22,7 @@ import {
   Info,
   Layers,
 } from 'lucide-react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { ThemedText } from '@/components/ThemedText';
 import { BackButton } from '@/components/BackButton';

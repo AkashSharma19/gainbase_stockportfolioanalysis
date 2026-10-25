@@ -701,7 +701,7 @@ export default function AddAccountScreen() {
                   </View>
                   {!logo && <Check size={18} color="#00C9A7" strokeWidth={2.5} />}
                 </TouchableOpacity>
-              ) : null
+              ) : undefined
             }
             renderItem={({ item }) => {
               const isSelected = logo.toLowerCase() === item.id.toLowerCase();

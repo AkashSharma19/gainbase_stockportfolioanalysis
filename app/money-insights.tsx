@@ -477,7 +477,7 @@ export default function MoneyInsightsScreen() {
     null,
   );
   const [isGenerating, setIsGenerating] = useState(false);
-  const cardRefs = useRef<{ [key: string]: View | null }>({});
+  const cardRefs = useRef<{ [key: string]: any }>({});
 
   // Hide bottom tab bar dock and disable native back gesture while folder details is expanded
   useEffect(() => {
