@@ -62,7 +62,7 @@ export default function YearlyAnalysisScreen() {
     [transactions, getYearlyAnalysis, tickers],
   );
   const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
-  const chartScrollRef = useRef<ScrollView>(null);
+  const chartScrollRef = useRef<any>(null);
 
   const barData = useMemo(() => {
     const sorted = [...yearlyAnalysis].reverse(); // Chronological order

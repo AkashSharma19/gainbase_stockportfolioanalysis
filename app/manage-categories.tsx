@@ -198,7 +198,7 @@ export default function ManageCategoriesScreen() {
   const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
   const [iconPickerSearch, setIconPickerSearch] = useState('');
 
-  const drawerInputRef = useRef<TextInput>(null);
+  const drawerInputRef = useRef<any>(null);
 
   const handleHaptic = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
