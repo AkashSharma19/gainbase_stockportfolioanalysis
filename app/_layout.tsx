@@ -235,7 +235,7 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="loan-details/[id]"
-            options={{ animation: 'fade', headerShown: false }}
+            options={{ animation: 'slide_from_right', headerShown: false, gestureEnabled: true }}
           />
           <Stack.Screen
             name="prepay-loan/[id]"
@@ -251,7 +251,7 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="subscription-details/[id]"
-            options={{ animation: 'fade', headerShown: false }}
+            options={{ animation: 'slide_from_right', headerShown: false, gestureEnabled: true }}
           />
           <Stack.Screen
             name="add-budget"
@@ -263,14 +263,6 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="money-analytics"
-            options={{ animation: 'slide_from_right', headerShown: false }}
-          />
-          <Stack.Screen
-            name="money-insights"
-            options={{ animation: 'slide_from_right', headerShown: false }}
-          />
-          <Stack.Screen
-            name="money-health"
             options={{ animation: 'slide_from_right', headerShown: false }}
           />
           <Stack.Screen

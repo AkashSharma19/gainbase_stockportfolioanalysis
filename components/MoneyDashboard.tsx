@@ -49,10 +49,9 @@ import { usePortfolioStore } from '../store/usePortfolioStore';
 import { useGoalStore } from '../store/useGoalStore';
 import { MoneyTransaction } from '../types/money';
 import { MoneyActivityCalendar } from './MoneyActivityCalendar';
-import { FinancialGoalsCard } from './FinancialGoalsCard';
-import { useMoneyInsights } from '../hooks/useMoneyInsights';
 import { getNextLoanDuePayment, getEffectiveLoanOutstanding } from '../lib/finance';
 import { getTicketCardPath } from '../constants/folderTheme';
+import { FinancialGoalsCard } from './FinancialGoalsCard';
 
 const getSubscriptionIcon = (logoName: string | undefined) => {
   switch (logoName) {
@@ -341,242 +340,6 @@ function CircularProgress3DIcon({
 }
 
 
-interface DonutChartProps {
-  critical?: number;
-  warning?: number;
-  moderate?: number;
-  positive?: number;
-  // legacy backward compat
-  warnings?: number;
-  tips?: number;
-  success?: number;
-  size: number;
-  trackColor: string;
-  textColor: string;
-  centerColor?: string;
-  isPrivacyMode: boolean;
-}
-
-const MoneyInsightsDonut = ({
-  critical = 0,
-  warning = 0,
-  moderate = 0,
-  positive = 0,
-  warnings,
-  tips,
-  success,
-  size,
-  trackColor,
-  textColor,
-  centerColor,
-  isPrivacyMode,
-}: DonutChartProps) => {
-  const r = size * 0.38;
-  const center = size / 2;
-  const circum = 2 * Math.PI * r;
-
-  const cCrit = critical;
-  const cWarn = warning || (warnings ?? 0);
-  const cMod = moderate || (tips ?? 0);
-  const cPos = positive || (success ?? 0);
-  const total = cCrit + cWarn + cMod + cPos;
-
-  if (total === 0) {
-    return (
-      <View style={{ alignItems: 'center', justifyContent: 'center', width: size, height: size }}>
-        <Svg width={size} height={size}>
-          <Circle
-            cx={center}
-            cy={center}
-            r={r}
-            stroke={trackColor}
-            strokeWidth={size * 0.085}
-            strokeDasharray="4 4"
-            fill="none"
-          />
-        </Svg>
-        <View style={styles.chartCenterBox}>
-          <Sparkles size={18} color="#00C9A7" />
-          <ThemedText style={[styles.chartCenterSub, { color: textColor, marginTop: 2, letterSpacing: 0.5 }]}>
-            AI AUDIT
-          </ThemedText>
-        </View>
-      </View>
-    );
-  }
-
-  const activeTiersCount = (cCrit > 0 ? 1 : 0) + (cWarn > 0 ? 1 : 0) + (cMod > 0 ? 1 : 0) + (cPos > 0 ? 1 : 0);
-  const gap = activeTiersCount > 1 ? 4 : 0;
-
-  const critStroke = cCrit > 0 ? Math.max(1, (cCrit / total) * circum - gap) : 0;
-  const warnStroke = cWarn > 0 ? Math.max(1, (cWarn / total) * circum - gap) : 0;
-  const modStroke = cMod > 0 ? Math.max(1, (cMod / total) * circum - gap) : 0;
-  const posStroke = cPos > 0 ? Math.max(1, (cPos / total) * circum - gap) : 0;
-
-  const critArcLen = (cCrit / total) * circum;
-  const warnArcLen = (cWarn / total) * circum;
-  const modArcLen = (cMod / total) * circum;
-
-  const centerNumColor =
-    cCrit > 0 ? '#EF4444' : cWarn > 0 ? '#F97316' : cMod > 0 ? '#EAB308' : '#22C55E';
-
-  return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', width: size, height: size }}>
-      <Svg width={size} height={size}>
-        {/* Track background */}
-        <Circle
-          cx={center}
-          cy={center}
-          r={r}
-          stroke={trackColor}
-          strokeWidth={size * 0.085}
-          fill="none"
-        />
-
-        {/* Tier 1: Critical (🔴 Red) */}
-        {cCrit > 0 && (
-          <Circle
-            cx={center}
-            cy={center}
-            r={r}
-            stroke="#EF4444"
-            strokeWidth={size * 0.085}
-            strokeDasharray={`${critStroke} ${circum}`}
-            strokeLinecap={activeTiersCount === 1 ? 'round' : 'butt'}
-            fill="none"
-            transform={`rotate(-90 ${center} ${center})`}
-          />
-        )}
-
-        {/* Tier 2: Warning (🟠 Orange) */}
-        {cWarn > 0 && (
-          <Circle
-            cx={center}
-            cy={center}
-            r={r}
-            stroke="#F97316"
-            strokeWidth={size * 0.085}
-            strokeDasharray={`${warnStroke} ${circum}`}
-            strokeDashoffset={-critArcLen}
-            strokeLinecap={activeTiersCount === 1 ? 'round' : 'butt'}
-            fill="none"
-            transform={`rotate(-90 ${center} ${center})`}
-          />
-        )}
-
-        {/* Tier 3: Opportunity / Moderate (🟡 Yellow) */}
-        {cMod > 0 && (
-          <Circle
-            cx={center}
-            cy={center}
-            r={r}
-            stroke="#EAB308"
-            strokeWidth={size * 0.085}
-            strokeDasharray={`${modStroke} ${circum}`}
-            strokeDashoffset={-(critArcLen + warnArcLen)}
-            strokeLinecap={activeTiersCount === 1 ? 'round' : 'butt'}
-            fill="none"
-            transform={`rotate(-90 ${center} ${center})`}
-          />
-        )}
-
-        {/* Tier 4: On Track / Positive (🟢 Green) */}
-        {cPos > 0 && (
-          <Circle
-            cx={center}
-            cy={center}
-            r={r}
-            stroke="#22C55E"
-            strokeWidth={size * 0.085}
-            strokeDasharray={`${posStroke} ${circum}`}
-            strokeDashoffset={-(critArcLen + warnArcLen + modArcLen)}
-            strokeLinecap={activeTiersCount === 1 ? 'round' : 'butt'}
-            fill="none"
-            transform={`rotate(-90 ${center} ${center})`}
-          />
-        )}
-      </Svg>
-      <View style={styles.chartCenterBox}>
-        <ThemedText
-          style={[
-            styles.chartCenterNum,
-            { color: centerColor || centerNumColor, fontFamily: 'Outfit_700Bold' },
-          ]}
-        >
-          {isPrivacyMode ? '••' : total}
-        </ThemedText>
-        <ThemedText
-          style={[
-            styles.chartCenterSub,
-            { color: textColor, fontFamily: 'Outfit_600SemiBold', fontSize: 9, letterSpacing: 0.6 },
-          ]}
-        >
-          FINDINGS
-        </ThemedText>
-      </View>
-    </View>
-  );
-};
-
-interface GaugeProps {
-  score: number;
-  size: number;
-  color: string;
-  trackColor: string;
-  textColor: string;
-  isPrivacyMode: boolean;
-}
-
-const HealthScoreGauge = ({
-  score,
-  size,
-  color,
-  trackColor,
-  textColor,
-  isPrivacyMode,
-}: GaugeProps) => {
-  const r = size * 0.38;
-  const center = size / 2;
-  const circum = 2 * Math.PI * r;
-  const clamped = Math.min(100, Math.max(0, score));
-  const offset = circum - (clamped / 100) * circum;
-
-  return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', width: size, height: size }}>
-      <Svg width={size} height={size}>
-        <Circle
-          cx={center}
-          cy={center}
-          r={r}
-          stroke={trackColor}
-          strokeWidth={size * 0.08}
-          fill="none"
-        />
-        <Circle
-          cx={center}
-          cy={center}
-          r={r}
-          stroke={color}
-          strokeWidth={size * 0.08}
-          strokeDasharray={`${circum} ${circum}`}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          fill="none"
-          transform={`rotate(-90 ${center} ${center})`}
-        />
-      </Svg>
-      <View style={styles.chartCenterBox}>
-        <ThemedText style={[styles.chartCenterNum, { color }]}>
-          {isPrivacyMode ? '**' : score}
-        </ThemedText>
-        <ThemedText style={[styles.chartCenterSub, { color: textColor }]}>
-          HEALTH
-        </ThemedText>
-      </View>
-    </View>
-  );
-};
-
 export function MoneyDashboard() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'dark';
@@ -584,10 +347,7 @@ export function MoneyDashboard() {
   const currColors = Colors[colorScheme];
 
   const [cardWidth, setCardWidth] = useState<number>(Dimensions.get('window').width - 32);
-  const [insightsCardWidth, setInsightsCardWidth] = useState(130);
-  const [healthCardWidth, setHealthCardWidth] = useState(130);
 
-  // Stores
   const {
     accounts,
     moneyTransactions,
@@ -604,7 +364,6 @@ export function MoneyDashboard() {
   const togglePrivacyMode = usePortfolioStore((state) => state.togglePrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
   const goals = useGoalStore((state) => state.goals);
-  const { count: insightsCount, criticalityCounts, countByType } = useMoneyInsights();
 
   // Subscribe to portfolio transactions and tickers so net worth updates live
   const portfolioTransactions = usePortfolioStore((state) => state.transactions);
@@ -716,168 +475,6 @@ export function MoneyDashboard() {
 
     return { income, expense, savingsRate, dailyBurnRate, avgDailyEarning };
   }, [moneyTransactions]);
-
-  // Calculate Financial Health Score & Grade for the dashboard button
-  const healthSummary = useMemo(() => {
-    // 1. Calculate Average Monthly Income & Expense (Based on last 90 Days / 3 Months)
-    const now = new Date();
-    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).getTime();
-
-    let totalIncome90d = 0;
-    let totalExpense90d = 0;
-    let daysDiff = 90;
-
-    const txTimes = moneyTransactions.map((t) => new Date(t.date).getTime());
-    if (txTimes.length > 0) {
-      const oldestTx = Math.min(...txTimes);
-      const computedDays = Math.max(1, (now.getTime() - oldestTx) / (24 * 60 * 60 * 1000));
-      daysDiff = Math.min(90, Math.round(computedDays));
-    }
-
-    moneyTransactions.forEach((tx) => {
-      const txTime = new Date(tx.date).getTime();
-      if (txTime >= now.getTime() - daysDiff * 24 * 60 * 60 * 1000) {
-        if (tx.type === 'income') totalIncome90d += tx.amount;
-        else if (tx.type === 'expense') totalExpense90d += tx.amount;
-      }
-    });
-
-    const incomeAvgMonthly = daysDiff > 0 ? (totalIncome90d / daysDiff) * 30 : 0;
-    const expenseAvgMonthly = daysDiff > 0 ? (totalExpense90d / daysDiff) * 30 : 0;
-
-    // A. Savings Rate (All-time cumulative savings rate)
-    let allTimeIncome = 0;
-    let allTimeExpense = 0;
-    moneyTransactions.forEach((tx) => {
-      if (tx.type === 'income') allTimeIncome += tx.amount;
-      else if (tx.type === 'expense') allTimeExpense += tx.amount;
-    });
-    const allTimeSavings = allTimeIncome - allTimeExpense;
-    const savingsRate = allTimeIncome > 0 ? (allTimeSavings / allTimeIncome) * 100 : 0;
-
-    let liquidCash = 0;
-    let ccDebt = 0;
-    let ccLimit = 0;
-    let receivables = 0;
-    let payables = 0;
-    let investmentsVal = 0;
-
-    let brokerAllocations: any[] = [];
-    try {
-      brokerAllocations = usePortfolioStore.getState().getAllocationData('Broker');
-    } catch (e) {
-      console.error('Failed to get broker allocations in dashboard health score:', e);
-    }
-
-    accounts.forEach((acc) => {
-      if (!acc.isArchived) {
-        if (acc.type === 'wallet' || acc.type === 'savings' || acc.type === 'emergency_fund') {
-          liquidCash += Math.max(0, acc.balance);
-        } else if (acc.type === 'credit_card') {
-          ccDebt += Math.abs(acc.balance);
-          ccLimit += acc.creditLimit || 0;
-        } else if (acc.type === 'receivable') {
-          receivables += Math.max(0, acc.balance);
-        } else if (acc.type === 'payable') {
-          payables += Math.abs(acc.balance);
-        } else if (acc.type === 'investment') {
-          if (acc.linkedBroker) {
-            const allocation = brokerAllocations.find(
-              (b) => b.name.toLowerCase().trim() === acc.linkedBroker!.toLowerCase().trim()
-            );
-            investmentsVal += allocation ? allocation.value : 0;
-          } else {
-            investmentsVal += Math.max(0, acc.balance);
-          }
-        }
-      }
-    });
-
-    const emiBurden = getMonthlyEMIBurden();
-    const dtiRatio = incomeAvgMonthly > 0 ? (emiBurden / incomeAvgMonthly) * 100 : 0;
-
-    let blockedEmiAmount = 0;
-    loans.forEach((loan) => {
-      if (loan.isActive && loan.linkedAccountId) {
-        const acc = accounts.find((a) => a.id === loan.linkedAccountId);
-        if (acc && acc.type === 'credit_card') {
-          blockedEmiAmount += getEffectiveLoanOutstanding(loan, emiPayments);
-        }
-      }
-    });
-
-    const totalCCSpent = ccDebt + blockedEmiAmount;
-    const creditUtilization = ccLimit > 0 ? (totalCCSpent / ccLimit) * 100 : 0;
-
-    const totalAssets = liquidCash + receivables + investmentsVal;
-    const shortTermLiabilities = ccDebt + payables;
-    const quickRatio = shortTermLiabilities > 0 ? (liquidCash + receivables - payables) / shortTermLiabilities : (liquidCash + receivables - payables) > 0 ? 9.9 : 0;
-
-    // --- Scoring Algorithm (Max 100) ---
-    // 1. Savings Rate Score (Max 20 points)
-    let savingsScore = 0;
-    if (savingsRate >= 20) savingsScore = 20;
-    else if (savingsRate > 0) savingsScore = (savingsRate / 20) * 20;
-
-    const monthlyExpense = expenseAvgMonthly || 10000;
-    const emergencyCoverMonths = Math.max(0, liquidCash / monthlyExpense);
-
-    // 2. Emergency Fund Score (Max 20 points)
-    let emergencyScore = 0;
-    if (emergencyCoverMonths >= 3) emergencyScore = 20;
-    else emergencyScore = (emergencyCoverMonths / 3) * 20;
-
-    // 3. DTI Score (Max 20 points)
-    let dtiScore = 0;
-    if (dtiRatio <= 15) dtiScore = 20;
-    else if (dtiRatio >= 45) dtiScore = 0;
-    else dtiScore = 20 * (1 - (dtiRatio - 15) / 30);
-
-    // 4. Credit Utilization Score (Max 15 points)
-    let utilizationScore = 15; // Default full marks if no credit limits
-    if (ccLimit > 0) {
-      if (creditUtilization <= 30) utilizationScore = 15;
-      else if (creditUtilization >= 80) utilizationScore = 0;
-      else utilizationScore = 15 * (1 - (creditUtilization - 30) / 50);
-    }
-
-    // 5. Asset Allocation Score (Max 15 points)
-    let allocationScore = 15;
-    if (totalAssets > 0) {
-      const ratio = investmentsVal / totalAssets;
-      if (ratio >= 0.30 && ratio <= 0.70) allocationScore = 15;
-      else if ((ratio >= 0.10 && ratio < 0.30) || (ratio > 0.70 && ratio <= 0.85)) allocationScore = 10;
-      else allocationScore = 5;
-    }
-
-    // 6. Quick Ratio Score (Max 10 points)
-    let quickRatioScore = 10;
-    if (shortTermLiabilities > 0) {
-      if (quickRatio >= 1.5) quickRatioScore = 10;
-      else if (quickRatio >= 1.0) quickRatioScore = 7;
-      else quickRatioScore = 2;
-    }
-
-    const totalScore = Math.round(savingsScore + emergencyScore + dtiScore + utilizationScore + allocationScore + quickRatioScore);
-
-    let grade = 'D';
-    let gradeColor = '#FF3B30';
-    if (totalScore >= 90) {
-      grade = 'A+';
-      gradeColor = '#34C759';
-    } else if (totalScore >= 80) {
-      grade = 'A';
-      gradeColor = '#34C759';
-    } else if (totalScore >= 70) {
-      grade = 'B';
-      gradeColor = currColors.tintMoney;
-    } else if (totalScore >= 55) {
-      grade = 'C';
-      gradeColor = '#FF9500';
-    }
-
-    return { totalScore, grade, gradeColor };
-  }, [moneyTransactions, accounts, loans, getMonthlyEMIBurden]);
 
   // Filter and limit recent transactions to show only the last transaction date's data, capped at 3
   const filteredRecentTxs = useMemo(() => {
@@ -1173,157 +770,6 @@ export function MoneyDashboard() {
       >
         {/* ─── Ticket-Style Net Worth Hero Card with All Stat Rows ─── */}
         {renderTicketHeroCard()}
-
-        {/* ─── Smart Insights & Health Score (Analytics-based Row) ─── */}
-        <View style={styles.compactRow}>
-          {/* Smart Insights Analytics Donut Card */}
-          <TouchableOpacity
-            style={[
-              styles.compactDashboardCard,
-              {
-                backgroundColor: '#FEF08A',
-                borderWidth: isDark ? 0 : 1,
-                borderColor: isDark ? 'transparent' : '#CA8A04',
-                borderRadius: 22,
-              },
-            ]}
-            activeOpacity={0.75}
-            onLayout={(e) => setInsightsCardWidth(e.nativeEvent.layout.width - 32)}
-            onPress={() => {
-              handleHaptic();
-              router.push('/money-insights');
-            }}
-          >
-            <View style={styles.compactCardHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Sparkles size={12} color="#713F12" />
-                <ThemedText
-                  style={[
-                    styles.compactCardSectionLabel,
-                    { color: '#854D0E' },
-                  ]}
-                >
-                  AI INSIGHTS
-                </ThemedText>
-              </View>
-              <View
-                style={[
-                  styles.iconCircleSmall,
-                  { backgroundColor: 'rgba(113, 63, 18, 0.12)' },
-                ]}
-              >
-                <ArrowRight size={12} color="#713F12" />
-              </View>
-            </View>
-
-            <View style={[styles.compactMain, { flex: 1, justifyContent: 'center' }]}>
-              <MoneyInsightsDonut
-                critical={criticalityCounts.critical}
-                warning={criticalityCounts.warning}
-                moderate={criticalityCounts.moderate}
-                positive={criticalityCounts.positive}
-                size={insightsCardWidth * 0.85}
-                trackColor="rgba(113, 63, 18, 0.12)"
-                textColor="#854D0E"
-                centerColor="#713F12"
-                isPrivacyMode={isPrivacyMode}
-              />
-              <View
-                style={[
-                  styles.compactFooterBadge,
-                  {
-                    backgroundColor:
-                      criticalityCounts.critical > 0
-                        ? 'rgba(239, 68, 68, 0.16)'
-                        : 'rgba(113, 63, 18, 0.12)',
-                  },
-                ]}
-              >
-                <ThemedText
-                  style={[
-                    styles.compactFooterBadgeText,
-                    {
-                      color:
-                        criticalityCounts.critical > 0
-                          ? '#B91C1C'
-                          : '#713F12',
-                      fontFamily: 'Outfit_600SemiBold',
-                    },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {criticalityCounts.critical > 0
-                    ? `${criticalityCounts.critical} IMMEDIATE RISK${criticalityCounts.critical > 1 ? 'S' : ''}`
-                    : criticalityCounts.warning > 0
-                      ? `${criticalityCounts.warning} WARNING${criticalityCounts.warning > 1 ? 'S' : ''}`
-                      : criticalityCounts.moderate > 0
-                        ? `${criticalityCounts.moderate} OPPORTUNIT${criticalityCounts.moderate > 1 ? 'IES' : 'Y'}`
-                        : criticalityCounts.positive > 0
-                          ? 'ALL ON TRACK'
-                          : 'RUN AI AUDIT'}
-                </ThemedText>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          {/* Health Score Gauge Card (Soft Lilac, matching EMIs subscriptions theme) */}
-          <TouchableOpacity
-            style={[
-              styles.compactDashboardCard,
-              {
-                backgroundColor: '#E9D5FF',
-                borderWidth: isDark ? 0 : 1,
-                borderColor: isDark ? 'transparent' : '#9333EA',
-                borderRadius: 22,
-              },
-            ]}
-            activeOpacity={0.75}
-            onLayout={(e) => setHealthCardWidth(e.nativeEvent.layout.width - 32)}
-            onPress={() => {
-              handleHaptic();
-              router.push('/money-health');
-            }}
-          >
-            <View style={styles.compactCardHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Activity size={12} color="#7E22CE" />
-                <ThemedText style={[styles.compactCardSectionLabel, { color: '#7E22CE' }]}>
-                  HEALTH SCORE
-                </ThemedText>
-              </View>
-              <View style={[styles.iconCircleSmall, { backgroundColor: 'rgba(88, 28, 135, 0.12)' }]}>
-                <ArrowRight size={12} color="#581C87" />
-              </View>
-            </View>
-
-            <View style={[styles.compactMain, { flex: 1, justifyContent: 'center' }]}>
-              <HealthScoreGauge
-                score={healthSummary.totalScore}
-                size={healthCardWidth * 0.85}
-                color={healthSummary.gradeColor}
-                trackColor="rgba(88, 28, 135, 0.12)"
-                textColor="#7E22CE"
-                isPrivacyMode={isPrivacyMode}
-              />
-              <View
-                style={[
-                  styles.compactFooterBadge,
-                  { backgroundColor: 'rgba(88, 28, 135, 0.12)' },
-                ]}
-              >
-                <ThemedText
-                  style={[
-                    styles.compactFooterBadgeText,
-                    { color: '#581C87', fontFamily: 'Outfit_600SemiBold' },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {`GRADE ${healthSummary.grade}`.toUpperCase()}
-                </ThemedText>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </View>
 
         {/* ─── Financial Goals & Milestones Analytics Card ─── */}
         <FinancialGoalsCard />
@@ -1705,24 +1151,7 @@ export function MoneyDashboard() {
                         </View>
                       </View>
 
-                      <View
-                        style={{
-                          paddingHorizontal: 9,
-                          paddingVertical: 4.5,
-                          borderRadius: 10,
-                          backgroundColor: isIncome
-                            ? '#DCFCE7'
-                            : isExpense
-                            ? 'rgba(136, 19, 55, 0.12)'
-                            : '#DBEAFE',
-                          borderWidth: 1,
-                          borderColor: isIncome
-                            ? '#86EFAC'
-                            : isExpense
-                            ? 'rgba(136, 19, 55, 0.22)'
-                            : '#93C5FD',
-                        }}
-                      >
+                      <View style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
                         <ThemedText
                           style={[
                             styles.txAmount,
@@ -1732,7 +1161,6 @@ export function MoneyDashboard() {
                                 : isExpense
                                 ? '#881337'
                                 : '#1D4ED8',
-                              fontFamily: 'Outfit_700Bold',
                             },
                           ]}
                         >
@@ -2025,8 +1453,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_400Regular',
   },
   txAmount: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.2,
   },
 
   // ─── Upcoming Pastel Cards ───

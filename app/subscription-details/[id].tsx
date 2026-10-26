@@ -38,7 +38,7 @@ import { Subscription, SubscriptionPayment } from '@/types/money';
 import { Category3DIcon } from '@/components/Category3DIcon';
 import { AccountPickerModal } from '@/components/AccountPickerModal';
 import { AccountSelectCard } from '@/components/AccountSelectCard';
-import { FolderDetailsCard, CircularProgress3DIcon } from '@/components/FolderDetailsCard';
+import { CircularProgress3DIcon } from '@/components/FolderDetailsCard';
 import { getCardPaletteFromItem } from '@/constants/folderTheme';
 import { advanceDateByCycle } from '@/lib/finance';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
@@ -396,7 +396,7 @@ interface ScheduleRow {
 
   return (
     <View style={[styles.container, { backgroundColor: currColors.background }]}>
-      <Stack.Screen options={{ headerShown: false }} />
+      <Stack.Screen options={{ headerShown: false, gestureEnabled: true }} />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: headerTopPadding, paddingBottom: 12 }]}>
@@ -448,16 +448,33 @@ interface ScheduleRow {
         bounces={false}
         overScrollMode="never"
       >
-        {/* ─── 1. Folder Dossier Hero Card (Matching Folder Details UI) ─── */}
-        <FolderDetailsCard
-          palette={palette}
-          headerTitle={subscription.name}
-          headerSubtitle={
-            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: palette.sub }} numberOfLines={1}>
-              {formatAmount(subscription.amount)}{cycleSuffix}{linkedAccount?.name ? ` · ${linkedAccount.name}` : ''}
-            </ThemedText>
-          }
-          tabRightContent={
+        {/* ─── 1. Subscription Summary Hero Card ─── */}
+        <View
+          style={[
+            styles.heroCard,
+            {
+              backgroundColor: palette.bg,
+              borderColor: isDark ? 'transparent' : palette.sub + '35',
+            },
+          ]}
+        >
+          {/* Header Row: Title & Subtitle on left, 3D Icon on right */}
+          <View style={styles.heroHeaderRow}>
+            <View style={{ flex: 1, paddingRight: 14 }}>
+              <ThemedText
+                style={[styles.heroHeaderTitle, { color: palette.text }]}
+                numberOfLines={2}
+              >
+                {subscription.name}
+              </ThemedText>
+              <ThemedText
+                style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: palette.sub, marginTop: 4 }}
+                numberOfLines={1}
+              >
+                {formatAmount(subscription.amount)}{cycleSuffix}{linkedAccount?.name ? ` · ${linkedAccount.name}` : ''}
+              </ThemedText>
+            </View>
+
             <CircularProgress3DIcon
               name={subscription.category || subscription.name}
               icon={subscription.logo}
@@ -466,10 +483,10 @@ interface ScheduleRow {
               size={48}
               iconSize={28}
             />
-          }
-        >
-          {/* Top Row with Amount and Status */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          </View>
+
+          {/* Amount and Status */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
               <ThemedText style={[styles.heroValue, { color: palette.text, fontFamily: 'Outfit_700Bold', fontSize: 28 }]}>
                 {formatAmount(subscription.amount)}
@@ -537,7 +554,7 @@ interface ScheduleRow {
             </ThemedText>
           </View>
 
-          {/* Integrated Dossier Action Buttons */}
+          {/* Integrated Action Buttons */}
           <View style={[styles.cardActionsRow, { borderTopColor: palette.sub + '22' }]}>
             {subscription.isActive ? (
               <>
@@ -582,7 +599,7 @@ interface ScheduleRow {
               </TouchableOpacity>
             )}
           </View>
-        </FolderDetailsCard>
+        </View>
 
         {/* ─── 3. Tabbed Renewal & Payment Schedule ─── */}
         <View style={styles.scheduleHeaderRow}>
@@ -943,16 +960,25 @@ const styles = StyleSheet.create({
   heroCard: {
     marginHorizontal: 16,
     borderRadius: 16,
-    borderWidth: 1,
-    padding: 18,
-    marginTop: 4,
-    marginBottom: 14,
+    borderCurve: 'continuous',
+    borderWidth: 1.2,
+    padding: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    marginBottom: 8,
   },
   heroHeaderRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+  },
+  heroHeaderTitle: {
+    fontSize: 20,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: -0.3,
   },
   heroLabel: {
     fontSize: 10,

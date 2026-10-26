@@ -7,21 +7,25 @@ import {
   Alert,
   Modal,
   TouchableWithoutFeedback,
+  Dimensions,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Svg, Path, Line } from 'react-native-svg';
 import {
-  ArrowLeft,
-  Trash2,
-  ArrowDownLeft,
-  ArrowUpRight,
-  ArrowRightLeft,
-  Info,
-  Layers,
-  Calendar,
   SlidersHorizontal,
   X,
+  Calendar,
+  Layers,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowRightLeft,
+  Eye,
+  EyeOff,
+  Plus,
+  Receipt,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -31,20 +35,33 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
+import { getTicketCardPath } from '@/constants/folderTheme';
+
+type DateRangeKey =
+  | 'this_month'
+  | 'this_week'
+  | 'last_30_days'
+  | 'last_90_days'
+  | 'this_year'
+  | 'all';
 
 export default function AllTransactionsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     category?: string;
     type?: 'all' | 'income' | 'expense' | 'transfer';
-    dateRange?: 'this_month' | 'this_week' | 'last_30_days' | 'last_90_days' | 'this_year' | 'all';
+    dateRange?: DateRangeKey;
     startDate?: string;
     endDate?: string;
     dateLabel?: string;
   }>();
+
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'dark';
+  const isDark = colorScheme === 'dark';
   const currColors = Colors[colorScheme];
+
+  const [cardWidth, setCardWidth] = useState<number>(Dimensions.get('window').width - 32);
 
   const {
     accounts,
@@ -53,12 +70,10 @@ export default function AllTransactionsScreen() {
   } = useMoneyStore();
 
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
+  const togglePrivacyMode = usePortfolioStore((state) => state.togglePrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
 
-  // Date range presets state type
-  type DateRangeKey = 'this_month' | 'this_week' | 'last_30_days' | 'last_90_days' | 'this_year' | 'all';
-
-  // Custom date bounds state (e.g. from Money Analytics specific month/quarter/year)
+  // Custom date bounds state (e.g. from Money Analytics specific period navigation)
   const [customRange, setCustomRange] = useState<{
     startDate: string;
     endDate: string;
@@ -73,7 +88,7 @@ export default function AllTransactionsScreen() {
       : null
   );
 
-  // Filter state initialized from params
+  // Filter state
   const [activeFilter, setActiveFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>(
     params.type && ['all', 'income', 'expense', 'transfer'].includes(params.type)
       ? params.type
@@ -83,7 +98,10 @@ export default function AllTransactionsScreen() {
     params.category ? params.category : null
   );
   const [dateRange, setDateRange] = useState<DateRangeKey>(
-    params.dateRange && ['this_month', 'this_week', 'last_30_days', 'last_90_days', 'this_year', 'all'].includes(params.dateRange)
+    params.dateRange &&
+      ['this_month', 'this_week', 'last_30_days', 'last_90_days', 'this_year', 'all'].includes(
+        params.dateRange
+      )
       ? params.dateRange
       : 'this_month'
   );
@@ -102,24 +120,41 @@ export default function AllTransactionsScreen() {
         label: params.dateLabel || 'Selected Period',
       });
       setDateRange('all');
-    } else if (params.dateRange && ['this_month', 'this_week', 'last_30_days', 'last_90_days', 'this_year', 'all'].includes(params.dateRange)) {
+    } else if (
+      params.dateRange &&
+      ['this_month', 'this_week', 'last_30_days', 'last_90_days', 'this_year', 'all'].includes(
+        params.dateRange
+      )
+    ) {
       setCustomRange(null);
       setDateRange(params.dateRange as DateRangeKey);
     }
-  }, [params.category, params.type, params.dateRange, params.startDate, params.endDate, params.dateLabel]);
+  }, [
+    params.category,
+    params.type,
+    params.dateRange,
+    params.startDate,
+    params.endDate,
+    params.dateLabel,
+  ]);
 
   // Modal sheet visibility
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   // Check if any filter is active away from defaults
   const isFilterActive = useMemo(() => {
-    return activeFilter !== 'all' || dateRange !== 'this_month' || selectedCategory !== null || customRange !== null;
+    return (
+      activeFilter !== 'all' ||
+      dateRange !== 'this_month' ||
+      selectedCategory !== null ||
+      customRange !== null
+    );
   }, [activeFilter, dateRange, selectedCategory, customRange]);
 
   // Compute active filters list for display summary chips
   const activeFilters = useMemo(() => {
     const list: Array<{ key: string; label: string; onClear: () => void }> = [];
-    
+
     if (customRange && customRange.label) {
       list.push({
         key: 'dateRange',
@@ -144,16 +179,15 @@ export default function AllTransactionsScreen() {
         onClear: () => setDateRange('all'),
       });
     }
-    
+
     if (activeFilter !== 'all') {
       const labels = {
-        expense: 'Expenses',
+        expense: 'Spent',
         income: 'Income',
-        transfer: 'Transfers',
-        all: 'All',
+        transfer: 'Transfer',
       };
       list.push({
-        key: 'activeFilter',
+        key: 'type',
         label: labels[activeFilter],
         onClear: () => {
           setActiveFilter('all');
@@ -161,7 +195,7 @@ export default function AllTransactionsScreen() {
         },
       });
     }
-    
+
     if (selectedCategory) {
       list.push({
         key: 'category',
@@ -169,79 +203,78 @@ export default function AllTransactionsScreen() {
         onClear: () => setSelectedCategory(null),
       });
     }
-    
+
     return list;
   }, [activeFilter, dateRange, selectedCategory, customRange]);
 
   // Helper check for date range inclusion
-  const isWithinDateRange = useCallback((dateStr: string, range: DateRangeKey) => {
-    const txTime = new Date(dateStr).getTime();
-    
-    // If a custom range is active (e.g. from Money Analytics historical navigation)
-    if (customRange && customRange.startDate && customRange.endDate) {
-      const start = new Date(customRange.startDate).getTime();
-      const end = new Date(customRange.endDate).getTime();
-      return txTime >= start && txTime <= end;
-    }
+  const isWithinDateRange = useCallback(
+    (dateStr: string, range: DateRangeKey) => {
+      const txTime = new Date(dateStr).getTime();
 
-    const now = new Date();
-    
-    switch (range) {
-      case 'this_month': {
-        const start = new Date();
-        start.setDate(1);
-        start.setHours(0, 0, 0, 0);
-        
-        const end = new Date(start.getFullYear(), start.getMonth() + 1, 0, 23, 59, 59, 999);
-        return txTime >= start.getTime() && txTime <= end.getTime();
+      if (customRange && customRange.startDate && customRange.endDate) {
+        const start = new Date(customRange.startDate).getTime();
+        const end = new Date(customRange.endDate).getTime();
+        return txTime >= start && txTime <= end;
       }
-      case 'this_week': {
-        const start = new Date();
-        const day = start.getDay();
-        const diff = start.getDate() - day; // Sunday is 0
-        start.setDate(diff);
-        start.setHours(0, 0, 0, 0);
-        
-        const end = new Date(start);
-        end.setDate(end.getDate() + 7);
-        end.setHours(23, 59, 59, 999);
-        
-        return txTime >= start.getTime() && txTime <= end.getTime();
-      }
-      case 'last_30_days': {
-        const start = new Date();
-        start.setDate(start.getDate() - 30);
-        start.setHours(0, 0, 0, 0);
-        return txTime >= start.getTime();
-      }
-      case 'last_90_days': {
-        const start = new Date();
-        start.setDate(start.getDate() - 90);
-        start.setHours(0, 0, 0, 0);
-        return txTime >= start.getTime();
-      }
-      case 'this_year': {
-        const start = new Date();
-        start.setMonth(0);
-        start.setDate(1);
-        start.setHours(0, 0, 0, 0);
-        
-        const end = new Date(start.getFullYear(), 11, 31, 23, 59, 59, 999);
-        return txTime >= start.getTime() && txTime <= end.getTime();
-      }
-      case 'all':
-      default:
-        return true;
-    }
-  }, []);
 
-  // List of unique categories for the active type filter and date range (before category filter is applied)
+      switch (range) {
+        case 'this_month': {
+          const start = new Date();
+          start.setDate(1);
+          start.setHours(0, 0, 0, 0);
+
+          const end = new Date(start.getFullYear(), start.getMonth() + 1, 0, 23, 59, 59, 999);
+          return txTime >= start.getTime() && txTime <= end.getTime();
+        }
+        case 'this_week': {
+          const start = new Date();
+          const day = start.getDay();
+          const diff = start.getDate() - day; // Sunday is 0
+          start.setDate(diff);
+          start.setHours(0, 0, 0, 0);
+
+          const end = new Date(start);
+          end.setDate(end.getDate() + 7);
+          end.setHours(23, 59, 59, 999);
+
+          return txTime >= start.getTime() && txTime <= end.getTime();
+        }
+        case 'last_30_days': {
+          const start = new Date();
+          start.setDate(start.getDate() - 30);
+          start.setHours(0, 0, 0, 0);
+          return txTime >= start.getTime();
+        }
+        case 'last_90_days': {
+          const start = new Date();
+          start.setDate(start.getDate() - 90);
+          start.setHours(0, 0, 0, 0);
+          return txTime >= start.getTime();
+        }
+        case 'this_year': {
+          const start = new Date();
+          start.setMonth(0);
+          start.setDate(1);
+          start.setHours(0, 0, 0, 0);
+
+          const end = new Date(start.getFullYear(), 11, 31, 23, 59, 59, 999);
+          return txTime >= start.getTime() && txTime <= end.getTime();
+        }
+        case 'all':
+        default:
+          return true;
+      }
+    },
+    [customRange]
+  );
+
+  // List of unique categories for the active type filter and date range
   const availableCategories = useMemo(() => {
     let list = moneyTransactions;
     if (activeFilter !== 'all') {
       list = list.filter((tx) => tx.type === activeFilter);
     }
-    // Filter by date range
     list = list.filter((tx) => isWithinDateRange(tx.date, dateRange));
 
     const cats = list
@@ -251,7 +284,7 @@ export default function AllTransactionsScreen() {
   }, [moneyTransactions, activeFilter, dateRange, isWithinDateRange]);
 
   // Clean selected category if it's no longer present in availableCategories
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedCategory && !availableCategories.includes(selectedCategory)) {
       setSelectedCategory(null);
     }
@@ -260,16 +293,13 @@ export default function AllTransactionsScreen() {
   // Filter & sort transactions chronologically (latest first)
   const filteredTxs = useMemo(() => {
     let list = moneyTransactions;
-    
-    // 1. Filter by active type
+
     if (activeFilter !== 'all') {
       list = list.filter((tx) => tx.type === activeFilter);
     }
 
-    // 2. Filter by date range
     list = list.filter((tx) => isWithinDateRange(tx.date, dateRange));
 
-    // 3. Filter by selected category
     if (selectedCategory) {
       list = list.filter((tx) => {
         if (tx.type === 'transfer') {
@@ -282,7 +312,7 @@ export default function AllTransactionsScreen() {
     return [...list].sort((a, b) => b.date.localeCompare(a.date));
   }, [moneyTransactions, activeFilter, dateRange, selectedCategory, isWithinDateRange]);
 
-  // Helper for human-friendly group date header (e.g. "Today", "Yesterday", "22 May 2024")
+  // Helper for human-friendly group date header
   const getGroupDateLabel = (dateStr: string) => {
     const d = new Date(dateStr);
     const now = new Date();
@@ -301,39 +331,6 @@ export default function AllTransactionsScreen() {
     });
   };
 
-  // Helper for pastel category circular badge backgrounds
-  const getCategoryBadgeTint = (category: string, type: 'income' | 'expense' | 'transfer', isDark: boolean) => {
-    if (type === 'income') {
-      return { bg: isDark ? '#00C9A722' : '#E6F9F5' };
-    }
-    if (type === 'transfer') {
-      return { bg: isDark ? '#007AFF22' : '#EDF4FF' };
-    }
-    const cat = (category || '').toLowerCase();
-    if (cat.includes('grocer') || cat.includes('food') || cat.includes('dine') || cat.includes('restaurant') || cat.includes('snack') || cat.includes('eat')) {
-      return { bg: isDark ? '#34C75924' : '#EAF8EE' };
-    }
-    if (cat.includes('shop') || cat.includes('cloth') || (cat.includes('electr') && !cat.includes('electric bill')) || cat.includes('gadget') || cat.includes('amazon') || cat.includes('purchase')) {
-      return { bg: isDark ? '#AF52DE24' : '#F5EDFD' };
-    }
-    if (cat.includes('bill') || cat.includes('electric') || cat.includes('utility') || cat.includes('rent') || cat.includes('recharge') || cat.includes('wifi') || cat.includes('internet') || cat.includes('emi') || cat.includes('loan')) {
-      return { bg: isDark ? '#FF950024' : '#FFF4EB' };
-    }
-    if (cat.includes('transport') || cat.includes('travel') || cat.includes('taxi') || cat.includes('cab') || cat.includes('fuel') || cat.includes('petrol') || cat.includes('uber') || cat.includes('ola')) {
-      return { bg: isDark ? '#FFCC0026' : '#FFF9E6' };
-    }
-    if (cat.includes('entertain') || cat.includes('movie') || cat.includes('ott') || cat.includes('netflix') || cat.includes('game') || cat.includes('play')) {
-      return { bg: isDark ? '#FF2D5524' : '#FEECEF' };
-    }
-    if (cat.includes('health') || cat.includes('medic') || cat.includes('doctor') || cat.includes('gym') || cat.includes('fit') || cat.includes('pharma')) {
-      return { bg: isDark ? '#32ADE624' : '#E8F6FC' };
-    }
-    if (cat.includes('invest') || cat.includes('stock') || cat.includes('mutual') || cat.includes('gold')) {
-      return { bg: isDark ? '#5856D624' : '#EFF0FD' };
-    }
-    return { bg: isDark ? '#8E8E9324' : '#F2F2F7' };
-  };
-
   // Group filtered transactions by day
   const groupedTransactions = useMemo(() => {
     const map: Record<string, typeof filteredTxs> = {};
@@ -341,7 +338,9 @@ export default function AllTransactionsScreen() {
 
     filteredTxs.forEach((tx) => {
       const d = new Date(tx.date);
-      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+        d.getDate()
+      ).padStart(2, '0')}`;
       if (!map[dateKey]) {
         map[dateKey] = [];
         order.push(dateKey);
@@ -356,19 +355,31 @@ export default function AllTransactionsScreen() {
     }));
   }, [filteredTxs]);
 
-  // Sum of income and expense for the filtered transactions
-  const stats = useMemo(() => {
+  // Period stats (respects date range and category filter, evaluating full income & expense)
+  const periodStats = useMemo(() => {
     let income = 0;
     let expense = 0;
-    filteredTxs.forEach((tx) => {
-      if (tx.type === 'income') {
-        income += tx.amount;
-      } else if (tx.type === 'expense') {
-        expense += tx.amount;
-      }
-    });
-    return { income, expense, net: income - expense };
-  }, [filteredTxs]);
+    let transferTotal = 0;
+
+    moneyTransactions
+      .filter((tx) => isWithinDateRange(tx.date, dateRange))
+      .filter((tx) => {
+        if (!selectedCategory) return true;
+        if (tx.type === 'transfer') return selectedCategory === 'Transfer';
+        return tx.category === selectedCategory;
+      })
+      .forEach((tx) => {
+        if (tx.type === 'income') {
+          income += tx.amount;
+        } else if (tx.type === 'expense') {
+          expense += tx.amount;
+        } else if (tx.type === 'transfer') {
+          transferTotal += tx.amount;
+        }
+      });
+
+    return { income, expense, transferTotal, net: income - expense };
+  }, [moneyTransactions, dateRange, selectedCategory, isWithinDateRange]);
 
   const formatAmount = (val: number) => {
     if (isPrivacyMode) return '••••••';
@@ -404,78 +415,580 @@ export default function AllTransactionsScreen() {
     );
   };
 
-  const activeFilterBg = '#00C9A7';
+  // Streamlined Soft Rose Ticket Hero Card
+  const renderTicketHeroCard = () => {
+    const h = 152;
+    const notchY = 76;
+    const notchR = 8;
+    const path = getTicketCardPath(cardWidth, h, notchY, notchR, 20);
+
+    const palette = {
+      bg: '#FFE4E6',
+      text: '#881337',
+      sub: '#9F1239',
+      border: '#FDA4AF',
+    };
+
+    const getHeroLabel = () => {
+      if (activeFilter === 'expense') return 'TOTAL SPENT';
+      if (activeFilter === 'income') return 'TOTAL INCOME';
+      if (activeFilter === 'transfer') return 'TOTAL TRANSFERS';
+      return 'NET CASH FLOW';
+    };
+
+    const getHeroValue = () => {
+      if (activeFilter === 'expense') return `-${formatAmount(periodStats.expense)}`;
+      if (activeFilter === 'income') return `+${formatAmount(periodStats.income)}`;
+      if (activeFilter === 'transfer') return formatAmount(periodStats.transferTotal);
+      return `${periodStats.net >= 0 ? '+' : ''}${formatAmount(periodStats.net)}`;
+    };
+
+    return (
+      <View
+        onLayout={(e) => {
+          const w = e.nativeEvent.layout.width;
+          if (w > 0 && Math.abs(w - cardWidth) > 1) {
+            setCardWidth(w);
+          }
+        }}
+        style={{
+          marginHorizontal: 16,
+          marginBottom: 12,
+          marginTop: 4,
+          height: h,
+          shadowColor: isDark ? '#000000' : palette.sub,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isDark ? 0.06 : 0.1,
+          shadowRadius: isDark ? 4 : 6,
+          elevation: 2,
+        }}
+      >
+        {/* SVG Ticket Shape Background */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Svg width={cardWidth} height={h}>
+            <Path
+              d={path}
+              fill={palette.bg}
+              stroke={isDark ? 'transparent' : palette.border}
+              strokeWidth={1.2}
+            />
+            {/* Perforated dashed divider line */}
+            <Line
+              x1={notchR + 6}
+              y1={notchY}
+              x2={cardWidth - notchR - 6}
+              y2={notchY}
+              stroke={isDark ? palette.text + '35' : palette.sub + 'B0'}
+              strokeWidth={1.2}
+              strokeDasharray="5, 4"
+            />
+          </Svg>
+        </View>
+
+        {/* Top Ticket Section (Net Cash Flow / Total + Quick Actions) */}
+        <View
+          style={{
+            height: notchY,
+            paddingHorizontal: 20,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <ThemedText
+              style={{
+                fontSize: 10,
+                fontFamily: 'Outfit_700Bold',
+                letterSpacing: 0.8,
+                color: palette.sub,
+                textTransform: 'uppercase',
+                marginBottom: 2,
+              }}
+              numberOfLines={1}
+            >
+              {getHeroLabel()}
+            </ThemedText>
+            <ThemedText
+              style={{
+                fontSize: 24,
+                fontFamily: 'Outfit_400Regular',
+                color: palette.text,
+              }}
+              numberOfLines={1}
+            >
+              {getHeroValue()}
+            </ThemedText>
+          </View>
+
+          {/* Privacy Toggle Action */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              handleHaptic();
+              togglePrivacyMode();
+            }}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              backgroundColor: palette.text + '14',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            {isPrivacyMode ? (
+              <EyeOff size={15} color={palette.text} />
+            ) : (
+              <Eye size={15} color={palette.text} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Bottom Ticket Body (Income & Expense Rows like Dashboard Top Card) */}
+        <View
+          style={{
+            height: h - notchY,
+            paddingHorizontal: 20,
+            justifyContent: 'center',
+          }}
+        >
+          <View style={styles.heroRow}>
+            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
+              Income
+            </ThemedText>
+            <ThemedText style={[styles.heroRowValue, { color: '#047857' }]}>
+              {isPrivacyMode ? '••••••' : `+${formatAmount(periodStats.income)}`}
+            </ThemedText>
+          </View>
+
+          <View style={[styles.heroRow, { marginBottom: 0 }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
+              Expenses
+            </ThemedText>
+            <ThemedText style={[styles.heroRowValue, { color: '#881337' }]}>
+              {isPrivacyMode ? '••••••' : `-${formatAmount(periodStats.expense)}`}
+            </ThemedText>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const headerTopPadding = Math.max(insets.top, Platform.OS === 'ios' ? 56 : 32);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <BackButton />
-        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
-          All Transactions
-        </ThemedText>
+    <View style={[styles.container, { backgroundColor: currColors.background }]}>
+      {/* ─── Header matching Signature EMIs & AI Chat Standard ─── */}
+      <View style={[styles.header, { paddingTop: headerTopPadding }]}>
+        <BackButton
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)');
+            }
+          }}
+        />
+
+        <View style={styles.headerTitleWrap}>
+          <ThemedText style={[styles.headerTitle, { color: currColors.text }]}>
+            Transactions
+          </ThemedText>
+          <View
+            style={[
+              styles.countBadge,
+              {
+                backgroundColor: isDark ? currColors.cardSecondary : '#FFE4E6',
+                borderColor: isDark ? 'transparent' : '#FDA4AF',
+              },
+            ]}
+          >
+            <ThemedText
+              style={[
+                styles.countBadgeText,
+                { color: isDark ? currColors.text : '#881337' },
+              ]}
+            >
+              {filteredTxs.length}
+            </ThemedText>
+          </View>
+        </View>
+
+        {/* Right Filter Trigger Action */}
         <TouchableOpacity
-          style={[styles.filterTriggerBtn, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}
+          style={[
+            styles.filterTriggerBtn,
+            {
+              backgroundColor: isFilterActive
+                ? isDark
+                  ? '#88133730'
+                  : '#FFE4E6'
+                : isDark
+                ? currColors.card
+                : '#F3F4F6',
+              borderColor: isFilterActive ? '#FDA4AF' : currColors.border,
+            },
+          ]}
           onPress={() => {
             handleHaptic();
             setFilterModalVisible(true);
           }}
           activeOpacity={0.7}
         >
-          <SlidersHorizontal size={18} color={currColors.text} />
+          <SlidersHorizontal
+            size={18}
+            color={isFilterActive ? (isDark ? '#FDA4AF' : '#881337') : currColors.text}
+          />
           {isFilterActive && <View style={styles.activeFilterDot} />}
         </TouchableOpacity>
       </View>
 
-      {/* Active Filters Summary strip */}
-      {activeFilters.length > 0 && (
-        <View style={styles.activeFiltersSummary}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            bounces={false}
-            contentContainerStyle={styles.activeFiltersScroll}
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 24) + 64 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
+        {/* ─── Streamlined Top Ticket Hero Card ─── */}
+        {renderTicketHeroCard()}
+
+        {/* ─── Compact Segmented Capsule Type Switcher ─── */}
+        <View style={styles.typeSwitcherWrap}>
+          <View
+            style={[
+              styles.typeSwitcherTrack,
+              {
+                backgroundColor: isDark ? currColors.card : '#F3F4F6',
+                borderColor: currColors.border,
+              },
+            ]}
           >
-            <ThemedText style={[styles.activeFiltersLabel, { color: currColors.textSecondary }]}>
-              Filters:
-            </ThemedText>
-            {activeFilters.map((filter) => (
+            {(
+              [
+                { key: 'all', label: 'All' },
+                { key: 'expense', label: 'Spent' },
+                { key: 'income', label: 'Income' },
+                { key: 'transfer', label: 'Transfer' },
+              ] as const
+            ).map((tab) => {
+              const isSelected = activeFilter === tab.key;
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.typeSwitcherPill,
+                    isSelected && {
+                      backgroundColor: isDark ? '#FFFFFF' : '#1C1917',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.12,
+                      shadowRadius: 2,
+                      elevation: 2,
+                    },
+                  ]}
+                  onPress={() => {
+                    handleHaptic();
+                    setActiveFilter(tab.key);
+                    setSelectedCategory(null);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <ThemedText
+                    style={[
+                      styles.typeSwitcherPillText,
+                      {
+                        color: isSelected
+                          ? isDark
+                            ? '#000000'
+                            : '#FFFFFF'
+                          : currColors.textSecondary,
+                        fontFamily: isSelected ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                      },
+                    ]}
+                  >
+                    {tab.label}
+                  </ThemedText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ─── Active Filters Summary Chips (Only when non-default filter active) ─── */}
+        {activeFilters.length > 0 && (
+          <View style={styles.activeFiltersSummary}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              bounces={false}
+              contentContainerStyle={styles.activeFiltersScroll}
+            >
+              {activeFilters.map((filter) => (
+                <TouchableOpacity
+                  key={filter.key}
+                  style={[
+                    styles.summaryChip,
+                    {
+                      backgroundColor: isDark ? currColors.cardSecondary : '#FFE4E6',
+                      borderColor: isDark ? currColors.border : '#FDA4AF',
+                    },
+                  ]}
+                  onPress={() => {
+                    handleHaptic();
+                    filter.onClear();
+                  }}
+                >
+                  <ThemedText
+                    style={[
+                      styles.summaryChipText,
+                      { color: isDark ? currColors.text : '#881337' },
+                    ]}
+                  >
+                    {filter.label}
+                  </ThemedText>
+                  <X
+                    size={10}
+                    color={isDark ? currColors.textSecondary : '#9F1239'}
+                    style={{ marginLeft: 4 }}
+                  />
+                </TouchableOpacity>
+              ))}
               <TouchableOpacity
-                key={filter.key}
-                style={[
-                  styles.summaryChip,
-                  {
-                    backgroundColor: currColors.cardSecondary,
-                    borderColor: currColors.border,
-                  },
-                ]}
                 onPress={() => {
                   handleHaptic();
-                  filter.onClear();
+                  setActiveFilter('all');
+                  setDateRange('this_month');
+                  setSelectedCategory(null);
+                  setCustomRange(null);
                 }}
+                style={styles.clearAllBtn}
               >
-                <ThemedText style={[styles.summaryChipText, { color: currColors.text }]}>
-                  {filter.label}
-                </ThemedText>
-                <X size={10} color={currColors.textSecondary} style={{ marginLeft: 4 }} />
+                <ThemedText style={styles.clearAllText}>Clear All</ThemedText>
               </TouchableOpacity>
-            ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* ─── Transaction Groups or Empty State ─── */}
+        {filteredTxs.length === 0 ? (
+          <View
+            style={[
+              styles.emptyCard,
+              { backgroundColor: currColors.card, borderColor: currColors.border },
+            ]}
+          >
+            <View
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: 26,
+                backgroundColor: isDark ? currColors.cardSecondary : '#FFE4E6',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: 12,
+              }}
+            >
+              <Receipt size={22} color={isDark ? currColors.textSecondary : '#881337'} />
+            </View>
+            <ThemedText
+              style={{
+                fontSize: 16,
+                fontFamily: 'Outfit_600SemiBold',
+                color: currColors.text,
+                marginBottom: 4,
+              }}
+            >
+              No Transactions Found
+            </ThemedText>
+            <ThemedText
+              style={{
+                color: currColors.textSecondary,
+                textAlign: 'center',
+                fontFamily: 'Outfit_400Regular',
+                fontSize: 13,
+                lineHeight: 18,
+                marginBottom: 16,
+                paddingHorizontal: 24,
+              }}
+            >
+              {isFilterActive
+                ? 'Try adjusting your date range or category filters.'
+                : 'Start tracking your spending and income by logging your first transaction.'}
+            </ThemedText>
             <TouchableOpacity
               onPress={() => {
                 handleHaptic();
-                setActiveFilter('all');
-                setDateRange('this_month'); // Revert to default
-                setSelectedCategory(null);
+                router.push('/add-money-transaction');
               }}
-              style={styles.clearAllBtn}
+              style={[
+                styles.emptyActionBtn,
+                { backgroundColor: isDark ? '#FFFFFF' : '#1C1917' },
+              ]}
+              activeOpacity={0.8}
             >
-              <ThemedText style={styles.clearAllText}>Clear All</ThemedText>
+              <ThemedText
+                style={[
+                  styles.emptyActionBtnText,
+                  { color: isDark ? '#000000' : '#FFFFFF' },
+                ]}
+              >
+                + Log Transaction
+              </ThemedText>
             </TouchableOpacity>
-          </ScrollView>
-        </View>
-      )}
+          </View>
+        ) : (
+          <View style={styles.groupsContainer}>
+            {groupedTransactions.map((group) => (
+              <View key={group.dateKey} style={styles.dateGroupWrapper}>
+                {/* Clean, De-cluttered Date Header */}
+                <ThemedText
+                  style={[styles.dateGroupHeader, { color: currColors.textSecondary }]}
+                >
+                  {group.label}
+                </ThemedText>
 
-      {/* Filters Bottom Sheet Modal */}
+                {/* Connected Card Group Container */}
+                <View
+                  style={[
+                    styles.dateGroupCard,
+                    {
+                      backgroundColor: currColors.card,
+                      borderColor: currColors.border,
+                    },
+                  ]}
+                >
+                  {group.data.map((tx, index) => {
+                    const account = accounts.find((a) => a.id === tx.accountId);
+                    const toAccount = tx.toAccountId
+                      ? accounts.find((a) => a.id === tx.toAccountId)
+                      : null;
+
+                    const isIncome = tx.type === 'income';
+                    const isExpense = tx.type === 'expense';
+                    const isTransfer = tx.type === 'transfer';
+                    const isLast = index === group.data.length - 1;
+
+                    // Primary Title
+                    const primaryTitle =
+                      tx.note && tx.note.trim()
+                        ? tx.note.trim()
+                        : isTransfer
+                        ? 'Transfer'
+                        : tx.category;
+
+                    // Secondary Subtitle
+                    const secondarySubtitle =
+                      tx.note && tx.note.trim()
+                        ? isTransfer
+                          ? `${account?.name || 'Account'} → ${toAccount?.name || 'Account'}`
+                          : `${tx.category}${account?.name ? ` • ${account.name}` : ''}`
+                        : isTransfer
+                        ? `${account?.name || 'Account'} → ${toAccount?.name || 'Account'}`
+                        : account?.name || '';
+
+                    return (
+                      <TouchableOpacity
+                        key={tx.id}
+                        style={[
+                          styles.txRowItem,
+                          {
+                            borderBottomColor: currColors.border,
+                            borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
+                          },
+                        ]}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          handleHaptic();
+                          router.push({
+                            pathname: '/add-money-transaction',
+                            params: { id: tx.id },
+                          });
+                        }}
+                        onLongPress={() => handleDeleteTransaction(tx.id)}
+                      >
+                        <View style={styles.txRowLeft}>
+                          <Category3DIcon
+                            name={isTransfer ? 'Transfer' : tx.category}
+                            icon={isTransfer ? 'transfer' : undefined}
+                            size={36}
+                            style={{ marginRight: 12 }}
+                          />
+                          <View style={styles.txInfoCol}>
+                            <ThemedText
+                              style={[styles.txPrimaryText, { color: currColors.text }]}
+                              numberOfLines={1}
+                            >
+                              {primaryTitle}
+                            </ThemedText>
+                            <ThemedText
+                              style={[
+                                styles.txSecondaryText,
+                                { color: currColors.textSecondary },
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {secondarySubtitle}
+                            </ThemedText>
+                          </View>
+                        </View>
+
+                        {/* Clean Text Amount (No bulky pill badge) */}
+                        <View style={styles.txRowRight}>
+                          <ThemedText
+                            style={[
+                              styles.txAmountText,
+                              {
+                                color: isIncome
+                                  ? isDark
+                                    ? '#30D158'
+                                    : '#15803D'
+                                  : isExpense
+                                  ? isDark
+                                    ? '#FF453A'
+                                    : '#BE123C'
+                                  : isDark
+                                  ? '#0A84FF'
+                                  : '#007AFF',
+                              },
+                            ]}
+                          >
+                            {isIncome ? '+' : isExpense ? '-' : ''}
+                            {formatAmount(tx.amount)}
+                          </ThemedText>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* ─── Floating Action Button (+ Log Transaction) ─── */}
+      <TouchableOpacity
+        style={[
+          styles.floatingAddBtn,
+          {
+            backgroundColor: '#FFE4E6',
+            borderColor: '#FDA4AF',
+            bottom: Math.max(insets.bottom, 16) + 16,
+          },
+        ]}
+        activeOpacity={0.85}
+        onPress={() => {
+          handleHaptic();
+          router.push('/add-money-transaction');
+        }}
+      >
+        <Plus size={24} color="#881337" strokeWidth={2.6} />
+      </TouchableOpacity>
+
+      {/* ─── Filters Bottom Sheet Modal ─── */}
       <Modal
         visible={filterModalVisible}
         transparent={true}
@@ -485,43 +998,78 @@ export default function AllTransactionsScreen() {
         <TouchableWithoutFeedback onPress={() => setFilterModalVisible(false)}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
-              <View style={[styles.modalContent, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                {/* Drag Indicator / Bar */}
-                <View style={[styles.dragHandle, { backgroundColor: currColors.border }]} />
-                
+              <View
+                style={[
+                  styles.modalContent,
+                  {
+                    backgroundColor: currColors.card,
+                    borderColor: currColors.border,
+                    paddingBottom: Math.max(insets.bottom, 16) + 12,
+                  },
+                ]}
+              >
+                {/* Drag Indicator Bar */}
+                <View
+                  style={[
+                    styles.dragHandle,
+                    { backgroundColor: isDark ? currColors.border : '#D1D5DB' },
+                  ]}
+                />
+
                 {/* Modal Header */}
                 <View style={styles.modalHeader}>
-                  <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Filters</ThemedText>
+                  <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>
+                    Filter Transactions
+                  </ThemedText>
                   <TouchableOpacity
-                    style={[styles.modalCloseBtn, { backgroundColor: currColors.cardSecondary }]}
+                    style={[
+                      styles.modalCloseBtn,
+                      { backgroundColor: currColors.cardSecondary },
+                    ]}
                     onPress={() => setFilterModalVisible(false)}
                   >
                     <X size={16} color={currColors.text} />
                   </TouchableOpacity>
                 </View>
 
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.modalScroll}
+                >
                   {/* Section 1: Transaction Type */}
                   <View style={styles.modalSection}>
-                    <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>Transaction Type</ThemedText>
+                    <ThemedText
+                      style={[styles.sectionTitle, { color: currColors.textSecondary }]}
+                    >
+                      TRANSACTION TYPE
+                    </ThemedText>
                     <View style={styles.typeGrid}>
-                      {([
-                        { key: 'all', label: 'All', icon: Layers },
-                        { key: 'expense', label: 'Expenses', icon: ArrowUpRight },
-                        { key: 'income', label: 'Income', icon: ArrowDownLeft },
-                        { key: 'transfer', label: 'Transfers', icon: ArrowRightLeft },
-                      ] as const).map((filter) => {
+                      {(
+                        [
+                          { key: 'all', label: 'All', icon: Layers },
+                          { key: 'expense', label: 'Spent', icon: ArrowUpRight },
+                          { key: 'income', label: 'Income', icon: ArrowDownLeft },
+                          { key: 'transfer', label: 'Transfer', icon: ArrowRightLeft },
+                        ] as const
+                      ).map((filter) => {
                         const IconComponent = filter.icon;
                         const isSelected = activeFilter === filter.key;
-                        const iconColor = isSelected ? '#FFFFFF' : currColors.textSecondary;
                         return (
                           <TouchableOpacity
                             key={filter.key}
                             style={[
                               styles.modalGridButton,
                               {
-                                backgroundColor: isSelected ? activeFilterBg : currColors.cardSecondary,
-                                borderColor: isSelected ? activeFilterBg : currColors.border,
+                                backgroundColor: isSelected
+                                  ? isDark
+                                    ? '#FFFFFF'
+                                    : '#1C1917'
+                                  : currColors.cardSecondary,
+                                borderColor: isSelected
+                                  ? isDark
+                                    ? '#FFFFFF'
+                                    : '#1C1917'
+                                  : currColors.border,
                               },
                             ]}
                             onPress={() => {
@@ -530,13 +1078,29 @@ export default function AllTransactionsScreen() {
                               setSelectedCategory(null);
                             }}
                           >
-                            <IconComponent size={14} color={iconColor} style={{ marginRight: 6 }} />
+                            <IconComponent
+                              size={14}
+                              color={
+                                isSelected
+                                  ? isDark
+                                    ? '#000000'
+                                    : '#FFFFFF'
+                                  : currColors.textSecondary
+                              }
+                              style={{ marginRight: 6 }}
+                            />
                             <ThemedText
                               style={[
                                 styles.modalGridButtonText,
                                 {
-                                  color: isSelected ? '#FFFFFF' : currColors.textSecondary,
-                                  fontFamily: isSelected ? 'Outfit_600SemiBold' : 'Outfit_400Regular',
+                                  color: isSelected
+                                    ? isDark
+                                      ? '#000000'
+                                      : '#FFFFFF'
+                                    : currColors.textSecondary,
+                                  fontFamily: isSelected
+                                    ? 'Outfit_600SemiBold'
+                                    : 'Outfit_400Regular',
                                 },
                               ]}
                             >
@@ -548,28 +1112,42 @@ export default function AllTransactionsScreen() {
                     </View>
                   </View>
 
-                  {/* Section 2: Date Range Preset */}
+                  {/* Section 2: Date Range Presets */}
                   <View style={styles.modalSection}>
-                    <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>Date Range</ThemedText>
+                    <ThemedText
+                      style={[styles.sectionTitle, { color: currColors.textSecondary }]}
+                    >
+                      DATE RANGE
+                    </ThemedText>
                     <View style={styles.presetsGrid}>
-                      {([
-                        { key: 'this_month', label: 'This Month' },
-                        { key: 'this_week', label: 'This Week' },
-                        { key: 'last_30_days', label: 'Last 30 Days' },
-                        { key: 'last_90_days', label: 'Last 90 Days' },
-                        { key: 'this_year', label: 'This Year' },
-                        { key: 'all', label: 'All Time' },
-                      ] as const).map((preset) => {
-                        const isSelected = dateRange === preset.key;
+                      {(
+                        [
+                          { key: 'this_month', label: 'This Month' },
+                          { key: 'this_week', label: 'This Week' },
+                          { key: 'last_30_days', label: 'Last 30 Days' },
+                          { key: 'last_90_days', label: 'Last 90 Days' },
+                          { key: 'this_year', label: 'This Year' },
+                          { key: 'all', label: 'All Time' },
+                        ] as const
+                      ).map((preset) => {
+                        const isSelected = dateRange === preset.key && !customRange;
                         return (
                           <TouchableOpacity
                             key={preset.key}
                             style={[
                               styles.modalGridButton,
                               {
-                                width: '48%', // 2 columns
-                                backgroundColor: isSelected ? activeFilterBg : currColors.cardSecondary,
-                                borderColor: isSelected ? activeFilterBg : currColors.border,
+                                width: '48%',
+                                backgroundColor: isSelected
+                                  ? isDark
+                                    ? '#FFFFFF'
+                                    : '#1C1917'
+                                  : currColors.cardSecondary,
+                                borderColor: isSelected
+                                  ? isDark
+                                    ? '#FFFFFF'
+                                    : '#1C1917'
+                                  : currColors.border,
                               },
                             ]}
                             onPress={() => {
@@ -578,13 +1156,29 @@ export default function AllTransactionsScreen() {
                               setDateRange(preset.key);
                             }}
                           >
-                            <Calendar size={14} color={isSelected ? '#FFFFFF' : currColors.textSecondary} style={{ marginRight: 6 }} />
+                            <Calendar
+                              size={14}
+                              color={
+                                isSelected
+                                  ? isDark
+                                    ? '#000000'
+                                    : '#FFFFFF'
+                                  : currColors.textSecondary
+                              }
+                              style={{ marginRight: 6 }}
+                            />
                             <ThemedText
                               style={[
                                 styles.modalGridButtonText,
                                 {
-                                  color: isSelected ? '#FFFFFF' : currColors.textSecondary,
-                                  fontFamily: isSelected ? 'Outfit_600SemiBold' : 'Outfit_400Regular',
+                                  color: isSelected
+                                    ? isDark
+                                      ? '#000000'
+                                      : '#FFFFFF'
+                                    : currColors.textSecondary,
+                                  fontFamily: isSelected
+                                    ? 'Outfit_600SemiBold'
+                                    : 'Outfit_400Regular',
                                 },
                               ]}
                             >
@@ -598,9 +1192,20 @@ export default function AllTransactionsScreen() {
 
                   {/* Section 3: Categories */}
                   <View style={styles.modalSection}>
-                    <ThemedText style={[styles.sectionTitle, { color: currColors.textSecondary }]}>Category</ThemedText>
+                    <ThemedText
+                      style={[styles.sectionTitle, { color: currColors.textSecondary }]}
+                    >
+                      CATEGORY
+                    </ThemedText>
                     {availableCategories.length === 0 ? (
-                      <ThemedText style={{ color: currColors.textSecondary, fontSize: 13, fontFamily: 'Outfit_400Regular', marginTop: 4 }}>
+                      <ThemedText
+                        style={{
+                          color: currColors.textSecondary,
+                          fontSize: 13,
+                          fontFamily: 'Outfit_400Regular',
+                          marginTop: 4,
+                        }}
+                      >
                         No categories available for selected filters.
                       </ThemedText>
                     ) : (
@@ -609,8 +1214,16 @@ export default function AllTransactionsScreen() {
                           style={[
                             styles.categoryTag,
                             {
-                              backgroundColor: !selectedCategory ? activeFilterBg : currColors.cardSecondary,
-                              borderColor: !selectedCategory ? activeFilterBg : currColors.border,
+                              backgroundColor: !selectedCategory
+                                ? isDark
+                                  ? '#FFFFFF'
+                                  : '#1C1917'
+                                : currColors.cardSecondary,
+                              borderColor: !selectedCategory
+                                ? isDark
+                                  ? '#FFFFFF'
+                                  : '#1C1917'
+                                : currColors.border,
                             },
                           ]}
                           onPress={() => {
@@ -622,8 +1235,14 @@ export default function AllTransactionsScreen() {
                             style={[
                               styles.categoryTagText,
                               {
-                                color: !selectedCategory ? '#FFFFFF' : currColors.textSecondary,
-                                fontFamily: !selectedCategory ? 'Outfit_600SemiBold' : 'Outfit_400Regular',
+                                color: !selectedCategory
+                                  ? isDark
+                                    ? '#000000'
+                                    : '#FFFFFF'
+                                  : currColors.textSecondary,
+                                fontFamily: !selectedCategory
+                                  ? 'Outfit_600SemiBold'
+                                  : 'Outfit_400Regular',
                               },
                             ]}
                           >
@@ -639,8 +1258,16 @@ export default function AllTransactionsScreen() {
                               style={[
                                 styles.categoryTag,
                                 {
-                                  backgroundColor: isSelected ? activeFilterBg : currColors.cardSecondary,
-                                  borderColor: isSelected ? activeFilterBg : currColors.border,
+                                  backgroundColor: isSelected
+                                    ? isDark
+                                      ? '#FFFFFF'
+                                      : '#1C1917'
+                                    : currColors.cardSecondary,
+                                  borderColor: isSelected
+                                    ? isDark
+                                      ? '#FFFFFF'
+                                      : '#1C1917'
+                                    : currColors.border,
                                   flexDirection: 'row',
                                   alignItems: 'center',
                                 },
@@ -650,13 +1277,23 @@ export default function AllTransactionsScreen() {
                                 setSelectedCategory(isSelected ? null : cat);
                               }}
                             >
-                              <Category3DIcon name={cat} size={16} style={{ marginRight: 6 }} />
+                              <Category3DIcon
+                                name={cat}
+                                size={16}
+                                style={{ marginRight: 6 }}
+                              />
                               <ThemedText
                                 style={[
                                   styles.categoryTagText,
                                   {
-                                    color: isSelected ? '#FFFFFF' : currColors.textSecondary,
-                                    fontFamily: isSelected ? 'Outfit_600SemiBold' : 'Outfit_400Regular',
+                                    color: isSelected
+                                      ? isDark
+                                        ? '#000000'
+                                        : '#FFFFFF'
+                                      : currColors.textSecondary,
+                                    fontFamily: isSelected
+                                      ? 'Outfit_600SemiBold'
+                                      : 'Outfit_400Regular',
                                   },
                                 ]}
                               >
@@ -671,9 +1308,17 @@ export default function AllTransactionsScreen() {
                 </ScrollView>
 
                 {/* Modal Footer Actions */}
-                <View style={[styles.modalFooter, { borderTopColor: currColors.border }]}>
+                <View
+                  style={[
+                    styles.modalFooter,
+                    { borderTopColor: currColors.border },
+                  ]}
+                >
                   <TouchableOpacity
-                    style={[styles.modalClearBtn, { borderColor: currColors.border }]}
+                    style={[
+                      styles.modalClearBtn,
+                      { borderColor: currColors.border, backgroundColor: currColors.cardSecondary },
+                    ]}
                     onPress={() => {
                       handleHaptic();
                       setCustomRange(null);
@@ -682,18 +1327,34 @@ export default function AllTransactionsScreen() {
                       setSelectedCategory(null);
                     }}
                   >
-                    <ThemedText style={[styles.modalClearBtnText, { color: currColors.textSecondary }]}>Reset</ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.modalClearBtnText,
+                        { color: currColors.textSecondary },
+                      ]}
+                    >
+                      Reset
+                    </ThemedText>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.modalApplyBtn, { backgroundColor: activeFilterBg }]}
+                    style={[
+                      styles.modalApplyBtn,
+                      { backgroundColor: isDark ? '#FFFFFF' : '#1C1917' },
+                    ]}
                     onPress={() => {
                       handleHaptic();
                       setFilterModalVisible(false);
                     }}
                   >
-                    <ThemedText style={styles.modalApplyBtnText}>
-                      Show {filteredTxs.length} {filteredTxs.length === 1 ? 'Transaction' : 'Transactions'}
+                    <ThemedText
+                      style={[
+                        styles.modalApplyBtnText,
+                        { color: isDark ? '#000000' : '#FFFFFF' },
+                      ]}
+                    >
+                      Show {filteredTxs.length}{' '}
+                      {filteredTxs.length === 1 ? 'Transaction' : 'Transactions'}
                     </ThemedText>
                   </TouchableOpacity>
                 </View>
@@ -702,152 +1363,7 @@ export default function AllTransactionsScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom, 24) + 32 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Dynamic Cash Flow Card */}
-        <View style={[styles.heroCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-
-          <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
-              Total Income
-            </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#34C759' }]}>
-              +{formatAmount(stats.income)}
-            </ThemedText>
-          </View>
-
-          <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
-              Total Expenses
-            </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#FF3B30' }]}>
-              -{formatAmount(stats.expense)}
-            </ThemedText>
-          </View>
-
-          <View
-            style={[
-              styles.dashedDivider,
-              { borderColor: currColors.border, marginVertical: 16, marginBottom: 16 },
-            ]}
-          />
-
-          <View style={[styles.heroRow, { marginBottom: 0 }]}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
-              Net Cash Flow
-            </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: stats.net >= 0 ? '#34C759' : '#FF3B30' }]}>
-              {stats.net >= 0 ? '+' : ''}{formatAmount(stats.net)}
-            </ThemedText>
-          </View>
-        </View>
-
-        {filteredTxs.length === 0 ? (
-          <View style={[styles.emptyCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-            <Info size={36} color={currColors.textSecondary} style={{ marginBottom: 12 }} />
-            <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', lineHeight: 22 }}>
-              No transactions match the selected filter.
-            </ThemedText>
-          </View>
-        ) : (
-          <View style={styles.groupsContainer}>
-            {groupedTransactions.map((group) => (
-              <View key={group.dateKey} style={styles.dateGroupWrapper}>
-                <ThemedText style={[styles.dateGroupHeader, { color: currColors.text }]}>
-                  {group.label}
-                </ThemedText>
-
-                <View
-                  style={[
-                    styles.dateGroupCard,
-                    {
-                      backgroundColor: currColors.card,
-                      borderColor: currColors.border,
-                    },
-                  ]}
-                >
-                  {group.data.map((tx, index) => {
-                    const account = accounts.find((a) => a.id === tx.accountId);
-                    const toAccount = tx.toAccountId ? accounts.find((a) => a.id === tx.toAccountId) : null;
-
-                    const isIncome = tx.type === 'income';
-                    const isExpense = tx.type === 'expense';
-                    const isTransfer = tx.type === 'transfer';
-                    const isLast = index === group.data.length - 1;
-
-                    // Title & Subtitle logic matching modern banking UI
-                    const primaryTitle = tx.note && tx.note.trim()
-                      ? tx.note.trim()
-                      : (isTransfer ? 'Transfer' : tx.category);
-
-                    const secondarySubtitle = tx.note && tx.note.trim()
-                      ? (isTransfer ? `${account?.name || 'Account'} → ${toAccount?.name || 'Account'}` : tx.category)
-                      : (isTransfer ? `${account?.name || 'Account'} → ${toAccount?.name || 'Account'}` : (account?.name || ''));
-
-                    const tint = getCategoryBadgeTint(tx.category, tx.type, colorScheme === 'dark');
-
-                    return (
-                      <TouchableOpacity
-                        key={tx.id}
-                        style={[
-                          styles.txRowItem,
-                          {
-                            borderBottomColor: currColors.border,
-                            borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
-                          },
-                        ]}
-                        activeOpacity={0.7}
-                        onPress={() => {
-                          handleHaptic();
-                          router.push({ pathname: '/add-money-transaction', params: { id: tx.id } });
-                        }}
-                        onLongPress={() => handleDeleteTransaction(tx.id)}
-                      >
-                        <View style={styles.txRowLeft}>
-                          <Category3DIcon
-                            name={isTransfer ? 'Transfer' : tx.category}
-                            icon={isTransfer ? 'transfer' : undefined}
-                            size={34}
-                            style={{ marginRight: 12 }}
-                          />
-                          <View style={styles.txInfoCol}>
-                            <ThemedText style={[styles.txPrimaryText, { color: currColors.text }]} numberOfLines={1}>
-                              {primaryTitle}
-                            </ThemedText>
-                            <ThemedText style={[styles.txSecondaryText, { color: currColors.textSecondary }]} numberOfLines={1}>
-                              {secondarySubtitle}
-                            </ThemedText>
-                          </View>
-                        </View>
-
-                        <View style={styles.txRowRight}>
-                          <ThemedText
-                            style={[
-                              styles.txAmountDisplay,
-                              {
-                                color: isIncome ? '#34C759' : isExpense ? '#FF3B30' : currColors.text,
-                              },
-                            ]}
-                          >
-                            {isIncome ? '+' : isExpense ? '-' : ''}{formatAmount(tx.amount)}
-                          </ThemedText>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -860,36 +1376,68 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: 12,
   },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
+  headerTitleWrap: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   headerTitle: {
     fontSize: 20,
     fontFamily: 'Outfit_600SemiBold',
     letterSpacing: -0.5,
   },
+  countBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  countBadgeText: {
+    fontSize: 11,
+    fontFamily: 'Outfit_600SemiBold',
+  },
   filterTriggerBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
   activeFilterDot: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: 8,
+    right: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
     backgroundColor: '#FF3B30',
+  },
+  scrollContent: {
+    paddingTop: 4,
+  },
+  typeSwitcherWrap: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  typeSwitcherTrack: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 3,
+    height: 38,
+  },
+  typeSwitcherPill: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 9,
+  },
+  typeSwitcherPillText: {
+    fontSize: 12.5,
   },
   activeFiltersSummary: {
     marginBottom: 12,
@@ -899,11 +1447,6 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     gap: 8,
     alignItems: 'center',
-  },
-  activeFiltersLabel: {
-    fontSize: 11,
-    fontFamily: 'Outfit_500Medium',
-    marginRight: 2,
   },
   summaryChip: {
     flexDirection: 'row',
@@ -922,9 +1465,99 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   clearAllText: {
-    color: '#00C9A7',
+    color: '#FF3B30',
     fontSize: 11,
     fontFamily: 'Outfit_600SemiBold',
+  },
+  groupsContainer: {
+    paddingHorizontal: 16,
+  },
+  dateGroupWrapper: {
+    marginBottom: 16,
+  },
+  dateGroupHeader: {
+    fontSize: 11,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  dateGroupCard: {
+    borderRadius: 16,
+    borderCurve: 'continuous',
+    borderWidth: 1.2,
+    overflow: 'hidden',
+    paddingHorizontal: 14,
+  },
+  txRowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 13,
+  },
+  txRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  txInfoCol: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  txPrimaryText: {
+    fontSize: 14.5,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.2,
+    marginBottom: 2,
+  },
+  txSecondaryText: {
+    fontSize: 11.5,
+    fontFamily: 'Outfit_400Regular',
+  },
+  txRowRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  txAmountText: {
+    fontSize: 15,
+    fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: -0.2,
+  },
+  emptyCard: {
+    marginHorizontal: 16,
+    borderRadius: 18,
+    borderCurve: 'continuous',
+    borderWidth: 1.2,
+    padding: 28,
+    marginTop: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyActionBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 18,
+  },
+  emptyActionBtnText: {
+    fontSize: 13,
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  floatingAddBtn: {
+    position: 'absolute',
+    right: 18,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 6,
   },
   modalOverlay: {
     flex: 1,
@@ -938,7 +1571,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     paddingTop: 12,
     paddingHorizontal: 18,
-    maxHeight: '80%',
+    maxHeight: '82%',
   },
   dragHandle: {
     width: 36,
@@ -951,31 +1584,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   modalTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontFamily: 'Outfit_600SemiBold',
   },
   modalCloseBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalScroll: {
-    paddingBottom: 24,
+    paddingBottom: 20,
   },
   modalSection: {
-    marginBottom: 18,
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 10,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Outfit_700Bold',
     textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
+    letterSpacing: 0.8,
+    marginBottom: 10,
   },
   typeGrid: {
     flexDirection: 'row',
@@ -988,9 +1621,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   modalGridButton: {
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1007,8 +1640,8 @@ const styles = StyleSheet.create({
   },
   categoryTag: {
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
     borderWidth: 1,
   },
   categoryTagText: {
@@ -1017,13 +1650,13 @@ const styles = StyleSheet.create({
   modalFooter: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    paddingVertical: 14,
+    paddingTop: 14,
     gap: 12,
   },
   modalClearBtn: {
     flex: 1,
-    paddingVertical: 11,
-    borderRadius: 12,
+    paddingVertical: 12,
+    borderRadius: 14,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1034,129 +1667,27 @@ const styles = StyleSheet.create({
   },
   modalApplyBtn: {
     flex: 2,
-    paddingVertical: 11,
-    borderRadius: 12,
+    paddingVertical: 12,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalApplyBtnText: {
-    color: '#FFFFFF',
     fontSize: 14,
     fontFamily: 'Outfit_600SemiBold',
-  },
-  heroCard: {
-    marginHorizontal: 16,
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  heroHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  heroLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  heroValue: {
-    fontSize: 24,
-    fontWeight: '400',
-    fontFamily: 'Outfit_400Regular',
-    marginBottom: 16,
-  },
-  dashedDivider: {
-    height: 1,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: 1,
-    marginBottom: 16,
   },
   heroRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   heroRowLabel: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontFamily: 'Outfit_400Regular',
   },
   heroRowValue: {
-    fontSize: 14,
-    fontWeight: '400',
+    fontSize: 13.5,
     fontFamily: 'Outfit_400Regular',
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  emptyCard: {
-    marginHorizontal: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 24,
-    marginTop: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderStyle: 'dashed',
-  },
-  groupsContainer: {
-    paddingHorizontal: 16,
-    marginTop: 4,
-  },
-  dateGroupWrapper: {
-    marginBottom: 16,
-  },
-  dateGroupHeader: {
-    fontSize: 11,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-    marginLeft: 4,
-  },
-  dateGroupCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-    paddingHorizontal: 14,
-  },
-  txRowItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 11,
-  },
-  txRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 10,
-  },
-  txInfoCol: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  txPrimaryText: {
-    fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
-    marginBottom: 1,
-  },
-  txSecondaryText: {
-    fontSize: 11,
-    fontFamily: 'Outfit_400Regular',
-  },
-  txRowRight: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  txAmountDisplay: {
-    fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
   },
 });

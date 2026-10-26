@@ -50,29 +50,11 @@ export interface AiInsight {
   logo?: string;
 }
 
-export interface AiMoneyInsight {
-  id: string;
-  type: 'warning' | 'tip' | 'success';
-  title: string;
-  subtitle?: string;
-  badge?: string;
-  value?: string;
-  message: string;
-  actionLabel: string;
-  actionPath: string;
-  metric?: string;
-  icon?: string;
-  color?: string;
-  potentialSavings?: string;
-  category?: string;
-}
-
 interface AiState {
   geminiApiKey: string;
   selectedModel: string;
   messages: ChatMessage[];
   aiStockInsights: AiInsight[];
-  aiMoneyInsights: AiMoneyInsight[];
   lastAiInsightsRunTimestamp: number;
   isAiGeneratingBackground: boolean;
   setGeminiApiKey: (key: string) => void;
@@ -82,8 +64,6 @@ interface AiState {
   clearMessages: () => void;
   setAiStockInsights: (insights: AiInsight[]) => void;
   clearAiStockInsights: () => void;
-  setAiMoneyInsights: (insights: AiMoneyInsight[]) => void;
-  clearAiMoneyInsights: () => void;
   setLastAiInsightsRunTimestamp: (timestamp: number) => void;
   setIsAiGeneratingBackground: (isGenerating: boolean) => void;
 }
@@ -95,7 +75,6 @@ export const useAiStore = create<AiState>()(
       selectedModel: 'gemini-1.5-flash',
       messages: [],
       aiStockInsights: [],
-      aiMoneyInsights: [],
       lastAiInsightsRunTimestamp: 0,
       isAiGeneratingBackground: false,
       setGeminiApiKey: (key) => set({ geminiApiKey: key }),
@@ -124,8 +103,6 @@ export const useAiStore = create<AiState>()(
       clearMessages: () => set({ messages: [] }),
       setAiStockInsights: (insights) => set({ aiStockInsights: insights }),
       clearAiStockInsights: () => set({ aiStockInsights: [] }),
-      setAiMoneyInsights: (insights) => set({ aiMoneyInsights: insights }),
-      clearAiMoneyInsights: () => set({ aiMoneyInsights: [] }),
       setLastAiInsightsRunTimestamp: (timestamp) =>
         set({ lastAiInsightsRunTimestamp: timestamp }),
       setIsAiGeneratingBackground: (isGenerating) =>

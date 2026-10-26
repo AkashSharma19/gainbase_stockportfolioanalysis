@@ -32,6 +32,7 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
+import { BackButton } from '@/components/BackButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const IconMap: Record<string, any> = {
@@ -82,9 +83,6 @@ const CATEGORY_CONFIG: Record<
     subtitle: 'POSITIONS TO WATCH & OBSERVE',
   },
 };
-
-import { useAppModeStore } from '@/store/useAppModeStore';
-import MoneyInsightsScreen from '../money-insights';
 
 function PortfolioInsightsScreen() {
   const router = useRouter();
@@ -502,6 +500,11 @@ INSTRUCTIONS:
     >
       {aiStockInsights.length === 0 ? (
         <View style={styles.aiHeroContainer}>
+          {router.canGoBack() && (
+            <View style={{ alignSelf: 'flex-start', marginBottom: 12, marginLeft: 16 }}>
+              <BackButton onPress={() => router.back()} />
+            </View>
+          )}
           <View style={[styles.aiHeroCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
             <View style={[styles.sparkleIconOuter, { backgroundColor: 'rgba(10, 132, 255, 0.1)' }]}>
               <Sparkles size={36} color="#0A84FF" />
@@ -534,6 +537,12 @@ INSTRUCTIONS:
         <>
           {/* Search Header */}
           <View style={styles.header}>
+            {router.canGoBack() && (
+              <BackButton
+                style={{ marginRight: 10 }}
+                onPress={() => router.back()}
+              />
+            )}
             <View style={styles.searchContainerOuter}>
               <View
                 style={[
@@ -676,12 +685,6 @@ INSTRUCTIONS:
 }
 
 export default function InsightsScreen() {
-  const { activeMode } = useAppModeStore();
-
-  if (activeMode === 'money') {
-    return <MoneyInsightsScreen />;
-  }
-
   return <PortfolioInsightsScreen />;
 }
 
@@ -692,9 +695,12 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 12,
     paddingBottom: 10,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   searchContainerOuter: {
-    paddingHorizontal: 16,
+    flex: 1,
   },
   searchContainer: {
     flexDirection: 'row',

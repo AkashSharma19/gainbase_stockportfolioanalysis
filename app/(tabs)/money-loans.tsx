@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,30 +6,18 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import { useRouter, useNavigation } from 'expo-router';
+import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
 import {
   Plus,
   Landmark,
-  Calendar,
   Home,
   Car,
   User,
   GraduationCap,
-  ChevronRight,
   Info,
-  Repeat,
-  Tv,
-  Music,
-  Youtube,
-  ShoppingBag,
-  Cloud,
-  Gamepad2,
-  Sparkles,
-  Layers,
 } from 'lucide-react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -43,36 +31,11 @@ import { LOAN_3D_ICON_MAP } from '@/constants/Category3DIcons';
 import {
   FolderPalette,
   getCardPaletteFromItem,
-  getInterlockingCardPath,
   getTicketCardPath,
 } from '@/constants/folderTheme';
-import { ExpandedFolderContainer } from '@/components/ExpandedFolderContainer';
-import { LoanDetailsContent } from '@/app/loan-details/[id]';
-import { SubscriptionDetailsContent } from '@/app/subscription-details/[id]';
 import { getEffectiveLoanOutstanding } from '@/lib/finance';
 
-const getSubscriptionIcon = (logoName: string | undefined) => {
-  switch (logoName) {
-    case 'tv':
-      return Tv;
-    case 'music':
-      return Music;
-    case 'youtube':
-      return Youtube;
-    case 'shopping-bag':
-      return ShoppingBag;
-    case 'sparkles':
-      return Sparkles;
-    case 'cloud':
-      return Cloud;
-    case 'gamepad-2':
-      return Gamepad2;
-    case 'layers':
-      return Layers;
-    default:
-      return Repeat;
-  }
-};
+
 
 const TYPE_CONFIG = {
   home: { label: 'Home Loan', emoji: '🏠', icon: Home, color: '#007AFF' },
@@ -146,34 +109,14 @@ function CircularProgress3DIcon({
 
 type ObligationTab = 'loans' | 'subscriptions';
 
-interface ExpandedItemState {
-  type: 'loan' | 'subscription';
-  id: string;
-  origin: { x: number; y: number; width: number; height: number };
-  palette: FolderPalette;
-  item: Loan | Subscription;
-  isFirst?: boolean;
-  isLast?: boolean;
-}
-
 export default function LoansScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const navigation = useNavigation();
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
   const currColors = Colors[colorScheme];
   const [activeTab, setActiveTab] = useState<ObligationTab>('loans');
   const [cardWidth, setCardWidth] = useState<number>(Dimensions.get('window').width - 32);
-  const [expandedItem, setExpandedItem] = useState<ExpandedItemState | null>(null);
-  const cardRefs = useRef<{ [key: string]: any }>({});
-
-  // Hide bottom tab bar dock while folder details is expanded
-  useEffect(() => {
-    navigation.setOptions({
-      tabBarStyle: { display: expandedItem ? 'none' : undefined },
-    });
-  }, [expandedItem, navigation]);
 
   const { loans, getMonthlyEMIBurden, subscriptions, getMonthlySubscriptionBurden, accounts, emiPayments = [] } = useMoneyStore();
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
@@ -226,173 +169,6 @@ export default function LoansScreen() {
       router.push('/add-loan');
     } else {
       router.push('/add-subscription');
-    }
-  };
-
-  const handleCardPress = (
-    item: Loan | Subscription,
-    type: 'loan' | 'subscription',
-    palette: FolderPalette,
-    isFirst: boolean = false,
-    isLast: boolean = false
-  ) => {
-    handleHaptic();
-    const ref = cardRefs.current[item.id];
-    if (ref && (ref as any).measureInWindow) {
-      (ref as any).measureInWindow((x: number, y: number, width: number, height: number) => {
-        if (width > 0 && height > 0) {
-          setExpandedItem({
-            type,
-            id: item.id,
-            origin: { x, y, width, height },
-            palette,
-            item,
-            isFirst,
-            isLast,
-          });
-        } else {
-          setExpandedItem({
-            type,
-            id: item.id,
-            origin: { x: 16, y: 220, width: cardWidth, height: 118 },
-            palette,
-            item,
-            isFirst,
-            isLast,
-          });
-        }
-      });
-    } else {
-      setExpandedItem({
-        type,
-        id: item.id,
-        origin: { x: 16, y: 220, width: cardWidth, height: 118 },
-        palette,
-        item,
-        isFirst,
-        isLast,
-      });
-    }
-  };
-
-  const renderExpandedCardPreview = (expanded: ExpandedItemState) => {
-    const palette = expanded.palette;
-    const w = expanded.origin.width || cardWidth;
-    const hBody = 92;
-    const tabH = 26;
-    const tabW = 90;
-    const totalH = hBody + tabH;
-    const isFirst = expanded.isFirst ?? false;
-    const isLast = expanded.isLast ?? false;
-    const path = getInterlockingCardPath(w, hBody, tabW, tabH, 18, isFirst, isLast, 24);
-
-    if (expanded.type === 'loan') {
-      const loan = expanded.item as Loan;
-      const paidAmount = Math.max(0, loan.principalAmount - loan.outstandingAmount);
-      const loanProgress = loan.principalAmount > 0 ? Math.min(1, paidAmount / loan.principalAmount) : 0;
-      const linkedAccount = loan.linkedAccountId ? accounts.find((a) => a.id === loan.linkedAccountId) : null;
-      const accountSuffix = linkedAccount?.name ? ` · ${linkedAccount.name}` : '';
-      return (
-        <View style={{ width: w, height: totalH, alignSelf: 'center' }}>
-          <Svg width={w} height={totalH}>
-            <Path
-              d={path}
-              fill={palette.bg}
-              stroke={isDark ? 'transparent' : palette.sub + '55'}
-              strokeWidth={1.2}
-            />
-          </Svg>
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 14,
-              width: tabW - 14,
-              height: hBody,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <CircularProgress3DIcon
-              name={loan.icon || LOAN_3D_ICON_MAP[loan.type] || 'loan'}
-              progress={loanProgress}
-              color={palette.text}
-              size={50}
-              iconSize={30}
-            />
-          </View>
-          <View
-            style={{
-              position: 'absolute',
-              top: tabH,
-              left: 20,
-              height: hBody,
-              justifyContent: 'center',
-              paddingRight: tabW + 12,
-            }}
-          >
-            <ThemedText style={[styles.curvedCardTitle, { color: palette.text }]} numberOfLines={1}>
-              {loan.name}
-            </ThemedText>
-            <ThemedText style={[styles.curvedCardSubtitle, { color: palette.sub }]} numberOfLines={1}>
-              {formatAmount(loan.emiAmount)}/monthly{accountSuffix}
-            </ThemedText>
-          </View>
-        </View>
-      );
-    } else {
-      const sub = expanded.item as Subscription;
-      const cycleLabel = sub.billingCycle
-        ? sub.billingCycle.charAt(0).toUpperCase() + sub.billingCycle.slice(1)
-        : 'Monthly';
-      const linkedAccount = sub.linkedAccountId ? accounts.find((a) => a.id === sub.linkedAccountId) : null;
-      const accountSuffix = linkedAccount?.name ? ` · ${linkedAccount.name}` : '';
-      return (
-        <View style={{ width: w, height: totalH, alignSelf: 'center' }}>
-          <Svg width={w} height={totalH}>
-            <Path
-              d={path}
-              fill={palette.bg}
-              stroke={isDark ? 'transparent' : palette.sub + '55'}
-              strokeWidth={1.2}
-            />
-          </Svg>
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 14,
-              width: tabW - 14,
-              height: hBody,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Category3DIcon
-              name={sub.category || sub.name}
-              icon={sub.logo}
-              size={32}
-            />
-          </View>
-          <View
-            style={{
-              position: 'absolute',
-              top: tabH,
-              left: 20,
-              height: hBody,
-              justifyContent: 'center',
-              paddingRight: tabW + 12,
-            }}
-          >
-            <ThemedText style={[styles.curvedCardTitle, { color: palette.text }]} numberOfLines={1}>
-              {sub.name}
-            </ThemedText>
-            <ThemedText style={[styles.curvedCardSubtitle, { color: palette.sub }]} numberOfLines={1}>
-              {formatAmount(sub.amount)}/{cycleLabel.toLowerCase()}{accountSuffix}
-            </ThemedText>
-          </View>
-        </View>
-      );
     }
   };
 
@@ -530,8 +306,6 @@ export default function LoansScreen() {
   };
 
   const renderLoanCard = (item: Loan, index: number, totalCount: number) => {
-    const isFirst = index === 0;
-    const isLast = index === totalCount - 1;
     const palette = getCardPaletteFromItem({
       type: 'loan',
       loanType: item.type,
@@ -545,83 +319,48 @@ export default function LoansScreen() {
     const linkedAccount = item.linkedAccountId ? accounts.find((a) => a.id === item.linkedAccountId) : null;
     const accountSuffix = linkedAccount?.name ? ` · ${linkedAccount.name}` : '';
 
-    const hBody = 92;
-    const tabH = 26;
-    const tabW = 90;
-    const totalH = hBody + tabH;
-    const path = getInterlockingCardPath(cardWidth, hBody, tabW, tabH, 18, isFirst, isLast, 24);
+    const isFirst = index === 0;
+    const isLast = index === totalCount - 1;
 
     return (
       <TouchableOpacity
         key={item.id}
-        ref={(r) => {
-          cardRefs.current[item.id] = r;
-        }}
-        style={{
-          height: totalH,
-          marginTop: isFirst ? 0 : -tabH,
-          zIndex: totalCount - index,
-          shadowColor: '#000000',
-          shadowOffset: { width: 0, height: 1.5 },
-          shadowOpacity: 0.05,
-          shadowRadius: 3,
-          elevation: 1,
-        }}
-        activeOpacity={0.82}
+        style={[
+          styles.cardRow,
+          {
+            backgroundColor: palette.bg,
+            borderTopLeftRadius: isFirst ? 16 : 0,
+            borderTopRightRadius: isFirst ? 16 : 0,
+            borderBottomLeftRadius: isLast ? 16 : 0,
+            borderBottomRightRadius: isLast ? 16 : 0,
+            borderCurve: 'continuous',
+            borderBottomWidth: isLast ? 0 : 1.2,
+            borderBottomColor: isDark ? 'rgba(0,0,0,0.18)' : palette.sub + '25',
+          },
+        ]}
+        activeOpacity={0.78}
         onPress={() => {
-          handleCardPress(item, 'loan', palette, isFirst, isLast);
+          handleHaptic();
+          router.push(`/loan-details/${item.id}`);
         }}
       >
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Svg width={cardWidth} height={totalH}>
-            <Path
-              d={path}
-              fill={palette.bg}
-              stroke={isDark ? 'transparent' : palette.sub + '55'}
-              strokeWidth={1.2}
-            />
-          </Svg>
+        <View style={styles.cardLeftContent}>
+          <ThemedText style={[styles.cardTitle, { color: palette.text }]} numberOfLines={1}>
+            {item.name}
+          </ThemedText>
+          <ThemedText style={[styles.cardSubtitle, { color: palette.sub }]} numberOfLines={1}>
+            {formatAmount(item.emiAmount)}/monthly{accountSuffix}
+          </ThemedText>
         </View>
 
-        {/* Right Tab Lobe with Circular Progress 3D Icon */}
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: 14,
-            width: tabW - 14,
-            height: hBody,
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10,
-          }}
-        >
+        <View style={styles.cardRightIcon}>
           <CircularProgress3DIcon
             name={item.icon || LOAN_3D_ICON_MAP[item.type] || 'loan'}
             progress={loanProgress}
             color={palette.text}
-            size={50}
-            iconSize={30}
+            size={48}
+            iconSize={28}
           />
-        </View>
-
-        {/* Left Body Content */}
-        <View
-          style={{
-            position: 'absolute',
-            top: tabH,
-            left: 20,
-            height: hBody,
-            justifyContent: 'center',
-            paddingRight: tabW + 12,
-          }}
-        >
-          <ThemedText style={[styles.curvedCardTitle, { color: palette.text }]} numberOfLines={1}>
-            {item.name}
-          </ThemedText>
-          <ThemedText style={[styles.curvedCardSubtitle, { color: palette.sub }]} numberOfLines={1}>
-            {formatAmount(item.emiAmount)}/monthly{accountSuffix}
-          </ThemedText>
         </View>
       </TouchableOpacity>
     );
@@ -641,81 +380,43 @@ export default function LoansScreen() {
     const linkedAccount = item.linkedAccountId ? accounts.find((a) => a.id === item.linkedAccountId) : null;
     const accountSuffix = linkedAccount?.name ? ` · ${linkedAccount.name}` : '';
 
-    const hBody = 92;
-    const tabH = 26;
-    const tabW = 90;
-    const totalH = hBody + tabH;
-    const path = getInterlockingCardPath(cardWidth, hBody, tabW, tabH, 18, isFirst, isLast, 24);
-
     return (
       <TouchableOpacity
         key={item.id}
-        ref={(r) => {
-          cardRefs.current[item.id] = r;
-        }}
-        style={{
-          height: totalH,
-          marginTop: isFirst ? 0 : -tabH,
-          zIndex: totalCount - index,
-          shadowColor: '#000000',
-          shadowOffset: { width: 0, height: 1.5 },
-          shadowOpacity: 0.05,
-          shadowRadius: 3,
-          elevation: 1,
-        }}
-        activeOpacity={0.82}
+        style={[
+          styles.cardRow,
+          {
+            backgroundColor: palette.bg,
+            borderTopLeftRadius: isFirst ? 16 : 0,
+            borderTopRightRadius: isFirst ? 16 : 0,
+            borderBottomLeftRadius: isLast ? 16 : 0,
+            borderBottomRightRadius: isLast ? 16 : 0,
+            borderCurve: 'continuous',
+            borderBottomWidth: isLast ? 0 : 1.2,
+            borderBottomColor: isDark ? 'rgba(0,0,0,0.18)' : palette.sub + '25',
+          },
+        ]}
+        activeOpacity={0.78}
         onPress={() => {
-          handleCardPress(item, 'subscription', palette, isFirst, isLast);
+          handleHaptic();
+          router.push(`/subscription-details/${item.id}`);
         }}
       >
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Svg width={cardWidth} height={totalH}>
-            <Path
-              d={path}
-              fill={palette.bg}
-              stroke={isDark ? 'transparent' : palette.sub + '55'}
-              strokeWidth={1.2}
-            />
-          </Svg>
+        <View style={styles.cardLeftContent}>
+          <ThemedText style={[styles.cardTitle, { color: palette.text }]} numberOfLines={1}>
+            {item.name}
+          </ThemedText>
+          <ThemedText style={[styles.cardSubtitle, { color: palette.sub }]} numberOfLines={1}>
+            {formatAmount(item.amount)}/{cycleLabel.toLowerCase()}{accountSuffix}
+          </ThemedText>
         </View>
 
-        {/* Right Tab Lobe with 3D Icon */}
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: 14,
-            width: tabW - 14,
-            height: hBody,
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10,
-          }}
-        >
+        <View style={styles.cardRightIcon}>
           <Category3DIcon
             name={item.category || item.name}
             icon={item.logo}
-            size={32}
+            size={36}
           />
-        </View>
-
-        {/* Left Body Content */}
-        <View
-          style={{
-            position: 'absolute',
-            top: tabH,
-            left: 20,
-            height: hBody,
-            justifyContent: 'center',
-            paddingRight: tabW + 12,
-          }}
-        >
-          <ThemedText style={[styles.curvedCardTitle, { color: palette.text }]} numberOfLines={1}>
-            {item.name}
-          </ThemedText>
-          <ThemedText style={[styles.curvedCardSubtitle, { color: palette.sub }]} numberOfLines={1}>
-            {formatAmount(item.amount)}/{cycleLabel.toLowerCase()}{accountSuffix}
-          </ThemedText>
         </View>
       </TouchableOpacity>
     );
@@ -854,7 +555,9 @@ export default function LoansScreen() {
                   if (w > 0) setCardWidth(w);
                 }}
               >
-                {activeLoans.map((item, index) => renderLoanCard(item, index, activeLoans.length))}
+                <View style={styles.cardsGroup}>
+                  {activeLoans.map((item, index) => renderLoanCard(item, index, activeLoans.length))}
+                </View>
               </View>
             )}
 
@@ -885,7 +588,9 @@ export default function LoansScreen() {
                   </View>
                 </View>
                 <View style={styles.cardListContainer}>
-                  {completedLoans.map((item, index) => renderLoanCard(item, index, completedLoans.length))}
+                  <View style={styles.cardsGroup}>
+                    {completedLoans.map((item, index) => renderLoanCard(item, index, completedLoans.length))}
+                  </View>
                 </View>
               </View>
             ) : null}
@@ -907,7 +612,9 @@ export default function LoansScreen() {
                   if (w > 0) setCardWidth(w);
                 }}
               >
-                {activeSubscriptions.map((item, index) => renderSubscriptionCard(item, index, activeSubscriptions.length))}
+                <View style={styles.cardsGroup}>
+                  {activeSubscriptions.map((item, index) => renderSubscriptionCard(item, index, activeSubscriptions.length))}
+                </View>
               </View>
             )}
 
@@ -938,7 +645,9 @@ export default function LoansScreen() {
                   </View>
                 </View>
                 <View style={styles.cardListContainer}>
-                  {completedSubscriptions.map((item, index) => renderSubscriptionCard(item, index, completedSubscriptions.length))}
+                  <View style={styles.cardsGroup}>
+                    {completedSubscriptions.map((item, index) => renderSubscriptionCard(item, index, completedSubscriptions.length))}
+                  </View>
                 </View>
               </View>
             ) : null}
@@ -947,51 +656,24 @@ export default function LoansScreen() {
       </ScrollView>
 
         {/* Floating Add Button above Nav Bar Dock */}
-        {!expandedItem && (
-          <TouchableOpacity
-            style={[
-              styles.floatingAddBtn,
-              {
-                bottom: Math.max(insets.bottom, 12) + 74,
-                backgroundColor: isLoansView ? '#FEF08A' : '#E9D5FF',
-                borderWidth: isDark ? 0 : 1.5,
-                borderColor: isLoansView ? '#CA8A04' : '#9333EA',
-                shadowColor: isDark ? '#000000' : (isLoansView ? '#CA8A04' : '#9333EA'),
-              },
-            ]}
-            onPress={handleAdd}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            activeOpacity={0.82}
-          >
-            <Plus size={24} color={isLoansView ? '#713F12' : '#581C87'} strokeWidth={2.6} />
-          </TouchableOpacity>
-        )}
-      </SafeAreaView>
-
-      {/* ─── Seamless Folder Expanding & Collapsing Container ─── */}
-      {expandedItem && (
-        <ExpandedFolderContainer
-          isOpen={!!expandedItem}
-          origin={expandedItem.origin}
-          palette={expandedItem.palette}
-          cardPreview={renderExpandedCardPreview(expandedItem)}
-          onClose={() => setExpandedItem(null)}
+        <TouchableOpacity
+          style={[
+            styles.floatingAddBtn,
+            {
+              bottom: Math.max(insets.bottom, 12) + 74,
+              backgroundColor: isLoansView ? '#FEF08A' : '#E9D5FF',
+              borderWidth: isDark ? 0 : 1.5,
+              borderColor: isLoansView ? '#CA8A04' : '#9333EA',
+              shadowColor: isDark ? '#000000' : (isLoansView ? '#CA8A04' : '#9333EA'),
+            },
+          ]}
+          onPress={handleAdd}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.82}
         >
-          {(triggerClose) =>
-            expandedItem.type === 'loan' ? (
-              <LoanDetailsContent
-                loanId={expandedItem.id}
-                onBack={triggerClose}
-              />
-            ) : (
-              <SubscriptionDetailsContent
-                subscriptionId={expandedItem.id}
-                onBack={triggerClose}
-              />
-            )
-          }
-        </ExpandedFolderContainer>
-      )}
+          <Plus size={24} color={isLoansView ? '#713F12' : '#581C87'} strokeWidth={2.6} />
+        </TouchableOpacity>
+      </SafeAreaView>
     </View>
   );
 }
@@ -1118,42 +800,43 @@ const styles = StyleSheet.create({
   cardListContainer: {
     marginHorizontal: 16,
   },
-  curvedCardContainer: {
-    width: '100%',
-    position: 'relative',
-    overflow: 'visible',
+  cardsGroup: {
+    borderRadius: 16,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+    borderWidth: 1.2,
+    borderColor: 'rgba(0,0,0,0.06)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
+    elevation: 2,
   },
-  curvedTabRightLobe: {
-    position: 'absolute',
-    top: 0,
-    right: 12,
+  cardRow: {
+    paddingVertical: 18,
+    paddingHorizontal: 18,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    zIndex: 10,
+    justifyContent: 'space-between',
   },
-  curvedSubBody: {
-    position: 'absolute',
-    left: 18,
-    paddingRight: 106,
+  cardLeftContent: {
+    flex: 1,
+    paddingRight: 14,
     justifyContent: 'center',
   },
-  curvedCardTitle: {
-    fontSize: 16.5,
-    fontFamily: 'Outfit_700Bold',
+  cardTitle: {
+    fontSize: 16,
+    fontFamily: 'Outfit_600SemiBold',
     letterSpacing: -0.2,
     marginBottom: 4,
   },
-  curvedCardSubtitle: {
-    fontSize: 13.5,
-    fontFamily: 'Outfit_500Medium',
+  cardSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Outfit_400Regular',
   },
-  actionCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
+  cardRightIcon: {
     alignItems: 'center',
+    justifyContent: 'center',
   },
   progressContainer: {
     marginTop: 10,

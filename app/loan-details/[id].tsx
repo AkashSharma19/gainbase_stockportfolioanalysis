@@ -11,7 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -37,7 +37,7 @@ import { Category3DIcon } from '@/components/Category3DIcon';
 import { LOAN_3D_ICON_MAP } from '@/constants/Category3DIcons';
 import { AccountPickerModal } from '@/components/AccountPickerModal';
 import { AccountSelectCard } from '@/components/AccountSelectCard';
-import { FolderDetailsCard, CircularProgress3DIcon } from '@/components/FolderDetailsCard';
+import { CircularProgress3DIcon } from '@/components/FolderDetailsCard';
 import { getCardPaletteFromItem } from '@/constants/folderTheme';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 import { getNextLoanDuePayment } from '@/lib/finance';
@@ -505,6 +505,7 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
 
   return (
     <View style={[styles.container, { backgroundColor: currColors.background }]}>
+      <Stack.Screen options={{ headerShown: false, gestureEnabled: true }} />
       {/* Header */}
       <View style={[styles.header, { paddingTop: headerTopPadding, paddingBottom: 12 }]}>
         <BackButton onPress={onBack} />
@@ -555,16 +556,33 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
         bounces={false}
         overScrollMode="never"
       >
-        {/* ─── 1. Folder Dossier Hero Card (Matching Folder Details UI) ─── */}
-        <FolderDetailsCard
-          palette={palette}
-          headerTitle={loan.name}
-          headerSubtitle={
-            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: palette.sub }} numberOfLines={1}>
-              {formatAmount(loan.emiAmount)}/monthly{linkedAccount?.name ? ` · ${linkedAccount.name}` : ''}
-            </ThemedText>
-          }
-          tabRightContent={
+        {/* ─── 1. Loan Summary Hero Card ─── */}
+        <View
+          style={[
+            styles.heroCard,
+            {
+              backgroundColor: palette.bg,
+              borderColor: isDark ? 'transparent' : palette.sub + '35',
+            },
+          ]}
+        >
+          {/* Header Row: Loan Title & Subtitle on left, Circular Progress 3D Icon on right */}
+          <View style={styles.heroHeaderRow}>
+            <View style={{ flex: 1, paddingRight: 14 }}>
+              <ThemedText
+                style={[styles.heroHeaderTitle, { color: palette.text }]}
+                numberOfLines={2}
+              >
+                {loan.name}
+              </ThemedText>
+              <ThemedText
+                style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: palette.sub, marginTop: 4 }}
+                numberOfLines={1}
+              >
+                {formatAmount(loan.emiAmount)}/monthly{linkedAccount?.name ? ` · ${linkedAccount.name}` : ''}
+              </ThemedText>
+            </View>
+
             <CircularProgress3DIcon
               name={loan.icon || LOAN_3D_ICON_MAP[loan.type] || 'loan'}
               progress={paidPercentage / 100}
@@ -572,10 +590,10 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
               size={48}
               iconSize={28}
             />
-          }
-        >
+          </View>
+
           {/* Outstanding Balance */}
-          <ThemedText style={[styles.heroValue, { color: palette.text, fontFamily: 'Outfit_700Bold', fontSize: 28, marginBottom: 10 }]}>
+          <ThemedText style={[styles.heroValue, { color: palette.text, fontFamily: 'Outfit_700Bold', fontSize: 28, marginTop: 16, marginBottom: 10 }]}>
             {formatAmount(effectiveOutstanding)}
           </ThemedText>
 
@@ -633,7 +651,7 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
             </ThemedText>
           </View>
 
-          {/* Integrated Dossier Action Buttons */}
+          {/* Integrated Action Buttons */}
           {effectiveOutstanding > 0 && (
             <View style={[styles.cardActionsRow, { borderTopColor: palette.sub + '22' }]}>
               <TouchableOpacity
@@ -668,7 +686,7 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
               </TouchableOpacity>
             </View>
           )}
-        </FolderDetailsCard>
+        </View>
 
         {/* ─── 3. Tabbed Amortization Schedule & History ─── */}
         <View style={styles.scheduleHeaderRow}>
@@ -1154,19 +1172,28 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
-  outstandingCard: {
+  heroCard: {
     marginHorizontal: 16,
     borderRadius: 16,
-    borderWidth: 1,
-    padding: 18,
-    marginTop: 4,
-    marginBottom: 14,
+    borderCurve: 'continuous',
+    borderWidth: 1.2,
+    padding: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+    marginBottom: 8,
   },
   heroHeaderRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+  },
+  heroHeaderTitle: {
+    fontSize: 20,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: -0.3,
   },
   heroLabel: {
     fontSize: 10,

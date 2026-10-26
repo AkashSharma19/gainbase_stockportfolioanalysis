@@ -1,12 +1,11 @@
-import { useAiStore, AiInsight, AiMoneyInsight } from '@/store/useAiStore';
-import { useMoneyStore } from '@/store/useMoneyStore';
+import { useAiStore, AiInsight } from '@/store/useAiStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 let isCurrentlyRunning = false;
 
 /**
- * Runs the AI Insights background evaluation across Money Ledger & Stock Portfolio.
+ * Runs the AI Insights background evaluation across Stock Portfolio.
  * - Guard: Only runs if Gemini API Key is configured.
  * - Interval: Only runs if >= 12 hours have elapsed since the last run.
  * - Silent: Never throws or displays user-facing error dialogs.
@@ -45,11 +44,8 @@ export async function runBackgroundAiInsightsIfNeeded(): Promise<boolean> {
     const modelToUse = selectedModel || 'gemini-1.5-flash';
     const keyToUse = geminiApiKey.trim();
 
-    // Run Money Insights and Stock Insights concurrently in the background
-    await Promise.allSettled([
-      generateMoneyInsightsSilently(keyToUse, modelToUse),
-      generateStockInsightsSilently(keyToUse, modelToUse),
-    ]);
+    // Run Stock Insights in the background
+    await generateStockInsightsSilently(keyToUse, modelToUse);
 
     return true;
   } catch (error) {
@@ -61,164 +57,6 @@ export async function runBackgroundAiInsightsIfNeeded(): Promise<boolean> {
   }
 }
 
-/**
- * Evaluates the user's real personal finance ledger and updates aiMoneyInsights in useAiStore.
- */
-export async function generateMoneyInsightsSilently(
-  geminiApiKey: string,
-  selectedModel: string,
-): Promise<void> {
-  try {
-    const moneyState = useMoneyStore.getState();
-    const {
-      accounts,
-      moneyTransactions,
-      subscriptions,
-      loans,
-      getNetWorth,
-      getMonthlyEMIBurden,
-      getMonthlySubscriptionBurden,
-    } = moneyState;
-
-    // Check if there is data to analyze
-    if (
-      accounts.length === 0 &&
-      moneyTransactions.length === 0 &&
-      subscriptions.length === 0 &&
-      loans.length === 0
-    ) {
-      return;
-    }
-
-    const netWorth = getNetWorth();
-    const monthlyEmiBurden = getMonthlyEMIBurden();
-    const monthlySubBurden = getMonthlySubscriptionBurden();
-
-    const accountsSummary = accounts
-      .filter((a) => !a.isArchived)
-      .map((a) => `- ${a.name} (${a.type}): Balance ₹${a.balance.toLocaleString('en-IN')}`)
-      .join('\n');
-
-    // Category spending for the current month
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    const categorySpendCurrent: Record<string, number> = {};
-    let totalExpenseThisMonth = 0;
-
-    moneyTransactions.forEach((t) => {
-      const d = new Date(t.date);
-      if (t.type === 'expense' && d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-        totalExpenseThisMonth += t.amount;
-        categorySpendCurrent[t.category] = (categorySpendCurrent[t.category] || 0) + t.amount;
-      }
-    });
-
-    const categorySummary = Object.entries(categorySpendCurrent)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([name, amount]) => {
-        const sharePct =
-          totalExpenseThisMonth > 0 ? Math.round((amount / totalExpenseThisMonth) * 100) : 0;
-        return `- ${name}: ₹${amount.toLocaleString('en-IN')} (${sharePct}%)`;
-      })
-      .join('\n');
-
-    const subscriptionsSummary = subscriptions
-      .filter((s) => s.isActive)
-      .map((s) => `- ${s.name}: ₹${s.amount.toLocaleString('en-IN')}/${s.billingCycle}`)
-      .join('\n');
-
-    const loansSummary = loans
-      .filter((l) => l.isActive)
-      .map(
-        (l) =>
-          `- ${l.name}: Principal ₹${l.outstandingAmount.toLocaleString('en-IN')}, EMI ₹${l.emiAmount.toLocaleString('en-IN')}/mo`,
-      )
-      .join('\n');
-
-    const prompt = `You are Gainbase AI, an institutional-grade personal wealth strategist. Analyze this user's real financial ledger:
-
-[FINANCIAL METRICS]
-Net Worth: ₹${netWorth.toLocaleString('en-IN')}
-Monthly EMI Burden: ₹${monthlyEmiBurden.toLocaleString('en-IN')}
-Monthly Subscription Burden: ₹${monthlySubBurden.toLocaleString('en-IN')}
-
-[ACCOUNTS]
-${accountsSummary || 'No accounts logged'}
-
-[CATEGORY SPENDING THIS MONTH]
-${categorySummary || 'No expenses logged'}
-
-[ACTIVE SUBSCRIPTIONS]
-${subscriptionsSummary || 'No active subscriptions'}
-
-[ACTIVE LOANS & DEBT]
-${loansSummary || 'No active debt'}
-
-TASK:
-Generate 6 highly personalized, quantitative optimization proposals referencing the user's specific account names, category spending amounts, subscriptions, and loans.
-Format strictly as a JSON array of objects with fields:
-- "id": unique string
-- "type": "warning" | "tip" | "success"
-- "title": punchy 3-5 word proposal mentioning the real category or service name
-- "potentialSavings": e.g. "Save ₹1,500/month" or "Action Needed"
-- "message": 2 crisp sentences explaining the exact quantitative root cause and observation
-- "actionLabel": e.g. "Adjust Budget", "Manage Subscriptions", "View Accounts"
-- "actionPath": one of "/money-analytics", "/(tabs)/money-accounts", "/(tabs)/money-loans", "/add-budget", "/manage-categories"`;
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${geminiApiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: 'ARRAY',
-              items: {
-                type: 'OBJECT',
-                properties: {
-                  id: { type: 'STRING' },
-                  type: {
-                    type: 'STRING',
-                    enum: ['warning', 'tip', 'success'],
-                  },
-                  title: { type: 'STRING' },
-                  potentialSavings: { type: 'STRING' },
-                  message: { type: 'STRING' },
-                  actionLabel: { type: 'STRING' },
-                  actionPath: { type: 'STRING' },
-                },
-                required: [
-                  'id',
-                  'type',
-                  'title',
-                  'potentialSavings',
-                  'message',
-                  'actionLabel',
-                  'actionPath',
-                ],
-              },
-            },
-          },
-        }),
-      },
-    );
-
-    const data = await response.json();
-    if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      const parsed: AiMoneyInsight[] = JSON.parse(data.candidates[0].content.parts[0].text);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        useAiStore.getState().setAiMoneyInsights(parsed);
-      }
-    }
-  } catch (err) {
-    console.error('[AiBackgroundService] Failed to generate money insights in background:', err);
-  }
-}
 
 /**
  * Evaluates the user's active stock holdings and updates aiStockInsights in useAiStore.
