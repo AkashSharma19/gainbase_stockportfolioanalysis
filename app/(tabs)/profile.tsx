@@ -1403,8 +1403,6 @@ export default function ProfileScreen() {
             <Path
               d={path}
               fill={ticketPalette.bg}
-              stroke={isDark ? 'transparent' : ticketPalette.border}
-              strokeWidth={1.5}
             />
             {/* Perforated dashed divider line */}
             <Line
@@ -1412,8 +1410,8 @@ export default function ProfileScreen() {
               y1={notchY}
               x2={cardWidth - notchR - 6}
               y2={notchY}
-              stroke={isDark ? ticketPalette.text + '35' : ticketPalette.sub + 'B0'}
-              strokeWidth={1.5}
+              stroke={isDark ? ticketPalette.text + '35' : ticketPalette.sub + '45'}
+              strokeWidth={1.2}
               strokeDasharray="5, 4"
             />
           </Svg>

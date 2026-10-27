@@ -145,8 +145,6 @@ export default function AiSettingsScreen() {
             <Path
               d={path}
               fill="#E9D5FF"
-              stroke={isDark ? 'transparent' : '#C084FC'}
-              strokeWidth={1.5}
             />
             <Line
               x1={notchR + 6}

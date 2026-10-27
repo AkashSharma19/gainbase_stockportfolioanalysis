@@ -469,8 +469,6 @@ export default function AllTransactionsScreen() {
             <Path
               d={path}
               fill={palette.bg}
-              stroke={isDark ? 'transparent' : palette.border}
-              strokeWidth={1.2}
             />
             {/* Perforated dashed divider line */}
             <Line
@@ -478,7 +476,7 @@ export default function AllTransactionsScreen() {
               y1={notchY}
               x2={cardWidth - notchR - 6}
               y2={notchY}
-              stroke={isDark ? palette.text + '35' : palette.sub + 'B0'}
+              stroke={isDark ? palette.text + '35' : palette.sub + '45'}
               strokeWidth={1.2}
               strokeDasharray="5, 4"
             />
@@ -600,7 +598,6 @@ export default function AllTransactionsScreen() {
               styles.countBadge,
               {
                 backgroundColor: isDark ? currColors.cardSecondary : '#FFE4E6',
-                borderColor: isDark ? 'transparent' : '#FDA4AF',
               },
             ]}
           >
@@ -627,7 +624,6 @@ export default function AllTransactionsScreen() {
                 : isDark
                 ? currColors.card
                 : '#F3F4F6',
-              borderColor: isFilterActive ? '#FDA4AF' : currColors.border,
             },
           ]}
           onPress={() => {
@@ -777,7 +773,7 @@ export default function AllTransactionsScreen() {
           <View
             style={[
               styles.emptyCard,
-              { backgroundColor: currColors.card, borderColor: currColors.border },
+              { backgroundColor: currColors.card },
             ]}
           >
             <View
@@ -856,7 +852,6 @@ export default function AllTransactionsScreen() {
                     styles.dateGroupCard,
                     {
                       backgroundColor: currColors.card,
-                      borderColor: currColors.border,
                     },
                   ]}
                 >
@@ -975,7 +970,6 @@ export default function AllTransactionsScreen() {
           styles.floatingAddBtn,
           {
             backgroundColor: '#FFE4E6',
-            borderColor: '#FDA4AF',
             bottom: Math.max(insets.bottom, 16) + 16,
           },
         ]}
@@ -1392,7 +1386,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
-    borderWidth: 1,
   },
   countBadgeText: {
     fontSize: 11,
@@ -1402,7 +1395,6 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -1486,7 +1478,6 @@ const styles = StyleSheet.create({
   dateGroupCard: {
     borderRadius: 16,
     borderCurve: 'continuous',
-    borderWidth: 1.2,
     overflow: 'hidden',
     paddingHorizontal: 14,
   },
@@ -1529,7 +1520,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderRadius: 18,
     borderCurve: 'continuous',
-    borderWidth: 1.2,
     padding: 28,
     marginTop: 12,
     alignItems: 'center',
@@ -1550,7 +1540,6 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

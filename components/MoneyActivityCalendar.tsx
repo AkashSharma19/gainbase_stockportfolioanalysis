@@ -121,7 +121,6 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
         styles.calendarCard,
         {
           backgroundColor: palette.bg,
-          borderColor: isDark ? 'transparent' : palette.border,
         },
       ]}
     >
@@ -194,7 +193,6 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
 const styles = StyleSheet.create({
   calendarCard: {
     borderRadius: 22,
-    borderWidth: 1.2,
     paddingTop: 16,
     paddingBottom: 14,
     paddingHorizontal: 8,

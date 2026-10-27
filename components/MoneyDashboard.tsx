@@ -576,8 +576,6 @@ export function MoneyDashboard() {
             <Path
               d={path}
               fill={palette.bg}
-              stroke={isDark ? 'transparent' : palette.border}
-              strokeWidth={1.5}
             />
             {/* Perforated dashed divider line */}
             <Line
@@ -585,8 +583,8 @@ export function MoneyDashboard() {
               y1={notchY}
               x2={cardWidth - notchR - 6}
               y2={notchY}
-              stroke={isDark ? palette.text + '35' : palette.sub + 'B0'}
-              strokeWidth={1.5}
+              stroke={isDark ? palette.text + '35' : palette.sub + '45'}
+              strokeWidth={1.2}
               strokeDasharray="5, 4"
             />
           </Svg>
@@ -793,8 +791,6 @@ export function MoneyDashboard() {
                     paddingVertical: 2,
                     borderRadius: 10,
                     backgroundColor: isDark ? currColors.cardSecondary : '#FEF08A',
-                    borderWidth: isDark ? 0 : 1,
-                    borderColor: '#CA8A04',
                   }}
                 >
                   <ThemedText
@@ -952,8 +948,6 @@ export function MoneyDashboard() {
                 styles.accordionContainer,
                 {
                   backgroundColor: txCardPalette.bg,
-                  borderColor: isDark ? 'transparent' : txCardPalette.border,
-                  borderWidth: 1.2,
                 },
               ]}
             >
@@ -975,8 +969,6 @@ export function MoneyDashboard() {
                         paddingVertical: 2,
                         borderRadius: 10,
                         backgroundColor: 'rgba(136, 19, 55, 0.12)',
-                        borderWidth: 1,
-                        borderColor: 'rgba(136, 19, 55, 0.22)',
                       }}
                     >
                       <ThemedText
@@ -1367,7 +1359,6 @@ const styles = StyleSheet.create({
   accordionContainer: {
     borderRadius: 22,
     overflow: 'hidden',
-    borderWidth: 1,
     marginBottom: 16,
   },
   headerWithAction: {

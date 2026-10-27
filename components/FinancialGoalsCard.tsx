@@ -114,8 +114,6 @@ export function FinancialGoalsCard() {
           styles.container,
           {
             backgroundColor: palette.bg,
-            borderWidth: theme === 'dark' ? 0 : 1.2,
-            borderColor: palette.border,
             borderRadius: 22,
           },
         ]}
@@ -151,8 +149,6 @@ export function FinancialGoalsCard() {
         styles.container,
         {
           backgroundColor: palette.bg,
-          borderWidth: theme === 'dark' ? 0 : 1.2,
-          borderColor: palette.border,
           borderRadius: 22,
         },
       ]}
@@ -264,7 +260,6 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 20,
     padding: 16,
-    borderWidth: 1,
     marginBottom: 16,
   },
   header: {

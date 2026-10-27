@@ -218,8 +218,6 @@ export default function LoansScreen() {
             <Path
               d={path}
               fill={palette.bg}
-              stroke={isDark ? 'transparent' : palette.border}
-              strokeWidth={1.5}
             />
             {/* Perforated dashed divider line */}
             <Line
@@ -227,8 +225,8 @@ export default function LoansScreen() {
               y1={notchY}
               x2={cardWidth - notchR - 6}
               y2={notchY}
-              stroke={isDark ? palette.text + '35' : palette.sub + 'B0'}
-              strokeWidth={1.5}
+              stroke={isDark ? palette.text + '35' : palette.sub + '45'}
+              strokeWidth={1.2}
               strokeDasharray="5, 4"
             />
           </Svg>
@@ -334,8 +332,8 @@ export default function LoansScreen() {
             borderBottomLeftRadius: isLast ? 16 : 0,
             borderBottomRightRadius: isLast ? 16 : 0,
             borderCurve: 'continuous',
-            borderBottomWidth: isLast ? 0 : 1.2,
-            borderBottomColor: isDark ? 'rgba(0,0,0,0.18)' : palette.sub + '25',
+            borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
+            borderBottomColor: isDark ? 'rgba(0,0,0,0.18)' : palette.sub + '20',
           },
         ]}
         activeOpacity={0.78}
@@ -392,8 +390,8 @@ export default function LoansScreen() {
             borderBottomLeftRadius: isLast ? 16 : 0,
             borderBottomRightRadius: isLast ? 16 : 0,
             borderCurve: 'continuous',
-            borderBottomWidth: isLast ? 0 : 1.2,
-            borderBottomColor: isDark ? 'rgba(0,0,0,0.18)' : palette.sub + '25',
+            borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
+            borderBottomColor: isDark ? 'rgba(0,0,0,0.18)' : palette.sub + '20',
           },
         ]}
         activeOpacity={0.78}
@@ -437,8 +435,6 @@ export default function LoansScreen() {
               paddingVertical: 2.5,
               borderRadius: 12,
               backgroundColor: isLoansView ? '#FEF08A' : '#E9D5FF',
-              borderWidth: isDark ? 0 : 1,
-              borderColor: isLoansView ? '#CA8A04' : '#9333EA',
             }}
           >
             <ThemedText
@@ -460,7 +456,6 @@ export default function LoansScreen() {
           styles.toggleBar,
           {
             backgroundColor: isDark ? currColors.card : '#FFFFFF',
-            borderColor: isDark ? currColors.border : '#E2E8F0',
             shadowColor: '#000000',
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: isDark ? 0 : 0.05,
@@ -474,8 +469,6 @@ export default function LoansScreen() {
             styles.toggleOption,
             isLoansView && {
               backgroundColor: '#FEF08A',
-              borderWidth: isDark ? 0 : 1.5,
-              borderColor: '#CA8A04',
               shadowColor: isDark ? '#000000' : '#CA8A04',
               shadowOffset: { width: 0, height: 1.5 },
               shadowOpacity: isDark ? 0.08 : 0.22,
@@ -506,8 +499,6 @@ export default function LoansScreen() {
             styles.toggleOption,
             !isLoansView && {
               backgroundColor: '#E9D5FF',
-              borderWidth: isDark ? 0 : 1.5,
-              borderColor: '#9333EA',
               shadowColor: isDark ? '#000000' : '#9333EA',
               shadowOffset: { width: 0, height: 1.5 },
               shadowOpacity: isDark ? 0.08 : 0.22,
@@ -662,9 +653,7 @@ export default function LoansScreen() {
             {
               bottom: Math.max(insets.bottom, 12) + 74,
               backgroundColor: isLoansView ? '#FEF08A' : '#E9D5FF',
-              borderWidth: isDark ? 0 : 1.5,
-              borderColor: isLoansView ? '#CA8A04' : '#9333EA',
-              shadowColor: isDark ? '#000000' : (isLoansView ? '#CA8A04' : '#9333EA'),
+              shadowColor: '#000000',
             },
           ]}
           onPress={handleAdd}
@@ -714,7 +703,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 4,
     marginBottom: 16,
-    borderWidth: 1,
   },
   toggleOption: {
     flex: 1,
@@ -731,7 +719,6 @@ const styles = StyleSheet.create({
   burdenCard: {
     marginHorizontal: 16,
     borderRadius: 16,
-    borderWidth: 1,
     padding: 18,
     marginTop: 4,
     marginBottom: 20,
@@ -804,8 +791,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderCurve: 'continuous',
     overflow: 'hidden',
-    borderWidth: 1.2,
-    borderColor: 'rgba(0,0,0,0.06)',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
