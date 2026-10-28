@@ -1,20 +1,21 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
   ScrollView,
   TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Svg, Path, Line } from 'react-native-svg';
 import {
   Plus,
   Wallet,
   Landmark,
   Activity,
   CreditCard,
-  ChevronRight,
   PiggyBank,
   Info,
   ArrowDownLeft,
@@ -35,6 +36,8 @@ import { BankLogo } from '@/components/BankLogo';
 import { Category3DIcon } from '@/components/Category3DIcon';
 import { CATEGORY_3D_ICONS_LIST } from '@/constants/Category3DIcons';
 import { getEffectiveLoanOutstanding } from '@/lib/finance';
+import { getTicketCardPath } from '@/constants/folderTheme';
+
 
 const TYPE_CONFIG: Record<AccountType, { label: string; color: string; icon: any }> = {
   savings: { label: 'Savings Accounts', color: '#007AFF', icon: Landmark },
@@ -58,8 +61,11 @@ const DEFAULT_ORDER: AccountType[] = [
 
 export default function AccountsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
+  const [cardWidth, setCardWidth] = useState<number>(Dimensions.get('window').width - 32);
 
   const accounts = useMoneyStore((state) => state.accounts) || [];
   const loans = useMoneyStore((state) => state.loans) || [];
@@ -180,9 +186,161 @@ export default function AccountsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const renderAccountItem = (item: Account, isLast: boolean) => {
+  const renderTicketHeroCard = () => {
+    const h = 152;
+    const notchY = 82;
+    const notchR = 9;
+    const path = getTicketCardPath(cardWidth, h, notchY, notchR, 22);
+    const palette = { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' };
+
+    return (
+      <View
+        onLayout={(e) => {
+          const w = e.nativeEvent.layout.width;
+          if (w > 0 && Math.abs(w - cardWidth) > 1) {
+            setCardWidth(w);
+          }
+        }}
+        style={{
+          marginHorizontal: 16,
+          marginBottom: 16,
+          marginTop: 4,
+          height: h,
+          shadowColor: isDark ? '#000000' : palette.sub,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isDark ? 0.06 : 0.12,
+          shadowRadius: isDark ? 4 : 8,
+          elevation: 2,
+        }}
+      >
+        {/* SVG Ticket Shape Background */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Svg width={cardWidth} height={h}>
+            <Path d={path} fill={palette.bg} />
+            {/* Perforated dashed divider line */}
+            <Line
+              x1={notchR + 6}
+              y1={notchY}
+              x2={cardWidth - notchR - 6}
+              y2={notchY}
+              stroke={isDark ? palette.text + '35' : palette.sub + '45'}
+              strokeWidth={1.2}
+              strokeDasharray="5, 4"
+            />
+          </Svg>
+        </View>
+
+        {/* Top Ticket Section: Net Worth + Quick Actions */}
+        <View
+          style={{
+            height: notchY,
+            paddingHorizontal: 20,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <ThemedText
+              style={{
+                fontSize: 10,
+                fontFamily: 'Outfit_700Bold',
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+                color: palette.sub,
+                marginBottom: 2,
+              }}
+            >
+              TOTAL NET WORTH
+            </ThemedText>
+            <ThemedText
+              style={{
+                fontSize: 24,
+                fontFamily: 'Outfit_400Regular',
+                color: palette.text,
+              }}
+              numberOfLines={1}
+            >
+              {formatAmount(summary.totalAssets - summary.totalLiabilities)}
+            </ThemedText>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                togglePrivacyMode();
+              }}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                backgroundColor: palette.text + '14',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              activeOpacity={0.7}
+            >
+              {isPrivacyMode ? (
+                <EyeOff size={15} color={palette.text} />
+              ) : (
+                <Eye size={15} color={palette.text} />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                handleHaptic();
+                router.push('/money-analytics');
+              }}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                backgroundColor: palette.text + '14',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              activeOpacity={0.7}
+            >
+              <PieChart size={15} color={palette.text} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Bottom Ticket Section: Total Assets & Liabilities */}
+        <View
+          style={{
+            height: h - notchY,
+            paddingHorizontal: 20,
+            justifyContent: 'center',
+          }}
+        >
+          <View style={styles.heroRow}>
+            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
+              Total Assets
+            </ThemedText>
+            <ThemedText style={[styles.heroRowValue, { color: '#047857' }]}>
+              {isPrivacyMode ? '••••••' : `+${formatAmount(summary.totalAssets)}`}
+            </ThemedText>
+          </View>
+
+          <View style={[styles.heroRow, { marginBottom: 0 }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
+              Liabilities
+            </ThemedText>
+            <ThemedText style={[styles.heroRowValue, { color: '#881337' }]}>
+              {isPrivacyMode ? '••••••' : `-${formatAmount(summary.totalLiabilities)}`}
+            </ThemedText>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderAccountItem = (item: Account, index: number, totalCount: number) => {
+    const isFirst = index === 0;
+    const isLast = index === totalCount - 1;
     const config = TYPE_CONFIG[item.type] || TYPE_CONFIG.savings;
-    const IconComponent = config.icon;
     const isCreditCard = item.type === 'credit_card';
 
     // Find outstanding principal blocked on this credit card from linked loans
@@ -206,127 +364,183 @@ export default function AccountsScreen() {
       ? brokerAlloc.value
       : item.balance;
 
+    // Subtitle formatted text (metadata only — amount is displayed on the right side)
+    let subtitleText = '';
+    if (isCreditCard) {
+      const parts: string[] = [];
+      if (item.institution) parts.push(item.institution);
+      if (item.accountNumber) parts.push(`•••• ${item.accountNumber}`);
+      if (item.creditLimit && item.creditLimit > 0) parts.push(`Limit ${formatAmount(item.creditLimit)}`);
+      subtitleText = parts.length > 0 ? parts.join(' · ') : 'Credit Card';
+    } else if (item.type === 'investment') {
+      subtitleText = item.linkedBroker || item.institution || 'Investment Portfolio';
+    } else if (item.type === 'receivable') {
+      subtitleText = 'Receivable';
+    } else if (item.type === 'payable') {
+      subtitleText = 'Payable';
+    } else if (item.type === 'emergency_fund') {
+      subtitleText = item.institution ? `${item.institution} · Emergency Fund` : 'Emergency Reserve';
+    } else {
+      // Savings, Wallet, Cash, etc.
+      const inst = item.institution || (item.type === 'wallet' ? 'Cash & Digital Wallet' : 'Bank Account');
+      const acctNum = item.accountNumber ? ` •••• ${item.accountNumber}` : '';
+      subtitleText = `${inst}${acctNum}`;
+    }
+
+    if (item.includeInAssets === false) {
+      subtitleText += ' · Excluded';
+    }
+
     return (
       <TouchableOpacity
         key={item.id}
         style={[
           styles.accountListItem,
-          !isLast && { borderBottomWidth: 1, borderBottomColor: currColors.border },
+          {
+            backgroundColor: 'transparent',
+            borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
+            borderBottomColor: currColors.border,
+          },
           item.includeInAssets === false && { opacity: 0.55 }
         ]}
-        activeOpacity={0.75}
+        activeOpacity={0.7}
         onPress={() => {
           handleHaptic();
           router.push(`/account-details/${item.id}`);
         }}
       >
         <View style={styles.cardMainRow}>
-          <View style={styles.cardLeft}>
-            {(() => {
-              if (item.logo) {
-                return <BankLogo logo={item.logo} size={30} style={{ marginRight: 12 }} />;
-              }
+          {/* Left Side: Icon + Account Name & Subtitle */}
+          <View style={styles.cardLeftContent}>
+            <View style={styles.iconContainer}>
+              {(() => {
+                if (item.logo) {
+                  return <BankLogo logo={item.logo} size={24} />;
+                }
 
-              if (item.type === 'wallet') {
-                const walletIcon = item.icon && item.icon.toLowerCase() !== 'wallet' ? item.icon : 'wallet';
+                if (item.type === 'wallet') {
+                  const walletIcon = item.icon && item.icon.toLowerCase() !== 'wallet' ? item.icon : 'wallet';
+                  return (
+                    <Category3DIcon
+                      name={walletIcon}
+                      icon={walletIcon}
+                      size={32}
+                    />
+                  );
+                }
+
+                if (item.type === 'receivable' || item.type === 'payable') {
+                  const peerIcon = item.icon || (item.type === 'receivable' ? 'receivable' : 'payable');
+                  return (
+                    <Category3DIcon
+                      name={peerIcon}
+                      icon={peerIcon}
+                      size={32}
+                    />
+                  );
+                }
+
+                if (item.icon && CATEGORY_3D_ICONS_LIST.find((i) => i.id === item.icon)) {
+                  return (
+                    <Category3DIcon
+                      name={item.icon}
+                      icon={item.icon}
+                      size={32}
+                    />
+                  );
+                }
+
+                if (isCreditCard) {
+                  return (
+                    <Category3DIcon
+                      name="credit_card"
+                      icon="credit_card"
+                      size={32}
+                    />
+                  );
+                }
+
+                if (item.type === 'investment') {
+                  return (
+                    <Category3DIcon
+                      name="investments"
+                      icon="investments"
+                      size={32}
+                    />
+                  );
+                }
+
                 return (
                   <Category3DIcon
-                    name={walletIcon}
-                    icon={walletIcon}
-                    size={36}
-                    style={{ marginRight: 12 }}
+                    name="banknote"
+                    icon="banknote"
+                    size={32}
                   />
                 );
-              }
+              })()}
+            </View>
 
-              if (item.type === 'receivable' || item.type === 'payable') {
-                const peerIcon = item.icon || (item.type === 'receivable' ? 'receivable' : 'payable');
-                return (
-                  <Category3DIcon
-                    name={peerIcon}
-                    icon={peerIcon}
-                    size={36}
-                    style={{ marginRight: 12 }}
-                  />
-                );
-              }
-
-              if (item.icon && CATEGORY_3D_ICONS_LIST.find((i) => i.id === item.icon)) {
-                return (
-                  <Category3DIcon
-                    name={item.icon}
-                    icon={item.icon}
-                    size={36}
-                    style={{ marginRight: 12 }}
-                  />
-                );
-              }
-
-              return (
-                <View style={[styles.iconWrapper, { backgroundColor: `${item.color}15` }]}>
-                  <IconComponent size={18} color={item.color} />
-                </View>
-              );
-            })()}
-            <View style={styles.accountInfo}>
-              <ThemedText type="semiBold" style={[styles.accountName, { color: currColors.text }]} numberOfLines={1}>
+            <View style={styles.accountTextContainer}>
+              <ThemedText style={[styles.cardTitle, { color: currColors.text }]} numberOfLines={1}>
                 {item.name}
               </ThemedText>
-              {(item.institution || item.accountNumber || item.includeInAssets === false) ? (
-                <ThemedText style={[styles.accountSub, { color: currColors.textSecondary }]} numberOfLines={1}>
-                  {item.institution || ''}
-                  {item.accountNumber ? `${item.institution ? ' • ' : ''}•••• ${item.accountNumber}` : ''}
-                  {item.includeInAssets === false ? `${(item.institution || item.accountNumber) ? ' • ' : ''}Excluded` : ''}
-                </ThemedText>
-              ) : null}
+              <ThemedText style={[styles.cardSubtitle, { color: currColors.textSecondary }]} numberOfLines={1}>
+                {subtitleText}
+              </ThemedText>
             </View>
           </View>
 
-          <View style={styles.cardRight}>
-            <View style={{ alignItems: 'flex-end', marginRight: 10 }}>
+          {/* Right Side: Amount Only + Secondary Metric */}
+          <View style={styles.cardRightContent}>
+            <ThemedText
+              style={[
+                styles.amountText,
+                {
+                  color: (currentVal < 0 || isCreditCard)
+                    ? (currentVal < 0 ? '#B91C1C' : currColors.text)
+                    : currColors.text,
+                }
+              ]}
+              numberOfLines={1}
+            >
+              {formatAmount(currentVal)}
+            </ThemedText>
+
+            {isInvestment && brokerAlloc ? (
               <ThemedText
-                style={[
-                  styles.accountBalance,
-                  {
-                    fontFamily: 'Outfit_600SemiBold',
-                    color: currentVal < 0 ? '#FF3B30' : currColors.text
-                  }
-                ]}
+                style={{
+                  fontSize: 11,
+                  fontFamily: 'Outfit_600SemiBold',
+                  color: brokerAlloc.pnl >= 0 ? '#047857' : '#B91C1C',
+                  marginTop: 2,
+                }}
               >
-                {formatAmount(currentVal)}
+                {brokerAlloc.pnl >= 0 ? '+' : ''}{brokerAlloc.pnlPercentage.toFixed(1)}%
               </ThemedText>
-              {isInvestment && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 4 }}>
-                  <ThemedText style={{ fontSize: 10, color: currColors.textSecondary, fontFamily: 'Outfit_400Regular' }}>
-                    Invested: {formatAmount(item.balance)}
-                  </ThemedText>
-                  {brokerAlloc && (
-                    <ThemedText
-                      style={{
-                        fontSize: 10,
-                        color: brokerAlloc.pnl >= 0 ? '#34C759' : '#FF3B30',
-                        fontFamily: 'Outfit_600SemiBold'
-                      }}
-                    >
-                      ({brokerAlloc.pnl >= 0 ? '+' : ''}{brokerAlloc.pnlPercentage.toFixed(1)}%)
-                    </ThemedText>
-                  )}
-                </View>
-              )}
-            </View>
-            <ChevronRight size={14} color={currColors.textSecondary} />
+            ) : isCreditCard && item.creditLimit && item.creditLimit > 0 ? (
+              <ThemedText
+                style={{
+                  fontSize: 11,
+                  fontFamily: 'Outfit_500Medium',
+                  color: utilization > 70 ? '#DC2626' : utilization > 30 ? '#D97706' : currColors.textSecondary,
+                  marginTop: 2,
+                }}
+              >
+                {utilization.toFixed(0)}% used
+              </ThemedText>
+            ) : null}
           </View>
         </View>
 
         {isCreditCard && item.creditLimit && item.creditLimit > 0 ? (
           <View style={styles.utilizationContainer}>
-            <View style={[styles.progressBarBG, { backgroundColor: currColors.cardSecondary }]}>
+            <View style={[styles.progressBarBG, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
               <View 
                 style={[
                   styles.progressBarFill, 
                   { 
                     width: `${Math.min(100, utilization)}%`,
-                    backgroundColor: utilization > 70 ? '#FF3B30' : utilization > 30 ? '#FF9500' : '#34C759'
+                    backgroundColor: utilization > 70 ? '#DC2626' : utilization > 30 ? '#D97706' : '#059669'
                   }
                 ]} 
               />
@@ -344,7 +558,7 @@ export default function AccountsScreen() {
                 Available: {formatAmount(item.creditLimit - totalUtilized)}
               </ThemedText>
               {blockedAmount > 0 && (
-                <ThemedText style={{ fontSize: 10, color: '#FF9500', fontFamily: 'Outfit_500Medium' }}>
+                <ThemedText style={{ fontSize: 10, color: '#D97706', fontFamily: 'Outfit_500Medium' }}>
                   Blocked: {formatAmount(blockedAmount)}
                 </ThemedText>
               )}
@@ -356,147 +570,149 @@ export default function AccountsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currColors.background }]} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
-          Accounts
-        </ThemedText>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+    <View style={[styles.container, { backgroundColor: currColors.background }]}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
+              Accounts
+            </ThemedText>
+            <View
+              style={{
+                paddingHorizontal: 8,
+                paddingVertical: 2.5,
+                borderRadius: 12,
+                backgroundColor: '#D1F5EC',
+              }}
+            >
+              <ThemedText
+                style={{
+                  fontSize: 11,
+                  fontFamily: 'Outfit_600SemiBold',
+                  color: '#064E3B',
+                }}
+              >
+                {accounts.filter(a => !a.isArchived).length}
+              </ThemedText>
+            </View>
+          </View>
           <TouchableOpacity
             style={[styles.actionHeaderBtn, { backgroundColor: currColors.cardSecondary }]}
             onPress={() => {
               handleHaptic();
               router.push('/reorder-accounts');
             }}
+            activeOpacity={0.7}
           >
             <ArrowUpDown size={18} color={currColors.text} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.addBtn, { backgroundColor: currColors.cardSecondary }]}
-            onPress={() => {
-              handleHaptic();
-              router.push('/add-account');
-            }}
-          >
-            <Plus size={20} color="#00C9A7" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
-        {/* Aggregate Overview Card (flat, matching net worth hero) */}
-        <View
-          style={[
-            styles.premiumOverviewCard,
-            {
-              backgroundColor: currColors.card,
-              borderColor: currColors.border,
-            },
-          ]}
-        >
-          <View style={styles.heroHeaderRow}>
-            <ThemedText style={[styles.netWorthLabel, { color: currColors.textSecondary }]}>
-              TOTAL NET WORTH
-            </ThemedText>
-            <View style={styles.heroIcons}>
-              <TouchableOpacity
-                onPress={() => {
-                  handleHaptic();
-                  togglePrivacyMode();
-                }}
-                style={[styles.iconButton, { backgroundColor: currColors.cardSecondary }]}
-              >
-                {isPrivacyMode ? (
-                  <EyeOff size={16} color={currColors.text} />
-                ) : (
-                  <Eye size={16} color={currColors.text} />
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  handleHaptic();
-                  router.push('/money-analytics');
-                }}
-                style={[styles.iconButton, { backgroundColor: currColors.cardSecondary }]}
-              >
-                <PieChart size={16} color={currColors.text} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <ThemedText style={[styles.netWorthVal, { color: currColors.text }]}>
-            {formatAmount(summary.totalAssets - summary.totalLiabilities)}
-          </ThemedText>
-
-          <View style={[styles.dashedDivider, { borderColor: currColors.border }]} />
-
-          <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
-              Total Assets
-            </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#34C759' }]}>
-              {formatAmount(summary.totalAssets)}
-            </ThemedText>
-          </View>
-
-          <View style={[styles.heroRow, { marginBottom: 0 }]}>
-            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
-              Liabilities
-            </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#FF3B30' }]}>
-              {formatAmount(summary.totalLiabilities)}
-            </ThemedText>
-          </View>
         </View>
 
-        {/* Render accounts grouped by customized type order */}
-        {effectiveTypesOrder.map((type) => {
-          const list = groupedAccounts[type];
-          if (!list || list.length === 0) return null;
-          const config = TYPE_CONFIG[type] || TYPE_CONFIG.savings;
-          const totalBalance = list.reduce((sum, acc) => {
-            if (acc.includeInAssets === false) return sum;
-            const balance = acc.type === 'investment' && acc.linkedBroker
-              ? (brokerAllocations.find(b => b.name.toLowerCase().trim() === acc.linkedBroker!.toLowerCase().trim())?.value ?? 0)
-              : acc.balance;
-            return sum + balance;
-          }, 0);
-          
-          return (
-            <View key={type} style={styles.groupContainer}>
-              <View style={styles.groupHeaderRow}>
-                <ThemedText type="medium" style={[styles.groupTitle, { color: currColors.textSecondary }]}>
-                  {config.label.toUpperCase()} ({list.length})
-                </ThemedText>
-                <ThemedText 
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
+          {/* Mint Ticket-Style Net Worth Hero Card */}
+          {renderTicketHeroCard()}
+
+          {/* Render accounts grouped by customized type order */}
+          {effectiveTypesOrder.map((type) => {
+            const list = groupedAccounts[type];
+            if (!list || list.length === 0) return null;
+            const config = TYPE_CONFIG[type] || TYPE_CONFIG.savings;
+            const totalBalance = list.reduce((sum, acc) => {
+              if (acc.includeInAssets === false) return sum;
+              const balance = acc.type === 'investment' && acc.linkedBroker
+                ? (brokerAllocations.find(b => b.name.toLowerCase().trim() === acc.linkedBroker!.toLowerCase().trim())?.value ?? 0)
+                : acc.balance;
+              return sum + balance;
+            }, 0);
+            
+            return (
+              <View key={type} style={styles.groupContainer}>
+                <View style={styles.groupHeaderRow}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <ThemedText type="medium" style={[styles.groupTitle, { color: currColors.textSecondary }]}>
+                      {config.label.toUpperCase()}
+                    </ThemedText>
+                    <View
+                      style={{
+                        paddingHorizontal: 7,
+                        paddingVertical: 1.5,
+                        borderRadius: 10,
+                        backgroundColor: currColors.cardSecondary,
+                      }}
+                    >
+                      <ThemedText
+                        style={{
+                          fontSize: 10.5,
+                          fontFamily: 'Outfit_600SemiBold',
+                          color: currColors.textSecondary,
+                        }}
+                      >
+                        {list.length}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <ThemedText 
+                    style={[
+                      styles.groupTotalText, 
+                      { 
+                        color: totalBalance < 0 ? '#FF3B30' : currColors.text,
+                      }
+                    ]}
+                  >
+                    {formatAmount(totalBalance)}
+                  </ThemedText>
+                </View>
+                <View
                   style={[
-                    styles.groupTotalText, 
-                    { 
-                      color: totalBalance < 0 ? '#FF3B30' : currColors.text,
-                    }
+                    styles.groupWrapperCard,
+                    {
+                      backgroundColor: currColors.card,
+                      shadowColor: '#000000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: isDark ? 0.08 : 0.05,
+                      shadowRadius: 6,
+                      elevation: 2,
+                    },
                   ]}
                 >
-                  {formatAmount(totalBalance)}
-                </ThemedText>
+                  {list.map((item, index) => renderAccountItem(item, index, list.length))}
+                </View>
               </View>
-              <View style={[styles.groupWrapperCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
-                {list.map((item, index) => renderAccountItem(item, index === list.length - 1))}
-              </View>
-            </View>
-          );
-        })}
+            );
+          })}
 
-        {accounts.filter(a => !a.isArchived).length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Info size={44} color={currColors.textSecondary} style={{ marginBottom: 16 }} />
-            <ThemedText style={[styles.emptyText, { color: currColors.textSecondary, fontFamily: 'Outfit_400Regular', lineHeight: 22 }]}>
-              No accounts added yet. Tap the '+' button at the top to add your wallet, bank accounts, or credit cards.
-            </ThemedText>
-          </View>
-        ) : null}
-      </ScrollView>
-    </SafeAreaView>
+          {accounts.filter(a => !a.isArchived).length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Info size={44} color={currColors.textSecondary} style={{ marginBottom: 16 }} />
+              <ThemedText style={[styles.emptyText, { color: currColors.textSecondary, fontFamily: 'Outfit_400Regular', lineHeight: 22 }]}>
+                No accounts added yet. Tap the '+' button below to add your wallet, bank accounts, or credit cards.
+              </ThemedText>
+            </View>
+          ) : null}
+        </ScrollView>
+
+        {/* Floating Add Button above Nav Bar Dock */}
+        <TouchableOpacity
+          style={[
+            styles.floatingAddBtn,
+            {
+              bottom: Math.max(insets.bottom, 12) + 74,
+              backgroundColor: '#D1F5EC',
+              shadowColor: '#000000',
+            },
+          ]}
+          onPress={() => {
+            handleHaptic();
+            router.push('/add-account');
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.82}
+        >
+          <Plus size={24} color="#064E3B" strokeWidth={2.6} />
+        </TouchableOpacity>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -523,83 +739,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  addBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  floatingAddBtn: {
+    position: 'absolute',
+    right: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  premiumOverviewCard: {
-    marginHorizontal: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 18,
-    marginTop: 4,
-    marginBottom: 20,
-  },
-  heroHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 2,
-  },
-  heroIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  netWorthLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  netWorthVal: {
-    fontSize: 24,
-    fontWeight: '400',
-    fontFamily: 'Outfit_400Regular',
-    marginBottom: 16,
-  },
-  dashedDivider: {
-    height: 1,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: 1,
-    marginBottom: 16,
+    zIndex: 100,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    elevation: 6,
   },
   heroRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 6,
   },
   heroRowLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Outfit_400Regular',
   },
   heroRowValue: {
-    fontSize: 14,
-    fontWeight: '400',
-    fontFamily: 'Outfit_400Regular',
+    fontSize: 13,
+    fontFamily: 'Outfit_600SemiBold',
   },
   scrollContent: {
-    paddingBottom: 110,
+    paddingBottom: 160,
   },
   groupContainer: {
     marginBottom: 20,
   },
   groupTitle: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontSize: 11,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   groupHeaderRow: {
@@ -610,20 +787,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   groupTotalText: {
-    fontSize: 12,
-    fontWeight: '400',
-    fontFamily: 'Outfit_400Regular',
+    fontSize: 13,
+    fontFamily: 'Outfit_600SemiBold',
   },
   groupWrapperCard: {
     marginHorizontal: 16,
     borderRadius: 16,
-    borderWidth: 1,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   accountListItem: {
-    flexDirection: 'column',
-    paddingVertical: 12,
+    paddingVertical: 13,
     paddingHorizontal: 16,
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
   cardMainRow: {
     flexDirection: 'row',
@@ -631,49 +808,38 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
   },
-  cardLeft: {
+  cardLeftContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1.2,
-  },
-  iconWrapper: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    flex: 1,
     marginRight: 12,
   },
-  accountInfo: {
+  iconContainer: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  accountTextContainer: {
     flex: 1,
   },
-  accountName: {
-    fontSize: 14,
-    fontWeight: '400',
+  cardTitle: {
+    fontSize: 15,
+    fontFamily: 'Outfit_600SemiBold',
+    marginBottom: 2,
+  },
+  cardSubtitle: {
+    fontSize: 12,
     fontFamily: 'Outfit_400Regular',
   },
-  warningBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    alignItems: 'center',
+  cardRightContent: {
+    alignItems: 'flex-end',
     justifyContent: 'center',
   },
-  accountSub: {
-    fontSize: 11,
-    fontFamily: 'Outfit_400Regular',
-    marginTop: 2,
-  },
-  cardRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    flex: 1,
-  },
-  accountBalance: {
-    fontSize: 14,
-    fontWeight: '400',
-    fontFamily: 'Outfit_400Regular',
+  amountText: {
+    fontSize: 16,
+    fontFamily: 'Outfit_600SemiBold',
   },
   utilizationContainer: {
     width: '100%',

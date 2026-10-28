@@ -228,7 +228,7 @@ export default function AccountDetailsScreen() {
         overScrollMode="never"
       >
         {/* Balance Hero Card */}
-        <View style={[styles.balanceCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+        <View style={[styles.balanceCard, { backgroundColor: currColors.card }]}>
           <ThemedText style={[styles.balanceLabel, { color: currColors.textSecondary }]}>
             {account.type === 'investment' && account.linkedBroker 
               ? `CURRENT VALUE (LINKED: ${account.linkedBroker.toUpperCase()})` 
@@ -342,13 +342,13 @@ export default function AccountDetailsScreen() {
         </View>
 
         {accountTxs.length === 0 ? (
-          <View style={[styles.emptyCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <View style={[styles.emptyCard, { backgroundColor: currColors.card }]}>
             <Info size={32} color={currColors.textSecondary} style={{ marginBottom: 10 }} />
             <ThemedText style={{ color: currColors.textSecondary, textAlign: 'center', fontFamily: 'Outfit_400Regular', fontSize: 13, lineHeight: 20 }}>
               No transactions logged for this account yet.
             </ThemedText>
             <TouchableOpacity
-              style={[styles.addTxPromptBtn, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}
+              style={[styles.addTxPromptBtn, { backgroundColor: currColors.cardSecondary }]}
               onPress={() => {
                 handleHaptic();
                 router.push({ pathname: '/add-money-transaction', params: { defaultAccountId: account.id } });
@@ -361,7 +361,7 @@ export default function AccountDetailsScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={[styles.txsList, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <View style={[styles.txsList, { backgroundColor: currColors.card }]}>
             {accountTxs.map((tx, index) => {
               const isSource = tx.accountId === id;
               const isIncome = tx.type === 'income';
@@ -492,9 +492,14 @@ const styles = StyleSheet.create({
   balanceCard: {
     marginHorizontal: 16,
     borderRadius: 24,
-    borderWidth: 1,
+    borderCurve: 'continuous',
     padding: 24,
     marginTop: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   balanceLabel: {
     fontSize: 10,
@@ -548,7 +553,7 @@ const styles = StyleSheet.create({
   emptyCard: {
     marginHorizontal: 16,
     borderRadius: 18,
-    borderWidth: 1,
+    borderCurve: 'continuous',
     padding: 24,
     alignItems: 'center',
   },
@@ -557,7 +562,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    borderWidth: 1,
   },
   addTxPromptText: {
     fontSize: 13,
@@ -566,8 +570,13 @@ const styles = StyleSheet.create({
   txsList: {
     marginHorizontal: 16,
     borderRadius: 20,
-    borderWidth: 1,
+    borderCurve: 'continuous',
     overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   txItem: {
     flexDirection: 'row',

@@ -59,11 +59,15 @@ export const ICON_3D_PALETTES: Record<string, FolderPalette> = {
 
   // Home & Bills -> Warm Butter Amber
   house: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
+  loan: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
   receipt: { bg: '#CFFAFE', text: '#164E63', sub: '#0E7490' },
   credit_card: { bg: '#EDE9FE', text: '#581C87', sub: '#6D28D9' },
   wallet: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
   money: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
   banknote: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
+  bank: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
+  savings: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
+  current: { bg: '#CFFAFE', text: '#164E63', sub: '#0E7490' },
   coin: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
   investments: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
   shopping: { bg: '#FED7AA', text: '#7C2D12', sub: '#9A3412' },
