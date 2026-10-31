@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   Keyboard,
+  InputAccessoryView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -31,6 +32,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import { ThemedText } from '@/components/ThemedText';
+import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { Subscription, Account } from '@/types/money';
 import { Category3DIcon } from '@/components/Category3DIcon';
@@ -40,21 +43,9 @@ import {
   CATEGORY_3D_ICONS_LIST,
   findBest3DIconForText,
 } from '@/constants/Category3DIcons';
-import { getCardPaletteFromItem } from '@/constants/folderTheme';
 import { formatCurrencyINR, formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
-// Fallback Static Theme
-const DEFAULT_THEME = {
-  bg: '#E9D5FF',
-  text: '#581C87',
-  sub: '#7E22CE',
-  border: '#9333EA',
-  cardBg: '#FFFFFF',
-  cardBorder: 'rgba(88, 28, 135, 0.15)',
-  trackInactive: 'rgba(88, 28, 135, 0.15)',
-  trackActive: '#581C87',
-  accentPill: 'rgba(88, 28, 135, 0.08)',
-};
+const EMPTY_ACCESSORY_ID = 'gainbase-empty-accessory';
 
 const CYCLES: {
   cycle: Subscription['billingCycle'];
@@ -92,25 +83,24 @@ export default function AddSubscriptionScreen() {
   const [icon, setIcon] = useState('tv');
   const [isIconManuallyChosen, setIsIconManuallyChosen] = useState(false);
 
-  // Dynamic Pastel Theme derived from icon (matching list view card colors)
+  const colorScheme = useColorScheme() ?? 'dark';
+  const isDark = colorScheme === 'dark';
+  const currColors = Colors[colorScheme];
+
+  // Unified Native Theme
   const THEME = useMemo(() => {
-    const palette = getCardPaletteFromItem({
-      icon,
-      name,
-      color: editingSubscription?.color,
-    });
     return {
-      bg: palette.bg,
-      text: palette.text,
-      sub: palette.sub,
-      border: palette.sub,
-      cardBg: '#FFFFFF',
-      cardBorder: `${palette.text}22`,
-      trackInactive: `${palette.text}20`,
-      trackActive: palette.text,
-      accentPill: `${palette.text}14`,
+      bg: currColors.background,
+      text: currColors.text,
+      sub: currColors.textSecondary,
+      border: currColors.border,
+      cardBg: currColors.card,
+      cardBorder: currColors.border,
+      trackInactive: isDark ? '#2C2C2E' : '#E5E5EA',
+      trackActive: currColors.tintMoney,
+      accentPill: isDark ? currColors.cardSecondary : '#F2F2F7',
     };
-  }, [icon, name, editingSubscription?.color]);
+  }, [currColors, isDark]);
 
   // Modals & Pickers
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -314,13 +304,13 @@ export default function AddSubscriptionScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: THEME.bg }]}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* ─── Top Header & Progress Bar ─── */}
       <View style={[styles.topHeader, { paddingTop: Math.max(insets.top, 16) + 4 }]}>
         <View style={styles.headerNavRow}>
           <TouchableOpacity
-            style={[styles.headerIconButton, { backgroundColor: THEME.text + '14' }]}
+            style={[styles.headerIconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
             onPress={handleBack}
             activeOpacity={0.7}
           >
@@ -332,7 +322,7 @@ export default function AddSubscriptionScreen() {
           </ThemedText>
 
           <TouchableOpacity
-            style={[styles.headerIconButton, { backgroundColor: THEME.text + '14' }]}
+            style={[styles.headerIconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
@@ -355,11 +345,6 @@ export default function AddSubscriptionScreen() {
             />
           ))}
         </View>
-
-        {/* Step Indicator Subtitle */}
-        <ThemedText style={[styles.stepLabel, { color: THEME.sub }]}>
-          STEP {currentStep + 1} OF 3 • {STEP_METAS[currentStep].title.toUpperCase()}
-        </ThemedText>
       </View>
 
       <KeyboardAvoidingView
@@ -392,14 +377,11 @@ export default function AddSubscriptionScreen() {
 
           {/* ════════════ STEP 0: SUBSCRIPTION NAME & ICON ════════════ */}
           {currentStep === 0 && (
-            <View style={[styles.stepCard, { borderColor: THEME.cardBorder }]}>
-              {/* Visual 3D Icon Preview & Tap to Pick */}
+            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
+              {/* Visual 3D Icon Preview & Tap to Pick - Boundary free */}
               <View style={styles.iconChooserRow}>
                 <TouchableOpacity
-                  style={[
-                    styles.iconPreviewButton,
-                    { backgroundColor: THEME.bg, borderColor: THEME.text + '33' },
-                  ]}
+                  style={styles.iconPreviewButton}
                   onPress={() => {
                     handleHaptic();
                     setShowIconModal(true);
@@ -413,12 +395,14 @@ export default function AddSubscriptionScreen() {
                   <TextInput
                     style={[
                       styles.largeTextInput,
-                      { color: THEME.text, borderBottomColor: THEME.text + '33' },
+                      { color: THEME.text, borderBottomColor: THEME.cardBorder },
                     ]}
                     placeholder="e.g. Netflix, Spotify, iCloud"
-                    placeholderTextColor={THEME.text + '55'}
+                    placeholderTextColor={THEME.sub + '80'}
                     value={name}
                     onChangeText={handleNameChange}
+                    autoCorrect={false}
+                    spellCheck={false}
                     autoFocus={!editingSubscription}
                     returnKeyType="next"
                   />
@@ -429,7 +413,7 @@ export default function AddSubscriptionScreen() {
 
           {/* ════════════ STEP 1: COST & BILLING CYCLE ════════════ */}
           {currentStep === 1 && (
-            <View style={[styles.stepCard, { borderColor: THEME.cardBorder }]}>
+            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
               {/* Amount Input */}
               <View>
                 <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
@@ -445,7 +429,7 @@ export default function AddSubscriptionScreen() {
                     value={amount}
                     onChangeText={(val) => setAmount(formatIndianAmount(val))}
                     autoFocus={true}
-                    returnKeyType="done"
+                    inputAccessoryViewID={EMPTY_ACCESSORY_ID}
                   />
                 </View>
               </View>
@@ -466,8 +450,10 @@ export default function AddSubscriptionScreen() {
                         style={[
                           styles.cycleCard,
                           {
-                            borderColor: isSelected ? THEME.text : THEME.text + '26',
-                            backgroundColor: isSelected ? THEME.text + '14' : THEME.text + '08',
+                            borderColor: isSelected ? currColors.tintMoney : currColors.border,
+                            backgroundColor: isSelected
+                              ? isDark ? 'rgba(0, 194, 150, 0.15)' : 'rgba(0, 194, 150, 0.12)'
+                              : isDark ? currColors.cardSecondary : '#F2F2F7',
                           },
                         ]}
                         onPress={() => {
@@ -480,21 +466,21 @@ export default function AddSubscriptionScreen() {
                           <ThemedText
                             style={[
                               styles.cycleCardTitle,
-                              { color: THEME.text },
+                              { color: isSelected ? (isDark ? '#FFFFFF' : '#003328') : currColors.text },
                             ]}
                           >
                             {c.label}
                           </ThemedText>
                           {isSelected && (
-                            <View style={[styles.cycleCheckPill, { backgroundColor: THEME.text }]}>
-                              <Check size={12} color={THEME.bg} strokeWidth={3} />
+                            <View style={[styles.cycleCheckPill, { backgroundColor: currColors.tintMoney }]}>
+                              <Check size={12} color={isDark ? '#003328' : '#FFFFFF'} strokeWidth={3} />
                             </View>
                           )}
                         </View>
                         <ThemedText
                           style={[
                             styles.cycleCardSub,
-                            { color: isSelected ? THEME.text : THEME.sub },
+                            { color: isSelected ? currColors.tintMoney : currColors.textSecondary },
                           ]}
                         >
                           {c.tag}
@@ -507,25 +493,25 @@ export default function AddSubscriptionScreen() {
 
               {/* Dynamic Annualized Spend Box */}
               {parsedAmountNum > 0 && (
-                <View style={[styles.costBreakdownBox, { backgroundColor: THEME.text + '0F', borderColor: THEME.text + '1F' }]}>
+                <View style={[styles.costBreakdownBox, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
                   <View style={styles.costBreakdownHeader}>
-                    <Sparkles size={16} color={THEME.text} />
-                    <ThemedText style={[styles.costBreakdownTitle, { color: THEME.text }]}>
+                    <Sparkles size={16} color={currColors.tintMoney} />
+                    <ThemedText style={[styles.costBreakdownTitle, { color: currColors.text }]}>
                       Cash Flow Impact
                     </ThemedText>
                   </View>
 
                   <View style={styles.costMetricsRow}>
                     <View style={styles.costMetricCol}>
-                      <ThemedText style={[styles.costMetricLabel, { color: THEME.sub }]}>Monthly Cost</ThemedText>
-                      <ThemedText style={[styles.costMetricValue, { color: THEME.text }]}>
+                      <ThemedText style={[styles.costMetricLabel, { color: currColors.textSecondary }]}>Monthly Cost</ThemedText>
+                      <ThemedText style={[styles.costMetricValue, { color: currColors.text }]}>
                         ₹{monthlyEquivalent.toLocaleString('en-IN')}/mo
                       </ThemedText>
                     </View>
-                    <View style={[styles.costMetricDivider, { backgroundColor: THEME.text + '26' }]} />
+                    <View style={[styles.costMetricDivider, { backgroundColor: currColors.border }]} />
                     <View style={styles.costMetricCol}>
-                      <ThemedText style={[styles.costMetricLabel, { color: THEME.sub }]}>Yearly Cost</ThemedText>
-                      <ThemedText style={[styles.costMetricValue, { color: THEME.text }]}>
+                      <ThemedText style={[styles.costMetricLabel, { color: currColors.textSecondary }]}>Yearly Cost</ThemedText>
+                      <ThemedText style={[styles.costMetricValue, { color: currColors.text }]}>
                         ₹{yearlyEquivalent.toLocaleString('en-IN')}/yr
                       </ThemedText>
                     </View>
@@ -537,13 +523,13 @@ export default function AddSubscriptionScreen() {
 
           {/* ════════════ STEP 2: RENEWAL & DEBIT ACCOUNT ════════════ */}
           {currentStep === 2 && (
-            <View style={[styles.stepCard, { borderColor: THEME.cardBorder }]}>
+            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
               {/* Next Payment Date */}
               <View>
                 <View style={styles.selectorTriggerRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <Calendar size={18} color={THEME.text} />
-                    <ThemedText style={[styles.selectorTriggerValue, { color: THEME.text }]}>
+                    <Calendar size={18} color={currColors.tintMoney} />
+                    <ThemedText style={[styles.selectorTriggerValue, { color: currColors.text }]}>
                       Renewal Date
                     </ThemedText>
                   </View>
@@ -553,8 +539,8 @@ export default function AddSubscriptionScreen() {
                       mode="date"
                       display="default"
                       onChange={onDateChange}
-                      themeVariant="light"
-                      accentColor={THEME.text}
+                      themeVariant={colorScheme}
+                      accentColor={currColors.tintMoney}
                     />
                   ) : (
                     <TouchableOpacity
@@ -563,7 +549,7 @@ export default function AddSubscriptionScreen() {
                         setShowDatePicker(true);
                       }}
                     >
-                      <ThemedText style={[styles.selectorTriggerValue, { color: THEME.text }]}>
+                      <ThemedText style={[styles.selectorTriggerValue, { color: currColors.text }]}>
                         {nextPaymentDate.toLocaleDateString('en-IN', {
                           day: 'numeric',
                           month: 'short',
@@ -621,19 +607,19 @@ export default function AddSubscriptionScreen() {
               </View>
 
               {/* Final Review Summary Dossier */}
-              <View style={[styles.reviewSummaryBox, { backgroundColor: THEME.bg, borderColor: THEME.text + '26' }]}>
+              <View style={[styles.reviewSummaryBox, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <Category3DIcon name={icon} size={42} />
                   <View style={{ flex: 1 }}>
-                    <ThemedText style={[styles.reviewTitle, { color: THEME.text }]} numberOfLines={1}>
+                    <ThemedText style={[styles.reviewTitle, { color: currColors.text }]} numberOfLines={1}>
                       {name || 'New Subscription'}
                     </ThemedText>
-                    <ThemedText style={[styles.reviewSub, { color: THEME.sub }]}>
+                    <ThemedText style={[styles.reviewSub, { color: currColors.textSecondary }]}>
                       ₹{parsedAmountNum.toLocaleString('en-IN')} {CYCLES.find((c) => c.cycle === billingCycle)?.periodText} • {CYCLES.find((c) => c.cycle === billingCycle)?.label}
                     </ThemedText>
                   </View>
-                  <View style={[styles.readyBadge, { backgroundColor: THEME.text }]}>
-                    <ThemedText style={[styles.readyBadgeText, { color: THEME.bg }]}>READY</ThemedText>
+                  <View style={[styles.readyBadge, { backgroundColor: currColors.tintMoney }]}>
+                    <ThemedText style={[styles.readyBadgeText, { color: isDark ? '#003328' : '#FFFFFF' }]}>READY</ThemedText>
                   </View>
                 </View>
               </View>
@@ -646,20 +632,44 @@ export default function AddSubscriptionScreen() {
           style={[
             styles.bottomActionBar,
             {
-              backgroundColor: THEME.bg,
-              borderTopColor: THEME.text + '1E',
+              backgroundColor: 'transparent',
+              borderTopWidth: 0,
               paddingBottom: isKeyboardVisible
-                ? 12
+                ? 24
                 : Math.max(insets.bottom, 16) + 8,
             },
           ]}
         >
+          {currentStep > 0 && (
+            <TouchableOpacity
+              style={[
+                styles.backActionButton,
+                {
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)',
+                  backgroundColor: 'transparent',
+                },
+              ]}
+              onPress={handleBack}
+              activeOpacity={0.8}
+            >
+              <ArrowLeft size={18} color={currColors.text} />
+              <ThemedText style={[styles.backActionText, { color: currColors.text }]}>
+                Back
+              </ThemedText>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
-            style={[styles.primaryActionButton, { backgroundColor: THEME.text }]}
+            style={[
+              styles.primaryActionButton,
+              {
+                backgroundColor: isDark ? '#FFFFFF' : '#1C1917',
+              },
+            ]}
             onPress={handleNext}
             activeOpacity={0.85}
           >
-            <ThemedText style={[styles.primaryActionText, { color: THEME.bg }]}>
+            <ThemedText style={[styles.primaryActionText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
               {currentStep === 2
                 ? editingSubscription
                   ? 'Update Subscription'
@@ -667,9 +677,9 @@ export default function AddSubscriptionScreen() {
                 : 'Continue'}
             </ThemedText>
             {currentStep === 2 ? (
-              <Check size={18} color={THEME.bg} />
+              <Check size={18} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.5} />
             ) : (
-              <ArrowRight size={18} color={THEME.bg} />
+              <ArrowRight size={18} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.5} />
             )}
           </TouchableOpacity>
         </View>
@@ -682,30 +692,30 @@ export default function AddSubscriptionScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowIconModal(false)}
       >
-        <View style={[styles.modalContainer, { backgroundColor: THEME.bg }]}>
+        <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
           <View style={styles.modalHeader}>
             <TouchableOpacity
               onPress={() => setShowIconModal(false)}
-              style={[styles.modalCloseBtn, { backgroundColor: THEME.text + '14' }]}
+              style={[styles.modalCloseBtn, { backgroundColor: currColors.cardSecondary }]}
             >
-              <X size={20} color={THEME.text} />
+              <X size={18} color={currColors.text} />
             </TouchableOpacity>
-            <ThemedText style={[styles.modalHeaderTitle, { color: THEME.text }]}>
+            <ThemedText style={[styles.modalHeaderTitle, { color: currColors.text }]}>
               Choose 3D Icon
             </ThemedText>
             <View style={{ width: 36 }} />
           </View>
 
           {/* Search Box */}
-          <View style={[styles.modalSearchBox, { borderColor: THEME.text + '26' }]}>
-            <Search size={18} color={THEME.sub} />
+          <View style={[styles.modalSearchBox, { backgroundColor: isDark ? currColors.cardSecondary : '#F2F2F7', borderColor: currColors.border }]}>
+            <Search size={18} color={currColors.textSecondary} />
             <TextInput
-              style={[styles.modalSearchInput, { color: THEME.text }]}
+              style={[styles.modalSearchInput, { color: currColors.text }]}
               placeholder="Search icons (e.g. streaming, game, music, food)..."
-              placeholderTextColor={THEME.text + '66'}
+              placeholderTextColor={currColors.textSecondary + '80'}
               value={iconSearch}
               onChangeText={setIconSearch}
-              clearButtonMode="while-editing"
+              autoCorrect={false}
             />
           </View>
 
@@ -722,7 +732,18 @@ export default function AddSubscriptionScreen() {
                     key={item.id}
                     style={[
                       styles.iconGridTile,
-                      isSelected && [styles.iconGridTileActive, { borderColor: THEME.text, backgroundColor: THEME.text + '14' }],
+                      {
+                        backgroundColor: currColors.card,
+                        borderColor: currColors.border,
+                      },
+                      isSelected && [
+                        styles.iconGridTileActive,
+                        {
+                          borderColor: currColors.tintMoney,
+                          borderWidth: 2,
+                          backgroundColor: isDark ? currColors.cardSecondary : '#E6F7F2',
+                        },
+                      ],
                     ]}
                     onPress={() => {
                       handleHaptic();
@@ -736,15 +757,15 @@ export default function AddSubscriptionScreen() {
                     <ThemedText
                       style={[
                         styles.iconGridLabel,
-                        { color: isSelected ? THEME.text : THEME.text + 'B0' },
+                        { color: isSelected ? currColors.text : currColors.textSecondary },
                       ]}
                       numberOfLines={1}
                     >
                       {item.name}
                     </ThemedText>
                     {isSelected && (
-                      <View style={[styles.iconGridCheck, { backgroundColor: THEME.text }]}>
-                        <Check size={10} color={THEME.bg} strokeWidth={3} />
+                      <View style={[styles.iconGridCheck, { backgroundColor: currColors.tintMoney }]}>
+                        <Check size={10} color={isDark ? '#003328' : '#FFFFFF'} strokeWidth={3} />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -765,6 +786,12 @@ export default function AddSubscriptionScreen() {
         selectedAccountId={linkedAccountId}
         title="Select Payment Method"
       />
+
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID={EMPTY_ACCESSORY_ID}>
+          <View />
+        </InputAccessoryView>
+      )}
     </View>
   );
 }
@@ -806,11 +833,6 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
   },
-  stepLabel: {
-    fontSize: 11,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: 1.2,
-  },
   scrollArea: {
     flex: 1,
   },
@@ -834,11 +856,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   stepCard: {
-    backgroundColor: DEFAULT_THEME.cardBg,
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: DEFAULT_THEME.cardBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
@@ -847,7 +867,7 @@ const styles = StyleSheet.create({
   },
   fieldDivider: {
     height: 1,
-    backgroundColor: 'rgba(88, 28, 135, 0.08)',
+    backgroundColor: 'rgba(0, 0, 0, 0.08)',
     marginVertical: 18,
   },
   inputLabel: {
@@ -861,33 +881,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconPreviewButton: {
-    width: 76,
-    height: 76,
-    borderRadius: 18,
-    backgroundColor: DEFAULT_THEME.bg,
+    width: 60,
+    height: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  iconEditPill: {
-    position: 'absolute',
-    bottom: -6,
-    backgroundColor: DEFAULT_THEME.text,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  iconEditText: {
-    color: DEFAULT_THEME.bg,
-    fontSize: 8,
-    fontFamily: 'Outfit_600SemiBold',
   },
   largeTextInput: {
     fontSize: 18,
     fontFamily: 'Outfit_600SemiBold',
     borderBottomWidth: 1.5,
-    borderBottomColor: 'rgba(0, 0, 0, 0.2)',
     paddingVertical: 6,
   },
   standardTextInput: {
@@ -927,36 +929,25 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.15)',
-    backgroundColor: 'rgba(0, 0, 0, 0.03)',
   },
-  cycleCardActive: {
-    borderColor: DEFAULT_THEME.text,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-  },
+  cycleCardActive: {},
   cycleCardTitle: {
     fontSize: 15,
     fontFamily: 'Outfit_600SemiBold',
-    color: DEFAULT_THEME.text,
   },
-  cycleCardTitleActive: {
-    color: DEFAULT_THEME.text,
-  },
+  cycleCardTitleActive: {},
   cycleCardSub: {
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
-    color: DEFAULT_THEME.sub,
     marginTop: 4,
   },
   cycleCardSubActive: {
-    color: DEFAULT_THEME.text,
     fontFamily: 'Outfit_500Medium',
   },
   cycleCheckPill: {
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: DEFAULT_THEME.text,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -964,9 +955,7 @@ const styles = StyleSheet.create({
     marginTop: 18,
     padding: 14,
     borderRadius: 14,
-    backgroundColor: 'rgba(0, 0, 0, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.12)',
   },
   costBreakdownHeader: {
     flexDirection: 'row',
@@ -977,7 +966,6 @@ const styles = StyleSheet.create({
   costBreakdownTitle: {
     fontSize: 12,
     fontFamily: 'Outfit_600SemiBold',
-    color: DEFAULT_THEME.text,
     letterSpacing: 0.5,
   },
   costMetricsRow: {
@@ -990,18 +978,15 @@ const styles = StyleSheet.create({
   costMetricLabel: {
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
-    color: DEFAULT_THEME.sub,
     marginBottom: 2,
   },
   costMetricValue: {
     fontSize: 16,
     fontFamily: 'Outfit_600SemiBold',
-    color: DEFAULT_THEME.text,
   },
   costMetricDivider: {
     width: 1,
     height: 28,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
     marginHorizontal: 12,
   },
   selectorTriggerRow: {
@@ -1020,7 +1005,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   datePickerDoneText: {
-    color: DEFAULT_THEME.text,
     fontFamily: 'Outfit_600SemiBold',
     fontSize: 14,
   },
@@ -1028,56 +1012,62 @@ const styles = StyleSheet.create({
     marginTop: 20,
     padding: 14,
     borderRadius: 14,
-    backgroundColor: DEFAULT_THEME.bg,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.12)',
   },
   reviewTitle: {
     fontSize: 15,
     fontFamily: 'Outfit_600SemiBold',
-    color: DEFAULT_THEME.text,
   },
   reviewSub: {
     fontSize: 12,
     fontFamily: 'Outfit_400Regular',
-    color: DEFAULT_THEME.sub,
     marginTop: 2,
   },
   readyBadge: {
-    backgroundColor: DEFAULT_THEME.text,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   readyBadgeText: {
-    color: DEFAULT_THEME.bg,
     fontSize: 9,
     fontFamily: 'Outfit_700Bold',
     letterSpacing: 0.8,
   },
   bottomActionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingHorizontal: 20,
     paddingTop: 12,
-    backgroundColor: DEFAULT_THEME.bg,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.12)',
+  },
+  backActionButton: {
+    height: 50,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  backActionText: {
+    fontSize: 15,
+    fontFamily: 'Outfit_600SemiBold',
   },
   primaryActionButton: {
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: DEFAULT_THEME.text,
+    flex: 1,
+    height: 50,
+    borderRadius: 16,
+    borderCurve: 'continuous',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    flexShrink: 1,
   },
   primaryActionText: {
-    color: DEFAULT_THEME.bg,
     fontSize: 16,
     fontFamily: 'Outfit_600SemiBold',
   },
@@ -1096,7 +1086,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1107,13 +1096,11 @@ const styles = StyleSheet.create({
   modalSearchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
     paddingHorizontal: 12,
     height: 42,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.15)',
     gap: 8,
     marginBottom: 12,
   },
@@ -1136,18 +1123,12 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.15)',
-    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 6,
     position: 'relative',
   },
-  iconGridTileActive: {
-    borderColor: DEFAULT_THEME.text,
-    borderWidth: 2,
-    backgroundColor: 'rgba(0, 0, 0, 0.06)',
-  },
+  iconGridTileActive: {},
   iconGridLabel: {
     fontSize: 10,
     fontFamily: 'Outfit_500Medium',
@@ -1161,7 +1142,6 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: DEFAULT_THEME.text,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -415,7 +415,7 @@ export default function AllTransactionsScreen() {
     );
   };
 
-  // Streamlined Soft Rose Ticket Hero Card
+  // Streamlined Ticket Hero Card (Unified Native Theme)
   const renderTicketHeroCard = () => {
     const h = 152;
     const notchY = 76;
@@ -423,10 +423,10 @@ export default function AllTransactionsScreen() {
     const path = getTicketCardPath(cardWidth, h, notchY, notchR, 20);
 
     const palette = {
-      bg: '#FFE4E6',
-      text: '#881337',
-      sub: '#9F1239',
-      border: '#FDA4AF',
+      bg: currColors.card,
+      text: currColors.text,
+      sub: currColors.textSecondary,
+      border: currColors.border,
     };
 
     const getHeroLabel = () => {
@@ -456,10 +456,10 @@ export default function AllTransactionsScreen() {
           marginBottom: 12,
           marginTop: 4,
           height: h,
-          shadowColor: isDark ? '#000000' : palette.sub,
+          shadowColor: '#000000',
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: isDark ? 0.06 : 0.1,
-          shadowRadius: isDark ? 4 : 6,
+          shadowOpacity: isDark ? 0.2 : 0.05,
+          shadowRadius: 8,
           elevation: 2,
         }}
       >
@@ -469,6 +469,8 @@ export default function AllTransactionsScreen() {
             <Path
               d={path}
               fill={palette.bg}
+              stroke={palette.border}
+              strokeWidth={1}
             />
             {/* Perforated dashed divider line */}
             <Line
@@ -476,7 +478,7 @@ export default function AllTransactionsScreen() {
               y1={notchY}
               x2={cardWidth - notchR - 6}
               y2={notchY}
-              stroke={isDark ? palette.text + '35' : palette.sub + '45'}
+              stroke={palette.border}
               strokeWidth={1.2}
               strokeDasharray="5, 4"
             />
@@ -530,7 +532,7 @@ export default function AllTransactionsScreen() {
               width: 34,
               height: 34,
               borderRadius: 17,
-              backgroundColor: palette.text + '14',
+              backgroundColor: currColors.cardSecondary,
               justifyContent: 'center',
               alignItems: 'center',
             }}
@@ -555,7 +557,7 @@ export default function AllTransactionsScreen() {
             <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
               Income
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#047857' }]}>
+            <ThemedText style={[styles.heroRowValue, { color: '#34C759' }]}>
               {isPrivacyMode ? '••••••' : `+${formatAmount(periodStats.income)}`}
             </ThemedText>
           </View>
@@ -564,7 +566,7 @@ export default function AllTransactionsScreen() {
             <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
               Expenses
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#881337' }]}>
+            <ThemedText style={[styles.heroRowValue, { color: '#FF3B30' }]}>
               {isPrivacyMode ? '••••••' : `-${formatAmount(periodStats.expense)}`}
             </ThemedText>
           </View>
@@ -597,14 +599,14 @@ export default function AllTransactionsScreen() {
             style={[
               styles.countBadge,
               {
-                backgroundColor: isDark ? currColors.cardSecondary : '#FFE4E6',
+                backgroundColor: currColors.cardSecondary,
               },
             ]}
           >
             <ThemedText
               style={[
                 styles.countBadgeText,
-                { color: isDark ? currColors.text : '#881337' },
+                { color: currColors.text },
               ]}
             >
               {filteredTxs.length}
@@ -618,12 +620,8 @@ export default function AllTransactionsScreen() {
             styles.filterTriggerBtn,
             {
               backgroundColor: isFilterActive
-                ? isDark
-                  ? '#88133730'
-                  : '#FFE4E6'
-                : isDark
-                ? currColors.card
-                : '#F3F4F6',
+                ? (isDark ? '#2C2C2E' : '#EFEFF4')
+                : (isDark ? currColors.card : '#F3F4F6'),
             },
           ]}
           onPress={() => {
@@ -634,7 +632,7 @@ export default function AllTransactionsScreen() {
         >
           <SlidersHorizontal
             size={18}
-            color={isFilterActive ? (isDark ? '#FDA4AF' : '#881337') : currColors.text}
+            color={isFilterActive ? currColors.tintMoney : currColors.text}
           />
           {isFilterActive && <View style={styles.activeFilterDot} />}
         </TouchableOpacity>
@@ -728,8 +726,8 @@ export default function AllTransactionsScreen() {
                   style={[
                     styles.summaryChip,
                     {
-                      backgroundColor: isDark ? currColors.cardSecondary : '#FFE4E6',
-                      borderColor: isDark ? currColors.border : '#FDA4AF',
+                      backgroundColor: currColors.cardSecondary,
+                      borderColor: currColors.border,
                     },
                   ]}
                   onPress={() => {
@@ -740,14 +738,14 @@ export default function AllTransactionsScreen() {
                   <ThemedText
                     style={[
                       styles.summaryChipText,
-                      { color: isDark ? currColors.text : '#881337' },
+                      { color: currColors.text },
                     ]}
                   >
                     {filter.label}
                   </ThemedText>
                   <X
                     size={10}
-                    color={isDark ? currColors.textSecondary : '#9F1239'}
+                    color={currColors.textSecondary}
                     style={{ marginLeft: 4 }}
                   />
                 </TouchableOpacity>
@@ -781,13 +779,13 @@ export default function AllTransactionsScreen() {
                 width: 52,
                 height: 52,
                 borderRadius: 26,
-                backgroundColor: isDark ? currColors.cardSecondary : '#FFE4E6',
+                backgroundColor: currColors.cardSecondary,
                 justifyContent: 'center',
                 alignItems: 'center',
                 marginBottom: 12,
               }}
             >
-              <Receipt size={22} color={isDark ? currColors.textSecondary : '#881337'} />
+              <Receipt size={22} color={currColors.textSecondary} />
             </View>
             <ThemedText
               style={{
@@ -969,7 +967,7 @@ export default function AllTransactionsScreen() {
         style={[
           styles.floatingAddBtn,
           {
-            backgroundColor: '#FFE4E6',
+            backgroundColor: isDark ? currColors.tintMoney : '#00876E',
             bottom: Math.max(insets.bottom, 16) + 16,
           },
         ]}
@@ -979,7 +977,7 @@ export default function AllTransactionsScreen() {
           router.push('/add-money-transaction');
         }}
       >
-        <Plus size={24} color="#881337" strokeWidth={2.6} />
+        <Plus size={24} color={isDark ? '#003328' : '#FFFFFF'} strokeWidth={2.6} />
       </TouchableOpacity>
 
       {/* ─── Filters Bottom Sheet Modal ─── */}

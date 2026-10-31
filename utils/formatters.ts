@@ -7,7 +7,7 @@
  * Formats a raw numeric string or number into Indian Numbering format (e.g. 1,00,000).
  * Preserves active decimal points and typing in progress (e.g. "1000." -> "1,000.").
  */
-export const formatIndianAmount = (val: string | number | null | undefined): string => {
+export const formatIndianAmount = (val: string | number | null | undefined, maxDecimals: number = 2): string => {
   if (val === null || val === undefined || val === '') return '';
   const str = String(val);
   // Keep digits and decimal point
@@ -16,7 +16,8 @@ export const formatIndianAmount = (val: string | number | null | undefined): str
 
   const parts = clean.split('.');
   const intPart = parts[0];
-  const decPart = parts.length > 1 ? `.${parts.slice(1).join('')}` : '';
+  const rawDecPart = parts.slice(1).join('');
+  const decPart = parts.length > 1 ? `.${rawDecPart.slice(0, maxDecimals)}` : '';
 
   if (!intPart && decPart) return `0${decPart}`;
   if (!intPart) return '';

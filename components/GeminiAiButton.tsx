@@ -14,10 +14,10 @@ import Svg, {
   Stop,
   Path,
 } from 'react-native-svg';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
 import { useColorScheme } from './useColorScheme';
+import Colors from '../constants/Colors';
 
 interface GeminiAiButtonProps {
   onPress: () => void;
@@ -27,6 +27,7 @@ interface GeminiAiButtonProps {
 export function GeminiAiButton({ onPress, size = 40 }: GeminiAiButtonProps) {
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
+  const currColors = Colors[colorScheme];
 
   const pulse = useSharedValue(1);
   const rotate = useSharedValue(0);
@@ -75,19 +76,13 @@ export function GeminiAiButton({ onPress, size = 40 }: GeminiAiButtonProps) {
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: '#E9D5FF',
-          borderColor: '#C084FC',
-          shadowColor: '#9333EA',
-          shadowOpacity: isDark ? 0.30 : 0.22,
+          backgroundColor: isDark ? currColors.cardSecondary : '#FFFFFF',
+          borderColor: isDark ? '#3A3A3C' : currColors.border,
+          shadowColor: '#000000',
+          shadowOpacity: isDark ? 0.20 : 0.08,
         },
       ]}
     >
-      <LinearGradient
-        colors={['#E9D5FF', '#DDD6FE']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[StyleSheet.absoluteFill, { borderRadius: size / 2 }]}
-      />
       <Animated.View style={animatedIconStyle}>
         <Svg
           width={starSize}
@@ -96,9 +91,9 @@ export function GeminiAiButton({ onPress, size = 40 }: GeminiAiButtonProps) {
         >
           <Defs>
             <SvgLinearGradient id="geminiGrad" x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0%" stopColor="#6B21A8" />
-              <Stop offset="50%" stopColor="#9333EA" />
-              <Stop offset="100%" stopColor="#4F46E5" />
+              <Stop offset="0%" stopColor="#A855F7" />
+              <Stop offset="50%" stopColor="#6366F1" />
+              <Stop offset="100%" stopColor="#38BDF8" />
             </SvgLinearGradient>
           </Defs>
           <Path

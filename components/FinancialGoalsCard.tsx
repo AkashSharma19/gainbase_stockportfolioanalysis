@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Target, ArrowRight } from 'lucide-react-native';
+import { ArrowRight } from 'lucide-react-native';
 
 import { ThemedText } from './ThemedText';
 import { useColorScheme } from './useColorScheme';
@@ -101,10 +101,10 @@ export function FinancialGoalsCard() {
   };
 
   const palette = {
-    bg: '#BAE6FD',
-    text: '#0C4A6E',
-    sub: '#0369A1',
-    border: '#38BDF8',
+    bg: currColors.card,
+    text: currColors.text,
+    sub: currColors.textSecondary,
+    border: currColors.border,
   };
 
   if (!featuredGoal) {
@@ -114,20 +114,19 @@ export function FinancialGoalsCard() {
           styles.container,
           {
             backgroundColor: palette.bg,
-            borderRadius: 22,
+            borderColor: palette.border,
+            borderWidth: 1,
+            borderRadius: 16,
           },
         ]}
         activeOpacity={0.8}
         onPress={handlePress}
       >
         <View style={styles.header}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Target size={12} color={palette.sub} />
-            <ThemedText style={[styles.sectionTitle, { color: palette.sub }]}>
-              FINANCIAL GOALS
-            </ThemedText>
-          </View>
-          <View style={[styles.iconCircle, { backgroundColor: 'rgba(12, 74, 110, 0.12)' }]}>
+          <ThemedText style={[styles.sectionTitle, { color: palette.sub }]}>
+            FINANCIAL GOALS
+          </ThemedText>
+          <View style={[styles.iconCircle, { backgroundColor: currColors.cardSecondary }]}>
             <ArrowRight size={12} color={palette.text} />
           </View>
         </View>
@@ -141,7 +140,7 @@ export function FinancialGoalsCard() {
     );
   }
 
-  const goalColor = featuredGoal.color || '#0284C7';
+  const goalColor = featuredGoal.color || currColors.tintMoney;
 
   return (
     <TouchableOpacity
@@ -149,7 +148,9 @@ export function FinancialGoalsCard() {
         styles.container,
         {
           backgroundColor: palette.bg,
-          borderRadius: 22,
+          borderColor: palette.border,
+          borderWidth: 1,
+          borderRadius: 16,
         },
       ]}
       activeOpacity={0.8}
@@ -157,12 +158,9 @@ export function FinancialGoalsCard() {
     >
       {/* Minimal Header */}
       <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Target size={12} color={palette.sub} />
-          <ThemedText style={[styles.sectionTitle, { color: palette.sub }]}>
-            FINANCIAL GOALS
-          </ThemedText>
-        </View>
+        <ThemedText style={[styles.sectionTitle, { color: palette.sub }]}>
+          FINANCIAL GOALS
+        </ThemedText>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {summary.total > 1 && (
@@ -171,7 +169,7 @@ export function FinancialGoalsCard() {
                 paddingHorizontal: 8,
                 paddingVertical: 2,
                 borderRadius: 10,
-                backgroundColor: 'rgba(12, 74, 110, 0.12)',
+                backgroundColor: currColors.cardSecondary,
               }}
             >
               <ThemedText style={{ fontSize: 11, color: palette.text, fontFamily: 'Outfit_600SemiBold' }}>
@@ -179,7 +177,7 @@ export function FinancialGoalsCard() {
               </ThemedText>
             </View>
           )}
-          <View style={[styles.iconCircle, { backgroundColor: 'rgba(12, 74, 110, 0.12)' }]}>
+          <View style={[styles.iconCircle, { backgroundColor: currColors.cardSecondary }]}>
             <ArrowRight size={12} color={palette.text} />
           </View>
         </View>
@@ -205,7 +203,7 @@ export function FinancialGoalsCard() {
             </View>
           </View>
 
-          <View style={[styles.progressBadge, { backgroundColor: 'rgba(12, 74, 110, 0.14)' }]}>
+          <View style={[styles.progressBadge, { backgroundColor: currColors.cardSecondary }]}>
             <ThemedText style={[styles.progressBadgeText, { color: palette.text }]}>
               {featuredGoal.isAchieved ? '100%' : `${featuredGoal.progressPercentage}%`}
             </ThemedText>
@@ -222,7 +220,7 @@ export function FinancialGoalsCard() {
                   styles.segmentTrack,
                   {
                     flex: Math.max(0.04, seg.spanRatio ?? 1),
-                    backgroundColor: 'rgba(12, 74, 110, 0.15)',
+                    backgroundColor: currColors.cardSecondary,
                   },
                 ]}
               >
@@ -239,7 +237,7 @@ export function FinancialGoalsCard() {
             ))}
           </View>
         ) : (
-          <View style={[styles.progressBarTrack, { backgroundColor: 'rgba(12, 74, 110, 0.15)' }]}>
+          <View style={[styles.progressBarTrack, { backgroundColor: currColors.cardSecondary }]}>
             <View
               style={[
                 styles.progressBarFill,
@@ -288,14 +286,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  featuredIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
   },
   goalName: {
     fontSize: 15,

@@ -108,182 +108,6 @@ const getCategoryBadgeTint = (category: string, type: 'income' | 'expense' | 'tr
   return { bg: isDark ? '#8E8E9324' : '#F2F2F7' };
 };
 
-function hexToHSL(hex: string): { h: number; s: number; l: number } {
-  let r = 0, g = 0, b = 0;
-  const cleanHex = hex.replace('#', '');
-  if (cleanHex.length === 3) {
-    r = parseInt(cleanHex[0] + cleanHex[0], 16) / 255;
-    g = parseInt(cleanHex[1] + cleanHex[1], 16) / 255;
-    b = parseInt(cleanHex[2] + cleanHex[2], 16) / 255;
-  } else if (cleanHex.length >= 6) {
-    r = parseInt(cleanHex.substring(0, 2), 16) / 255;
-    g = parseInt(cleanHex.substring(2, 4), 16) / 255;
-    b = parseInt(cleanHex.substring(4, 6), 16) / 255;
-  }
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0, s = 0;
-  const l = (max + min) / 2;
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
-    }
-    h /= 6;
-  }
-  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
-}
-
-function hslToHex(h: number, s: number, l: number): string {
-  l /= 100;
-  const a = (s * Math.min(l, 1 - l)) / 100;
-  const f = (n: number) => {
-    const k = (n + h / 30) % 12;
-    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-    return Math.round(255 * color).toString(16).padStart(2, '0');
-  };
-  return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
-}
-
-function getPastelPaletteFromHex(hex: string) {
-  try {
-    const { h, s } = hexToHSL(hex);
-    const sat = Math.max(45, Math.min(85, s));
-    const bg = hslToHex(h, sat, 90);
-    const text = hslToHex(h, Math.min(95, sat + 15), 18);
-    const sub = hslToHex(h, Math.min(90, sat + 10), 32);
-    return { bg, text, sub };
-  } catch {
-    return { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' };
-  }
-}
-
-const ICON_3D_PALETTES: Record<string, { bg: string; text: string; sub: string }> = {
-  // Music & Audio -> Mint Green
-  music: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  headphones: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  musical_notes: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  spotify: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-
-  // Video & OTT -> Lilac / Purple
-  tv: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
-  netflix: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
-  popcorn: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
-  clapperboard: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
-  film_projector: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
-
-  // Apple & Warm Gadgets -> Butter Yellow
-  apple: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  star: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  trophy: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  medal: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  electric: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-
-  // Gym, Gaming & Fitness -> Soft Rose / Magenta
-  gym: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  fitness: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  video_game: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  game: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  youtube: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  heart: { bg: '#FFE4E6', text: '#9F1239', sub: '#BE123C' },
-
-  // Food & Fast Food -> Sunset Peach / Orange
-  food: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  grocery: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
-  pizza: { bg: '#FED7AA', text: '#7C2D12', sub: '#9A3412' },
-  burger: { bg: '#FED7AA', text: '#7C2D12', sub: '#9A3412' },
-  cake: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  cookie: { bg: '#FEF3C7', text: '#78350F', sub: '#92400E' },
-  coffee: { bg: '#FEF3C7', text: '#78350F', sub: '#92400E' },
-  beverage: { bg: '#FFE4E6', text: '#881337', sub: '#9F1239' },
-  carrot: { bg: '#FFEDD5', text: '#7C2D12', sub: '#9A3412' },
-  broccoli: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
-
-  // Internet, Cloud, Tech & Car -> Sky Blue / Cyan
-  cloud: { bg: '#BAE6FD', text: '#0C4A6E', sub: '#0369A1' },
-  internet: { bg: '#BAE6FD', text: '#0C4A6E', sub: '#0369A1' },
-  wifi: { bg: '#BAE6FD', text: '#0C4A6E', sub: '#0369A1' },
-  laptop: { bg: '#E0E7FF', text: '#312E81', sub: '#4338CA' },
-  phone: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  car: { bg: '#BAE6FD', text: '#0C4A6E', sub: '#0369A1' },
-  fuel: { bg: '#FFEDD5', text: '#7C2D12', sub: '#9A3412' },
-  water: { bg: '#CFFAFE', text: '#164E63', sub: '#0E7490' },
-  travel: { bg: '#CCFBF1', text: '#115E59', sub: '#0F766E' },
-  compass: { bg: '#CCFBF1', text: '#115E59', sub: '#0F766E' },
-
-  // Home & Bills -> Warm Butter Amber
-  house: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  receipt: { bg: '#CFFAFE', text: '#164E63', sub: '#0E7490' },
-  credit_card: { bg: '#EDE9FE', text: '#581C87', sub: '#6D28D9' },
-  wallet: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  money: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
-  banknote: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
-  coin: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  investments: { bg: '#DCFCE7', text: '#14532D', sub: '#15803D' },
-  shopping: { bg: '#FED7AA', text: '#7C2D12', sub: '#9A3412' },
-  clothes: { bg: '#E0E7FF', text: '#312E81', sub: '#4338CA' },
-  medical: { bg: '#E0F2FE', text: '#075985', sub: '#0284C7' },
-  shield: { bg: '#CCFBF1', text: '#115E59', sub: '#0F766E' },
-  education: { bg: '#EDE9FE', text: '#581C87', sub: '#6D28D9' },
-  books: { bg: '#EDE9FE', text: '#581C87', sub: '#6D28D9' },
-  briefcase: { bg: '#F5F5F4', text: '#1C1917', sub: '#44403C' },
-  umbrella: { bg: '#CCFBF1', text: '#115E59', sub: '#0F766E' },
-  gift: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
-  sparkles: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
-  transfer: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
-  target: { bg: '#FFE4E6', text: '#9F1239', sub: '#BE123C' },
-  rocket: { bg: '#FFEDD5', text: '#7C2D12', sub: '#9A3412' },
-};
-
-function stringToHue(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    hash = hash & hash;
-  }
-  return Math.abs(hash) % 360;
-}
-
-function getPastelFromHue(hue: number) {
-  const bg = hslToHex(hue, 75, 90);
-  const text = hslToHex(hue, 85, 18);
-  const sub = hslToHex(hue, 80, 32);
-  return { bg, text, sub };
-}
-
-function getCardPaletteFromItem(payment: {
-  color?: string;
-  type: string;
-  loanType?: string;
-  icon?: string;
-  category?: string;
-  name?: string;
-}) {
-  const iconKey = (payment.icon || payment.category || payment.name || '').toLowerCase().trim();
-
-  // 1. Direct match in comprehensive 3D icon catalog
-  if (ICON_3D_PALETTES[iconKey]) {
-    return ICON_3D_PALETTES[iconKey];
-  }
-
-  for (const [key, palette] of Object.entries(ICON_3D_PALETTES)) {
-    if (iconKey.includes(key)) {
-      return palette;
-    }
-  }
-
-  // 2. If item has explicit hex color code (e.g. sub.color or loan.color)
-  if (payment.color && payment.color.startsWith('#')) {
-    return getPastelPaletteFromHex(payment.color);
-  }
-
-  // 3. Dynamic: deterministic pastel palette from the icon chosen
-  const dynamicHue = stringToHue(iconKey || 'gainbase');
-  return getPastelFromHue(dynamicHue);
-}
-
 function CircularProgress3DIcon({
   name,
   icon,
@@ -543,10 +367,10 @@ export function MoneyDashboard() {
     const path = getTicketCardPath(cardWidth, h, notchY, notchR, 22);
 
     const palette = {
-      bg: '#D1F5EC',
-      text: '#064E3B',
-      sub: '#047857',
-      border: '#34D399',
+      bg: currColors.card,
+      text: currColors.text,
+      sub: currColors.textSecondary,
+      border: currColors.border,
     };
 
     return (
@@ -563,10 +387,10 @@ export function MoneyDashboard() {
         style={{
           marginBottom: 16,
           marginTop: 2,
-          shadowColor: isDark ? '#000000' : palette.sub,
+          shadowColor: '#000000',
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: isDark ? 0.06 : 0.12,
-          shadowRadius: isDark ? 4 : 8,
+          shadowOpacity: isDark ? 0.2 : 0.05,
+          shadowRadius: 8,
           elevation: 2,
         }}
       >
@@ -576,6 +400,8 @@ export function MoneyDashboard() {
             <Path
               d={path}
               fill={palette.bg}
+              stroke={palette.border}
+              strokeWidth={1}
             />
             {/* Perforated dashed divider line */}
             <Line
@@ -583,9 +409,9 @@ export function MoneyDashboard() {
               y1={notchY}
               x2={cardWidth - notchR - 6}
               y2={notchY}
-              stroke={isDark ? palette.text + '35' : palette.sub + '45'}
-              strokeWidth={1.2}
-              strokeDasharray="5, 4"
+              stroke={palette.border}
+              strokeWidth={1}
+              strokeDasharray="4, 4"
             />
           </Svg>
         </View>
@@ -638,7 +464,7 @@ export function MoneyDashboard() {
                 width: 36,
                 height: 36,
                 borderRadius: 18,
-                backgroundColor: palette.text + '14',
+                backgroundColor: currColors.cardSecondary,
                 justifyContent: 'center',
                 alignItems: 'center',
               }}
@@ -659,7 +485,7 @@ export function MoneyDashboard() {
                 width: 36,
                 height: 36,
                 borderRadius: 18,
-                backgroundColor: palette.text + '14',
+                backgroundColor: currColors.cardSecondary,
                 justifyContent: 'center',
                 alignItems: 'center',
               }}
@@ -681,7 +507,7 @@ export function MoneyDashboard() {
             <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
               This month income
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#047857' }]}>
+            <ThemedText style={[styles.heroRowValue, { color: '#34C759' }]}>
               {isPrivacyMode ? '••••••' : `+${formatAmount(monthlyStats.income)}`}
             </ThemedText>
           </View>
@@ -690,7 +516,7 @@ export function MoneyDashboard() {
             <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
               This month expenses
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#B91C1C' }]}>
+            <ThemedText style={[styles.heroRowValue, { color: '#FF3B30' }]}>
               {isPrivacyMode ? '••••••' : `-${formatAmount(monthlyStats.expense)} (${(monthlyStats.income > 0 ? (monthlyStats.expense / monthlyStats.income) * 100 : 0).toFixed(0)}%)`}
             </ThemedText>
           </View>
@@ -724,10 +550,10 @@ export function MoneyDashboard() {
                   color: isPrivacyMode
                     ? palette.text
                     : monthlyStats.savingsRate >= 20
-                    ? '#047857'
+                    ? '#34C759'
                     : monthlyStats.savingsRate > 0
-                    ? '#B45309'
-                    : '#B91C1C',
+                    ? '#FF9500'
+                    : '#FF3B30',
                 },
               ]}
             >
@@ -748,7 +574,7 @@ export function MoneyDashboard() {
             <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
               Avg Daily Earning
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#047857' }]}>
+            <ThemedText style={[styles.heroRowValue, { color: '#34C759' }]}>
               {isPrivacyMode ? '••••••' : `+${formatAmount(monthlyStats.avgDailyEarning)}/day`}
             </ThemedText>
           </View>
@@ -790,14 +616,14 @@ export function MoneyDashboard() {
                     paddingHorizontal: 8,
                     paddingVertical: 2,
                     borderRadius: 10,
-                    backgroundColor: isDark ? currColors.cardSecondary : '#FEF08A',
+                    backgroundColor: currColors.cardSecondary,
                   }}
                 >
                   <ThemedText
                     style={{
                       fontSize: 11,
                       fontFamily: 'Outfit_600SemiBold',
-                      color: isDark ? currColors.text : '#713F12',
+                      color: currColors.textSecondary,
                     }}
                   >
                     {upcomingPayments.length} due
@@ -818,7 +644,7 @@ export function MoneyDashboard() {
                     { backgroundColor: currColors.cardSecondary },
                   ]}
                 >
-                  <ArrowRight size={14} color={currColors.tint} />
+                  <ArrowRight size={14} color={currColors.text} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -835,10 +661,6 @@ export function MoneyDashboard() {
                         LOAN_3D_ICON_MAP[payment.loanType || ''] ||
                         'loan'
                       : payment.category || payment.name;
-                  const palette = getCardPaletteFromItem({
-                    ...payment,
-                    icon: iconName,
-                  });
                   const d1 = new Date(payment.date);
                   d1.setHours(0, 0, 0, 0);
                   const d2 = new Date();
@@ -861,7 +683,11 @@ export function MoneyDashboard() {
                       key={payment.id}
                       style={[
                         styles.pastelBillCard,
-                        { backgroundColor: palette.bg },
+                        {
+                          backgroundColor: currColors.card,
+                          borderColor: currColors.border,
+                          borderWidth: 1,
+                        },
                       ]}
                       activeOpacity={0.82}
                       onPress={() => {
@@ -882,7 +708,7 @@ export function MoneyDashboard() {
                             name={iconName}
                             icon={payment.icon}
                             progress={payment.progress ?? 0}
-                            color={palette.text}
+                            color={currColors.tintMoney}
                             size={36}
                             iconSize={22}
                           />
@@ -897,7 +723,7 @@ export function MoneyDashboard() {
                           <ThemedText
                             style={[
                               styles.pastelCardAmount,
-                              { color: palette.text },
+                              { color: currColors.text },
                             ]}
                           >
                             {isPrivacyMode
@@ -907,7 +733,14 @@ export function MoneyDashboard() {
                           <ThemedText
                             style={[
                               styles.pastelCardDueLabel,
-                              { color: palette.sub },
+                              {
+                                color:
+                                  diffDays <= 1
+                                    ? diffDays < 0
+                                      ? '#FF3B30'
+                                      : '#FF9500'
+                                    : currColors.textSecondary,
+                              },
                             ]}
                             numberOfLines={1}
                           >
@@ -920,7 +753,7 @@ export function MoneyDashboard() {
                       <ThemedText
                         style={[
                           styles.pastelCardName,
-                          { color: palette.text },
+                          { color: currColors.text },
                         ]}
                         numberOfLines={1}
                       >
@@ -933,13 +766,13 @@ export function MoneyDashboard() {
           </View>
         ) : null}
 
-        {/* ─── Recent Transactions (Single Card in New Pastel Theme) ─── */}
+        {/* ─── Recent Transactions (Single Card in Unified Theme) ─── */}
         {(() => {
           const txCardPalette = {
-            bg: '#FFE4E6',
-            text: '#881337',
-            sub: '#9F1239',
-            border: '#FDA4AF',
+            bg: currColors.card,
+            text: currColors.text,
+            sub: currColors.textSecondary,
+            border: currColors.border,
           };
 
           return (
@@ -948,6 +781,8 @@ export function MoneyDashboard() {
                 styles.accordionContainer,
                 {
                   backgroundColor: txCardPalette.bg,
+                  borderColor: txCardPalette.border,
+                  borderWidth: 1,
                 },
               ]}
             >
@@ -968,14 +803,14 @@ export function MoneyDashboard() {
                         paddingHorizontal: 8,
                         paddingVertical: 2,
                         borderRadius: 10,
-                        backgroundColor: 'rgba(136, 19, 55, 0.12)',
+                        backgroundColor: currColors.cardSecondary,
                       }}
                     >
                       <ThemedText
                         style={{
                           fontSize: 11,
                           fontFamily: 'Outfit_600SemiBold',
-                          color: txCardPalette.text,
+                          color: txCardPalette.sub,
                         }}
                       >
                         {filteredRecentTxs.length}
@@ -994,7 +829,7 @@ export function MoneyDashboard() {
                   <View
                     style={[
                       styles.iconCircle,
-                      { backgroundColor: 'rgba(136, 19, 55, 0.12)' },
+                      { backgroundColor: currColors.cardSecondary },
                     ]}
                   >
                     <ChevronRight size={14} color={txCardPalette.text} />
@@ -1026,7 +861,7 @@ export function MoneyDashboard() {
                       paddingVertical: 6,
                       paddingHorizontal: 14,
                       borderRadius: 16,
-                      backgroundColor: 'rgba(136, 19, 55, 0.12)',
+                      backgroundColor: currColors.cardSecondary,
                     }}
                     activeOpacity={0.7}
                   >
@@ -1107,7 +942,7 @@ export function MoneyDashboard() {
                       style={[
                         styles.txItem,
                         {
-                          borderBottomColor: 'rgba(159, 18, 57, 0.14)',
+                          borderBottomColor: currColors.border,
                           borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
                         },
                       ]}
@@ -1149,10 +984,10 @@ export function MoneyDashboard() {
                             styles.txAmount,
                             {
                               color: isIncome
-                                ? '#15803D'
+                                ? '#34C759'
                                 : isExpense
-                                ? '#881337'
-                                : '#1D4ED8',
+                                ? currColors.text
+                                : '#0A84FF',
                             },
                           ]}
                         >
@@ -1475,7 +1310,7 @@ const styles = StyleSheet.create({
   pastelBillCard: {
     width: 154,
     height: 106,
-    borderRadius: 22,
+    borderRadius: 16,
     padding: 13,
     justifyContent: 'space-between',
   },

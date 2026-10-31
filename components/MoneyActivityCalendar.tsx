@@ -1,3 +1,4 @@
+import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { MoneyTransaction } from '@/types/money';
@@ -6,7 +7,6 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { Calendar, DateData } from 'react-native-calendars';
-import { Calendar as CalendarIcon } from 'lucide-react-native';
 
 interface MoneyActivityCalendarProps {
   transactions: MoneyTransaction[];
@@ -15,13 +15,17 @@ interface MoneyActivityCalendarProps {
 export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarProps) => {
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const theme = useColorScheme() ?? 'dark';
+  const currColors = Colors[theme];
   const isDark = theme === 'dark';
 
+  const neutralSlate = isDark ? '#9CA3AF' : '#4B5563';
+  const disabledDayColor = isDark ? '#4B5563' : '#D1D5DB';
+
   const palette = {
-    bg: '#D1F5EC',
-    text: '#064E3B',
-    sub: '#047857',
-    border: '#34D399',
+    bg: currColors.card,
+    text: currColors.text,
+    sub: currColors.textSecondary,
+    border: currColors.border,
   };
 
   // Group transactions by date
@@ -94,9 +98,9 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
           style={[
             styles.dayText,
             { color: palette.text },
-            isToday && [styles.todayText, { color: '#047857' }],
+            isToday && [styles.todayText, { color: currColors.tintMoney }],
             day.state === 'disabled' && {
-              color: palette.sub + '55',
+              color: disabledDayColor,
             },
           ]}
         >
@@ -121,26 +125,24 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
         styles.calendarCard,
         {
           backgroundColor: palette.bg,
+          borderColor: palette.border,
+          borderWidth: 1,
         },
       ]}
     >
       {/* Top Header Section */}
       <View style={styles.headerRow}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-          <CalendarIcon size={14} color={palette.sub} />
-          <ThemedText
-            style={{
-              fontSize: 10,
-              fontFamily: 'Outfit_700Bold',
-              letterSpacing: 0.8,
-              color: palette.sub,
-              textTransform: 'uppercase',
-            }}
-          >
-            CASHFLOW CALENDAR
-          </ThemedText>
-        </View>
-
+        <ThemedText
+          style={{
+            fontSize: 10,
+            fontFamily: 'Outfit_700Bold',
+            letterSpacing: 0.8,
+            color: palette.sub,
+            textTransform: 'uppercase',
+          }}
+        >
+          CASHFLOW CALENDAR
+        </ThemedText>
       </View>
 
       {/* Calendar Component */}
@@ -163,23 +165,34 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
           {
             backgroundColor: 'transparent',
             calendarBackground: 'transparent',
-            textSectionTitleColor: palette.sub,
+            textSectionTitleColor: neutralSlate,
             selectedDayBackgroundColor: 'transparent',
             selectedDayTextColor: palette.text,
-            todayTextColor: palette.text,
+            todayTextColor: currColors.tintMoney,
             dayTextColor: palette.text,
-            textDisabledColor: palette.sub + '55',
-            dotColor: palette.text,
-            selectedDotColor: palette.text,
-            arrowColor: palette.sub,
+            textDisabledColor: disabledDayColor,
+            dotColor: currColors.tintMoney,
+            selectedDotColor: currColors.tintMoney,
+            arrowColor: palette.text,
             monthTextColor: palette.text,
-            indicatorColor: palette.text,
+            indicatorColor: currColors.tintMoney,
             textDayFontFamily: 'Outfit_400Regular',
             textMonthFontFamily: 'Outfit_700Bold',
-            textDayHeaderFontFamily: 'Outfit_700Bold',
+            textDayHeaderFontFamily: 'Outfit_600SemiBold',
             textDayFontSize: 14,
-            textMonthFontSize: 15,
+            textMonthFontSize: 16,
             textDayHeaderFontSize: 11,
+            'stylesheet.calendar.header': {
+              dayHeader: {
+                marginTop: 2,
+                marginBottom: 7,
+                width: 36,
+                textAlign: 'center',
+                fontSize: 11,
+                fontFamily: 'Outfit_600SemiBold',
+                color: neutralSlate,
+              },
+            },
           } as any
         }
         enableSwipeMonths={true}
@@ -192,7 +205,7 @@ export const MoneyActivityCalendar = ({ transactions }: MoneyActivityCalendarPro
 
 const styles = StyleSheet.create({
   calendarCard: {
-    borderRadius: 22,
+    borderRadius: 16,
     paddingTop: 16,
     paddingBottom: 14,
     paddingHorizontal: 8,
@@ -233,14 +246,14 @@ const styles = StyleSheet.create({
   },
   expenseText: {
     fontSize: 7.8,
-    color: '#B91C1C',
+    color: '#FF3B30',
     textAlign: 'center',
     fontFamily: 'Outfit_600SemiBold',
     lineHeight: 9.5,
   },
   incomeText: {
     fontSize: 7.8,
-    color: '#047857',
+    color: '#34C759',
     textAlign: 'center',
     fontFamily: 'Outfit_600SemiBold',
     lineHeight: 9.5,

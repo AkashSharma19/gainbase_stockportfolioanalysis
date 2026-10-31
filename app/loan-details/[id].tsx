@@ -38,7 +38,6 @@ import { LOAN_3D_ICON_MAP } from '@/constants/Category3DIcons';
 import { AccountPickerModal } from '@/components/AccountPickerModal';
 import { AccountSelectCard } from '@/components/AccountSelectCard';
 import { CircularProgress3DIcon } from '@/components/FolderDetailsCard';
-import { getCardPaletteFromItem } from '@/constants/folderTheme';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 import { getNextLoanDuePayment } from '@/lib/finance';
 
@@ -91,14 +90,14 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
   }, [id, loans]);
 
   const palette = useMemo(() => {
-    if (!loan) return { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' };
-    return getCardPaletteFromItem({
-      type: 'loan',
-      loanType: loan.type,
-      name: loan.name,
-      icon: loan.icon || LOAN_3D_ICON_MAP[loan.type],
-    });
-  }, [loan]);
+    return {
+      bg: currColors.card,
+      text: currColors.text,
+      sub: currColors.textSecondary,
+      border: currColors.border,
+      accent: currColors.tintMoney,
+    };
+  }, [currColors]);
 
   const loanPayments = useMemo(() => {
     return emiPayments
@@ -561,8 +560,9 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
           style={[
             styles.heroCard,
             {
-              backgroundColor: palette.bg,
-              borderColor: isDark ? 'transparent' : palette.sub + '35',
+              backgroundColor: currColors.card,
+              borderColor: currColors.border,
+              borderWidth: 1,
             },
           ]}
         >
@@ -570,13 +570,13 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
           <View style={styles.heroHeaderRow}>
             <View style={{ flex: 1, paddingRight: 14 }}>
               <ThemedText
-                style={[styles.heroHeaderTitle, { color: palette.text }]}
+                style={[styles.heroHeaderTitle, { color: currColors.text }]}
                 numberOfLines={2}
               >
                 {loan.name}
               </ThemedText>
               <ThemedText
-                style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: palette.sub, marginTop: 4 }}
+                style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: currColors.textSecondary, marginTop: 4 }}
                 numberOfLines={1}
               >
                 {formatAmount(loan.emiAmount)}/monthly{linkedAccount?.name ? ` · ${linkedAccount.name}` : ''}
@@ -586,25 +586,25 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
             <CircularProgress3DIcon
               name={loan.icon || LOAN_3D_ICON_MAP[loan.type] || 'loan'}
               progress={paidPercentage / 100}
-              color={palette.text}
+              color={currColors.tintMoney}
               size={48}
               iconSize={28}
             />
           </View>
 
           {/* Outstanding Balance */}
-          <ThemedText style={[styles.heroValue, { color: palette.text, fontFamily: 'Outfit_700Bold', fontSize: 28, marginTop: 16, marginBottom: 10 }]}>
+          <ThemedText style={[styles.heroValue, { color: currColors.text, fontFamily: 'Outfit_700Bold', fontSize: 28, marginTop: 16, marginBottom: 10 }]}>
             {formatAmount(effectiveOutstanding)}
           </ThemedText>
 
           {/* Progress Bar */}
-          <View style={[styles.progressBarBG, { backgroundColor: isDark ? 'rgba(0,0,0,0.18)' : palette.sub + '22' }]}>
+          <View style={[styles.progressBarBG, { backgroundColor: isDark ? currColors.cardSecondary : '#E5E7EB' }]}>
             <View
               style={[
                 styles.progressBarFill,
                 {
                   width: `${Math.min(100, Math.max(2, paidPercentage))}%`,
-                  backgroundColor: palette.text,
+                  backgroundColor: currColors.tintMoney,
                 },
               ]}
             />
@@ -612,55 +612,55 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
 
           {/* Progress Micro Labels */}
           <View style={styles.progressMetaRow}>
-            <ThemedText style={[styles.progressMetaText, { color: palette.sub }]}>
+            <ThemedText style={[styles.progressMetaText, { color: currColors.textSecondary }]}>
               {paidPercentage.toFixed(0)}% paid ({formatAmount(totalPrincipalPaid)})
             </ThemedText>
-            <ThemedText style={[styles.progressMetaText, { color: palette.sub }]}>
+            <ThemedText style={[styles.progressMetaText, { color: currColors.textSecondary }]}>
               {monthsRemaining} of {loan.tenureMonths} mos left
             </ThemedText>
           </View>
 
           {/* Dashed Divider */}
-          <View style={[styles.dashedDivider, { borderColor: palette.sub + '28' }]} />
+          <View style={[styles.dashedDivider, { borderColor: currColors.border }]} />
 
           {/* Metrics Rows */}
           <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
               Interest rate
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: palette.text }]}>
+            <ThemedText style={[styles.heroRowValue, { color: currColors.text }]}>
               {loan.interestRate}% p.a.
             </ThemedText>
           </View>
 
           <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
               Original loan
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: palette.text }]}>
+            <ThemedText style={[styles.heroRowValue, { color: currColors.text }]}>
               {formatAmount(loan.principalAmount)}
             </ThemedText>
           </View>
 
           <View style={[styles.heroRow, { marginBottom: 0 }]}>
-            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
               Next due
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: nextDueDateInfo?.isDueSoon ? '#FF9500' : palette.text }]}>
+            <ThemedText style={[styles.heroRowValue, { color: nextDueDateInfo?.isDueSoon ? '#FF9500' : currColors.text }]}>
               {nextDueDateInfo ? `${nextDueDateInfo.dateFormatted} (${nextDueDateInfo.daysLeft > 0 ? `in ${nextDueDateInfo.daysLeft}d` : 'Today'})` : 'Paid off'}
             </ThemedText>
           </View>
 
           {/* Integrated Action Buttons */}
           {effectiveOutstanding > 0 && (
-            <View style={[styles.cardActionsRow, { borderTopColor: palette.sub + '22' }]}>
+            <View style={[styles.cardActionsRow, { borderTopColor: currColors.border }]}>
               <TouchableOpacity
-                style={[styles.primaryActionBtn, { backgroundColor: palette.text }]}
+                style={[styles.primaryActionBtn, { backgroundColor: isDark ? '#FFFFFF' : '#1C1917' }]}
                 activeOpacity={0.85}
                 onPress={handleLogPayment}
               >
-                <Calendar size={15} color={palette.bg} />
-                <ThemedText style={[styles.primaryActionBtnText, { color: palette.bg }]}>
+                <Calendar size={15} color={isDark ? '#000000' : '#FFFFFF'} />
+                <ThemedText style={[styles.primaryActionBtnText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
                   Log EMI ({formatAmount(loan.emiAmount)})
                 </ThemedText>
               </TouchableOpacity>
@@ -669,8 +669,8 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
                 style={[
                   styles.secondaryActionBtn,
                   {
-                    backgroundColor: isDark ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.7)',
-                    borderColor: palette.sub + '35',
+                    backgroundColor: isDark ? currColors.cardSecondary : '#F2F2F7',
+                    borderColor: currColors.border,
                   },
                 ]}
                 activeOpacity={0.85}
@@ -679,8 +679,8 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
                   router.push(`/prepay-loan/${loan.id}`);
                 }}
               >
-                <Zap size={15} color={palette.text} />
-                <ThemedText style={[styles.secondaryActionBtnText, { color: palette.text }]}>
+                <Zap size={15} color={currColors.text} />
+                <ThemedText style={[styles.secondaryActionBtnText, { color: currColors.text }]}>
                   Prepay
                 </ThemedText>
               </TouchableOpacity>
@@ -791,7 +791,7 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
                           : row.isPaid
                           ? (isDark ? 'rgba(52, 199, 89, 0.16)' : 'rgba(52, 199, 89, 0.12)')
                           : row.isUpcoming
-                          ? (isDark ? currColors.cardSecondary : palette.bg)
+                          ? (isDark ? currColors.cardSecondary : '#F2F2F7')
                           : currColors.cardSecondary,
                         borderWidth: row.isUpcoming && isDark ? 1 : 0,
                         borderColor: row.isUpcoming && isDark ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
@@ -807,7 +807,7 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
                         <ThemedText
                           style={[
                             styles.dateTileMonth,
-                            { color: row.isUpcoming ? (isDark ? palette.bg : palette.text) : currColors.textSecondary },
+                            { color: row.isUpcoming ? currColors.tintMoney : currColors.textSecondary },
                           ]}
                         >
                           {monthAbbr}
@@ -815,7 +815,7 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
                         <ThemedText
                           style={[
                             styles.dateTileYear,
-                            { color: row.isUpcoming ? (isDark ? '#FFFFFF' : palette.text) : currColors.textSecondary },
+                            { color: row.isUpcoming ? currColors.text : currColors.textSecondary },
                           ]}
                         >
                           {yearShort}
@@ -838,13 +838,13 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
                         <View
                           style={[
                             styles.statusBadge,
-                            { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : palette.bg },
+                            { backgroundColor: isDark ? 'rgba(0, 194, 150, 0.15)' : 'rgba(0, 194, 150, 0.12)' },
                           ]}
                         >
                           <ThemedText
                             style={[
                               styles.statusBadgeText,
-                              { color: isDark ? palette.bg : palette.text },
+                              { color: currColors.tintMoney },
                             ]}
                           >
                             NEXT EMI
@@ -918,8 +918,8 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
                   style={[
                     styles.loadMoreBtn,
                     {
-                      backgroundColor: isDark ? palette.bg + '18' : palette.bg,
-                      borderColor: isDark ? palette.sub + '40' : palette.sub + '35',
+                      backgroundColor: currColors.cardSecondary,
+                      borderColor: currColors.border,
                     },
                   ]}
                   onPress={() => {
@@ -928,7 +928,7 @@ export function LoanDetailsContent({ loanId, onBack }: LoanDetailsProps) {
                   }}
                   activeOpacity={0.75}
                 >
-                  <ThemedText style={{ fontSize: 12, fontFamily: 'Outfit_600SemiBold', color: isDark ? palette.bg : palette.text }}>
+                  <ThemedText style={{ fontSize: 12, fontFamily: 'Outfit_600SemiBold', color: currColors.text }}>
                     Show all ({filteredSchedule.length})
                   </ThemedText>
                 </TouchableOpacity>

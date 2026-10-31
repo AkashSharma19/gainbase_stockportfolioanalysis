@@ -191,7 +191,12 @@ export default function AccountsScreen() {
     const notchY = 82;
     const notchR = 9;
     const path = getTicketCardPath(cardWidth, h, notchY, notchR, 22);
-    const palette = { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' };
+    const palette = {
+      bg: currColors.card,
+      text: currColors.text,
+      sub: currColors.textSecondary,
+      border: currColors.border,
+    };
 
     return (
       <View
@@ -206,24 +211,24 @@ export default function AccountsScreen() {
           marginBottom: 16,
           marginTop: 4,
           height: h,
-          shadowColor: isDark ? '#000000' : palette.sub,
+          shadowColor: '#000000',
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: isDark ? 0.06 : 0.12,
-          shadowRadius: isDark ? 4 : 8,
+          shadowOpacity: isDark ? 0.2 : 0.05,
+          shadowRadius: 8,
           elevation: 2,
         }}
       >
         {/* SVG Ticket Shape Background */}
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <Svg width={cardWidth} height={h}>
-            <Path d={path} fill={palette.bg} />
+            <Path d={path} fill={palette.bg} stroke={palette.border} strokeWidth={1} />
             {/* Perforated dashed divider line */}
             <Line
               x1={notchR + 6}
               y1={notchY}
               x2={cardWidth - notchR - 6}
               y2={notchY}
-              stroke={isDark ? palette.text + '35' : palette.sub + '45'}
+              stroke={palette.border}
               strokeWidth={1.2}
               strokeDasharray="5, 4"
             />
@@ -275,7 +280,7 @@ export default function AccountsScreen() {
                 width: 34,
                 height: 34,
                 borderRadius: 17,
-                backgroundColor: palette.text + '14',
+                backgroundColor: currColors.cardSecondary,
                 justifyContent: 'center',
                 alignItems: 'center',
               }}
@@ -296,7 +301,7 @@ export default function AccountsScreen() {
                 width: 34,
                 height: 34,
                 borderRadius: 17,
-                backgroundColor: palette.text + '14',
+                backgroundColor: currColors.cardSecondary,
                 justifyContent: 'center',
                 alignItems: 'center',
               }}
@@ -319,7 +324,7 @@ export default function AccountsScreen() {
             <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
               Total Assets
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#047857' }]}>
+            <ThemedText style={[styles.heroRowValue, { color: '#34C759' }]}>
               {isPrivacyMode ? '••••••' : `+${formatAmount(summary.totalAssets)}`}
             </ThemedText>
           </View>
@@ -328,7 +333,7 @@ export default function AccountsScreen() {
             <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
               Liabilities
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: '#881337' }]}>
+            <ThemedText style={[styles.heroRowValue, { color: '#FF3B30' }]}>
               {isPrivacyMode ? '••••••' : `-${formatAmount(summary.totalLiabilities)}`}
             </ThemedText>
           </View>
@@ -364,32 +369,82 @@ export default function AccountsScreen() {
       ? brokerAlloc.value
       : item.balance;
 
-    // Subtitle formatted text (metadata only — amount is displayed on the right side)
+    // Subtitle formatted text with intelligent bank & category deduplication
     let subtitleText = '';
-    if (isCreditCard) {
-      const parts: string[] = [];
-      if (item.institution) parts.push(item.institution);
-      if (item.accountNumber) parts.push(`•••• ${item.accountNumber}`);
-      if (item.creditLimit && item.creditLimit > 0) parts.push(`Limit ${formatAmount(item.creditLimit)}`);
-      subtitleText = parts.length > 0 ? parts.join(' · ') : 'Credit Card';
-    } else if (item.type === 'investment') {
-      subtitleText = item.linkedBroker || item.institution || 'Investment Portfolio';
-    } else if (item.type === 'receivable') {
-      subtitleText = 'Receivable';
-    } else if (item.type === 'payable') {
-      subtitleText = 'Payable';
-    } else if (item.type === 'emergency_fund') {
-      subtitleText = item.institution ? `${item.institution} · Emergency Fund` : 'Emergency Reserve';
-    } else {
-      // Savings, Wallet, Cash, etc.
-      const inst = item.institution || (item.type === 'wallet' ? 'Cash & Digital Wallet' : 'Bank Account');
-      const acctNum = item.accountNumber ? ` •••• ${item.accountNumber}` : '';
-      subtitleText = `${inst}${acctNum}`;
+    const nameLower = (item.name || '').toLowerCase().trim();
+
+    // Check if a string or its significant words are already in the account name (normalized across spaces and punctuation)
+    const isRedundantWithName = (str?: string) => {
+      if (!str) return true;
+      const clean = str.toLowerCase().trim();
+      if (!clean) return true;
+
+      // 1. Direct normalized comparison ignoring spaces, punctuation, casing (e.g. "IND Money" vs "INDmoney")
+      const normName = nameLower.replace(/[^a-z0-9]/g, '');
+      const normStr = clean.replace(/[^a-z0-9]/g, '');
+      if (normName && normStr && (normName.includes(normStr) || normStr.includes(normName))) {
+        return true;
+      }
+
+      // 2. Strip generic stop words from both and compare normalized stems
+      const stopWords =
+        /bank|financial|services|limited|ltd|corp|corporation|account|accounts|fund|funds|card|cards|reserve|digital|investment|investments|portfolio|broker|money/gi;
+      const strippedName = nameLower.replace(stopWords, '').replace(/[^a-z0-9]/g, '');
+      const strippedStr = clean.replace(stopWords, '').replace(/[^a-z0-9]/g, '');
+      if (
+        strippedName &&
+        strippedStr &&
+        (strippedName.includes(strippedStr) || strippedStr.includes(strippedName))
+      ) {
+        return true;
+      }
+
+      // 3. Significant word-level overlap
+      const words = clean
+        .replace(stopWords, '')
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w.length > 2);
+      return (
+        words.length > 0 &&
+        words.some((w) => normName.includes(w.replace(/[^a-z0-9]/g, '')))
+      );
+    };
+
+    const parts: string[] = [];
+
+    // 1. Institution / Bank / Broker (only if not redundant with name)
+    if (item.institution && !isRedundantWithName(item.institution)) {
+      parts.push(item.institution);
+    } else if (
+      item.type === 'investment' &&
+      item.linkedBroker &&
+      !isRedundantWithName(item.linkedBroker)
+    ) {
+      parts.push(item.linkedBroker);
     }
 
-    if (item.includeInAssets === false) {
-      subtitleText += ' · Excluded';
+    // 2. Account Number
+    if (item.accountNumber) {
+      const cleanNum = item.accountNumber.replace(/[^0-9]/g, '');
+      const last4 = cleanNum.length >= 4 ? cleanNum.slice(-4) : cleanNum;
+      if (last4) parts.push(`•••• ${last4}`);
     }
+
+    // 3. Fallback type only if nothing else is present AND type is not already stated in name
+    if (parts.length === 0 && !item.institution && !item.accountNumber) {
+      if (
+        item.type === 'wallet' &&
+        !nameLower.includes('wallet') &&
+        !nameLower.includes('cash')
+      ) {
+        parts.push('Digital Wallet');
+      }
+      // Note: for investment, receivable, payable, emergency_fund, and savings: if the name already contains the concept
+      // (or if there is no other metadata), do NOT duplicate the section title on the card face.
+    }
+
+    subtitleText = parts.join(' · ');
 
     return (
       <TouchableOpacity
@@ -484,9 +539,11 @@ export default function AccountsScreen() {
               <ThemedText style={[styles.cardTitle, { color: currColors.text }]} numberOfLines={1}>
                 {item.name}
               </ThemedText>
-              <ThemedText style={[styles.cardSubtitle, { color: currColors.textSecondary }]} numberOfLines={1}>
-                {subtitleText}
-              </ThemedText>
+              {subtitleText ? (
+                <ThemedText style={[styles.cardSubtitle, { color: currColors.textSecondary }]} numberOfLines={1}>
+                  {subtitleText}
+                </ThemedText>
+              ) : null}
             </View>
           </View>
 
@@ -511,22 +568,11 @@ export default function AccountsScreen() {
                 style={{
                   fontSize: 11,
                   fontFamily: 'Outfit_600SemiBold',
-                  color: brokerAlloc.pnl >= 0 ? '#047857' : '#B91C1C',
+                  color: brokerAlloc.pnl >= 0 ? '#34C759' : '#FF3B30',
                   marginTop: 2,
                 }}
               >
                 {brokerAlloc.pnl >= 0 ? '+' : ''}{brokerAlloc.pnlPercentage.toFixed(1)}%
-              </ThemedText>
-            ) : isCreditCard && item.creditLimit && item.creditLimit > 0 ? (
-              <ThemedText
-                style={{
-                  fontSize: 11,
-                  fontFamily: 'Outfit_500Medium',
-                  color: utilization > 70 ? '#DC2626' : utilization > 30 ? '#D97706' : currColors.textSecondary,
-                  marginTop: 2,
-                }}
-              >
-                {utilization.toFixed(0)}% used
               </ThemedText>
             ) : null}
           </View>
@@ -583,14 +629,14 @@ export default function AccountsScreen() {
                 paddingHorizontal: 8,
                 paddingVertical: 2.5,
                 borderRadius: 12,
-                backgroundColor: '#D1F5EC',
+                backgroundColor: currColors.cardSecondary,
               }}
             >
               <ThemedText
                 style={{
                   fontSize: 11,
                   fontFamily: 'Outfit_600SemiBold',
-                  color: '#064E3B',
+                  color: currColors.text,
                 }}
               >
                 {accounts.filter(a => !a.isArchived).length}
@@ -698,7 +744,7 @@ export default function AccountsScreen() {
             styles.floatingAddBtn,
             {
               bottom: Math.max(insets.bottom, 12) + 74,
-              backgroundColor: '#D1F5EC',
+              backgroundColor: isDark ? currColors.tintMoney : '#00876E',
               shadowColor: '#000000',
             },
           ]}
@@ -709,7 +755,7 @@ export default function AccountsScreen() {
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           activeOpacity={0.82}
         >
-          <Plus size={24} color="#064E3B" strokeWidth={2.6} />
+          <Plus size={24} color={isDark ? '#003328' : '#FFFFFF'} strokeWidth={2.6} />
         </TouchableOpacity>
       </SafeAreaView>
     </View>

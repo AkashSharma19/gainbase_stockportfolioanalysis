@@ -28,11 +28,7 @@ import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Loan, Subscription } from '@/types/money';
 import { Category3DIcon } from '@/components/Category3DIcon';
 import { LOAN_3D_ICON_MAP } from '@/constants/Category3DIcons';
-import {
-  FolderPalette,
-  getCardPaletteFromItem,
-  getTicketCardPath,
-} from '@/constants/folderTheme';
+import { getTicketCardPath } from '@/constants/folderTheme';
 import { getEffectiveLoanOutstanding } from '@/lib/finance';
 
 
@@ -181,10 +177,6 @@ export default function LoansScreen() {
     const path = getTicketCardPath(cardWidth, h, notchY, notchR, 22);
 
     const isLoans = isLoansView;
-    const palette = isLoans
-      ? { bg: '#FEF08A', text: '#713F12', sub: '#854D0E', border: '#CA8A04' }
-      : { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE', border: '#9333EA' };
-
     const title = isLoans ? 'MONTHLY EMI' : 'MONTHLY SUBSCRIPTIONS';
     const mainAmount = isLoans ? monthlyEMI : monthlySubBurden;
     const stubLabel = isLoans ? 'Total Outstanding' : 'Total Amount';
@@ -205,10 +197,10 @@ export default function LoansScreen() {
           marginBottom: 16,
           marginTop: 4,
           height: h,
-          shadowColor: isDark ? '#000000' : palette.sub,
+          shadowColor: '#000000',
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: isDark ? 0.06 : 0.12,
-          shadowRadius: isDark ? 4 : 8,
+          shadowOpacity: isDark ? 0.04 : 0.08,
+          shadowRadius: 6,
           elevation: 2,
         }}
       >
@@ -217,7 +209,9 @@ export default function LoansScreen() {
           <Svg width={cardWidth} height={h}>
             <Path
               d={path}
-              fill={palette.bg}
+              fill={currColors.card}
+              stroke={currColors.border}
+              strokeWidth={1}
             />
             {/* Perforated dashed divider line */}
             <Line
@@ -225,7 +219,7 @@ export default function LoansScreen() {
               y1={notchY}
               x2={cardWidth - notchR - 6}
               y2={notchY}
-              stroke={isDark ? palette.text + '35' : palette.sub + '45'}
+              stroke={currColors.border}
               strokeWidth={1.2}
               strokeDasharray="5, 4"
             />
@@ -248,7 +242,7 @@ export default function LoansScreen() {
                 fontSize: 10,
                 fontFamily: 'Outfit_700Bold',
                 letterSpacing: 0.8,
-                color: palette.sub,
+                color: currColors.textSecondary,
                 textTransform: 'uppercase',
                 marginBottom: 2,
               }}
@@ -260,7 +254,7 @@ export default function LoansScreen() {
               style={{
                 fontSize: 24,
                 fontFamily: 'Outfit_400Regular',
-                color: palette.text,
+                color: currColors.text,
               }}
               numberOfLines={1}
             >
@@ -283,7 +277,7 @@ export default function LoansScreen() {
             style={{
               fontSize: 14,
               fontFamily: 'Outfit_400Regular',
-              color: palette.sub,
+              color: currColors.textSecondary,
             }}
           >
             {stubLabel}
@@ -293,7 +287,7 @@ export default function LoansScreen() {
               fontSize: 14,
               fontWeight: '400',
               fontFamily: 'Outfit_400Regular',
-              color: palette.text,
+              color: currColors.text,
             }}
           >
             {stubValue}
@@ -304,13 +298,6 @@ export default function LoansScreen() {
   };
 
   const renderLoanCard = (item: Loan, index: number, totalCount: number) => {
-    const palette = getCardPaletteFromItem({
-      type: 'loan',
-      loanType: item.type,
-      name: item.name,
-      icon: item.icon || LOAN_3D_ICON_MAP[item.type],
-    });
-
     const effectiveOutstanding = getEffectiveLoanOutstanding(item, emiPayments);
     const paidAmount = Math.max(0, item.principalAmount - effectiveOutstanding);
     const loanProgress = item.principalAmount > 0 ? Math.min(1, paidAmount / item.principalAmount) : 0;
@@ -326,14 +313,14 @@ export default function LoansScreen() {
         style={[
           styles.cardRow,
           {
-            backgroundColor: palette.bg,
+            backgroundColor: currColors.card,
             borderTopLeftRadius: isFirst ? 16 : 0,
             borderTopRightRadius: isFirst ? 16 : 0,
             borderBottomLeftRadius: isLast ? 16 : 0,
             borderBottomRightRadius: isLast ? 16 : 0,
             borderCurve: 'continuous',
             borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
-            borderBottomColor: isDark ? 'rgba(0,0,0,0.18)' : palette.sub + '20',
+            borderBottomColor: currColors.border,
           },
         ]}
         activeOpacity={0.78}
@@ -343,10 +330,10 @@ export default function LoansScreen() {
         }}
       >
         <View style={styles.cardLeftContent}>
-          <ThemedText style={[styles.cardTitle, { color: palette.text }]} numberOfLines={1}>
+          <ThemedText style={[styles.cardTitle, { color: currColors.text }]} numberOfLines={1}>
             {item.name}
           </ThemedText>
-          <ThemedText style={[styles.cardSubtitle, { color: palette.sub }]} numberOfLines={1}>
+          <ThemedText style={[styles.cardSubtitle, { color: currColors.textSecondary }]} numberOfLines={1}>
             {formatAmount(item.emiAmount)}/monthly{accountSuffix}
           </ThemedText>
         </View>
@@ -355,7 +342,7 @@ export default function LoansScreen() {
           <CircularProgress3DIcon
             name={item.icon || LOAN_3D_ICON_MAP[item.type] || 'loan'}
             progress={loanProgress}
-            color={palette.text}
+            color={currColors.tintMoney}
             size={48}
             iconSize={28}
           />
@@ -367,12 +354,6 @@ export default function LoansScreen() {
   const renderSubscriptionCard = (item: Subscription, index: number, totalCount: number) => {
     const isFirst = index === 0;
     const isLast = index === totalCount - 1;
-    const palette = getCardPaletteFromItem({
-      type: 'subscription',
-      name: item.name,
-      category: item.category,
-      icon: item.logo,
-    });
 
     const cycleLabel = item.billingCycle ? item.billingCycle.charAt(0).toUpperCase() + item.billingCycle.slice(1) : 'Monthly';
     const linkedAccount = item.linkedAccountId ? accounts.find((a) => a.id === item.linkedAccountId) : null;
@@ -384,14 +365,14 @@ export default function LoansScreen() {
         style={[
           styles.cardRow,
           {
-            backgroundColor: palette.bg,
+            backgroundColor: currColors.card,
             borderTopLeftRadius: isFirst ? 16 : 0,
             borderTopRightRadius: isFirst ? 16 : 0,
             borderBottomLeftRadius: isLast ? 16 : 0,
             borderBottomRightRadius: isLast ? 16 : 0,
             borderCurve: 'continuous',
             borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
-            borderBottomColor: isDark ? 'rgba(0,0,0,0.18)' : palette.sub + '20',
+            borderBottomColor: currColors.border,
           },
         ]}
         activeOpacity={0.78}
@@ -401,10 +382,10 @@ export default function LoansScreen() {
         }}
       >
         <View style={styles.cardLeftContent}>
-          <ThemedText style={[styles.cardTitle, { color: palette.text }]} numberOfLines={1}>
+          <ThemedText style={[styles.cardTitle, { color: currColors.text }]} numberOfLines={1}>
             {item.name}
           </ThemedText>
-          <ThemedText style={[styles.cardSubtitle, { color: palette.sub }]} numberOfLines={1}>
+          <ThemedText style={[styles.cardSubtitle, { color: currColors.textSecondary }]} numberOfLines={1}>
             {formatAmount(item.amount)}/{cycleLabel.toLowerCase()}{accountSuffix}
           </ThemedText>
         </View>
@@ -434,14 +415,14 @@ export default function LoansScreen() {
               paddingHorizontal: 8,
               paddingVertical: 2.5,
               borderRadius: 12,
-              backgroundColor: isLoansView ? '#FEF08A' : '#E9D5FF',
+              backgroundColor: isDark ? currColors.cardSecondary : '#E5E7EB',
             }}
           >
             <ThemedText
               style={{
                 fontSize: 11,
                 fontFamily: 'Outfit_600SemiBold',
-                color: isLoansView ? '#713F12' : '#581C87',
+                color: currColors.textSecondary,
               }}
             >
               {isLoansView ? activeLoans.length : activeSubscriptions.length}
@@ -455,12 +436,9 @@ export default function LoansScreen() {
         style={[
           styles.toggleBar,
           {
-            backgroundColor: isDark ? currColors.card : '#FFFFFF',
-            shadowColor: '#000000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: isDark ? 0 : 0.05,
-            shadowRadius: 3,
-            elevation: isDark ? 0 : 1,
+            backgroundColor: isDark ? currColors.card : '#F2F2F7',
+            borderWidth: 1,
+            borderColor: currColors.border,
           },
         ]}
       >
@@ -468,11 +446,11 @@ export default function LoansScreen() {
           style={[
             styles.toggleOption,
             isLoansView && {
-              backgroundColor: '#FEF08A',
-              shadowColor: isDark ? '#000000' : '#CA8A04',
-              shadowOffset: { width: 0, height: 1.5 },
-              shadowOpacity: isDark ? 0.08 : 0.22,
-              shadowRadius: 3,
+              backgroundColor: isDark ? currColors.cardSecondary : '#FFFFFF',
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: isDark ? 0.2 : 0.08,
+              shadowRadius: 2,
               elevation: 2,
             },
           ]}
@@ -486,7 +464,7 @@ export default function LoansScreen() {
             style={[
               styles.toggleText,
               {
-                color: isLoansView ? '#713F12' : isDark ? currColors.textSecondary : '#64748B',
+                color: isLoansView ? currColors.text : currColors.textSecondary,
                 fontFamily: isLoansView ? 'Outfit_700Bold' : 'Outfit_600SemiBold',
               },
             ]}
@@ -498,11 +476,11 @@ export default function LoansScreen() {
           style={[
             styles.toggleOption,
             !isLoansView && {
-              backgroundColor: '#E9D5FF',
-              shadowColor: isDark ? '#000000' : '#9333EA',
-              shadowOffset: { width: 0, height: 1.5 },
-              shadowOpacity: isDark ? 0.08 : 0.22,
-              shadowRadius: 3,
+              backgroundColor: isDark ? currColors.cardSecondary : '#FFFFFF',
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: isDark ? 0.2 : 0.08,
+              shadowRadius: 2,
               elevation: 2,
             },
           ]}
@@ -516,7 +494,7 @@ export default function LoansScreen() {
             style={[
               styles.toggleText,
               {
-                color: !isLoansView ? '#581C87' : isDark ? currColors.textSecondary : '#64748B',
+                color: !isLoansView ? currColors.text : currColors.textSecondary,
                 fontFamily: !isLoansView ? 'Outfit_700Bold' : 'Outfit_600SemiBold',
               },
             ]}
@@ -546,7 +524,7 @@ export default function LoansScreen() {
                   if (w > 0) setCardWidth(w);
                 }}
               >
-                <View style={styles.cardsGroup}>
+                <View style={[styles.cardsGroup, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
                   {activeLoans.map((item, index) => renderLoanCard(item, index, activeLoans.length))}
                 </View>
               </View>
@@ -579,7 +557,7 @@ export default function LoansScreen() {
                   </View>
                 </View>
                 <View style={styles.cardListContainer}>
-                  <View style={styles.cardsGroup}>
+                  <View style={[styles.cardsGroup, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
                     {completedLoans.map((item, index) => renderLoanCard(item, index, completedLoans.length))}
                   </View>
                 </View>
@@ -603,7 +581,7 @@ export default function LoansScreen() {
                   if (w > 0) setCardWidth(w);
                 }}
               >
-                <View style={styles.cardsGroup}>
+                <View style={[styles.cardsGroup, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
                   {activeSubscriptions.map((item, index) => renderSubscriptionCard(item, index, activeSubscriptions.length))}
                 </View>
               </View>
@@ -636,7 +614,7 @@ export default function LoansScreen() {
                   </View>
                 </View>
                 <View style={styles.cardListContainer}>
-                  <View style={styles.cardsGroup}>
+                  <View style={[styles.cardsGroup, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
                     {completedSubscriptions.map((item, index) => renderSubscriptionCard(item, index, completedSubscriptions.length))}
                   </View>
                 </View>
@@ -652,7 +630,7 @@ export default function LoansScreen() {
             styles.floatingAddBtn,
             {
               bottom: Math.max(insets.bottom, 12) + 74,
-              backgroundColor: isLoansView ? '#FEF08A' : '#E9D5FF',
+              backgroundColor: currColors.tintMoney,
               shadowColor: '#000000',
             },
           ]}
@@ -660,7 +638,7 @@ export default function LoansScreen() {
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           activeOpacity={0.82}
         >
-          <Plus size={24} color={isLoansView ? '#713F12' : '#581C87'} strokeWidth={2.6} />
+          <Plus size={24} color={isDark ? '#003328' : '#FFFFFF'} strokeWidth={2.6} />
         </TouchableOpacity>
       </SafeAreaView>
     </View>

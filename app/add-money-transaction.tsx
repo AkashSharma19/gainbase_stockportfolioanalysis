@@ -122,7 +122,11 @@ function evaluateMathExpression(expr: string): string {
 
 export default function AddMoneyTransactionScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, defaultAccountId, type: initialType } = useLocalSearchParams<{
+    id?: string;
+    defaultAccountId?: string;
+    type?: 'expense' | 'income' | 'transfer';
+  }>();
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
   const isDark = colorScheme === 'dark';
@@ -185,12 +189,24 @@ export default function AddMoneyTransactionScreen() {
         setCategory(editingTx.category);
       }
     } else {
+      if (initialType && ['expense', 'income', 'transfer'].includes(initialType)) {
+        setType(initialType);
+      }
+
       const activeAccounts = accounts.filter((a) => !a.isArchived);
       if (activeAccounts.length > 0) {
-        const predicted = getPredictedAccount(type, category, moneyTransactions, activeAccounts);
-        setAccountId(predicted || activeAccounts[0].id);
+        if (defaultAccountId && activeAccounts.some((a) => a.id === defaultAccountId)) {
+          setAccountId(defaultAccountId);
+          setIsAccountManuallySelected(true);
+        } else {
+          const predicted = getPredictedAccount(type, category, moneyTransactions, activeAccounts);
+          setAccountId(predicted || activeAccounts[0].id);
+        }
         if (activeAccounts.length > 1) {
-          setToAccountId(activeAccounts[1].id);
+          const secondAcc = activeAccounts.find(
+            (a) => a.id !== (defaultAccountId || activeAccounts[0].id)
+          );
+          setToAccountId(secondAcc ? secondAcc.id : activeAccounts[1].id);
         }
       }
 

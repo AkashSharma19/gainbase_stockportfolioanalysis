@@ -11,6 +11,7 @@ import {
   Modal,
   FlatList,
   Keyboard,
+  InputAccessoryView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -31,6 +32,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import { ThemedText } from '@/components/ThemedText';
+import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { Loan, Account } from '@/types/money';
 import { Category3DIcon } from '@/components/Category3DIcon';
@@ -41,21 +44,9 @@ import {
   findBest3DIconForText,
   LOAN_3D_ICON_MAP,
 } from '@/constants/Category3DIcons';
-import { getCardPaletteFromItem } from '@/constants/folderTheme';
 import { formatCurrencyINR, formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
-// Fallback Static Theme
-const DEFAULT_THEME = {
-  bg: '#FEF08A',
-  text: '#713F12',
-  sub: '#854D0E',
-  border: '#CA8A04',
-  cardBg: '#FFFFFF',
-  cardBorder: 'rgba(113, 63, 18, 0.15)',
-  trackInactive: 'rgba(113, 63, 18, 0.15)',
-  trackActive: '#713F12',
-  accentPill: 'rgba(113, 63, 18, 0.1)',
-};
+const EMPTY_ACCESSORY_ID = 'gainbase-empty-accessory';
 
 const TENURE_PRESETS = [
   { label: '6m', months: 6 },
@@ -103,25 +94,24 @@ export default function AddLoanScreen() {
   const [isIconManuallyChosen, setIsIconManuallyChosen] = useState(false);
   const [hasManualOutstanding, setHasManualOutstanding] = useState(false);
 
-  // Dynamic Pastel Theme derived from icon (matching list view card colors)
+  const colorScheme = useColorScheme() ?? 'dark';
+  const isDark = colorScheme === 'dark';
+  const currColors = Colors[colorScheme];
+
+  // Unified Native Theme
   const THEME = useMemo(() => {
-    const palette = getCardPaletteFromItem({
-      icon,
-      name,
-      type: editingLoan?.type,
-    });
     return {
-      bg: palette.bg,
-      text: palette.text,
-      sub: palette.sub,
-      border: palette.sub,
-      cardBg: '#FFFFFF',
-      cardBorder: `${palette.text}22`,
-      trackInactive: `${palette.text}20`,
-      trackActive: palette.text,
-      accentPill: `${palette.text}14`,
+      bg: currColors.background,
+      text: currColors.text,
+      sub: currColors.textSecondary,
+      border: currColors.border,
+      cardBg: currColors.card,
+      cardBorder: currColors.border,
+      trackInactive: isDark ? '#2C2C2E' : '#E5E5EA',
+      trackActive: currColors.tintMoney,
+      accentPill: isDark ? currColors.cardSecondary : '#F2F2F7',
     };
-  }, [icon, name, editingLoan?.type]);
+  }, [currColors, isDark]);
 
   // Modals
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -397,13 +387,13 @@ export default function AddLoanScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: THEME.bg }]}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* ─── Top Header & Progress Bar ─── */}
       <View style={[styles.topHeader, { paddingTop: Math.max(insets.top, 16) + 4 }]}>
         <View style={styles.headerNavRow}>
           <TouchableOpacity
-            style={[styles.headerIconButton, { backgroundColor: THEME.text + '14' }]}
+            style={[styles.headerIconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
             onPress={handleBack}
             activeOpacity={0.7}
           >
@@ -415,7 +405,7 @@ export default function AddLoanScreen() {
           </ThemedText>
 
           <TouchableOpacity
-            style={[styles.headerIconButton, { backgroundColor: THEME.text + '14' }]}
+            style={[styles.headerIconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
@@ -438,11 +428,6 @@ export default function AddLoanScreen() {
             />
           ))}
         </View>
-
-        {/* Step Indicator Subtitle */}
-        <ThemedText style={[styles.stepLabel, { color: THEME.sub }]}>
-          STEP {currentStep + 1} OF 4 • {STEP_METAS[currentStep].title.toUpperCase()}
-        </ThemedText>
       </View>
 
       <KeyboardAvoidingView
@@ -477,14 +462,11 @@ export default function AddLoanScreen() {
 
           {/* ════════════ STEP 0: IDENTITY ════════════ */}
           {currentStep === 0 && (
-            <View style={[styles.stepCard, { borderColor: THEME.cardBorder }]}>
-              {/* Visual 3D Icon Preview & Tap to Pick */}
+            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
+              {/* Visual 3D Icon Preview & Tap to Pick - Boundary free */}
               <View style={styles.iconChooserRow}>
                 <TouchableOpacity
-                  style={[
-                    styles.iconPreviewButton,
-                    { backgroundColor: THEME.bg, borderColor: THEME.text + '33' },
-                  ]}
+                  style={styles.iconPreviewButton}
                   onPress={() => {
                     handleHaptic();
                     setShowIconModal(true);
@@ -498,9 +480,11 @@ export default function AddLoanScreen() {
                   <TextInput
                     style={[styles.largeTextInput, { color: THEME.text }]}
                     placeholder="e.g. Home Loan, Car Loan"
-                    placeholderTextColor={THEME.text + '55'}
+                    placeholderTextColor={THEME.sub + '80'}
                     value={name}
                     onChangeText={handleNameChange}
+                    autoCorrect={false}
+                    spellCheck={false}
                     autoFocus={!editingLoan}
                     returnKeyType="done"
                   />
@@ -511,7 +495,7 @@ export default function AddLoanScreen() {
 
           {/* ════════════ STEP 1: PRINCIPAL & BALANCE ════════════ */}
           {currentStep === 1 && (
-            <View style={[styles.stepCard, { borderColor: THEME.cardBorder }]}>
+            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
               <View>
                 <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
                   AMOUNT (₹)
@@ -533,6 +517,7 @@ export default function AddLoanScreen() {
                       }
                     }}
                     autoFocus
+                    inputAccessoryViewID={EMPTY_ACCESSORY_ID}
                   />
                 </View>
               </View>
@@ -566,6 +551,7 @@ export default function AddLoanScreen() {
                       setHasManualOutstanding(true);
                       setOutstandingAmount(formatIndianAmount(val));
                     }}
+                    inputAccessoryViewID={EMPTY_ACCESSORY_ID}
                   />
                 </View>
               </View>
@@ -574,7 +560,7 @@ export default function AddLoanScreen() {
 
           {/* ════════════ STEP 2: TERMS & INTEREST ════════════ */}
           {currentStep === 2 && (
-            <View style={[styles.stepCard, { borderColor: THEME.cardBorder }]}>
+            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
               {/* Interest Rate */}
               <View>
                 <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
@@ -589,6 +575,7 @@ export default function AddLoanScreen() {
                     value={interestRate}
                     onChangeText={setInterestRate}
                     autoFocus
+                    inputAccessoryViewID={EMPTY_ACCESSORY_ID}
                   />
                   <ThemedText style={[styles.currencyPrefix, { color: THEME.text }]}>%</ThemedText>
                 </View>
@@ -639,6 +626,7 @@ export default function AddLoanScreen() {
                   keyboardType="numeric"
                   value={tenureMonths}
                   onChangeText={setTenureMonths}
+                  inputAccessoryViewID={EMPTY_ACCESSORY_ID}
                 />
 
                 {/* Quick Tenure Presets */}
@@ -701,13 +689,13 @@ export default function AddLoanScreen() {
 
           {/* ════════════ STEP 3: SCHEDULE & ACCOUNT ════════════ */}
           {currentStep === 3 && (
-            <View style={[styles.stepCard, { borderColor: THEME.cardBorder }]}>
+            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
               {/* Start Date */}
               <View>
                 <View style={styles.selectorTriggerRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <Calendar size={18} color={THEME.text} />
-                    <ThemedText style={[styles.selectorTriggerValue, { color: THEME.text }]}>
+                    <Calendar size={18} color={currColors.tintMoney} />
+                    <ThemedText style={[styles.selectorTriggerValue, { color: currColors.text }]}>
                       Start Date
                     </ThemedText>
                   </View>
@@ -717,8 +705,8 @@ export default function AddLoanScreen() {
                       mode="date"
                       display="default"
                       onChange={onDateChange}
-                      themeVariant="light"
-                      accentColor={THEME.text}
+                      themeVariant={colorScheme}
+                      accentColor={currColors.tintMoney}
                     />
                   ) : (
                     <TouchableOpacity
@@ -727,7 +715,7 @@ export default function AddLoanScreen() {
                         setShowDatePicker(true);
                       }}
                     >
-                      <ThemedText style={[styles.selectorTriggerValue, { color: THEME.text }]}>
+                      <ThemedText style={[styles.selectorTriggerValue, { color: currColors.text }]}>
                         {startDate.toLocaleDateString('en-IN', {
                           day: 'numeric',
                           month: 'short',
@@ -762,6 +750,7 @@ export default function AddLoanScreen() {
                   keyboardType="numeric"
                   value={paidEmis}
                   onChangeText={setPaidEmis}
+                  inputAccessoryViewID={EMPTY_ACCESSORY_ID}
                 />
                 <ThemedText style={[styles.fieldHint, { color: THEME.sub }]}>
                   {parseInt(paidEmis, 10) > 0
@@ -807,19 +796,19 @@ export default function AddLoanScreen() {
               </View>
 
               {/* Final Review Summary Dossier */}
-              <View style={[styles.reviewSummaryBox, { backgroundColor: THEME.bg, borderColor: THEME.text + '26' }]}>
+              <View style={[styles.reviewSummaryBox, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <Category3DIcon name={icon} size={40} />
                   <View style={{ flex: 1 }}>
-                    <ThemedText style={[styles.reviewTitle, { color: THEME.text }]} numberOfLines={1}>
+                    <ThemedText style={[styles.reviewTitle, { color: currColors.text }]} numberOfLines={1}>
                       {name || 'New Loan'}
                     </ThemedText>
-                    <ThemedText style={[styles.reviewSub, { color: THEME.sub }]}>
+                    <ThemedText style={[styles.reviewSub, { color: currColors.textSecondary }]}>
                       ₹{effectiveEMI.toLocaleString('en-IN')}/mo • {tenureMonths || 0}m tenure
                     </ThemedText>
                   </View>
-                  <View style={[styles.readyBadge, { backgroundColor: THEME.text }]}>
-                    <ThemedText style={[styles.readyBadgeText, { color: THEME.bg }]}>READY</ThemedText>
+                  <View style={[styles.readyBadge, { backgroundColor: currColors.tintMoney }]}>
+                    <ThemedText style={[styles.readyBadgeText, { color: isDark ? '#003328' : '#FFFFFF' }]}>READY</ThemedText>
                   </View>
                 </View>
               </View>
@@ -832,20 +821,44 @@ export default function AddLoanScreen() {
           style={[
             styles.bottomActionBar,
             {
-              backgroundColor: THEME.bg,
-              borderTopColor: THEME.text + '1E',
+              backgroundColor: 'transparent',
+              borderTopWidth: 0,
               paddingBottom: isKeyboardVisible
-                ? 12
+                ? 24
                 : Math.max(insets.bottom, 16) + 8,
             },
           ]}
         >
+          {currentStep > 0 && (
+            <TouchableOpacity
+              style={[
+                styles.backActionButton,
+                {
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)',
+                  backgroundColor: 'transparent',
+                },
+              ]}
+              onPress={handleBack}
+              activeOpacity={0.8}
+            >
+              <ArrowLeft size={18} color={currColors.text} />
+              <ThemedText style={[styles.backActionText, { color: currColors.text }]}>
+                Back
+              </ThemedText>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
-            style={[styles.primaryActionButton, { backgroundColor: THEME.text }]}
+            style={[
+              styles.primaryActionButton,
+              {
+                backgroundColor: isDark ? '#FFFFFF' : '#1C1917',
+              },
+            ]}
             onPress={handleNext}
             activeOpacity={0.85}
           >
-            <ThemedText style={[styles.primaryActionText, { color: THEME.bg }]}>
+            <ThemedText style={[styles.primaryActionText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
               {currentStep === 3
                 ? editingLoan
                   ? 'Update Loan'
@@ -853,9 +866,9 @@ export default function AddLoanScreen() {
                 : 'Continue'}
             </ThemedText>
             {currentStep === 3 ? (
-              <Check size={18} color={THEME.bg} />
+              <Check size={18} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.5} />
             ) : (
-              <ArrowRight size={18} color={THEME.bg} />
+              <ArrowRight size={18} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.5} />
             )}
           </TouchableOpacity>
         </View>
@@ -868,35 +881,44 @@ export default function AddLoanScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowIconModal(false)}
       >
-        <View style={[styles.modalContainer, { backgroundColor: '#F8FAFC' }]}>
+        <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
           <View style={styles.modalHeader}>
             <View>
-              <ThemedText style={styles.modalTitle}>Choose 3D Icon</ThemedText>
-              <ThemedText style={styles.modalSubtitle}>
+              <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Choose 3D Icon</ThemedText>
+              <ThemedText style={[styles.modalSubtitle, { color: currColors.textSecondary }]}>
                 Select an icon for your loan category
               </ThemedText>
             </View>
             <TouchableOpacity
-              style={styles.modalCloseButton}
+              style={[styles.modalCloseButton, { backgroundColor: currColors.cardSecondary }]}
               onPress={() => setShowIconModal(false)}
             >
-              <X size={20} color="#1E293B" />
+              <X size={18} color={currColors.text} />
             </TouchableOpacity>
           </View>
 
           {/* Search Bar */}
-          <View style={styles.modalSearchRow}>
-            <Search size={16} color="#64748B" />
+          <View
+            style={[
+              styles.modalSearchRow,
+              {
+                backgroundColor: isDark ? currColors.cardSecondary : '#F2F2F7',
+                borderColor: currColors.border,
+              },
+            ]}
+          >
+            <Search size={16} color={currColors.textSecondary} />
             <TextInput
-              style={styles.modalSearchInput}
+              style={[styles.modalSearchInput, { color: currColors.text }]}
               placeholder="Search icons (e.g. car, house, laptop)..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={currColors.textSecondary + '80'}
               value={iconSearch}
               onChangeText={setIconSearch}
+              autoCorrect={false}
             />
             {iconSearch.length > 0 && (
               <TouchableOpacity onPress={() => setIconSearch('')}>
-                <X size={16} color="#64748B" />
+                <X size={16} color={currColors.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -913,7 +935,15 @@ export default function AddLoanScreen() {
                 <TouchableOpacity
                   style={[
                     styles.iconGridCell,
-                    isSelected && styles.iconGridCellSelected,
+                    {
+                      backgroundColor: currColors.card,
+                      borderColor: currColors.border,
+                    },
+                    isSelected && {
+                      borderColor: currColors.tintMoney,
+                      borderWidth: 2,
+                      backgroundColor: isDark ? currColors.cardSecondary : '#E6F7F2',
+                    },
                   ]}
                   onPress={() => {
                     handleHaptic();
@@ -924,7 +954,13 @@ export default function AddLoanScreen() {
                   activeOpacity={0.7}
                 >
                   <Category3DIcon name={item.id} size={36} />
-                  <ThemedText style={styles.iconCellName} numberOfLines={1}>
+                  <ThemedText
+                    style={[
+                      styles.iconCellName,
+                      { color: isSelected ? currColors.text : currColors.textSecondary },
+                    ]}
+                    numberOfLines={1}
+                  >
                     {item.name}
                   </ThemedText>
                 </TouchableOpacity>
@@ -944,6 +980,12 @@ export default function AddLoanScreen() {
         onClose={() => setShowAccountModal(false)}
         title="Select Auto-Debit Account"
       />
+
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID={EMPTY_ACCESSORY_ID}>
+          <View />
+        </InputAccessoryView>
+      )}
     </View>
   );
 }
@@ -985,11 +1027,6 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
   },
-  stepLabel: {
-    fontSize: 10,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: 1,
-  },
   scrollArea: {
     flex: 1,
   },
@@ -1012,11 +1049,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   stepCard: {
-    backgroundColor: DEFAULT_THEME.cardBg,
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: DEFAULT_THEME.cardBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
@@ -1028,27 +1063,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconPreviewButton: {
-    width: 76,
-    height: 76,
-    borderRadius: 20,
-    backgroundColor: DEFAULT_THEME.bg,
+    width: 60,
+    height: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  iconEditPill: {
-    position: 'absolute',
-    bottom: -6,
-    backgroundColor: DEFAULT_THEME.text,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  iconEditText: {
-    color: DEFAULT_THEME.bg,
-    fontSize: 9,
-    fontFamily: 'Outfit_600SemiBold',
   },
   inputLabel: {
     fontSize: 10,
@@ -1121,15 +1139,14 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   presetPillActive: {
-    backgroundColor: DEFAULT_THEME.text,
+    backgroundColor: '#1C1917',
   },
   presetPillText: {
     fontSize: 12,
     fontFamily: 'Outfit_500Medium',
-    color: DEFAULT_THEME.text,
   },
   presetPillTextActive: {
-    color: DEFAULT_THEME.bg,
+    color: '#FFFFFF',
     fontFamily: 'Outfit_600SemiBold',
   },
   amortizationBox: {
@@ -1141,17 +1158,14 @@ const styles = StyleSheet.create({
   amortLabel: {
     fontSize: 12.5,
     fontFamily: 'Outfit_400Regular',
-    color: DEFAULT_THEME.sub,
   },
   amortValue: {
     fontSize: 13,
     fontFamily: 'Outfit_600SemiBold',
-    color: DEFAULT_THEME.text,
   },
   amortValueBold: {
     fontSize: 15,
     fontFamily: 'Outfit_700Bold',
-    color: DEFAULT_THEME.text,
   },
   customEmiToggleRow: {
     marginTop: 12,
@@ -1163,7 +1177,6 @@ const styles = StyleSheet.create({
   customEmiToggleText: {
     fontSize: 11.5,
     fontFamily: 'Outfit_600SemiBold',
-    color: DEFAULT_THEME.text,
   },
   selectorTriggerRow: {
     flexDirection: 'row',
@@ -1179,23 +1192,18 @@ const styles = StyleSheet.create({
     marginTop: 18,
     padding: 14,
     borderRadius: 16,
-    backgroundColor: DEFAULT_THEME.bg,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.15)',
   },
   reviewTitle: {
     fontSize: 15,
     fontFamily: 'Outfit_700Bold',
-    color: DEFAULT_THEME.text,
   },
   reviewSub: {
     fontSize: 12,
     fontFamily: 'Outfit_400Regular',
-    color: DEFAULT_THEME.sub,
     marginTop: 1,
   },
   readyBadge: {
-    backgroundColor: DEFAULT_THEME.text,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -1203,34 +1211,45 @@ const styles = StyleSheet.create({
   readyBadgeText: {
     fontSize: 10,
     fontFamily: 'Outfit_700Bold',
-    color: DEFAULT_THEME.bg,
     letterSpacing: 0.5,
   },
   bottomActionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingHorizontal: 20,
     paddingTop: 12,
-    backgroundColor: DEFAULT_THEME.bg,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.12)',
+  },
+  backActionButton: {
+    height: 50,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  backActionText: {
+    fontSize: 15,
+    fontFamily: 'Outfit_600SemiBold',
   },
   primaryActionButton: {
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: DEFAULT_THEME.text,
+    flex: 1,
+    height: 50,
+    borderRadius: 16,
+    borderCurve: 'continuous',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
+    flexShrink: 1,
   },
   primaryActionText: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: 'Outfit_600SemiBold',
-    color: DEFAULT_THEME.bg,
   },
 
   /* Modal Styles */
@@ -1247,19 +1266,16 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontFamily: 'Outfit_700Bold',
-    color: '#0F172A',
   },
   modalSubtitle: {
     fontSize: 12.5,
     fontFamily: 'Outfit_400Regular',
-    color: '#64748B',
     marginTop: 2,
   },
   modalCloseButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1270,9 +1286,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     gap: 8,
     marginBottom: 12,
   },
@@ -1280,7 +1294,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: 'Outfit_400Regular',
-    color: '#0F172A',
   },
   iconGridContent: {
     paddingHorizontal: 14,
@@ -1291,22 +1304,17 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     margin: 6,
     borderRadius: 16,
-    backgroundColor: '#FFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 6,
   },
   iconGridCellSelected: {
-    borderColor: '#CA8A04',
     borderWidth: 2,
-    backgroundColor: '#FEF08A',
   },
   iconCellName: {
     fontSize: 9.5,
     fontFamily: 'Outfit_500Medium',
-    color: '#475569',
     marginTop: 4,
     textAlign: 'center',
   },

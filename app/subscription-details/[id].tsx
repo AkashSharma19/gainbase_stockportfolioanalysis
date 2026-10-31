@@ -39,7 +39,6 @@ import { Category3DIcon } from '@/components/Category3DIcon';
 import { AccountPickerModal } from '@/components/AccountPickerModal';
 import { AccountSelectCard } from '@/components/AccountSelectCard';
 import { CircularProgress3DIcon } from '@/components/FolderDetailsCard';
-import { getCardPaletteFromItem } from '@/constants/folderTheme';
 import { advanceDateByCycle } from '@/lib/finance';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 
@@ -81,15 +80,14 @@ export function SubscriptionDetailsContent({ subscriptionId, onBack }: Subscript
   }, [id, subscriptions]);
 
   const palette = useMemo(() => {
-    if (!subscription) return { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' };
-    return getCardPaletteFromItem({
-      type: 'subscription',
-      name: subscription.name,
-      category: subscription.category,
-      icon: subscription.logo,
-      color: subscription.color,
-    });
-  }, [subscription]);
+    return {
+      bg: currColors.card,
+      text: currColors.text,
+      sub: currColors.textSecondary,
+      border: currColors.border,
+      accent: currColors.tintMoney,
+    };
+  }, [currColors]);
 
   const payments = useMemo(() => {
     return subscriptionPayments
@@ -453,8 +451,9 @@ interface ScheduleRow {
           style={[
             styles.heroCard,
             {
-              backgroundColor: palette.bg,
-              borderColor: isDark ? 'transparent' : palette.sub + '35',
+              backgroundColor: currColors.card,
+              borderWidth: 1,
+              borderColor: currColors.border,
             },
           ]}
         >
@@ -462,13 +461,13 @@ interface ScheduleRow {
           <View style={styles.heroHeaderRow}>
             <View style={{ flex: 1, paddingRight: 14 }}>
               <ThemedText
-                style={[styles.heroHeaderTitle, { color: palette.text }]}
+                style={[styles.heroHeaderTitle, { color: currColors.text }]}
                 numberOfLines={2}
               >
                 {subscription.name}
               </ThemedText>
               <ThemedText
-                style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: palette.sub, marginTop: 4 }}
+                style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: currColors.textSecondary, marginTop: 4 }}
                 numberOfLines={1}
               >
                 {formatAmount(subscription.amount)}{cycleSuffix}{linkedAccount?.name ? ` · ${linkedAccount.name}` : ''}
@@ -479,7 +478,7 @@ interface ScheduleRow {
               name={subscription.category || subscription.name}
               icon={subscription.logo}
               progress={subscription.isActive ? 1 : 0}
-              color={palette.text}
+              color={currColors.tintMoney}
               size={48}
               iconSize={28}
             />
@@ -488,10 +487,10 @@ interface ScheduleRow {
           {/* Amount and Status */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-              <ThemedText style={[styles.heroValue, { color: palette.text, fontFamily: 'Outfit_700Bold', fontSize: 28 }]}>
+              <ThemedText style={[styles.heroValue, { color: currColors.text, fontFamily: 'Outfit_700Bold', fontSize: 28 }]}>
                 {formatAmount(subscription.amount)}
               </ThemedText>
-              <ThemedText style={[styles.heroValueSuffix, { color: palette.sub }]}>
+              <ThemedText style={[styles.heroValueSuffix, { color: currColors.textSecondary }]}>
                 {cycleSuffix}
               </ThemedText>
             </View>
@@ -517,26 +516,26 @@ interface ScheduleRow {
           </View>
 
           {/* Dashed Divider */}
-          <View style={[styles.dashedDivider, { borderColor: palette.sub + '28' }]} />
+          <View style={[styles.dashedDivider, { borderColor: currColors.border }]} />
 
           {/* Clean Stat Rows */}
           <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
               Billing cycle
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: palette.text, fontFamily: 'Outfit_600SemiBold' }]}>
+            <ThemedText style={[styles.heroRowValue, { color: currColors.text, fontFamily: 'Outfit_600SemiBold' }]}>
               {cycleLabel}
             </ThemedText>
           </View>
 
           <View style={styles.heroRow}>
-            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
               Next renewal
             </ThemedText>
             <ThemedText
               style={[
                 styles.heroRowValue,
-                { color: nextDueDateInfo?.isDueSoon ? '#FF9500' : palette.text },
+                { color: nextDueDateInfo?.isDueSoon ? '#FF9500' : currColors.text },
               ]}
             >
               {nextDueDateInfo
@@ -546,25 +545,25 @@ interface ScheduleRow {
           </View>
 
           <View style={[styles.heroRow, { marginBottom: 0 }]}>
-            <ThemedText style={[styles.heroRowLabel, { color: palette.sub }]}>
+            <ThemedText style={[styles.heroRowLabel, { color: currColors.textSecondary }]}>
               Yearly cost
             </ThemedText>
-            <ThemedText style={[styles.heroRowValue, { color: palette.text }]}>
+            <ThemedText style={[styles.heroRowValue, { color: currColors.text }]}>
               {formatAmount(yearlyCost)}/yr
             </ThemedText>
           </View>
 
           {/* Integrated Action Buttons */}
-          <View style={[styles.cardActionsRow, { borderTopColor: palette.sub + '22' }]}>
+          <View style={[styles.cardActionsRow, { borderTopColor: currColors.border }]}>
             {subscription.isActive ? (
               <>
                 <TouchableOpacity
-                  style={[styles.primaryActionBtn, { backgroundColor: palette.text }]}
+                  style={[styles.primaryActionBtn, { backgroundColor: isDark ? '#FFFFFF' : '#1C1917' }]}
                   activeOpacity={0.85}
                   onPress={handleLogPayment}
                 >
-                  <Calendar size={15} color={palette.bg} />
-                  <ThemedText style={[styles.primaryActionBtnText, { color: palette.bg }]}>
+                  <Calendar size={15} color={isDark ? '#000000' : '#FFFFFF'} />
+                  <ThemedText style={[styles.primaryActionBtnText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
                     Log Payment ({formatAmount(subscription.amount)})
                   </ThemedText>
                 </TouchableOpacity>
@@ -573,8 +572,8 @@ interface ScheduleRow {
                   style={[
                     styles.secondaryActionBtn,
                     {
-                      backgroundColor: isDark ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.7)',
-                      borderColor: palette.sub + '35',
+                      backgroundColor: currColors.cardSecondary,
+                      borderColor: currColors.border,
                     },
                   ]}
                   activeOpacity={0.85}
@@ -588,12 +587,12 @@ interface ScheduleRow {
               </>
             ) : (
               <TouchableOpacity
-                style={[styles.primaryActionBtn, { backgroundColor: palette.text, flex: 1 }]}
+                style={[styles.primaryActionBtn, { backgroundColor: isDark ? '#FFFFFF' : '#1C1917', flex: 1 }]}
                 activeOpacity={0.85}
                 onPress={handleReactivateSubscription}
               >
-                <RotateCcw size={15} color={palette.bg} />
-                <ThemedText style={[styles.primaryActionBtnText, { color: palette.bg }]}>
+                <RotateCcw size={15} color={isDark ? '#000000' : '#FFFFFF'} />
+                <ThemedText style={[styles.primaryActionBtnText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
                   Reactivate Subscription
                 </ThemedText>
               </TouchableOpacity>
@@ -709,7 +708,7 @@ interface ScheduleRow {
                         backgroundColor: row.isPaid
                           ? (isDark ? 'rgba(52, 199, 89, 0.16)' : 'rgba(52, 199, 89, 0.12)')
                           : row.isUpcoming
-                          ? (isDark ? currColors.cardSecondary : palette.bg)
+                          ? (isDark ? currColors.cardSecondary : '#F2F2F7')
                           : currColors.cardSecondary,
                         borderWidth: row.isUpcoming && isDark ? 1 : 0,
                         borderColor: row.isUpcoming && isDark ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
@@ -723,7 +722,7 @@ interface ScheduleRow {
                         <ThemedText
                           style={[
                             styles.dateTileMonth,
-                            { color: row.isUpcoming ? (isDark ? palette.bg : palette.text) : currColors.textSecondary },
+                            { color: row.isUpcoming ? currColors.tintMoney : currColors.textSecondary },
                           ]}
                         >
                           {monthAbbr || `CYCLE`}
@@ -731,7 +730,7 @@ interface ScheduleRow {
                         <ThemedText
                           style={[
                             styles.dateTileYear,
-                            { color: row.isUpcoming ? (isDark ? '#FFFFFF' : palette.text) : currColors.textSecondary },
+                            { color: row.isUpcoming ? currColors.text : currColors.textSecondary },
                           ]}
                         >
                           {dayStr || `#${row.cycleNumber}`}
@@ -750,13 +749,13 @@ interface ScheduleRow {
                         <View
                           style={[
                             styles.statusBadge,
-                            { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : palette.bg },
+                            { backgroundColor: isDark ? 'rgba(0, 194, 150, 0.15)' : 'rgba(0, 194, 150, 0.12)' },
                           ]}
                         >
                           <ThemedText
                             style={[
                               styles.statusBadgeText,
-                              { color: isDark ? palette.bg : palette.text },
+                              { color: currColors.tintMoney },
                             ]}
                           >
                             NEXT RENEWAL
