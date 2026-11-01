@@ -181,10 +181,6 @@ function RootLayoutNav() {
             options={{ animation: 'slide_from_right', headerShown: false }}
           />
           <Stack.Screen
-            name="win-loss-details"
-            options={{ animation: 'slide_from_right', headerShown: false }}
-          />
-          <Stack.Screen
             name="settings"
             options={{ animation: 'slide_from_right', headerShown: false }}
           />
@@ -195,14 +191,6 @@ function RootLayoutNav() {
 
           <Stack.Screen
             name="index-comparison"
-            options={{ animation: 'slide_from_right', headerShown: false }}
-          />
-          <Stack.Screen
-            name="portfolio-health"
-            options={{ animation: 'slide_from_right', headerShown: false }}
-          />
-          <Stack.Screen
-            name="portfolio-health-formula"
             options={{ animation: 'slide_from_right', headerShown: false }}
           />
           <Stack.Screen
@@ -263,18 +251,6 @@ function RootLayoutNav() {
           />
           <Stack.Screen
             name="money-analytics"
-            options={{ animation: 'slide_from_right', headerShown: false }}
-          />
-          <Stack.Screen
-            name="goals"
-            options={{ animation: 'slide_from_right', headerShown: false }}
-          />
-          <Stack.Screen
-            name="create-goal"
-            options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', headerShown: false }}
-          />
-          <Stack.Screen
-            name="custom-goal-formula"
             options={{ animation: 'slide_from_right', headerShown: false }}
           />
           <Stack.Screen

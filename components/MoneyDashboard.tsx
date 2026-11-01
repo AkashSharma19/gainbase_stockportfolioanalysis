@@ -46,12 +46,10 @@ import { useColorScheme } from './useColorScheme';
 import Colors from '../constants/Colors';
 import { useMoneyStore } from '../store/useMoneyStore';
 import { usePortfolioStore } from '../store/usePortfolioStore';
-import { useGoalStore } from '../store/useGoalStore';
 import { MoneyTransaction } from '../types/money';
 import { MoneyActivityCalendar } from './MoneyActivityCalendar';
 import { getNextLoanDuePayment, getEffectiveLoanOutstanding } from '../lib/finance';
 import { getTicketCardPath } from '../constants/folderTheme';
-import { FinancialGoalsCard } from './FinancialGoalsCard';
 
 const getSubscriptionIcon = (logoName: string | undefined) => {
   switch (logoName) {
@@ -187,7 +185,6 @@ export function MoneyDashboard() {
   const isPrivacyMode = usePortfolioStore((state) => state.isPrivacyMode);
   const togglePrivacyMode = usePortfolioStore((state) => state.togglePrivacyMode);
   const showCurrencySymbol = usePortfolioStore((state) => state.showCurrencySymbol);
-  const goals = useGoalStore((state) => state.goals);
 
   // Subscribe to portfolio transactions and tickers so net worth updates live
   const portfolioTransactions = usePortfolioStore((state) => state.transactions);
@@ -594,9 +591,6 @@ export function MoneyDashboard() {
       >
         {/* ─── Ticket-Style Net Worth Hero Card with All Stat Rows ─── */}
         {renderTicketHeroCard()}
-
-        {/* ─── Financial Goals & Milestones Analytics Card ─── */}
-        <FinancialGoalsCard />
 
         {/* ─── Upcoming Payments / Bills (Pastel Horizontal Carousel) ─── */}
         {upcomingPayments.length > 0 ? (

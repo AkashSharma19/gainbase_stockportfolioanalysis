@@ -1,9 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { useMoneyStore } from '../store/useMoneyStore';
 import { usePortfolioStore } from '../store/usePortfolioStore';
-import { useGoalStore } from '../store/useGoalStore';
 import { Account, MoneyTransaction, Loan, EMIPayment, Budget, BudgetCategory, Subscription, SubscriptionPayment } from '../types/money';
-import { FinancialGoal } from '../types/goals';
 import { Transaction } from '../types';
 
 interface SyncStatus {
@@ -310,13 +308,11 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
     const remoteCustomCategories = session.user.user_metadata?.custom_categories as { income?: string[]; expense?: string[] } | undefined;
     const remoteLoanIcons = (session.user.user_metadata?.loan_icons || {}) as Record<string, string>;
     const remoteSubIcons = (session.user.user_metadata?.subscription_icons || {}) as Record<string, string>;
-    const remoteGoals = (session.user.user_metadata?.financial_goals || []) as FinancialGoal[];
 
     const localCategoryMeta = (useMoneyStore.getState().categoryMetadata || {}) as Record<string, { icon: string; color: string }>;
     const localGlobalCategories = useMoneyStore.getState().categories || { income: [], expense: [] };
     const localLoansList = useMoneyStore.getState().loans || [];
     const localSubsList = useMoneyStore.getState().subscriptions || [];
-    const localGoals = useGoalStore.getState().goals || [];
 
     const localLoanIcons: Record<string, string> = {};
     localLoansList.forEach((l) => {
@@ -333,7 +329,6 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
     let mergedCategories: { income: string[]; expense: string[] };
     let mergedLoanIcons: Record<string, string>;
     let mergedSubIcons: Record<string, string>;
-    let mergedGoals: FinancialGoal[];
 
     if (forcePull) {
       mergedCategoryMeta = session.user.user_metadata?.category_metadata ? remoteCategoryMeta : localCategoryMeta;
@@ -345,13 +340,11 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
         : localGlobalCategories;
       mergedLoanIcons = session.user.user_metadata?.loan_icons ? remoteLoanIcons : localLoanIcons;
       mergedSubIcons = session.user.user_metadata?.subscription_icons ? remoteSubIcons : localSubIcons;
-      mergedGoals = session.user.user_metadata?.financial_goals ? remoteGoals : localGoals;
     } else if (mode === 'force_push') {
       mergedCategoryMeta = localCategoryMeta;
       mergedCategories = localGlobalCategories;
       mergedLoanIcons = localLoanIcons;
       mergedSubIcons = localSubIcons;
-      mergedGoals = localGoals;
     } else {
       mergedCategoryMeta = { ...remoteCategoryMeta, ...localCategoryMeta };
       const mergedIncome = Array.from(new Set([...(localGlobalCategories.income || []), ...(remoteCustomCategories?.income || [])]));
@@ -362,28 +355,9 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
       };
       mergedLoanIcons = { ...remoteLoanIcons, ...localLoanIcons };
       mergedSubIcons = { ...remoteSubIcons, ...localSubIcons };
-
-      const goalMap = new Map<string, FinancialGoal>();
-      localGoals.forEach(g => goalMap.set(g.id, g));
-      remoteGoals.forEach(g => {
-        if (!goalMap.has(g.id)) {
-          goalMap.set(g.id, g);
-        } else {
-          const localG = goalMap.get(g.id)!;
-          const localTime = new Date(localG.updatedAt || 0).getTime();
-          const remoteTime = new Date(g.updatedAt || 0).getTime();
-          if (remoteTime > localTime) {
-            goalMap.set(g.id, g);
-          }
-        }
-      });
-      mergedGoals = Array.from(goalMap.values());
     }
 
-    // Update local goals store
-    useGoalStore.setState({ goals: mergedGoals });
-
-    // Push merged category, loan, subscription and goal metadata back to Supabase auth user_metadata
+    // Push merged category, loan, and subscription metadata back to Supabase auth user_metadata
     try {
       await supabase.auth.updateUser({
         data: {
@@ -391,7 +365,6 @@ export async function syncAllData(syncMode: 'default' | 'force_push' | 'force_pu
           custom_categories: mergedCategories,
           loan_icons: mergedLoanIcons,
           subscription_icons: mergedSubIcons,
-          financial_goals: mergedGoals,
         },
       });
     } catch (metaErr) {
@@ -1260,7 +1233,6 @@ export async function wipeCloudData(): Promise<{ success: boolean; message: stri
           custom_categories: null,
           loan_icons: null,
           subscription_icons: null,
-          financial_goals: null,
         },
       });
     } catch (metaErr) {

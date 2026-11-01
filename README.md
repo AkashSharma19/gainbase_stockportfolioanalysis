@@ -130,8 +130,7 @@ Portfolio_ios_app/
 │   ├── ActivityCalendar.tsx # Trading activity heat map
 │   ├── ForecastCard.tsx     # Portfolio forecast widget
 │   ├── ShareableCard.tsx    # Shareable performance card
-│   ├── TopMovers.tsx        # Top gainers/losers widget
-│   └── WinLossCard.tsx      # Win/loss ratio widget
+│   └── TopMovers.tsx        # Top gainers/losers widget
 ├── store/                   # Zustand state management
 │   └── usePortfolioStore.ts # Portfolio state and logic
 ├── services/                # External services

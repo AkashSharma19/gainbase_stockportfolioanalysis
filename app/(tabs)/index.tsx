@@ -1,16 +1,12 @@
 import { ActivityCalendar } from '@/components/ActivityCalendar';
 import { ForecastCard } from '@/components/ForecastCard';
-import { PortfolioHealthCard } from '@/components/PortfolioHealthCard';
 import ShareableCard from '@/components/ShareableCard';
-import { usePortfolioHealth } from '@/hooks/usePortfolioHealth';
 import TopMovers from '@/components/TopMovers';
-import WinLossCard from '@/components/WinLossCard';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { useAppModeStore } from '@/store/useAppModeStore';
 import { MoneyDashboard } from '@/components/MoneyDashboard';
-import { FinancialGoalsCard } from '@/components/FinancialGoalsCard';
 import { AppSwitcher } from '@/components/AppSwitcher';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -24,11 +20,9 @@ import {
   PieChart,
   Share2,
   TrendingUp,
-  Target,
   ArrowDownLeft,
   ArrowUpRight,
 } from 'lucide-react-native';
-import { useGoalStore } from '@/store/useGoalStore';
 import { getCompanyLogoUrl } from '@/services/logoService';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -93,7 +87,6 @@ export function PortfolioScreen() {
 
   const theme = useColorScheme() ?? 'dark';
   const currColors = Colors[theme];
-  const goals = useGoalStore((state) => state.goals);
 
   // Tracks the formatted "X min ago" string, refreshed every minute
   const [syncLabel, setSyncLabel] = useState<string | null>(null);
@@ -177,8 +170,6 @@ export function PortfolioScreen() {
   const [expandedYear, setExpandedYear] = React.useState<number | null>(null);
   const forecastYears = usePortfolioStore((state) => state.forecastYears);
 
-  const health = usePortfolioHealth();
-
   const toggleYear = (year: number) => {
     Haptics.selectionAsync();
     setExpandedYear(expandedYear === year ? null : year);
@@ -227,10 +218,6 @@ export function PortfolioScreen() {
         profit: h.pnl,
       }));
 
-    const winners = holdings.filter((h) => h.pnl >= 0);
-    const winRate =
-      holdings.length > 0 ? (winners.length / holdings.length) * 100 : 0;
-
     return {
       totalValue: summary.totalValue,
       profitAmount: summary.profitAmount,
@@ -241,10 +228,8 @@ export function PortfolioScreen() {
       topWinners,
       userName: userName,
       holdingsCount: holdings.length,
-      winRate,
-      healthScore: health.totalScore,
     };
-  }, [summary, holdings, userName, health.totalScore]);
+  }, [summary, holdings, userName]);
 
   const tickerMap = useMemo(() => {
     const map = new Map<string, (typeof tickers)[0]>();
@@ -613,21 +598,6 @@ export function PortfolioScreen() {
 
           <TopMovers />
 
-          <View style={[styles.dashboardRow, { marginBottom: 16 }]}>
-            <View style={{ flex: 1 }}>
-              <PortfolioHealthCard isCompact />
-            </View>
-            <View style={{ flex: 1 }}>
-              <WinLossCard
-                isCompact
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push('/win-loss-details');
-                }}
-              />
-            </View>
-          </View>
-
           <ForecastCard
             years={forecastYears}
             summary={summary}
@@ -637,9 +607,6 @@ export function PortfolioScreen() {
               router.push('/forecast-details');
             }}
           />
-
-          {/* Financial Goals & Milestones Analytics Card */}
-          <FinancialGoalsCard />
 
           {/* ─── Recent Investments Card ─── */}
           <View style={[styles.section, { marginBottom: 16 }]}>

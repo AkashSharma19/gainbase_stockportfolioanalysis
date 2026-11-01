@@ -1,4 +1,4 @@
-import { Shield, Scale, LayoutGrid } from 'lucide-react-native';
+import { Shield, LayoutGrid } from 'lucide-react-native';
 import React from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { ThemedText } from './ThemedText';
@@ -14,14 +14,12 @@ interface ShareableCardProps {
     dayChange: number;
     dayChangePercentage: number;
     xirr: number;
-    healthScore?: number;
     topWinners: {
       symbol: string;
       profit: number;
     }[];
     userName?: string;
     holdingsCount?: number;
-    winRate?: number;
   };
 }
 
@@ -95,9 +93,7 @@ const MiniMetric = ({
 const getPersonaName = (stats: {
   risk: number;
   diversification: number;
-  winRate: number;
 }) => {
-  if (stats.winRate > 80) return 'The Alpha Hunter';
   if (stats.diversification > 80) return 'The Strategic Guardian';
   if (stats.risk > 70) return 'The Adrenaline Trader';
   if (stats.diversification > 60 && stats.risk < 40)
@@ -112,7 +108,6 @@ export default function ShareableCard({ data }: ShareableCardProps) {
   const persona = getPersonaName({
     risk: Math.min(Math.abs(data.dayChangePercentage) * 20, 100),
     diversification: Math.min((data.holdingsCount || 5) * 5, 100),
-    winRate: data.winRate || 50,
   });
 
   const formatCurrency = (val: number) => {
@@ -177,17 +172,17 @@ export default function ShareableCard({ data }: ShareableCardProps) {
         <View style={styles.bottomSection}>
           <View style={styles.statLine}>
             <MiniMetric
-              score={data.healthScore || 85}
+              score={Math.min((data.holdingsCount || 1) * 10, 100)}
               color="#0A84FF"
-              label="HEALTH"
-              icon={Shield}
+              label="HOLDINGS"
+              icon={LayoutGrid}
             />
             <View style={styles.verticalDivider} />
             <MiniMetric
-              score={data.winRate || 72}
+              score={Math.min(Math.max(data.profitPercentage, 0), 100)}
               color="#34C759"
-              label="WIN RATE"
-              icon={Scale}
+              label="RETURNS"
+              icon={Shield}
               isPercent
             />
           </View>

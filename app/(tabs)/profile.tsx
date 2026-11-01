@@ -38,10 +38,8 @@ import {
 } from 'lucide-react-native';
 import { useAiStore } from '@/store/useAiStore';
 import { useMoneyStore } from '@/store/useMoneyStore';
-import { useGoalStore } from '@/store/useGoalStore';
 import { AccountType, Account, Loan, EMIPayment, Budget } from '../../types/money';
 import { Subscription, SubscriptionPayment } from '../../types/money';
-import { FinancialGoal } from '../../types/goals';
 import Svg, { Path, Line } from 'react-native-svg';
 import { getTicketCardPath } from '@/constants/folderTheme';
 import { Category3DIcon } from '@/components/Category3DIcon';
@@ -125,7 +123,6 @@ export default function ProfileScreen() {
   const moneyEmiPayments = useMoneyStore((state) => state.emiPayments);
   const subscriptions: Subscription[] = useMoneyStore((state) => state.subscriptions) || [];
   const subscriptionPayments: SubscriptionPayment[] = useMoneyStore((state) => state.subscriptionPayments) || [];
-  const moneyGoals: FinancialGoal[] = useGoalStore((state) => state.goals) || [];
   const importMoneyData = useMoneyStore((state) => state.importMoneyData);
   const restoreMoneyData = useMoneyStore((state) => state.restoreMoneyData);
   const clearAllMoneyData = useMoneyStore((state) => state.clearAllMoneyData);
@@ -376,36 +373,6 @@ export default function ProfileScreen() {
         { Type: 'EXPENSE', 'Category Name': 'Subscriptions' },
       ];
 
-      // 9. Financial Goals Sample Sheet
-      const sampleGoals = [
-        {
-          Name: 'Build 6-Month Liquid Reserve',
-          Description: 'Ensure liquid safety net in Cash, Savings, and Emergency funds',
-          Category: 'savings',
-          Icon: 'ShieldCheck',
-          Color: '#00C9A7',
-          Formula: 'Cash + Savings + Emergency',
-          'Target Value': 300000.0,
-          'Targets (comma-separated)': '100000, 200000, 300000',
-          Unit: 'currency',
-          Operator: '>=',
-          'Is Completed': 'NO',
-        },
-        {
-          Name: '₹10 Lakh Stock Portfolio',
-          Description: 'Grow equity and ETF investments',
-          Category: 'investments',
-          Icon: 'TrendingUp',
-          Color: '#34C759',
-          Formula: 'HoldingsValue',
-          'Target Value': 1000000.0,
-          'Targets (comma-separated)': '250000, 500000, 1000000',
-          Unit: 'currency',
-          Operator: '>=',
-          'Is Completed': 'NO',
-        },
-      ];
-
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleTransactions), 'Transactions');
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleAccounts), 'Accounts');
@@ -415,7 +382,6 @@ export default function ProfileScreen() {
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleSubPayments), 'SubscriptionPayments');
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleBudgets), 'Budgets');
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleCategories), 'Categories');
-      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(sampleGoals), 'Goals');
 
       const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
       const filename = `Gainbase_Money_Manager_Sample_Template.xlsx`;
@@ -578,22 +544,6 @@ export default function ProfileScreen() {
       });
       const worksheetCategories = XLSX.utils.json_to_sheet(categoriesSheetData);
 
-      // 9. Goals
-      const goalsSheetData = moneyGoals.map((g: FinancialGoal) => ({
-        Name: g.name,
-        Description: g.description || '',
-        Category: g.category,
-        Icon: g.icon || 'ShieldCheck',
-        Color: g.color || '#00C9A7',
-        Formula: g.formula,
-        'Target Value': g.targetValue,
-        'Targets (comma-separated)': Array.isArray(g.targets) ? g.targets.join(', ') : '',
-        Unit: g.unit,
-        Operator: g.operator,
-        'Is Completed': g.isManuallyCompleted ? 'YES' : 'NO',
-      }));
-      const worksheetGoals = XLSX.utils.json_to_sheet(goalsSheetData);
-
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheetTxs, 'Transactions');
       XLSX.utils.book_append_sheet(workbook, worksheetAccs, 'Accounts');
@@ -603,7 +553,6 @@ export default function ProfileScreen() {
       XLSX.utils.book_append_sheet(workbook, worksheetSubPayments, 'SubscriptionPayments');
       XLSX.utils.book_append_sheet(workbook, worksheetBudgets, 'Budgets');
       XLSX.utils.book_append_sheet(workbook, worksheetCategories, 'Categories');
-      XLSX.utils.book_append_sheet(workbook, worksheetGoals, 'Goals');
 
       const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
       const filename = `Gainbase_Money_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -766,22 +715,6 @@ export default function ProfileScreen() {
       });
       const worksheetCategories = XLSX.utils.json_to_sheet(categoriesSheetData);
 
-      // 9. Goals
-      const goalsSheetData = moneyGoals.map((g: FinancialGoal) => ({
-        Name: g.name,
-        Description: g.description || '',
-        Category: g.category,
-        Icon: g.icon || 'ShieldCheck',
-        Color: g.color || '#00C9A7',
-        Formula: g.formula,
-        'Target Value': g.targetValue,
-        'Targets (comma-separated)': Array.isArray(g.targets) ? g.targets.join(', ') : '',
-        Unit: g.unit,
-        Operator: g.operator,
-        'Is Completed': g.isManuallyCompleted ? 'YES' : 'NO',
-      }));
-      const worksheetGoals = XLSX.utils.json_to_sheet(goalsSheetData);
-
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheetTxs, 'Transactions');
       XLSX.utils.book_append_sheet(workbook, worksheetAccs, 'Accounts');
@@ -791,7 +724,6 @@ export default function ProfileScreen() {
       XLSX.utils.book_append_sheet(workbook, worksheetSubPayments, 'SubscriptionPayments');
       XLSX.utils.book_append_sheet(workbook, worksheetBudgets, 'Budgets');
       XLSX.utils.book_append_sheet(workbook, worksheetCategories, 'Categories');
-      XLSX.utils.book_append_sheet(workbook, worksheetGoals, 'Goals');
 
       const wbout = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
       const filename = `Gainbase_Money_Backup_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -843,7 +775,6 @@ export default function ProfileScreen() {
       let emiDataList: any[] = [];
       let subscriptionsDataList: any[] = [];
       let subPaymentsDataList: any[] = [];
-      let goalsDataList: any[] = [];
 
       if (!isCsv) {
         const fileContent = await FileSystem.readAsStringAsync(fileUri, {
@@ -869,7 +800,6 @@ export default function ProfileScreen() {
         emiDataList = getSheetData('emi');
         subscriptionsDataList = getSheetData('subscription');
         subPaymentsDataList = getSheetData('subscriptionpayment');
-        goalsDataList = getSheetData('goal');
       } else {
         const fileContent = await FileSystem.readAsStringAsync(fileUri, {
           encoding: FileSystem.EncodingType.UTF8,
@@ -878,7 +808,7 @@ export default function ProfileScreen() {
         transactionsDataList = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]) || [];
       }
 
-      if (transactionsDataList.length === 0 && accountsDataList.length === 0 && loansDataList.length === 0 && subscriptionsDataList.length === 0 && goalsDataList.length === 0) {
+      if (transactionsDataList.length === 0 && accountsDataList.length === 0 && loansDataList.length === 0 && subscriptionsDataList.length === 0) {
         Alert.alert('Empty File', 'The imported file contains no data.');
         return;
       }
@@ -1293,37 +1223,7 @@ export default function ProfileScreen() {
         });
       }
 
-      // 9. Financial Goals
-      if (goalsDataList.length > 0) {
-        const newGoals: FinancialGoal[] = goalsDataList.map((row: any) => {
-          const name = String(row.Name || row.name || '').trim();
-          const targetVal = Number(row['Target Value'] || row.targetValue || 0);
-          const rawTargets = String(row['Targets (comma-separated)'] || row.targets || `${targetVal}`);
-          const targets = rawTargets.split(',').map((t: string) => Number(t.trim())).filter((n: number) => !isNaN(n) && n > 0);
-          return {
-            id: `goal-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            name: name || 'Financial Milestone',
-            description: row.Description || row.description || undefined,
-            category: (row.Category || row.category || 'savings').toLowerCase() as any,
-            icon: row.Icon || row.icon || 'ShieldCheck',
-            color: row.Color || row.color || '#00C9A7',
-            formula: row.Formula || row.formula || 'Cash + Savings',
-            targetValue: targetVal > 0 ? targetVal : (targets[targets.length - 1] || 100000),
-            targets: targets.length > 0 ? targets : [targetVal || 100000],
-            unit: (row.Unit || row.unit || 'currency').toLowerCase() as any,
-            operator: (row.Operator || row.operator || '>=').trim() as any,
-            isManuallyCompleted: String(row['Is Completed'] || row.isCompleted || 'NO').trim().toUpperCase() === 'YES',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-        }).filter((g: FinancialGoal) => g.name);
-
-        if (newGoals.length > 0) {
-          useGoalStore.setState({ goals: newGoals });
-        }
-      }
-
-      if (newTransactions.length > 0 || accountsDataList.length > 0 || loansDataList.length > 0 || budgetsDataList.length > 0 || subscriptionsDataList.length > 0 || goalsDataList.length > 0) {
+      if (newTransactions.length > 0 || accountsDataList.length > 0 || loansDataList.length > 0 || budgetsDataList.length > 0 || subscriptionsDataList.length > 0) {
         restoreMoneyData({
           accounts: newAccounts,
           transactions: newTransactions,
@@ -1337,7 +1237,7 @@ export default function ProfileScreen() {
 
         Alert.alert(
           'Success',
-          `Successfully restored all Money Manager accounts, transactions, loans, EMIs, budgets, categories, subscriptions, and financial goals.`,
+          `Successfully restored all Money Manager accounts, transactions, loans, EMIs, budgets, categories, and subscriptions.`,
         );
       } else {
         Alert.alert(
@@ -1789,7 +1689,6 @@ export default function ProfileScreen() {
           onPress: () => {
             clearAllData();
             clearAllMoneyData();
-            useGoalStore.getState().resetToDefaults();
             Alert.alert(
               'Data Cleared',
               'All local data has been cleared from this device. You can restore your data from the cloud at any time by triggering Cloud Sync.',
