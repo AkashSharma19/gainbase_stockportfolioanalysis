@@ -11,12 +11,10 @@ import {
   FlatList,
   Keyboard,
   Alert,
-  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 import {
   ArrowLeft,
   Settings,
@@ -51,7 +49,6 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { Category3DIcon } from '@/components/Category3DIcon';
 import { findBest3DIconForText } from '@/constants/Category3DIcons';
-import { FolderPalette, getInterlockingCardPath } from '@/constants/folderTheme';
 import { useAiStore, ChatMessage, ChatAction } from '@/store/useAiStore';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
@@ -72,8 +69,6 @@ const MODEL_PRESETS = [
 interface StarterSuggestion {
   id: string;
   title: string;
-  subtitle: string;
-  palette: FolderPalette;
   prompt: string;
 }
 
@@ -81,77 +76,59 @@ const STARTER_SUGGESTIONS: StarterSuggestion[] = [
   {
     id: 'expense',
     title: 'Log Daily Expense',
-    subtitle: 'Spent ₹350 on coffee & snacks',
-    palette: { bg: '#FEF3C7', text: '#78350F', sub: '#92400E' },
     prompt: 'I spent ₹350 on coffee and snacks with friends from my wallet. Record this expense and tell me if it was needed.',
   },
   {
     id: 'investments',
     title: 'Portfolio Snapshot',
-    subtitle: 'View stock returns, value & holdings',
-    palette: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
     prompt: 'Show my stock investments portfolio performance, holdings, and return summary.',
   },
   {
     id: 'loan',
     title: 'Pay Loan EMI',
-    subtitle: 'Record ₹15,000 Home Loan payment',
-    palette: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
     prompt: 'I just paid ₹15,000 for my Home Loan EMI. Update my loan and record the transaction.',
   },
   {
     id: 'subscription',
     title: 'Track Subscription',
-    subtitle: 'Paid ₹649 for Netflix renewal',
-    palette: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
     prompt: 'I paid ₹649 for my Netflix subscription renewal. Record it and advance my cycle.',
   },
   {
     id: 'peer',
-    title: 'Peer Lending / Given',
-    subtitle: 'Lent ₹2,500 to a friend',
-    palette: { bg: '#BAE6FD', text: '#0C4A6E', sub: '#0369A1' },
+    title: 'Peer Lending',
     prompt: 'I gave ₹2,500 to Rahul as a loan from my bank account. Record it as a receivable.',
   },
   {
     id: 'burn_rate',
     title: 'Burn Rate & Runway',
-    subtitle: 'Analyze spending velocity & runway',
-    palette: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
     prompt: 'Analyze my monthly spending burn rate, daily velocity, and financial runway.',
   },
 ];
 
 interface QuickChip {
   label: string;
-  palette: FolderPalette;
   prompt: string;
 }
 
 const QUICK_CHIPS: QuickChip[] = [
   {
     label: 'My Portfolio',
-    palette: { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' },
     prompt: 'Show my stock investments portfolio snapshot and returns',
   },
   {
     label: 'Active Loans',
-    palette: { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' },
     prompt: 'Show my active loans and debt summary',
   },
   {
     label: 'Subscriptions',
-    palette: { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' },
     prompt: 'Show my active subscriptions and monthly recurring burn',
   },
   {
     label: 'Log Expense',
-    palette: { bg: '#FEF3C7', text: '#78350F', sub: '#92400E' },
     prompt: 'I spent ₹350 on lunch. Record this expense.',
   },
   {
     label: 'Burn Rate',
-    palette: { bg: '#FCE7F3', text: '#831843', sub: '#9D174D' },
     prompt: 'What is my current monthly burn rate and runway?',
   },
 ];
@@ -162,8 +139,6 @@ export default function GeminiChatScreen() {
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
   const headerTopPadding = Math.max(insets.top, Platform.OS === 'ios' ? 56 : 32);
-  const { width: SCREEN_WIDTH } = Dimensions.get('window');
-  const [cardWidth, setCardWidth] = useState(SCREEN_WIDTH - 32);
 
   const currColors = Colors[colorScheme];
   // Unified Gainbase App Design System Palette
@@ -824,7 +799,7 @@ Return JSON:
     });
   };
 
-  // Render Interactive Action Card with Gainbase Pastel Card Architecture
+  // Render Interactive Action Card with Unified Native Gainbase Architecture
   const renderActionCard = (messageId: string, action: ChatAction) => {
     // 1. Show Investments Card
     if (action.type === 'show_investments') {
@@ -832,51 +807,50 @@ Return JSON:
       const holdings = getHoldingsData();
       const isPositive = summary.profitPercentage >= 0;
       const isDayPositive = summary.dayChange >= 0;
-      const palette = { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' };
 
       return (
-        <View style={[styles.pastelActionCard, { backgroundColor: palette.bg }]}>
-          <View style={styles.pastelCardHeaderRow}>
+        <View style={[styles.actionCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <View style={styles.actionCardHeaderRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Category3DIcon name="Investments" icon="investments" size={26} />
-              <ThemedText style={{ fontSize: 15, fontFamily: 'Outfit_600SemiBold', color: palette.text }}>
+              <ThemedText style={{ fontSize: 15, fontFamily: 'Outfit_600SemiBold', color: currColors.text }}>
                 Total Portfolio Value
               </ThemedText>
             </View>
-            <View style={[styles.pnlPill, { backgroundColor: isPositive ? 'rgba(6, 78, 59, 0.15)' : 'rgba(255, 59, 48, 0.15)' }]}>
-              {isPositive ? <TrendingUp size={12} color="#064E3B" /> : <TrendingDown size={12} color="#FF3B30" />}
-              <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_700Bold', color: isPositive ? '#064E3B' : '#FF3B30', marginLeft: 3 }}>
+            <View style={[styles.pnlPill, { backgroundColor: isPositive ? 'rgba(52, 199, 89, 0.12)' : 'rgba(255, 59, 48, 0.12)' }]}>
+              {isPositive ? <TrendingUp size={12} color="#34C759" /> : <TrendingDown size={12} color="#FF3B30" />}
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_700Bold', color: isPositive ? '#34C759' : '#FF3B30', marginLeft: 3 }}>
                 {isPositive ? '+' : ''}{summary.profitPercentage.toFixed(2)}%
               </ThemedText>
             </View>
           </View>
 
-          <ThemedText style={{ fontSize: 26, fontFamily: 'Outfit_700Bold', color: palette.text, marginTop: 10, marginBottom: 10 }}>
+          <ThemedText style={{ fontSize: 26, fontFamily: 'Outfit_700Bold', color: currColors.text, marginTop: 10, marginBottom: 10 }}>
             ₹{summary.totalValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
           </ThemedText>
 
-          <View style={[styles.pastelMetricGrid, { borderColor: palette.sub + '25' }]}>
-            <View style={styles.pastelMetricCol}>
-              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: palette.sub, letterSpacing: 0.5 }}>INVESTED</ThemedText>
-              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: palette.text, marginTop: 2 }}>
+          <View style={[styles.actionMetricGrid, { borderColor: currColors.border, backgroundColor: currColors.cardSecondary }]}>
+            <View style={styles.actionMetricCol}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: currColors.textSecondary, letterSpacing: 0.5 }}>INVESTED</ThemedText>
+              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: currColors.text, marginTop: 2 }}>
                 ₹{summary.totalCost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
               </ThemedText>
             </View>
-            <View style={styles.pastelMetricCol}>
-              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: palette.sub, letterSpacing: 0.5 }}>TOTAL RETURNS</ThemedText>
-              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: isPositive ? '#064E3B' : '#FF3B30', marginTop: 2 }}>
+            <View style={styles.actionMetricCol}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: currColors.textSecondary, letterSpacing: 0.5 }}>TOTAL RETURNS</ThemedText>
+              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: isPositive ? '#34C759' : '#FF3B30', marginTop: 2 }}>
                 {isPositive ? '+' : ''}₹{Math.abs(summary.unrealizedReturn).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
               </ThemedText>
             </View>
-            <View style={styles.pastelMetricCol}>
-              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: palette.sub, letterSpacing: 0.5 }}>DAY P&L</ThemedText>
-              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: isDayPositive ? '#064E3B' : '#FF3B30', marginTop: 2 }}>
+            <View style={styles.actionMetricCol}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: currColors.textSecondary, letterSpacing: 0.5 }}>DAY P&L</ThemedText>
+              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: isDayPositive ? '#34C759' : '#FF3B30', marginTop: 2 }}>
                 {isDayPositive ? '+' : ''}₹{summary.dayChange.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
               </ThemedText>
             </View>
-            <View style={styles.pastelMetricCol}>
-              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: palette.sub, letterSpacing: 0.5 }}>XIRR</ThemedText>
-              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: palette.text, marginTop: 2 }}>
+            <View style={styles.actionMetricCol}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: currColors.textSecondary, letterSpacing: 0.5 }}>XIRR</ThemedText>
+              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: currColors.text, marginTop: 2 }}>
                 {typeof summary.xirr === 'number' && !isNaN(summary.xirr)
                   ? `${summary.xirr.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%`
                   : 'N/A'}
@@ -885,12 +859,12 @@ Return JSON:
           </View>
 
           {holdings.length > 0 && (
-            <View style={{ marginTop: 6 }}>
+            <View style={{ marginTop: 8 }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
                 {holdings.slice(0, 5).map((h: any, i: number) => (
-                  <View key={i} style={[styles.pastelHoldingPill, { backgroundColor: palette.text + '15' }]}>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_600SemiBold', color: palette.text }}>
-                      {h.symbol} <ThemedText style={{ color: palette.sub }}>({h.quantity})</ThemedText>
+                  <View key={i} style={[styles.holdingPill, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_600SemiBold', color: currColors.text }}>
+                      {h.symbol} <ThemedText style={{ color: currColors.textSecondary }}>({h.quantity})</ThemedText>
                     </ThemedText>
                   </View>
                 ))}
@@ -899,7 +873,7 @@ Return JSON:
           )}
 
           <TouchableOpacity
-            style={[styles.pastelCtaBtn, { backgroundColor: palette.text }]}
+            style={[styles.actionCtaBtn, { backgroundColor: isDark ? '#FFFFFF' : '#000000' }]}
             onPress={() => {
               handleHaptic();
               setActiveMode('investments');
@@ -907,10 +881,10 @@ Return JSON:
             }}
             activeOpacity={0.82}
           >
-            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: '#FFFFFF' }}>
+            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: isDark ? '#000000' : '#FFFFFF' }}>
               Open Portfolio Dashboard
             </ThemedText>
-            <ArrowUpRight size={15} color="#FFFFFF" strokeWidth={2.4} />
+            <ArrowUpRight size={15} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.4} />
           </TouchableOpacity>
         </View>
       );
@@ -921,50 +895,49 @@ Return JSON:
       const activeLoans = moneyLoans.filter((l) => l.isActive);
       const totalOutstanding = activeLoans.reduce((sum, l) => sum + (l.outstandingAmount || 0), 0);
       const totalEmi = activeLoans.reduce((sum, l) => sum + (l.emiAmount || 0), 0);
-      const palette = { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' };
 
       return (
-        <View style={[styles.pastelActionCard, { backgroundColor: palette.bg }]}>
-          <View style={styles.pastelCardHeaderRow}>
+        <View style={[styles.actionCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <View style={styles.actionCardHeaderRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Category3DIcon name="Loans" icon="loan" size={26} />
-              <ThemedText style={{ fontSize: 15, fontFamily: 'Outfit_600SemiBold', color: palette.text }}>
+              <ThemedText style={{ fontSize: 15, fontFamily: 'Outfit_600SemiBold', color: currColors.text }}>
                 Total Debt Outstanding
               </ThemedText>
             </View>
-            <View style={[styles.pnlPill, { backgroundColor: palette.text + '15' }]}>
-              <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_700Bold', color: palette.text }}>
+            <View style={[styles.pnlPill, { backgroundColor: currColors.cardSecondary }]}>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_700Bold', color: currColors.textSecondary }}>
                 {activeLoans.length} active
               </ThemedText>
             </View>
           </View>
 
-          <ThemedText style={{ fontSize: 26, fontFamily: 'Outfit_700Bold', color: palette.text, marginTop: 10, marginBottom: 10 }}>
+          <ThemedText style={{ fontSize: 26, fontFamily: 'Outfit_700Bold', color: currColors.text, marginTop: 10, marginBottom: 10 }}>
             ₹{totalOutstanding.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
           </ThemedText>
 
-          <View style={[styles.pastelMetricGrid, { borderColor: palette.sub + '25' }]}>
-            <View style={[styles.pastelMetricCol, { flex: 1.2 }]}>
-              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: palette.sub, letterSpacing: 0.5 }}>MONTHLY EMI BURDEN</ThemedText>
-              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: palette.text, marginTop: 2 }}>
+          <View style={[styles.actionMetricGrid, { borderColor: currColors.border, backgroundColor: currColors.cardSecondary }]}>
+            <View style={[styles.actionMetricCol, { flex: 1.2 }]}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: currColors.textSecondary, letterSpacing: 0.5 }}>MONTHLY EMI BURDEN</ThemedText>
+              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: currColors.text, marginTop: 2 }}>
                 ₹{totalEmi.toLocaleString('en-IN', { maximumFractionDigits: 0 })}/mo
               </ThemedText>
             </View>
-            <View style={styles.pastelMetricCol}>
-              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: palette.sub, letterSpacing: 0.5 }}>ACTIVE FACILITIES</ThemedText>
-              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: palette.text, marginTop: 2 }}>
+            <View style={styles.actionMetricCol}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: currColors.textSecondary, letterSpacing: 0.5 }}>ACTIVE FACILITIES</ThemedText>
+              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: currColors.text, marginTop: 2 }}>
                 {activeLoans.length} Tracked
               </ThemedText>
             </View>
           </View>
 
           {activeLoans.length > 0 && (
-            <View style={{ marginTop: 6 }}>
+            <View style={{ marginTop: 8 }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
                 {activeLoans.map((l, i) => (
-                  <View key={i} style={[styles.pastelHoldingPill, { backgroundColor: palette.text + '15' }]}>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_600SemiBold', color: palette.text }}>
-                      {l.name} <ThemedText style={{ color: palette.sub }}>(₹{l.emiAmount.toLocaleString('en-IN')})</ThemedText>
+                  <View key={i} style={[styles.holdingPill, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_600SemiBold', color: currColors.text }}>
+                      {l.name} <ThemedText style={{ color: currColors.textSecondary }}>(₹{l.emiAmount.toLocaleString('en-IN')})</ThemedText>
                     </ThemedText>
                   </View>
                 ))}
@@ -973,7 +946,7 @@ Return JSON:
           )}
 
           <TouchableOpacity
-            style={[styles.pastelCtaBtn, { backgroundColor: palette.text }]}
+            style={[styles.actionCtaBtn, { backgroundColor: isDark ? '#FFFFFF' : '#000000' }]}
             onPress={() => {
               handleHaptic();
               setActiveMode('money');
@@ -981,10 +954,10 @@ Return JSON:
             }}
             activeOpacity={0.82}
           >
-            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: '#FFFFFF' }}>
+            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: isDark ? '#000000' : '#FFFFFF' }}>
               Open Loan & EMI Tracker
             </ThemedText>
-            <ArrowUpRight size={15} color="#FFFFFF" strokeWidth={2.4} />
+            <ArrowUpRight size={15} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.4} />
           </TouchableOpacity>
         </View>
       );
@@ -1001,50 +974,49 @@ Return JSON:
         (a, b) => new Date(a.nextPaymentDate).getTime() - new Date(b.nextPaymentDate).getTime()
       );
       const nextSub = sortedByRenewal[0];
-      const palette = { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' };
 
       return (
-        <View style={[styles.pastelActionCard, { backgroundColor: palette.bg }]}>
-          <View style={styles.pastelCardHeaderRow}>
+        <View style={[styles.actionCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+          <View style={styles.actionCardHeaderRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Category3DIcon name="Subscriptions" icon="tv" size={26} />
-              <ThemedText style={{ fontSize: 15, fontFamily: 'Outfit_600SemiBold', color: palette.text }}>
+              <ThemedText style={{ fontSize: 15, fontFamily: 'Outfit_600SemiBold', color: currColors.text }}>
                 Monthly Recurring Burn
               </ThemedText>
             </View>
-            <View style={[styles.pnlPill, { backgroundColor: palette.text + '15' }]}>
-              <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_700Bold', color: palette.text }}>
+            <View style={[styles.pnlPill, { backgroundColor: currColors.cardSecondary }]}>
+              <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_700Bold', color: currColors.textSecondary }}>
                 {activeSubs.length} active
               </ThemedText>
             </View>
           </View>
 
-          <ThemedText style={{ fontSize: 26, fontFamily: 'Outfit_700Bold', color: palette.text, marginTop: 10, marginBottom: 10 }}>
+          <ThemedText style={{ fontSize: 26, fontFamily: 'Outfit_700Bold', color: currColors.text, marginTop: 10, marginBottom: 10 }}>
             ₹{totalMonthlyBurn.toLocaleString('en-IN', { maximumFractionDigits: 0 })}/mo
           </ThemedText>
 
-          <View style={[styles.pastelMetricGrid, { borderColor: palette.sub + '25' }]}>
-            <View style={styles.pastelMetricCol}>
-              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: palette.sub, letterSpacing: 0.5 }}>ACTIVE SERVICES</ThemedText>
-              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: palette.text, marginTop: 2 }}>
+          <View style={[styles.actionMetricGrid, { borderColor: currColors.border, backgroundColor: currColors.cardSecondary }]}>
+            <View style={styles.actionMetricCol}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: currColors.textSecondary, letterSpacing: 0.5 }}>ACTIVE SERVICES</ThemedText>
+              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: currColors.text, marginTop: 2 }}>
                 {activeSubs.length} Tracked
               </ThemedText>
             </View>
-            <View style={[styles.pastelMetricCol, { flex: 1.3 }]}>
-              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: palette.sub, letterSpacing: 0.5 }}>NEXT RENEWAL</ThemedText>
-              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: palette.text, marginTop: 2 }} numberOfLines={1}>
+            <View style={[styles.actionMetricCol, { flex: 1.3 }]}>
+              <ThemedText style={{ fontSize: 9, fontFamily: 'Outfit_700Bold', color: currColors.textSecondary, letterSpacing: 0.5 }}>NEXT RENEWAL</ThemedText>
+              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: currColors.text, marginTop: 2 }} numberOfLines={1}>
                 {nextSub ? `${nextSub.name} (${new Date(nextSub.nextPaymentDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })})` : 'None'}
               </ThemedText>
             </View>
           </View>
 
           {activeSubs.length > 0 && (
-            <View style={{ marginTop: 6 }}>
+            <View style={{ marginTop: 8 }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
                 {activeSubs.map((s, i) => (
-                  <View key={i} style={[styles.pastelHoldingPill, { backgroundColor: palette.text + '15' }]}>
-                    <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_600SemiBold', color: palette.text }}>
-                      {s.name} <ThemedText style={{ color: palette.sub }}>(₹{s.amount})</ThemedText>
+                  <View key={i} style={[styles.holdingPill, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
+                    <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_600SemiBold', color: currColors.text }}>
+                      {s.name} <ThemedText style={{ color: currColors.textSecondary }}>(₹{s.amount})</ThemedText>
                     </ThemedText>
                   </View>
                 ))}
@@ -1053,7 +1025,7 @@ Return JSON:
           )}
 
           <TouchableOpacity
-            style={[styles.pastelCtaBtn, { backgroundColor: palette.text }]}
+            style={[styles.actionCtaBtn, { backgroundColor: isDark ? '#FFFFFF' : '#000000' }]}
             onPress={() => {
               handleHaptic();
               setActiveMode('money');
@@ -1061,10 +1033,10 @@ Return JSON:
             }}
             activeOpacity={0.82}
           >
-            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: '#FFFFFF' }}>
+            <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: isDark ? '#000000' : '#FFFFFF' }}>
               Manage Subscriptions & Billing
             </ThemedText>
-            <ArrowUpRight size={15} color="#FFFFFF" strokeWidth={2.4} />
+            <ArrowUpRight size={15} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.4} />
           </TouchableOpacity>
         </View>
       );
@@ -1090,14 +1062,6 @@ Return JSON:
 
     const isIncome = action.transactionType === 'income' || action.accountType === 'receivable';
 
-    const palette = isEmi
-      ? { bg: '#FEF08A', text: '#713F12', sub: '#854D0E' }
-      : isSub
-      ? { bg: '#E9D5FF', text: '#581C87', sub: '#7E22CE' }
-      : isIncome
-      ? { bg: '#D1F5EC', text: '#064E3B', sub: '#047857' }
-      : { bg: '#FFE4E6', text: '#9F1239', sub: '#BE123C' };
-
     const icon3DId = isEmi
       ? 'loan'
       : isSub
@@ -1112,36 +1076,36 @@ Return JSON:
     }
 
     return (
-      <View style={[styles.pastelActionCard, { backgroundColor: palette.bg }]}>
-        <View style={styles.pastelCardHeaderRow}>
+      <View style={[styles.actionCard, { backgroundColor: currColors.card, borderColor: currColors.border }]}>
+        <View style={styles.actionCardHeaderRow}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 8 }}>
             <Category3DIcon name={targetHeading} icon={icon3DId} size={26} />
-            <ThemedText style={{ fontSize: 15, fontFamily: 'Outfit_600SemiBold', color: palette.text }} numberOfLines={1}>
+            <ThemedText style={{ fontSize: 15, fontFamily: 'Outfit_600SemiBold', color: currColors.text }} numberOfLines={1}>
               {targetHeading}
             </ThemedText>
           </View>
-          <View style={[styles.pnlPill, { backgroundColor: palette.text + '15' }]}>
-            <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_700Bold', color: palette.text }}>
+          <View style={[styles.pnlPill, { backgroundColor: currColors.cardSecondary }]}>
+            <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_700Bold', color: currColors.textSecondary }}>
               {action.category || (isIncome ? 'Income' : 'Expense')}
             </ThemedText>
           </View>
         </View>
 
-        <ThemedText style={{ fontSize: 28, fontFamily: 'Outfit_700Bold', color: palette.text, marginTop: 10, marginBottom: 6 }}>
+        <ThemedText style={{ fontSize: 28, fontFamily: 'Outfit_700Bold', color: isIncome ? '#34C759' : currColors.text, marginTop: 10, marginBottom: 6 }}>
           {isIncome ? '+' : '-'}₹{action.amount.toLocaleString('en-IN')}
         </ThemedText>
 
         {action.note ? (
-          <View style={[styles.pastelHoldingPill, { backgroundColor: palette.text + '12', alignSelf: 'flex-start', marginVertical: 4 }]}>
-            <ThemedText style={{ fontSize: 12, fontFamily: 'Outfit_400Regular', color: palette.text }}>
+          <View style={[styles.holdingPill, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border, alignSelf: 'flex-start', marginVertical: 4 }]}>
+            <ThemedText style={{ fontSize: 12, fontFamily: 'Outfit_400Regular', color: currColors.text }}>
               {action.note}
             </ThemedText>
           </View>
         ) : null}
 
         {action.necessityVerdict ? (
-          <View style={{ marginTop: 6, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8, backgroundColor: palette.text + '12', alignSelf: 'flex-start' }}>
-            <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_600SemiBold', color: palette.text }}>
+          <View style={{ marginTop: 6, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8, backgroundColor: currColors.cardSecondary, borderColor: currColors.border, borderWidth: 1, alignSelf: 'flex-start' }}>
+            <ThemedText style={{ fontSize: 11, fontFamily: 'Outfit_600SemiBold', color: currColors.textSecondary }}>
               Guidance: {action.necessityVerdict} {action.necessityReason ? `• ${action.necessityReason}` : ''}
             </ThemedText>
           </View>
@@ -1151,12 +1115,12 @@ Return JSON:
         {isPending ? (
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
             <TouchableOpacity
-              style={[styles.pastelCtaBtn, { flex: 1, backgroundColor: palette.text, marginTop: 0 }]}
+              style={[styles.actionCtaBtn, { flex: 1, backgroundColor: isDark ? '#FFFFFF' : '#000000', marginTop: 0 }]}
               onPress={() => handleApproveAction(messageId, action)}
               activeOpacity={0.82}
             >
-              <Check size={16} color="#FFFFFF" strokeWidth={2.4} />
-              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: '#FFFFFF' }}>
+              <Check size={16} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.4} />
+              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: isDark ? '#000000' : '#FFFFFF' }}>
                 Approve & Record
               </ThemedText>
             </TouchableOpacity>
@@ -1166,29 +1130,29 @@ Return JSON:
                 paddingHorizontal: 16,
                 paddingVertical: 12,
                 borderRadius: 16,
-                backgroundColor: 'rgba(0,0,0,0.06)',
+                backgroundColor: currColors.cardSecondary,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
               onPress={() => handleDismissAction(messageId)}
               activeOpacity={0.7}
             >
-              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: palette.sub }}>
+              <ThemedText style={{ fontSize: 13, fontFamily: 'Outfit_500Medium', color: currColors.textSecondary }}>
                 Dismiss
               </ThemedText>
             </TouchableOpacity>
           </View>
         ) : isConfirmed ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: palette.sub + '22' }}>
-            <CheckCircle2 size={15} color={palette.text} />
-            <ThemedText style={{ fontSize: 12, fontFamily: 'Outfit_600SemiBold', color: palette.text }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: currColors.border }}>
+            <CheckCircle2 size={15} color="#34C759" />
+            <ThemedText style={{ fontSize: 12, fontFamily: 'Outfit_600SemiBold', color: '#34C759' }}>
               {isEmi ? 'Recorded & loan balance updated' : isSub ? 'Recorded & cycle advanced' : 'Recorded to account'}
             </ThemedText>
           </View>
         ) : (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: palette.sub + '22' }}>
-            <XCircle size={15} color={palette.sub} />
-            <ThemedText style={{ fontSize: 12, fontFamily: 'Outfit_500Medium', color: palette.sub }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: currColors.border }}>
+            <XCircle size={15} color={currColors.textSecondary} />
+            <ThemedText style={{ fontSize: 12, fontFamily: 'Outfit_500Medium', color: currColors.textSecondary }}>
               Dismissed (ledger unchanged)
             </ThemedText>
           </View>
@@ -1406,122 +1370,27 @@ Return JSON:
               </ThemedText>
             </View>
 
-            {/* Suggestions Interlocking Cards (Loans List Style) */}
-            <View
-              onLayout={(e) => {
-                const w = e.nativeEvent.layout.width;
-                if (w > 0 && Math.abs(w - cardWidth) > 1) {
-                  setCardWidth(w);
-                }
-              }}
-              style={{ width: '100%', marginBottom: 30 }}
-            >
-              {STARTER_SUGGESTIONS.map((item, index) => {
-                const isFirst = index === 0;
-                const isLast = index === STARTER_SUGGESTIONS.length - 1;
-                const hBody = 86;
-                const tabH = 26;
-                const tabW = 86;
-                const totalH = hBody + tabH;
-                const path = getInterlockingCardPath(cardWidth, hBody, tabW, tabH, 18, isFirst, isLast, 24);
-
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={{
-                      height: totalH,
-                      marginTop: isFirst ? 0 : -tabH,
-                      zIndex: STARTER_SUGGESTIONS.length - index,
-                      shadowColor: '#000000',
-                      shadowOffset: { width: 0, height: 1.5 },
-                      shadowOpacity: isDark ? 0.08 : 0.05,
-                      shadowRadius: 3,
-                      elevation: 1,
-                    }}
-                    onPress={() => handleSend(item.prompt)}
-                    activeOpacity={0.82}
-                  >
-                    {/* SVG Interlocking Card Background */}
-                    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                      <Svg width={cardWidth} height={totalH}>
-                        <Path
-                          d={path}
-                          fill={item.palette.bg}
-                          stroke={isDark ? 'transparent' : item.palette.sub + '55'}
-                          strokeWidth={1.2}
-                        />
-                      </Svg>
-                    </View>
-
-                    {/* Right Tab Lobe: Dark Circular Arrow Button (matching image) */}
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        right: 14,
-                        width: tabW - 14,
-                        height: hBody,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 10,
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 18,
-                          backgroundColor: item.palette.text,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          shadowColor: '#000000',
-                          shadowOffset: { width: 0, height: 1.5 },
-                          shadowOpacity: 0.18,
-                          shadowRadius: 2.5,
-                          elevation: 2,
-                        }}
-                      >
-                        <ArrowUpRight size={18} color="#FFFFFF" strokeWidth={2.4} />
-                      </View>
-                    </View>
-
-                    {/* Left Body Content */}
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: tabH,
-                        left: 20,
-                        height: hBody,
-                        justifyContent: 'center',
-                        paddingRight: tabW + 12,
-                      }}
-                    >
-                      <ThemedText
-                        style={{
-                          fontSize: 16,
-                          fontFamily: 'Outfit_600SemiBold',
-                          color: item.palette.text,
-                          letterSpacing: -0.3,
-                        }}
-                        numberOfLines={1}
-                      >
-                        {item.title}
-                      </ThemedText>
-                      <ThemedText
-                        style={{
-                          fontSize: 13,
-                          fontFamily: 'Outfit_400Regular',
-                          color: item.palette.sub,
-                          marginTop: 3,
-                        }}
-                        numberOfLines={1}
-                      >
-                        {item.subtitle}
-                      </ThemedText>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+            {/* Suggestions as Small Pills */}
+            <View style={styles.pillsContainer}>
+              {STARTER_SUGGESTIONS.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.starterPill,
+                    {
+                      backgroundColor: currColors.cardSecondary,
+                      borderColor: currColors.border,
+                    },
+                  ]}
+                  onPress={() => handleSend(item.prompt)}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText style={[styles.starterPillText, { color: currColors.text }]}>
+                    {item.title}
+                  </ThemedText>
+                  <ArrowUpRight size={13} color={currColors.textSecondary} strokeWidth={2.2} />
+                </TouchableOpacity>
+              ))}
             </View>
           </ScrollView>
         ) : (
@@ -1550,18 +1419,18 @@ Return JSON:
                   style={[
                     styles.quickPill,
                     {
-                      backgroundColor: chip.palette.bg,
-                      borderColor: isDark ? 'transparent' : chip.palette.sub + '44',
+                      backgroundColor: currColors.cardSecondary,
+                      borderColor: currColors.border,
                     },
                   ]}
                   onPress={() => handleSend(chip.prompt)}
                   activeOpacity={0.7}
                 >
-                  <ThemedText style={[styles.quickPillText, { color: chip.palette.text }]}>
+                  <ThemedText style={[styles.quickPillText, { color: currColors.text }]}>
                     {chip.label}
                   </ThemedText>
-                  <View style={[styles.quickPillArrowCircle, { backgroundColor: chip.palette.text }]}>
-                    <ArrowUpRight size={11} color="#FFFFFF" strokeWidth={2.4} />
+                  <View style={[styles.quickPillArrowCircle, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                    <ArrowUpRight size={11} color={currColors.textSecondary} strokeWidth={2.4} />
                   </View>
                 </TouchableOpacity>
               ))}
@@ -1743,72 +1612,43 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   emptyScrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 24,
-  },
-  emptyGreetingWrapper: {
-    paddingTop: 4,
-    paddingBottom: 4,
-    paddingHorizontal: 4,
-  },
-  emptyGreetingTitle: {
-    fontSize: 26,
-    lineHeight: 32,
-    fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: -0.5,
-  },
-  suggestionsGrid: {
-    gap: 10,
-  },
-  suggestionCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
-  },
-  suggestionTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  suggestionIconWrapper: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
-  suggestionBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+  emptyGreetingWrapper: {
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  suggestionBadgeText: {
-    fontSize: 10,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: 0.4,
-  },
-  suggestionTitle: {
-    fontSize: 15,
+  emptyGreetingTitle: {
+    fontSize: 28,
+    lineHeight: 36,
     fontFamily: 'Outfit_600SemiBold',
-    marginBottom: 4,
+    letterSpacing: -0.5,
+    textAlign: 'center',
   },
-  suggestionPromptPreview: {
-    fontSize: 12,
-    fontFamily: 'Outfit_400Regular',
-    lineHeight: 17,
-    fontStyle: 'italic',
+  pillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    maxWidth: 380,
   },
-  suggestionActionRow: {
+  starterPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    gap: 3,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 6,
   },
-  suggestionTryText: {
-    fontSize: 11,
-    fontFamily: 'Outfit_600SemiBold',
+  starterPillText: {
+    fontSize: 13,
+    fontFamily: 'Outfit_500Medium',
   },
   quickPillsWrapper: {
     paddingVertical: 6,
@@ -1824,18 +1664,18 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingLeft: 12,
     paddingRight: 8,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
   },
   quickPillText: {
     fontSize: 12,
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: 'Outfit_500Medium',
   },
   quickPillArrowCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1989,43 +1829,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 8,
   },
-  // Gainbase Pastel Action Card Styles
-  pastelActionCard: {
-    borderRadius: 22,
+  // Unified Native Action Card Styles
+  actionCard: {
+    borderRadius: 20,
+    borderWidth: 1,
     padding: 16,
     marginTop: 10,
     marginBottom: 6,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
   },
-  pastelCardHeaderRow: {
+  actionCardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  pastelMetricGrid: {
+  actionMetricGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    marginTop: 8,
-    marginBottom: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 10,
+    marginBottom: 10,
   },
-  pastelMetricCol: {
+  actionMetricCol: {
     flex: 1,
     minWidth: 100,
   },
-  pastelHoldingPill: {
+  holdingPill: {
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 10,
+    borderWidth: 1,
   },
-  pastelCtaBtn: {
+  actionCtaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
