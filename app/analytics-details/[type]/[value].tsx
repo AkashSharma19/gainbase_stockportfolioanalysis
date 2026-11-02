@@ -76,10 +76,11 @@ export default function AnalyticsDetailsScreen() {
 
     const key = typeKeyMap[type as keyof typeof typeKeyMap] || 'sector';
 
-    const result =
+    const result = (
       type === 'Broker'
         ? holdings
-        : holdings.filter((h) => String(h[key]) === decodedValue);
+        : holdings.filter((h) => String(h[key]) === decodedValue)
+    ).filter((h) => (h.currentValue || 0) > 0 || (h.investedValue || 0) > 0);
 
     return [...result].sort((a, b) => {
       let valA: any;

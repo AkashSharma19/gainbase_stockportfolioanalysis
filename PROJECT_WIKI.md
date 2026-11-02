@@ -140,8 +140,8 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
 *   **Calculations / Selectors & Symbol Normalization**:
     *   `createTickerResolver(tickers)`: Universal symbol resolution engine indexing exact symbols, normalized base tickers (via `normalizeTickerKey`), and prefixed variants (`NASDAQ:`, `NYSE:`, `NSE:`, `BSE:`). Prioritizes positive valuations and primary sync records.
     *   `calculateSummary()`: Returns total cost, current value, realized/unrealized gains, XIRR, and 1-day/1-year returns using `createTickerResolver`.
-    *   `getAllocationData(dimension)`: Allocates portfolio weights based on sector, broker, etc. using `createTickerResolver`. For `Broker` dimension, accurately evaluates multi-broker stock positions per `(symbol, broker)` pair.
-    *   `getHoldingsData(brokerFilter?)`: Aggregates buy/sell transactions into current positions (or filtered per broker), resolving prices via `createTickerResolver` to prevent exchange prefix mismatches.
+    *   `getAllocationData(dimension)`: Allocates portfolio weights based on sector, broker, etc. using `createTickerResolver`. Automatically filters out zero-investment / liquidated items (`(value > 0 && quantity > 0)`), preventing 0-value holdings from displaying in charts or allocation lists. For `Broker` dimension, accurately evaluates multi-broker stock positions per `(symbol, broker)` pair.
+    *   `getHoldingsData(brokerFilter?)`: Aggregates buy/sell transactions into current positions (or filtered per broker), resolving prices via `createTickerResolver` to prevent exchange prefix mismatches. Excludes fully liquidated positions (`quantity <= 0` or zero current/invested value).
 
 ### 3. `useMoneyStore` (`money-manager-storage`)
 *   **State**:

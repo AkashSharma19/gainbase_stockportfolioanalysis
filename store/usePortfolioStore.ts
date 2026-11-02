@@ -708,6 +708,7 @@ export const usePortfolioStore = create<PortfolioState>()(
                 xirr,
               };
             })
+            .filter((item) => (item.value || 0) > 0 && (item.quantity ?? 0) > 0)
             .sort((a, b) => b.value - a.value);
         }
 
@@ -792,6 +793,7 @@ export const usePortfolioStore = create<PortfolioState>()(
               xirr,
             };
           })
+          .filter((item) => (item.value || 0) > 0 && (item.quantity ?? 0) > 0)
           .sort((a, b) => b.value - a.value);
       },
       getHoldingsData: (brokerFilter?: string) => {
@@ -849,6 +851,7 @@ export const usePortfolioStore = create<PortfolioState>()(
           const yesterdayClose = ticker?.['Yesterday Close'] ?? currentPrice;
           const currentValue = data.quantity * currentPrice;
           const investedValue = data.totalCost;
+          if (currentValue <= 0 && investedValue <= 0) return;
           const dayChange = (currentPrice - yesterdayClose) * data.quantity;
           totalHoldingsValue += currentValue;
 

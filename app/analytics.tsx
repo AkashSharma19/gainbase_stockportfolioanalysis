@@ -182,7 +182,9 @@ export default function AnalyticsScreen() {
   );
 
   const filteredAllocation = useMemo(() => {
-    const data = [...allocation];
+    const data = allocation.filter(
+      (item) => (item.value || 0) > 0 && (item.quantity === undefined || item.quantity > 0),
+    );
 
     data.sort((a, b) => {
       let valA = 0;
@@ -503,7 +505,9 @@ export default function AnalyticsScreen() {
             </View>
           </LinearGradient>
 
-          <View style={styles.holdingsHeader}>
+          {filteredAllocation.length > 0 && (
+            <>
+              <View style={styles.holdingsHeader}>
             <TouchableOpacity
               style={[
                 styles.actionIconButton,
@@ -831,7 +835,9 @@ export default function AnalyticsScreen() {
                 </TouchableOpacity>
               );
             })}
-          </View>
+              </View>
+            </>
+          )}
         </ScrollView>
       </View>
     </SafeAreaView>
