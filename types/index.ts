@@ -29,6 +29,7 @@ export interface Ticker {
   PE?: number | string | null;
   DividendYield?: number | string | null;
   DebtToEquity?: number | string | null;
+  updated_at?: string;
   [key: string]: string | number | undefined | null; // Support for dynamic 'Today - X' keys
 }
 

@@ -29,6 +29,19 @@ interface TwelveDataLogoResponse {
 }
 
 /**
+ * Normalizes a stock symbol by stripping exchange prefixes (NASDAQ:, NYSE:, NSE:, BSE:, BOM:)
+ * and exchange suffixes (:NASDAQ, :NYSE, :NSE, :BSE, .NS, .BO).
+ * Example: 'NASDAQ:GOOGL' -> 'GOOGL', 'INFY.NS' -> 'INFY'.
+ */
+export function normalizeTickerKey(symbol: string): string {
+  if (!symbol) return '';
+  let clean = symbol.trim().toUpperCase();
+  clean = clean.replace(/^(NASDAQ|NYSE|NSE|BSE|BOM):/, '');
+  clean = clean.replace(/:(NASDAQ|NYSE|NSE|BSE)$/, '').replace(/\.(NS|BO)$/, '');
+  return clean;
+}
+
+/**
  * Normalizes symbol for Twelve Data queries.
  * Converts 'NSE:INFY' -> 'INFY:NSE', 'INFY.NS' -> 'INFY:NSE'.
  */

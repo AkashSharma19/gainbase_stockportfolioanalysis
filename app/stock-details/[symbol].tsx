@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { formatIndianNumber } from '@/lib/finance';
 import { MASTER_STOCKS_LIST, inferSector } from '@/constants/NSE_COMPANIES';
 import { getCompanyLogoUrl } from '@/services/logoService';
+import { normalizeTickerKey } from '@/services/TwelveDataService';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { BackButton } from '@/components/BackButton';
@@ -16,6 +17,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -65,6 +67,7 @@ export default function StockDetailsScreen() {
   const [news, setNews] = React.useState<NewsItem[]>([]);
   const [loadingNews, setLoadingNews] = React.useState(true);
   const [isHydrating, setIsHydrating] = React.useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
 
   React.useEffect(() => {
     if (symbol) {
@@ -75,18 +78,32 @@ export default function StockDetailsScreen() {
     }
   }, [symbol, fetchSingleTicker]);
 
+  const handleRefresh = React.useCallback(async () => {
+    if (!symbol) return;
+    setRefreshing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await fetchSingleTicker(symbol, true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [symbol, fetchSingleTicker]);
+
   const holding = useMemo(() => {
     const cleanSym = (symbol || '').trim().toUpperCase();
+    const baseSym = normalizeTickerKey(cleanSym);
     const holdings = getHoldingsData();
-    const foundHolding = holdings.find(
-      (h) => (h.symbol || '').trim().toUpperCase() === cleanSym,
-    );
+    const foundHolding = holdings.find((h) => {
+      const hClean = (h.symbol || '').trim().toUpperCase();
+      return hClean === cleanSym || (baseSym && normalizeTickerKey(hClean) === baseSym);
+    });
     if (foundHolding) return foundHolding;
 
     // 1. Look up from store tickers
-    const ticker = tickers.find(
-      (t) => (t.Tickers || '').trim().toUpperCase() === cleanSym,
-    );
+    const ticker = tickers.find((t) => {
+      const tClean = (t.Tickers || '').trim().toUpperCase();
+      return tClean === cleanSym || (baseSym && normalizeTickerKey(tClean) === baseSym);
+    });
     if (ticker) {
       const currentVal = ticker['Current Value'] || 0;
       const yClose = ticker['Yesterday Close'] || currentVal;
@@ -242,14 +259,24 @@ export default function StockDetailsScreen() {
   };
 
   const stockTransactions = useMemo(() => {
+    const clean = (symbol || '').trim().toUpperCase();
+    const base = normalizeTickerKey(clean);
     return transactions
-      .filter((t) => t.symbol === symbol)
+      .filter((t) => {
+        const tClean = (t.symbol || '').trim().toUpperCase();
+        return tClean === clean || (base && normalizeTickerKey(tClean) === base);
+      })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, symbol]);
 
-  const tickerData = usePortfolioStore((state) =>
-    state.tickers.find((t) => t.Tickers === symbol),
-  );
+  const tickerData = usePortfolioStore((state) => {
+    const clean = (symbol || '').trim().toUpperCase();
+    const base = normalizeTickerKey(clean);
+    return state.tickers.find((t) => {
+      const tClean = (t.Tickers || '').trim().toUpperCase();
+      return tClean === clean || (base && normalizeTickerKey(tClean) === base);
+    });
+  });
 
   const chartData = useMemo(() => {
     if (!tickerData) return [];
@@ -371,8 +398,15 @@ export default function StockDetailsScreen() {
           { paddingBottom: Math.max(insets.bottom, 24) + 40 },
         ]}
         showsVerticalScrollIndicator={false}
-        bounces={false}
-        overScrollMode="never"
+        bounces={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={currColors.tint}
+            colors={[currColors.tint]}
+          />
+        }
       >
         {/* Hero Chart (7 Day Trend) */}
 

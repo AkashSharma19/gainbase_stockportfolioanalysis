@@ -70,7 +70,7 @@ Here is the functional map of the directory tree and key files:
 | `tasks/` | Background automation tasks. | `backgroundFetch.ts` (registers periodic data backup jobs). |
 | `types/` | TypeScript interface definitions. | `index.ts` (portfolio types), `money.ts` (money manager types). |
 | `utils/` | Utility helpers & sync engine. | `formatters.ts` (Universal Indian numbering system `en-IN` amount formatting, live input comma masking, calculator expression parsing, and currency helpers), `syncEngine.ts` (Two-way incremental sync between local store and Supabase). |
-| `services/` | Peripheral external service adapters. | `MarketDataSyncService.ts` (Batches and synchronizes live Twelve Data market prices, 52W range, and logos into Supabase `public.tickers`), `TwelveDataService.ts` (Twelve Data Market Data API client providing live quotes, 52-week metrics, real-time USD/INR Forex exchange rates, and logo resolution), `DataExportService.ts` (exports/imports transactions backup), `logoService.ts` (Official high-res company vector logos, sector normalizer, and stock utilities). |
+| `services/` | Peripheral external service adapters. | `MarketDataSyncService.ts` (Batches and synchronizes live Twelve Data market prices, 52W range, and logos into Supabase `public.tickers`), `TwelveDataService.ts` (Twelve Data Market Data API client providing live quotes, 52-week metrics, real-time USD/INR Forex exchange rates, `normalizeTickerKey` prefix/suffix stripper, and logo resolution), `DataExportService.ts` (exports/imports transactions backup), `logoService.ts` (Official high-res company vector logos, sector normalizer, and stock utilities). |
 
 ---
 
@@ -136,10 +136,12 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     *   `removeTransaction(id)`: Safely removes transaction by string ID comparison and queues ID for Supabase deletion sync.
     *   `updateTransaction(id, transaction)`: Safely updates transaction by string ID.
     *   `importTransactions(transactions)`: Sanitizes IDs and appends imported records.
-*   **Calculations / Selectors**:
-    *   `calculateSummary()`: Returns total cost, current value, realized/unrealized gains, XIRR, and 1-day/1-year returns.
-    *   `getAllocationData(dimension)`: Allocates portfolio weights based on sector, broker, etc. For `Broker` dimension, accurately evaluates multi-broker stock positions per `(symbol, broker)` pair.
-    *   `getHoldingsData(brokerFilter?)`: Aggregates buy/sell transactions into current positions (or filtered per broker), calculating average buy price, current cost, market value, and total return.
+    *   `fetchSingleTicker(symbol, forceRefresh?)`: Implements a multi-client 30-minute cache window (`TICKER_CACHE_TTL_MS = 30 * 60 * 1000`). If Supabase has a record updated within the last 30 minutes, returns it directly to conserve 12api quotas; if expired (> 30 mins) or `forceRefresh = true`, fetches from Twelve Data API (`fetchTwelveDataQuote`), updates local Zustand store for both base and exchange-prefixed variants, and asynchronously upserts to Supabase `tickers` with a new timestamp. Gracefully falls back to Supabase and local memory if offline.
+*   **Calculations / Selectors & Symbol Normalization**:
+    *   `createTickerResolver(tickers)`: Universal symbol resolution engine indexing exact symbols, normalized base tickers (via `normalizeTickerKey`), and prefixed variants (`NASDAQ:`, `NYSE:`, `NSE:`, `BSE:`). Prioritizes positive valuations and primary sync records.
+    *   `calculateSummary()`: Returns total cost, current value, realized/unrealized gains, XIRR, and 1-day/1-year returns using `createTickerResolver`.
+    *   `getAllocationData(dimension)`: Allocates portfolio weights based on sector, broker, etc. using `createTickerResolver`. For `Broker` dimension, accurately evaluates multi-broker stock positions per `(symbol, broker)` pair.
+    *   `getHoldingsData(brokerFilter?)`: Aggregates buy/sell transactions into current positions (or filtered per broker), resolving prices via `createTickerResolver` to prevent exchange prefix mismatches.
 
 ### 3. `useMoneyStore` (`money-manager-storage`)
 *   **State**:
@@ -217,6 +219,18 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     *   **Hold**: Profit Book $> 30\%$ (Booking Profit).
     *   **Buy / Add**: Concentration $< 2\%$ (Sub-scale Holding), Large-cap buffer tracking, DCA Opportunity.
     *   **Not Sure**: Extreme volatility, 52W high/low proximity, winning/losing streaks, sector concentration, sync freshness.
+
+### 🌐 Real-Time Market Data & Live Quote Hydration (Twelve Data & Supabase)
+*   **Location**: [TwelveDataService.ts](file:///Users/akashsharma/Documents/Gainbase/services/TwelveDataService.ts), [usePortfolioStore.ts](file:///Users/akashsharma/Documents/Gainbase/store/usePortfolioStore.ts), and [stock-details/[symbol].tsx](file:///Users/akashsharma/Documents/Gainbase/app/stock-details/[symbol].tsx).
+*   **Symbol Normalization (`normalizeTickerKey`)**:
+    *   Strips exchange prefixes (`NASDAQ:`, `NYSE:`, `NSE:`, `BSE:`, `BOM:`) and suffixes (`:NASDAQ`, `:NYSE`, `:NSE`, `:BSE`, `.NS`, `.BO`), bridging discrepancies between user transaction records (e.g. `GOOGL`), Google Sheets sync formulas (e.g. `NASDAQ:GOOGL`), and market data APIs.
+*   **Live Price Pipeline & 30-Minute Shared Cache**:
+    *   `fetchSingleTicker` enforces a 30-minute freshness threshold (`TICKER_CACHE_TTL_MS = 30 * 60 * 1000`).
+    *   When any client requests a ticker, it checks if Supabase `tickers` has an entry where `Date.now() - updated_at < 30 minutes`. If fresh, Supabase data is returned immediately without contacting Twelve Data.
+    *   If the record is older than 30 minutes (or during manual pull-to-refresh where `forceRefresh = true`), it queries Twelve Data, converts foreign currencies to INR using live forex rates (`getRateToINR`), updates the store, and updates Supabase with the new `updated_at` timestamp so all subsequent requests across all users/devices reuse the fresh quote for the next 30 minutes.
+    *   Offline and busy-tier protection: smoothly cascades to Supabase `tickers` table and local Zustand memory cache.
+*   **Stock Details Studio (`stock-details/[symbol].tsx`)**:
+    *   Hydrates quote on mount (using 30-minute cached data if fresh) and provides pull-to-refresh (`RefreshControl`) with `forceRefresh = true` for on-demand market quote updates.
 
 ### 📅 Loan Installment & Next EMI Schedule Resolution
 *   **Location**: [finance.ts](file:///Users/akashsharma/Documents/Gainbase/lib/finance.ts#L150-L270) (`getNextLoanDuePayment`)
