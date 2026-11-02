@@ -108,7 +108,80 @@ export async function getRateToINR(
 }
 
 /**
+ * Fetches real-time market quote from Yahoo Finance.
+ * Used as an automated fallback when Twelve Data returns 404/restricted
+ * (e.g. Indian ETFs like SETFGOLD, NIFTYBEES, GOLDBEES, SILVERBEES on free plan) or rate limits.
+ */
+export async function fetchYahooFinanceQuote(symbol: string): Promise<Partial<Ticker> | null> {
+  try {
+    let clean = symbol.trim().toUpperCase();
+    clean = clean.replace(/^(NSE|BSE|BOM|NASDAQ|NYSE):/, '');
+    clean = clean.replace(/:(NSE|BSE|NASDAQ|NYSE)$/, '');
+
+    const candidates: string[] = [];
+    if (symbol.includes('NSE') || !clean.includes('.')) {
+      candidates.push(`${clean}.NS`);
+    }
+    if (symbol.includes('BSE') || symbol.includes('BOM')) {
+      candidates.push(`${clean}.BO`);
+    }
+    candidates.push(clean);
+
+    for (const sym of candidates) {
+      try {
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1d`;
+        const res = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+          },
+        });
+        if (!res.ok) continue;
+
+        const data = await res.json();
+        const meta = data.chart?.result?.[0]?.meta;
+        if (meta && typeof meta.regularMarketPrice === 'number' && meta.regularMarketPrice > 0) {
+          const rawCurrency = (meta.currency || 'INR').toUpperCase();
+          const rateToINR = await getRateToINR(rawCurrency);
+
+          const rawClose = meta.regularMarketPrice;
+          const rawPrev = meta.chartPreviousClose || rawClose;
+          const high52 = meta.fiftyTwoWeekHigh ? meta.fiftyTwoWeekHigh * rateToINR : undefined;
+          const low52 = meta.fiftyTwoWeekLow ? meta.fiftyTwoWeekLow * rateToINR : undefined;
+
+          const isEtf =
+            meta.instrumentType === 'ETF' ||
+            (meta.shortName && meta.shortName.toUpperCase().includes('ETF')) ||
+            clean.endsWith('BEES') ||
+            clean.startsWith('SETF');
+
+          return {
+            Tickers: symbol.trim().toUpperCase(),
+            'Company Name': meta.shortName || meta.longName || symbol,
+            'Current Value': rawClose * rateToINR,
+            'Yesterday Close': rawPrev * rateToINR,
+            High52: high52,
+            Low52: low52,
+            Currency: 'INR',
+            'Asset Type': isEtf ? 'ETF' : 'Equity',
+            Sector: isEtf ? 'ETF' : 'General',
+            OriginalCurrency: rawCurrency !== 'INR' ? rawCurrency : undefined,
+            OriginalPrice: rawCurrency !== 'INR' ? rawClose : undefined,
+          };
+        }
+      } catch {
+        // Try next candidate
+      }
+    }
+    return null;
+  } catch (err) {
+    console.warn(`[YahooFinance] Failed to fetch quote for ${symbol}:`, err);
+    return null;
+  }
+}
+
+/**
  * Fetches a single real-time stock quote from Twelve Data, converting foreign currencies (USD/EUR/etc.) to INR.
+ * Falls back to Yahoo Finance if Twelve Data free tier restricts the symbol (e.g. Indian ETFs like SETFGOLD).
  */
 export async function fetchTwelveDataQuote(
   symbol: string,
@@ -119,41 +192,46 @@ export async function fetchTwelveDataQuote(
     const url = `${API_CONFIG.TWELVE_DATA_BASE_URL}/quote?symbol=${encodeURIComponent(formattedSym)}&apikey=${apiKey}`;
 
     const res = await fetch(url);
-    if (!res.ok) return null;
+    if (res.ok) {
+      const data: TwelveDataQuoteResponse = await res.json();
+      if (!data.code && data.status !== 'error' && data.close) {
+        const rawCurrency = (data.currency || 'USD').toUpperCase();
+        const rateToINR = await getRateToINR(rawCurrency, apiKey);
 
-    const data: TwelveDataQuoteResponse = await res.json();
-    if (data.code || data.status === 'error' || !data.close) {
-      // Free tier restriction or symbol not found
-      return null;
+        const rawClose = parseFloat(data.close);
+        const rawPrev = parseFloat(data.previous_close);
+        const rawHigh52 = data.fifty_two_week?.high ? parseFloat(data.fifty_two_week.high) : undefined;
+        const rawLow52 = data.fifty_two_week?.low ? parseFloat(data.fifty_two_week.low) : undefined;
+
+        const currentVal = !isNaN(rawClose) ? rawClose * rateToINR : undefined;
+        const yesterdayClose = !isNaN(rawPrev) ? rawPrev * rateToINR : undefined;
+        const high52 = rawHigh52 !== undefined && !isNaN(rawHigh52) ? rawHigh52 * rateToINR : undefined;
+        const low52 = rawLow52 !== undefined && !isNaN(rawLow52) ? rawLow52 * rateToINR : undefined;
+
+        return {
+          Tickers: symbol.trim().toUpperCase(),
+          'Company Name': data.name || symbol,
+          'Current Value': currentVal,
+          'Yesterday Close': yesterdayClose,
+          High52: high52,
+          Low52: low52,
+          Currency: 'INR',
+          OriginalCurrency: rawCurrency !== 'INR' ? rawCurrency : undefined,
+          OriginalPrice: rawCurrency !== 'INR' && !isNaN(rawClose) ? rawClose : undefined,
+        };
+      }
     }
 
-    const rawCurrency = (data.currency || 'USD').toUpperCase();
-    const rateToINR = await getRateToINR(rawCurrency, apiKey);
+    // Fallback: If Twelve Data restricted this symbol (e.g. Indian ETFs on free plan) or rate-limited:
+    const yahooQuote = await fetchYahooFinanceQuote(symbol);
+    if (yahooQuote && yahooQuote['Current Value'] !== undefined) {
+      return yahooQuote;
+    }
 
-    const rawClose = parseFloat(data.close);
-    const rawPrev = parseFloat(data.previous_close);
-    const rawHigh52 = data.fifty_two_week?.high ? parseFloat(data.fifty_two_week.high) : undefined;
-    const rawLow52 = data.fifty_two_week?.low ? parseFloat(data.fifty_two_week.low) : undefined;
-
-    const currentVal = !isNaN(rawClose) ? rawClose * rateToINR : undefined;
-    const yesterdayClose = !isNaN(rawPrev) ? rawPrev * rateToINR : undefined;
-    const high52 = rawHigh52 !== undefined && !isNaN(rawHigh52) ? rawHigh52 * rateToINR : undefined;
-    const low52 = rawLow52 !== undefined && !isNaN(rawLow52) ? rawLow52 * rateToINR : undefined;
-
-    return {
-      Tickers: symbol.trim().toUpperCase(),
-      'Company Name': data.name || symbol,
-      'Current Value': currentVal,
-      'Yesterday Close': yesterdayClose,
-      High52: high52,
-      Low52: low52,
-      Currency: 'INR',
-      OriginalCurrency: rawCurrency !== 'INR' ? rawCurrency : undefined,
-      OriginalPrice: rawCurrency !== 'INR' && !isNaN(rawClose) ? rawClose : undefined,
-    };
+    return null;
   } catch (err) {
     console.warn(`[TwelveData] Failed to fetch quote for ${symbol}:`, err);
-    return null;
+    return fetchYahooFinanceQuote(symbol);
   }
 }
 
@@ -350,6 +428,18 @@ const POPULAR_BRAND_ALIASES: Record<string, string[]> = {
   lt: ['LT'],
   'l&t': ['LT'],
   larsen: ['LT'],
+  setfgold: ['SETFGOLD'],
+  'sbi gold': ['SETFGOLD'],
+  'sbi gold etf': ['SETFGOLD'],
+  niftybees: ['NIFTYBEES'],
+  'nifty bees': ['NIFTYBEES'],
+  goldbees: ['GOLDBEES'],
+  'gold bees': ['GOLDBEES'],
+  silverbees: ['SILVERBEES'],
+  'silver bees': ['SILVERBEES'],
+  spy: ['SPY'],
+  qqq: ['QQQ'],
+  voo: ['VOO'],
 };
 
 /**

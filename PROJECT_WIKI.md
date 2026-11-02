@@ -228,6 +228,7 @@ All stores use `AsyncStorage` via Zustand's `persist` middleware to survive app 
     *   `fetchSingleTicker` enforces a 30-minute freshness threshold (`TICKER_CACHE_TTL_MS = 30 * 60 * 1000`).
     *   When any client requests a ticker, it checks if Supabase `tickers` has an entry where `Date.now() - updated_at < 30 minutes`. If fresh, Supabase data is returned immediately without contacting Twelve Data.
     *   If the record is older than 30 minutes (or during manual pull-to-refresh where `forceRefresh = true`), it queries Twelve Data, converts foreign currencies to INR using live forex rates (`getRateToINR`), updates the store, and updates Supabase with the new `updated_at` timestamp so all subsequent requests across all users/devices reuse the fresh quote for the next 30 minutes.
+    *   **Automated ETF & Free-Tier Fallback (`fetchYahooFinanceQuote`)**: Twelve Data's free tier restricts Indian ETFs (such as `SETFGOLD`, `NIFTYBEES`, `GOLDBEES`, `SILVERBEES`) with HTTP 404. When a restriction or rate limit is encountered, the pipeline automatically falls back to Yahoo Finance (`query1.finance.yahoo.com`), seamlessly hydrating real-time prices, 52W range, and tagging `Asset Type: 'ETF'`.
     *   Offline and busy-tier protection: smoothly cascades to Supabase `tickers` table and local Zustand memory cache.
 *   **Stock Details Studio (`stock-details/[symbol].tsx`)**:
     *   Hydrates quote on mount (using 30-minute cached data if fresh) and provides pull-to-refresh (`RefreshControl`) with `forceRefresh = true` for on-demand market quote updates.
