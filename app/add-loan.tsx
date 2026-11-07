@@ -9,27 +9,23 @@ import {
   Platform,
   Alert,
   Modal,
-  FlatList,
-  Keyboard,
-  InputAccessoryView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import {
   ChevronRight,
-  ArrowRight,
-  ArrowLeft,
   X,
   Check,
   Search,
   Calendar,
-  CreditCard,
-  Building,
   Sparkles,
+  Calculator,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -44,9 +40,11 @@ import {
   findBest3DIconForText,
   LOAN_3D_ICON_MAP,
 } from '@/constants/Category3DIcons';
-import { formatCurrencyINR, formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
-
-const EMPTY_ACCESSORY_ID = 'gainbase-empty-accessory';
+import {
+  formatCurrencyINR,
+  formatIndianAmount,
+  parseIndianAmount,
+} from '@/utils/formatters';
 
 const TENURE_PRESETS = [
   { label: '6m', months: 6 },
@@ -77,9 +75,6 @@ export default function AddLoanScreen() {
     return id ? loans.find((l) => String(l.id) === String(id)) : null;
   }, [id, loans]);
 
-  // Step State (0: Name, 1: Amount, 2: Terms, 3: Schedule)
-  const [currentStep, setCurrentStep] = useState(0);
-
   // Form Fields
   const [name, setName] = useState('');
   const [lenderName, setLenderName] = useState('');
@@ -97,21 +92,6 @@ export default function AddLoanScreen() {
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
   const currColors = Colors[colorScheme];
-
-  // Unified Native Theme
-  const THEME = useMemo(() => {
-    return {
-      bg: currColors.background,
-      text: currColors.text,
-      sub: currColors.textSecondary,
-      border: currColors.border,
-      cardBg: currColors.card,
-      cardBorder: currColors.border,
-      trackInactive: isDark ? '#2C2C2E' : '#E5E5EA',
-      trackActive: currColors.tintMoney,
-      accentPill: isDark ? currColors.cardSecondary : '#F2F2F7',
-    };
-  }, [currColors, isDark]);
 
   // Modals
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -137,27 +117,12 @@ export default function AddLoanScreen() {
     return CATEGORY_3D_ICONS_LIST.filter((item) => {
       const matchName = item.name.toLowerCase().includes(q);
       const matchGroup = item.group.toLowerCase().includes(q);
-      const matchKeywords = item.keywords.some((kw) => kw.toLowerCase().includes(q));
+      const matchKeywords = item.keywords.some((kw) =>
+        kw.toLowerCase().includes(q)
+      );
       return matchName || matchGroup || matchKeywords;
     });
   }, [iconSearch]);
-
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setIsKeyboardVisible(true)
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setIsKeyboardVisible(false)
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
 
   const handleHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -167,7 +132,9 @@ export default function AddLoanScreen() {
     if (editingLoan) {
       setName(editingLoan.name);
       setLenderName(editingLoan.lenderName);
-      setPrincipalAmount(formatIndianAmount(editingLoan.principalAmount.toString()));
+      setPrincipalAmount(
+        formatIndianAmount(editingLoan.principalAmount.toString())
+      );
       const initialOutstanding =
         editingLoan.outstandingAmount > 0
           ? editingLoan.outstandingAmount
@@ -215,7 +182,14 @@ export default function AddLoanScreen() {
     const annualRate = parseFloat(interestRate);
     const N = parseInt(tenureMonths, 10);
 
-    if (isNaN(P) || isNaN(annualRate) || isNaN(N) || P <= 0 || annualRate < 0 || N <= 0) {
+    if (
+      isNaN(P) ||
+      isNaN(annualRate) ||
+      isNaN(N) ||
+      P <= 0 ||
+      annualRate < 0 ||
+      N <= 0
+    ) {
       return 0;
     }
 
@@ -263,86 +237,85 @@ export default function AddLoanScreen() {
       }
       setOutstandingAmount(formatIndianAmount(Math.round(bal).toString()));
     }
-  }, [principalAmount, interestRate, tenureMonths, paidEmis, effectiveEMI, editingLoan]);
+  }, [
+    principalAmount,
+    interestRate,
+    tenureMonths,
+    paidEmis,
+    effectiveEMI,
+    editingLoan,
+  ]);
 
-  // Step Validation & Navigation
-  const validateStep = (step: number): boolean => {
-    if (step === 0) {
-      if (!name.trim()) {
-        Alert.alert('Required Field', 'Please enter a name for this loan.');
-        return false;
-      }
-      return true;
-    }
-    if (step === 1) {
-      const P = parseIndianAmount(principalAmount);
-      if (isNaN(P) || P <= 0) {
-        Alert.alert('Required Field', 'Please enter a valid principal borrowed amount.');
-        return false;
-      }
-      return true;
-    }
-    if (step === 2) {
-      const rate = parseFloat(interestRate);
-      if (isNaN(rate) || rate < 0) {
-        Alert.alert('Required Field', 'Please enter an annual interest rate (use 0 for No-Cost EMI).');
-        return false;
-      }
-      const N = parseInt(tenureMonths, 10);
-      if (isNaN(N) || N <= 0) {
-        Alert.alert('Required Field', 'Please specify loan tenure in months.');
-        return false;
-      }
-      return true;
-    }
-    return true;
-  };
-
-  const handleNext = () => {
+  const handleSave = () => {
     handleHaptic();
-    if (!validateStep(currentStep)) return;
-    if (currentStep < 3) {
-      setCurrentStep((prev) => prev + 1);
-    } else {
-      handleFinalSave();
-    }
-  };
 
-  const handleBack = () => {
-    handleHaptic();
-    if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1);
-    } else {
-      router.back();
+    if (!name.trim()) {
+      Alert.alert('Required Field', 'Please enter a name for this loan.');
+      return;
     }
-  };
 
-  const handleFinalSave = () => {
-    handleHaptic();
     const P = parseIndianAmount(principalAmount);
-    const rate = parseFloat(interestRate);
-    const N = parseInt(tenureMonths, 10);
-    const finalEmi = effectiveEMI;
+    if (isNaN(P) || P <= 0) {
+      Alert.alert(
+        'Required Field',
+        'Please enter a valid principal borrowed amount.'
+      );
+      return;
+    }
 
-    const outstanding = outstandingAmount && !isNaN(parseIndianAmount(outstandingAmount))
-      ? parseIndianAmount(outstandingAmount)
-      : P;
+    const rate = parseFloat(interestRate);
+    if (isNaN(rate) || rate < 0) {
+      Alert.alert(
+        'Required Field',
+        'Please enter an annual interest rate (use 0 for No-Cost EMI).'
+      );
+      return;
+    }
+
+    const N = parseInt(tenureMonths, 10);
+    if (isNaN(N) || N <= 0) {
+      Alert.alert('Required Field', 'Please specify loan tenure in months.');
+      return;
+    }
+
+    const finalEmi = effectiveEMI;
+    const outstanding =
+      outstandingAmount && !isNaN(parseIndianAmount(outstandingAmount))
+        ? parseIndianAmount(outstandingAmount)
+        : P;
 
     const endDate = new Date(startDate);
     const startDay = endDate.getDate();
     endDate.setDate(1);
     endDate.setMonth(endDate.getMonth() + N);
-    const maxDays = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0).getDate();
+    const maxDays = new Date(
+      endDate.getFullYear(),
+      endDate.getMonth() + 1,
+      0
+    ).getDate();
     endDate.setDate(Math.min(startDay, maxDays));
 
     let loanType: Loan['type'] = editingLoan?.type || 'other';
     if (['house', 'home_garden'].includes(icon)) loanType = 'home';
     else if (['car', 'bus', 'fuel'].includes(icon)) loanType = 'car';
-    else if (['salary', 'banknote', 'money', 'personal', 'coin', 'credit_card', 'loan'].includes(icon)) loanType = 'personal';
+    else if (
+      [
+        'salary',
+        'banknote',
+        'money',
+        'personal',
+        'coin',
+        'credit_card',
+        'loan',
+      ].includes(icon)
+    )
+      loanType = 'personal';
     else if (['education', 'books'].includes(icon)) loanType = 'education';
 
     const loanData: Loan = {
-      id: editingLoan ? editingLoan.id : Math.random().toString(36).substring(2, 9),
+      id: editingLoan
+        ? editingLoan.id
+        : Math.random().toString(36).substring(2, 9),
       name: name.trim(),
       lenderName: lenderName.trim() || name.trim() || 'Loan',
       principalAmount: P,
@@ -377,234 +350,383 @@ export default function AddLoanScreen() {
     }
   };
 
-  // Step Meta Configuration
-  const STEP_METAS = [
-    { title: 'Name', subtitle: 'Loan Name' },
-    { title: 'Amount', subtitle: 'Loan Amount' },
-    { title: 'Terms', subtitle: 'Interest & Tenure' },
-    { title: 'Schedule', subtitle: 'Repayment Schedule' },
-  ];
-
   return (
-    <View style={[styles.root, { backgroundColor: THEME.bg }]}>
+    <View
+      style={[
+        styles.mainContainer,
+        {
+          backgroundColor: currColors.background,
+          paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 52 : 16),
+        },
+      ]}
+    >
       <StatusBar style={isDark ? 'light' : 'dark'} />
-
-      {/* ─── Top Header & Progress Bar ─── */}
-      <View style={[styles.topHeader, { paddingTop: Math.max(insets.top, 16) + 4 }]}>
-        <View style={styles.headerNavRow}>
+      <View style={[styles.safeArea, { backgroundColor: currColors.background }]}>
+        {/* HEADER BAR (Matching Add Transaction in Investments) */}
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: currColors.background,
+              borderBottomColor: currColors.border,
+            },
+          ]}
+        >
           <TouchableOpacity
-            style={[styles.headerIconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
-            onPress={handleBack}
+            onPress={() => router.back()}
+            style={[
+              styles.headerIconButton,
+              {
+                backgroundColor: currColors.cardSecondary,
+                borderColor: currColors.border,
+              },
+            ]}
             activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <ArrowLeft size={20} color={THEME.text} />
+            <X size={18} color={currColors.text} strokeWidth={2.2} />
           </TouchableOpacity>
-
-          <ThemedText style={[styles.headerScreenTitle, { color: THEME.text }]}>
+          <ThemedText
+            type="semiBold"
+            style={[styles.headerTitle, { color: currColors.text }]}
+          >
             {editingLoan ? 'Edit Loan' : 'Add Loan'}
           </ThemedText>
-
           <TouchableOpacity
-            style={[styles.headerIconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
+            onPress={handleSave}
+            style={[
+              styles.headerIconButton,
+              {
+                backgroundColor: currColors.tintMoney,
+                borderColor: currColors.tintMoney,
+              },
+            ]}
+            activeOpacity={0.8}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <X size={20} color={THEME.text} />
+            <Check
+              size={18}
+              color={isDark ? '#000000' : '#FFFFFF'}
+              strokeWidth={2.6}
+            />
           </TouchableOpacity>
         </View>
 
-        {/* 4-Segment Progress Bar */}
-        <View style={styles.segmentedProgressBar}>
-          {[0, 1, 2, 3].map((stepIdx) => (
-            <View
-              key={stepIdx}
-              style={[
-                styles.progressSegment,
-                {
-                  backgroundColor:
-                    stepIdx <= currentStep ? THEME.trackActive : THEME.trackInactive,
-                },
-              ]}
-            />
-          ))}
-        </View>
-      </View>
-
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          style={styles.scrollArea}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: 24 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
         >
-          {/* Step Headline & Explainer */}
-          <View style={styles.stepTitleContainer}>
-            <ThemedText style={[styles.stepHeadline, { color: THEME.text }]}>
-              {STEP_METAS[currentStep].subtitle}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* 1. LOAN DETAILS GROUP */}
+            <ThemedText
+              style={[styles.groupLabel, { color: currColors.textSecondary }]}
+            >
+              LOAN DETAILS
             </ThemedText>
-            <ThemedText style={[styles.stepExplainer, { color: THEME.sub }]}>
-              {currentStep === 0 &&
-                'Enter the loan name and choose an icon.'}
-              {currentStep === 1 &&
-                'Enter loan amount and outstanding balance.'}
-              {currentStep === 2 &&
-                'Set interest rate and tenure to calculate EMI.'}
-              {currentStep === 3 &&
-                'Set start date and linked auto-debit account.'}
-            </ThemedText>
-          </View>
-
-          {/* ════════════ STEP 0: IDENTITY ════════════ */}
-          {currentStep === 0 && (
-            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
-              {/* Visual 3D Icon Preview & Tap to Pick - Boundary free */}
-              <View style={styles.iconChooserRow}>
+            <View
+              style={[styles.formGroup, { backgroundColor: currColors.card }]}
+            >
+              {/* Loan Name & Clickable 3D Icon */}
+              <View
+                style={[
+                  styles.formRow,
+                  styles.formRowFirst,
+                  { borderBottomColor: currColors.border },
+                ]}
+              >
                 <TouchableOpacity
-                  style={styles.iconPreviewButton}
-                  onPress={() => {
-                    handleHaptic();
-                    setShowIconModal(true);
-                  }}
-                  activeOpacity={0.8}
+                  style={styles.logoTriggerButton}
+                  onPress={() => setShowIconModal(true)}
+                  activeOpacity={0.7}
                 >
-                  <Category3DIcon name={icon} size={48} />
+                  <Category3DIcon name={icon} size={32} />
                 </TouchableOpacity>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      color: currColors.text,
+                      marginLeft: 12,
+                      fontSize: 16,
+                    },
+                  ]}
+                  placeholder="e.g. HDFC Home Loan, Car Loan"
+                  placeholderTextColor={currColors.textSecondary}
+                  value={name}
+                  onChangeText={handleNameChange}
+                  autoCorrect={false}
+                  spellCheck={false}
+                  autoFocus={!editingLoan}
+                />
+              </View>
 
-                <View style={{ flex: 1, marginLeft: 16 }}>
-                  <TextInput
-                    style={[styles.largeTextInput, { color: THEME.text }]}
-                    placeholder="e.g. Home Loan, Car Loan"
-                    placeholderTextColor={THEME.sub + '80'}
-                    value={name}
-                    onChangeText={handleNameChange}
-                    autoCorrect={false}
-                    spellCheck={false}
-                    autoFocus={!editingLoan}
-                    returnKeyType="done"
+              {/* Lender / Bank Name */}
+              <View
+                style={[
+                  styles.formRow,
+                  { borderBottomColor: currColors.border },
+                ]}
+              >
+                <ThemedText
+                  style={[styles.label, { color: currColors.text }]}
+                >
+                  Lender / Bank
+                </ThemedText>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      color: currColors.text,
+                      textAlign: 'right',
+                    },
+                  ]}
+                  placeholder="e.g. HDFC Bank, SBI"
+                  placeholderTextColor={currColors.textSecondary}
+                  value={lenderName}
+                  onChangeText={setLenderName}
+                  autoCorrect={false}
+                  spellCheck={false}
+                />
+              </View>
+
+              {/* 3D Icon Avatar Row */}
+              <TouchableOpacity
+                style={[styles.formRow, styles.formRowLast]}
+                onPress={() => setShowIconModal(true)}
+                activeOpacity={0.7}
+              >
+                <ThemedText
+                  style={[styles.label, { color: currColors.text }]}
+                >
+                  Avatar Icon
+                </ThemedText>
+                <View style={styles.valueContainer}>
+                  <Category3DIcon name={icon} size={22} />
+                  <ThemedText
+                    style={[
+                      styles.valueText,
+                      { color: currColors.text, marginLeft: 6 },
+                    ]}
+                  >
+                    {selectedIconItem?.name || icon.toUpperCase()}
+                  </ThemedText>
+                  <ChevronRight
+                    size={16}
+                    color={currColors.border}
+                    style={{ marginLeft: 6 }}
                   />
                 </View>
-              </View>
+              </TouchableOpacity>
             </View>
-          )}
 
-          {/* ════════════ STEP 1: PRINCIPAL & BALANCE ════════════ */}
-          {currentStep === 1 && (
-            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
-              <View>
-                <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                  AMOUNT (₹)
-                </ThemedText>
-                <View style={styles.amountInputRow}>
-                  <ThemedText style={[styles.currencyPrefix, { color: THEME.text }]}>₹</ThemedText>
+            {/* 2. LOAN AMOUNT & PRINCIPAL GROUP */}
+            <ThemedText
+              style={[styles.groupLabel, { color: currColors.textSecondary }]}
+            >
+              AMOUNT & PRINCIPAL
+            </ThemedText>
+            <View
+              style={[styles.formGroup, { backgroundColor: currColors.card }]}
+            >
+              {/* Principal Borrowed */}
+              <View
+                style={[
+                  styles.formRow,
+                  { borderBottomColor: currColors.border },
+                ]}
+              >
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <ThemedText
+                    style={[styles.label, { color: currColors.text }]}
+                  >
+                    Principal Borrowed
+                  </ThemedText>
+                  <ThemedText
+                    style={[
+                      styles.subLabel,
+                      { color: currColors.textSecondary },
+                    ]}
+                  >
+                    Original sanctioned loan amount
+                  </ThemedText>
+                </View>
+                <View style={styles.amountInputWrap}>
+                  <ThemedText
+                    style={[
+                      styles.currencyPrefix,
+                      { color: currColors.textSecondary },
+                    ]}
+                  >
+                    ₹
+                  </ThemedText>
                   <TextInput
-                    style={[styles.heroAmountInput, { color: THEME.text }]}
+                    style={[styles.amountInput, { color: currColors.text }]}
                     placeholder="0"
-                    placeholderTextColor={THEME.text + '4D'}
+                    placeholderTextColor={currColors.textSecondary}
                     keyboardType="numeric"
                     value={principalAmount}
-                    onChangeText={(val) => {
-                      const formatted = formatIndianAmount(val);
-                      setPrincipalAmount(formatted);
-                      // Autofill outstanding balance to match Amount unless manually edited
-                      if (!hasManualOutstanding || !outstandingAmount || outstandingAmount === '0') {
-                        setOutstandingAmount(formatted);
-                      }
-                    }}
-                    autoFocus
-                    inputAccessoryViewID={EMPTY_ACCESSORY_ID}
+                    onChangeText={(val) =>
+                      setPrincipalAmount(formatIndianAmount(val))
+                    }
+                    textAlign="right"
                   />
                 </View>
               </View>
 
-              <View style={[styles.fieldDivider, { backgroundColor: THEME.text + '14' }]} />
-
-              {/* Outstanding Balance */}
-              <View>
-                <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                  OUTSTANDING BALANCE (₹)
-                </ThemedText>
-
-                <View style={styles.amountInputRow}>
-                  <ThemedText style={[styles.currencyPrefixSmall, { color: THEME.text }]}>₹</ThemedText>
-                  <TextInput
+              {/* Outstanding Principal Balance */}
+              <View style={[styles.formRow, styles.formRowLast]}>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <ThemedText
+                    style={[styles.label, { color: currColors.text }]}
+                  >
+                    Outstanding Balance
+                  </ThemedText>
+                  <ThemedText
                     style={[
-                      styles.standardTextInput,
-                      {
-                        color: THEME.text,
-                        fontSize: 22,
-                        fontFamily: 'Outfit_600SemiBold',
-                        flex: 1,
-                        paddingVertical: 2,
-                      },
+                      styles.subLabel,
+                      { color: currColors.textSecondary },
                     ]}
-                    placeholder={principalAmount || '0'}
-                    placeholderTextColor={THEME.text + '4D'}
+                  >
+                    Current remaining principal
+                  </ThemedText>
+                </View>
+                <View style={styles.amountInputWrap}>
+                  <ThemedText
+                    style={[
+                      styles.currencyPrefix,
+                      { color: currColors.textSecondary },
+                    ]}
+                  >
+                    ₹
+                  </ThemedText>
+                  <TextInput
+                    style={[styles.amountInput, { color: currColors.text }]}
+                    placeholder="0"
+                    placeholderTextColor={currColors.textSecondary}
                     keyboardType="numeric"
                     value={outstandingAmount}
                     onChangeText={(val) => {
-                      setHasManualOutstanding(true);
                       setOutstandingAmount(formatIndianAmount(val));
+                      setHasManualOutstanding(true);
                     }}
-                    inputAccessoryViewID={EMPTY_ACCESSORY_ID}
+                    textAlign="right"
                   />
                 </View>
               </View>
             </View>
-          )}
 
-          {/* ════════════ STEP 2: TERMS & INTEREST ════════════ */}
-          {currentStep === 2 && (
-            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
-              {/* Interest Rate */}
-              <View>
-                <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                  INTEREST RATE (% P.A.)
-                </ThemedText>
-                <View style={styles.percentInputRow}>
-                  <TextInput
-                    style={[styles.heroAmountInput, { color: THEME.text }]}
-                    placeholder="8.5"
-                    placeholderTextColor={THEME.text + '4D'}
-                    keyboardType="numeric"
-                    value={interestRate}
-                    onChangeText={setInterestRate}
-                    autoFocus
-                    inputAccessoryViewID={EMPTY_ACCESSORY_ID}
-                  />
-                  <ThemedText style={[styles.currencyPrefix, { color: THEME.text }]}>%</ThemedText>
+            {/* 3. INTEREST & TENURE GROUP */}
+            <ThemedText
+              style={[styles.groupLabel, { color: currColors.textSecondary }]}
+            >
+              INTEREST & TENURE
+            </ThemedText>
+            <View
+              style={[styles.formGroup, { backgroundColor: currColors.card }]}
+            >
+              {/* Annual Interest Rate */}
+              <View
+                style={[
+                  styles.formRow,
+                  { borderBottomColor: currColors.border, flexDirection: 'column', alignItems: 'stretch' },
+                ]}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <ThemedText
+                      style={[styles.label, { color: currColors.text }]}
+                    >
+                      Annual Interest Rate (%)
+                    </ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.subLabel,
+                        { color: currColors.textSecondary },
+                      ]}
+                    >
+                      Use 0 for No-Cost EMI
+                    </ThemedText>
+                  </View>
+                  <View style={styles.amountInputWrap}>
+                    <TextInput
+                      style={[
+                        styles.amountInput,
+                        { color: currColors.text, minWidth: 60 },
+                      ]}
+                      placeholder="0"
+                      placeholderTextColor={currColors.textSecondary}
+                      keyboardType="decimal-pad"
+                      value={interestRate}
+                      onChangeText={setInterestRate}
+                      textAlign="right"
+                    />
+                    <ThemedText
+                      style={[
+                        styles.currencyPrefix,
+                        { color: currColors.textSecondary, marginLeft: 2 },
+                      ]}
+                    >
+                      %
+                    </ThemedText>
+                  </View>
                 </View>
 
-                {/* Quick Presets */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetScroll}>
-                  {RATE_PRESETS.map((p) => {
-                    const isSelected = interestRate === p.rate;
+                {/* Rate Presets */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.presetsRow}
+                >
+                  {RATE_PRESETS.map((preset) => {
+                    const isSelected = interestRate === preset.rate;
                     return (
                       <TouchableOpacity
-                        key={p.label}
+                        key={preset.rate}
                         style={[
                           styles.presetPill,
-                          { backgroundColor: THEME.text + '14' },
-                          isSelected && { backgroundColor: THEME.text },
+                          {
+                            backgroundColor: isSelected
+                              ? isDark
+                                ? '#2C2C2E'
+                                : '#FFFFFF'
+                              : currColors.cardSecondary,
+                            borderColor: isSelected
+                              ? currColors.tintMoney
+                              : currColors.border,
+                            borderWidth: isSelected ? 1.5 : 1,
+                          },
                         ]}
                         onPress={() => {
                           handleHaptic();
-                          setInterestRate(p.rate);
+                          setInterestRate(preset.rate);
                         }}
+                        activeOpacity={0.7}
                       >
                         <ThemedText
                           style={[
                             styles.presetPillText,
-                            { color: THEME.text },
-                            isSelected && { color: THEME.bg },
+                            {
+                              color: isSelected
+                                ? currColors.text
+                                : currColors.textSecondary,
+                              fontFamily: isSelected
+                                ? 'Outfit_600SemiBold'
+                                : 'Outfit_400Regular',
+                            },
                           ]}
                         >
-                          {p.label}
+                          {preset.label}
                         </ThemedText>
                       </TouchableOpacity>
                     );
@@ -612,309 +734,413 @@ export default function AddLoanScreen() {
                 </ScrollView>
               </View>
 
-              <View style={[styles.fieldDivider, { backgroundColor: THEME.text + '14' }]} />
+              {/* Loan Tenure in Months */}
+              <View
+                style={[
+                  styles.formRow,
+                  { borderBottomColor: currColors.border, flexDirection: 'column', alignItems: 'stretch' },
+                ]}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <ThemedText
+                      style={[styles.label, { color: currColors.text }]}
+                    >
+                      Loan Tenure (Months)
+                    </ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.subLabel,
+                        { color: currColors.textSecondary },
+                      ]}
+                    >
+                      Total repayment period
+                    </ThemedText>
+                  </View>
+                  <View style={styles.amountInputWrap}>
+                    <TextInput
+                      style={[
+                        styles.amountInput,
+                        { color: currColors.text, minWidth: 60 },
+                      ]}
+                      placeholder="0"
+                      placeholderTextColor={currColors.textSecondary}
+                      keyboardType="numeric"
+                      value={tenureMonths}
+                      onChangeText={setTenureMonths}
+                      textAlign="right"
+                    />
+                    <ThemedText
+                      style={[
+                        styles.currencyPrefix,
+                        { color: currColors.textSecondary, marginLeft: 4, fontSize: 13 },
+                      ]}
+                    >
+                      mo
+                    </ThemedText>
+                  </View>
+                </View>
 
-              {/* Tenure Months */}
-              <View>
-                <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                  TENURE (MONTHS)
-                </ThemedText>
+                {/* Tenure Presets */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.presetsRow}
+                >
+                  {TENURE_PRESETS.map((preset) => {
+                    const isSelected =
+                      tenureMonths === preset.months.toString();
+                    return (
+                      <TouchableOpacity
+                        key={preset.label}
+                        style={[
+                          styles.presetPill,
+                          {
+                            backgroundColor: isSelected
+                              ? isDark
+                                ? '#2C2C2E'
+                                : '#FFFFFF'
+                              : currColors.cardSecondary,
+                            borderColor: isSelected
+                              ? currColors.tintMoney
+                              : currColors.border,
+                            borderWidth: isSelected ? 1.5 : 1,
+                          },
+                        ]}
+                        onPress={() => {
+                          handleHaptic();
+                          setTenureMonths(preset.months.toString());
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <ThemedText
+                          style={[
+                            styles.presetPillText,
+                            {
+                              color: isSelected
+                                ? currColors.text
+                                : currColors.textSecondary,
+                              fontFamily: isSelected
+                                ? 'Outfit_600SemiBold'
+                                : 'Outfit_400Regular',
+                            },
+                          ]}
+                        >
+                          {preset.label}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* Installments Already Paid */}
+              <View style={[styles.formRow, styles.formRowLast]}>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <ThemedText
+                    style={[styles.label, { color: currColors.text }]}
+                  >
+                    Installments Already Paid
+                  </ThemedText>
+                  <ThemedText
+                    style={[
+                      styles.subLabel,
+                      { color: currColors.textSecondary },
+                    ]}
+                  >
+                    Adjusts remaining balance automatically
+                  </ThemedText>
+                </View>
                 <TextInput
-                  style={[styles.standardTextInput, { color: THEME.text, fontSize: 20 }]}
-                  placeholder="e.g. 24, 60, 240"
-                  placeholderTextColor={THEME.text + '4D'}
+                  style={[
+                    styles.amountInput,
+                    { color: currColors.text, minWidth: 60 },
+                  ]}
+                  placeholder="0"
+                  placeholderTextColor={currColors.textSecondary}
                   keyboardType="numeric"
-                  value={tenureMonths}
-                  onChangeText={setTenureMonths}
-                  inputAccessoryViewID={EMPTY_ACCESSORY_ID}
+                  value={paidEmis}
+                  onChangeText={setPaidEmis}
+                  textAlign="right"
                 />
-
-                {/* Quick Tenure Presets */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetScroll}>
-                  {TENURE_PRESETS.map((p) => {
-                    const isSelected = tenureMonths === p.months.toString();
-                    return (
-                      <TouchableOpacity
-                        key={p.label}
-                        style={[
-                          styles.presetPill,
-                          { backgroundColor: THEME.text + '14' },
-                          isSelected && { backgroundColor: THEME.text },
-                        ]}
-                        onPress={() => {
-                          handleHaptic();
-                          setTenureMonths(p.months.toString());
-                        }}
-                      >
-                        <ThemedText
-                          style={[
-                            styles.presetPillText,
-                            { color: THEME.text },
-                            isSelected && { color: THEME.bg },
-                          ]}
-                        >
-                          {p.label}
-                        </ThemedText>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
               </View>
 
-              {/* Live Amortization Breakdown Box */}
+              {/* Live Amortization Summary Card */}
               {effectiveEMI > 0 && (
-                <View style={[styles.amortizationBox, { backgroundColor: THEME.text + '0F' }]}>
-                  <View style={styles.rowBetween}>
-                    <ThemedText style={[styles.amortLabel, { color: THEME.sub }]}>Monthly EMI</ThemedText>
-                    <ThemedText style={[styles.amortValueBold, { color: THEME.text }]}>
-                      ₹{effectiveEMI.toLocaleString('en-IN')}/mo
+                <View
+                  style={[
+                    styles.summaryCard,
+                    {
+                      backgroundColor: isDark
+                        ? currColors.cardSecondary
+                        : '#F9FAFB',
+                      borderColor: currColors.border,
+                    },
+                  ]}
+                >
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      marginBottom: 10,
+                    }}
+                  >
+                    <Calculator size={15} color={currColors.tintMoney} />
+                    <ThemedText
+                      style={[
+                        styles.summaryHeaderTitle,
+                        { color: currColors.text },
+                      ]}
+                    >
+                      Repayment Summary
                     </ThemedText>
                   </View>
-                  <View style={[styles.rowBetween, { marginTop: 6 }]}>
-                    <ThemedText style={[styles.amortLabel, { color: THEME.sub }]}>Total Interest</ThemedText>
-                    <ThemedText style={[styles.amortValue, { color: THEME.text }]}>
-                      ₹{Math.round(totalInterest).toLocaleString('en-IN')}
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.rowBetween, { marginTop: 6 }]}>
-                    <ThemedText style={[styles.amortLabel, { color: THEME.sub }]}>Total Repayment</ThemedText>
-                    <ThemedText style={[styles.amortValue, { color: THEME.text }]}>
-                      ₹{Math.round(totalPayable).toLocaleString('en-IN')}
-                    </ThemedText>
+
+                  <View style={styles.summaryStatsRow}>
+                    <View style={styles.summaryStatItem}>
+                      <ThemedText
+                        style={[
+                          styles.summaryStatLabel,
+                          { color: currColors.textSecondary },
+                        ]}
+                      >
+                        Monthly EMI
+                      </ThemedText>
+                      <ThemedText
+                        style={[
+                          styles.summaryStatValue,
+                          { color: currColors.tintMoney },
+                        ]}
+                      >
+                        ₹{effectiveEMI.toLocaleString('en-IN')}
+                      </ThemedText>
+                    </View>
+
+                    <View style={styles.summaryStatItem}>
+                      <ThemedText
+                        style={[
+                          styles.summaryStatLabel,
+                          { color: currColors.textSecondary },
+                        ]}
+                      >
+                        Total Interest
+                      </ThemedText>
+                      <ThemedText
+                        style={[
+                          styles.summaryStatValue,
+                          { color: currColors.text },
+                        ]}
+                      >
+                        ₹{totalInterest.toLocaleString('en-IN')}
+                      </ThemedText>
+                    </View>
+
+                    <View style={styles.summaryStatItem}>
+                      <ThemedText
+                        style={[
+                          styles.summaryStatLabel,
+                          { color: currColors.textSecondary },
+                        ]}
+                      >
+                        Total Payable
+                      </ThemedText>
+                      <ThemedText
+                        style={[
+                          styles.summaryStatValue,
+                          { color: currColors.text },
+                        ]}
+                      >
+                        ₹{totalPayable.toLocaleString('en-IN')}
+                      </ThemedText>
+                    </View>
                   </View>
                 </View>
               )}
             </View>
-          )}
 
-          {/* ════════════ STEP 3: SCHEDULE & ACCOUNT ════════════ */}
-          {currentStep === 3 && (
-            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
+            {/* 4. SCHEDULE & AUTO-DEBIT GROUP */}
+            <ThemedText
+              style={[styles.groupLabel, { color: currColors.textSecondary }]}
+            >
+              SCHEDULE & AUTO-DEBIT
+            </ThemedText>
+            <View
+              style={[styles.formGroup, { backgroundColor: currColors.card }]}
+            >
               {/* Start Date */}
-              <View>
-                <View style={styles.selectorTriggerRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <Calendar size={18} color={currColors.tintMoney} />
-                    <ThemedText style={[styles.selectorTriggerValue, { color: currColors.text }]}>
-                      Start Date
-                    </ThemedText>
-                  </View>
-                  {Platform.OS === 'ios' ? (
-                    <DateTimePicker
-                      value={startDate}
-                      mode="date"
-                      display="default"
-                      onChange={onDateChange}
-                      themeVariant={colorScheme}
-                      accentColor={currColors.tintMoney}
-                    />
-                  ) : (
-                    <TouchableOpacity
-                      onPress={() => {
-                        handleHaptic();
-                        setShowDatePicker(true);
-                      }}
-                    >
-                      <ThemedText style={[styles.selectorTriggerValue, { color: currColors.text }]}>
-                        {startDate.toLocaleDateString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {showDatePicker && Platform.OS !== 'ios' && (
+              <View
+                style={[
+                  styles.formRow,
+                  { borderBottomColor: currColors.border },
+                ]}
+              >
+                <ThemedText
+                  style={[styles.label, { color: currColors.text }]}
+                >
+                  First EMI Date
+                </ThemedText>
+                {Platform.OS === 'ios' ? (
                   <DateTimePicker
                     value={startDate}
                     mode="date"
-                    display="default"
+                    display="compact"
                     onChange={onDateChange}
+                    themeVariant={colorScheme}
+                    accentColor={currColors.tintMoney}
                   />
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => setShowDatePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <ThemedText
+                      style={[styles.valueText, { color: currColors.text }]}
+                    >
+                      {startDate.toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </ThemedText>
+                  </TouchableOpacity>
                 )}
               </View>
 
-              <View style={[styles.fieldDivider, { backgroundColor: THEME.text + '14' }]} />
-
-              {/* Paid EMIs count */}
-              <View>
-                <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                  INSTALLMENTS PAID
-                </ThemedText>
-                <TextInput
-                  style={[styles.standardTextInput, { color: THEME.text, fontSize: 18 }]}
-                  placeholder="0"
-                  placeholderTextColor={THEME.text + '4D'}
-                  keyboardType="numeric"
-                  value={paidEmis}
-                  onChangeText={setPaidEmis}
-                  inputAccessoryViewID={EMPTY_ACCESSORY_ID}
+              {showDatePicker && Platform.OS !== 'ios' && (
+                <DateTimePicker
+                  value={startDate}
+                  mode="date"
+                  display="default"
+                  onChange={onDateChange}
                 />
-                <ThemedText style={[styles.fieldHint, { color: THEME.sub }]}>
-                  {parseInt(paidEmis, 10) > 0
-                    ? `${paidEmis} installments completed. Outstanding balance automatically adjusted.`
-                    : 'Leave as 0 for freshly sanctioned loans.'}
-                </ThemedText>
-              </View>
-
-              <View style={[styles.fieldDivider, { backgroundColor: THEME.text + '14' }]} />
+              )}
 
               {/* Linked Auto-Debit Account */}
-              <View>
-                <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                  AUTO-DEBIT ACCOUNT
-                </ThemedText>
-                <TouchableOpacity
-                  style={styles.selectorTriggerRow}
-                  onPress={() => {
-                    handleHaptic();
-                    setShowAccountModal(true);
-                  }}
-                  activeOpacity={0.8}
+              <TouchableOpacity
+                style={[styles.formRow, styles.formRowLast]}
+                onPress={() => setShowAccountModal(true)}
+                activeOpacity={0.7}
+              >
+                <ThemedText
+                  style={[styles.label, { color: currColors.text }]}
                 >
+                  Auto-Debit Account
+                </ThemedText>
+                <View style={styles.valueContainer}>
                   {linkedAccount ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                      <AccountLogoOrIcon account={linkedAccount} size={28} />
-                      <View style={{ flex: 1 }}>
-                        <ThemedText style={[styles.selectorTriggerValue, { color: THEME.text }]} numberOfLines={1}>
-                          {linkedAccount.name}
-                        </ThemedText>
-                        <ThemedText style={{ fontSize: 12, color: THEME.sub }}>
-                          Balance: ₹{linkedAccount.balance.toLocaleString('en-IN')}
-                        </ThemedText>
-                      </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <AccountLogoOrIcon account={linkedAccount} size={20} />
+                      <ThemedText
+                        style={[styles.valueText, { color: currColors.text }]}
+                      >
+                        {linkedAccount.name}
+                      </ThemedText>
                     </View>
                   ) : (
-                    <ThemedText style={{ color: THEME.text + '80', fontSize: 15 }}>
-                      Select bank or account
+                    <ThemedText
+                      style={[styles.valueText, styles.placeholderText]}
+                    >
+                      Select Account
                     </ThemedText>
                   )}
-                  <ChevronRight size={18} color={THEME.sub} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Final Review Summary Dossier */}
-              <View style={[styles.reviewSummaryBox, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <Category3DIcon name={icon} size={40} />
-                  <View style={{ flex: 1 }}>
-                    <ThemedText style={[styles.reviewTitle, { color: currColors.text }]} numberOfLines={1}>
-                      {name || 'New Loan'}
-                    </ThemedText>
-                    <ThemedText style={[styles.reviewSub, { color: currColors.textSecondary }]}>
-                      ₹{effectiveEMI.toLocaleString('en-IN')}/mo • {tenureMonths || 0}m tenure
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.readyBadge, { backgroundColor: currColors.tintMoney }]}>
-                    <ThemedText style={[styles.readyBadgeText, { color: isDark ? '#003328' : '#FFFFFF' }]}>READY</ThemedText>
-                  </View>
+                  <ChevronRight
+                    size={16}
+                    color={currColors.border}
+                    style={{ marginLeft: 6 }}
+                  />
                 </View>
-              </View>
+              </TouchableOpacity>
             </View>
-          )}
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
 
-        {/* ─── Sticky Bottom Action Bar ─── */}
-        <View
-          style={[
-            styles.bottomActionBar,
-            {
-              backgroundColor: 'transparent',
-              borderTopWidth: 0,
-              paddingBottom: isKeyboardVisible
-                ? 24
-                : Math.max(insets.bottom, 16) + 8,
-            },
-          ]}
-        >
-          {currentStep > 0 && (
-            <TouchableOpacity
-              style={[
-                styles.backActionButton,
-                {
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)',
-                  backgroundColor: 'transparent',
-                },
-              ]}
-              onPress={handleBack}
-              activeOpacity={0.8}
-            >
-              <ArrowLeft size={18} color={currColors.text} />
-              <ThemedText style={[styles.backActionText, { color: currColors.text }]}>
-                Back
-              </ThemedText>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            style={[
-              styles.primaryActionButton,
-              {
-                backgroundColor: isDark ? '#FFFFFF' : '#1C1917',
-              },
-            ]}
-            onPress={handleNext}
-            activeOpacity={0.85}
-          >
-            <ThemedText style={[styles.primaryActionText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
-              {currentStep === 3
-                ? editingLoan
-                  ? 'Update Loan'
-                  : 'Save Loan'
-                : 'Continue'}
-            </ThemedText>
-            {currentStep === 3 ? (
-              <Check size={18} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.5} />
-            ) : (
-              <ArrowRight size={18} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.5} />
-            )}
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-
-      {/* ─── Full-Page Choose 3D Icon Modal ─── */}
+      {/* ─── FULL PAGE 3D ICON PICKER MODAL ─── */}
       <Modal
         visible={showIconModal}
         animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowIconModal(false)}
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
+        onRequestClose={() => {
+          setShowIconModal(false);
+          setIconSearch('');
+        }}
       >
-        <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
-          <View style={styles.modalHeader}>
-            <View>
-              <ThemedText style={[styles.modalTitle, { color: currColors.text }]}>Choose 3D Icon</ThemedText>
-              <ThemedText style={[styles.modalSubtitle, { color: currColors.textSecondary }]}>
-                Select an icon for your loan category
-              </ThemedText>
-            </View>
-            <TouchableOpacity
-              style={[styles.modalCloseButton, { backgroundColor: currColors.cardSecondary }]}
-              onPress={() => setShowIconModal(false)}
-            >
-              <X size={18} color={currColors.text} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Search Bar */}
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: currColors.background },
+          ]}
+        >
           <View
             style={[
-              styles.modalSearchRow,
+              styles.modalHeader,
               {
-                backgroundColor: isDark ? currColors.cardSecondary : '#F2F2F7',
+                backgroundColor: currColors.background,
+                borderBottomColor: currColors.border,
+                paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24),
+              },
+            ]}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                setShowIconModal(false);
+                setIconSearch('');
+              }}
+              style={styles.cancelButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <ThemedText
+                style={[
+                  styles.headerButtonText,
+                  { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' },
+                ]}
+              >
+                Cancel
+              </ThemedText>
+            </TouchableOpacity>
+
+            <ThemedText
+              type="semiBold"
+              style={[styles.headerTitle, { color: currColors.text }]}
+            >
+              Choose 3D Avatar Icon
+            </ThemedText>
+
+            <View style={{ width: 50 }} />
+          </View>
+
+          <View
+            style={[
+              styles.searchBarContainer,
+              {
+                backgroundColor: currColors.card,
                 borderColor: currColors.border,
               },
             ]}
           >
-            <Search size={16} color={currColors.textSecondary} />
+            <Search size={18} color={currColors.textSecondary} />
             <TextInput
-              style={[styles.modalSearchInput, { color: currColors.text }]}
-              placeholder="Search icons (e.g. car, house, laptop)..."
-              placeholderTextColor={currColors.textSecondary + '80'}
+              style={[styles.searchInput, { color: currColors.text }]}
+              placeholder="Search 80+ 3D objects (house, car, cash)..."
+              placeholderTextColor={currColors.textSecondary}
               value={iconSearch}
               onChangeText={setIconSearch}
-              autoCorrect={false}
+              autoFocus
             />
             {iconSearch.length > 0 && (
               <TouchableOpacity onPress={() => setIconSearch('')}>
@@ -923,336 +1149,241 @@ export default function AddLoanScreen() {
             )}
           </View>
 
-          {/* Icon Grid */}
-          <FlatList
-            data={filteredIcons}
-            keyExtractor={(item) => item.id}
-            numColumns={4}
+          <ScrollView
             contentContainerStyle={styles.iconGridContent}
-            renderItem={({ item }) => {
-              const isSelected = icon === item.id;
-              return (
-                <TouchableOpacity
-                  style={[
-                    styles.iconGridCell,
-                    {
-                      backgroundColor: currColors.card,
-                      borderColor: currColors.border,
-                    },
-                    isSelected && {
-                      borderColor: currColors.tintMoney,
-                      borderWidth: 2,
-                      backgroundColor: isDark ? currColors.cardSecondary : '#E6F7F2',
-                    },
-                  ]}
-                  onPress={() => {
-                    handleHaptic();
-                    setIcon(item.id);
-                    setIsIconManuallyChosen(true);
-                    setShowIconModal(false);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Category3DIcon name={item.id} size={36} />
-                  <ThemedText
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.iconGridWrap}>
+              {filteredIcons.map((item) => {
+                const isSelected = icon === item.id;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
                     style={[
-                      styles.iconCellName,
-                      { color: isSelected ? currColors.text : currColors.textSecondary },
+                      styles.iconGridCard,
+                      {
+                        backgroundColor: currColors.card,
+                        borderColor: isSelected
+                          ? currColors.tintMoney
+                          : currColors.border,
+                      },
+                      isSelected && styles.iconGridCardSelected,
                     ]}
-                    numberOfLines={1}
+                    onPress={() => {
+                      handleHaptic();
+                      setIcon(item.id);
+                      setIsIconManuallyChosen(true);
+                      setShowIconModal(false);
+                      setIconSearch('');
+                    }}
+                    activeOpacity={0.7}
                   >
-                    {item.name}
-                  </ThemedText>
-                </TouchableOpacity>
-              );
-            }}
-          />
+                    <Category3DIcon name={item.id} size={38} />
+                    <ThemedText
+                      style={[
+                        styles.iconGridCardLabel,
+                        { color: currColors.text },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.name}
+                    </ThemedText>
+                    {isSelected && (
+                      <View
+                        style={[
+                          styles.iconSelectedBadge,
+                          { backgroundColor: currColors.tintMoney },
+                        ]}
+                      >
+                        <Check size={10} color="#FFFFFF" strokeWidth={3} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
         </View>
       </Modal>
 
-      {/* ─── Account Picker Modal ─── */}
+      {/* ─── ACCOUNT PICKER MODAL ─── */}
       <AccountPickerModal
         visible={showAccountModal}
         selectedAccountId={linkedAccountId}
         onSelectAccount={(acc: Account) => {
+          handleHaptic();
           setLinkedAccountId(acc.id);
+          setShowAccountModal(false);
         }}
         onClose={() => setShowAccountModal(false)}
-        title="Select Auto-Debit Account"
       />
-
-      {Platform.OS === 'ios' && (
-        <InputAccessoryView nativeID={EMPTY_ACCESSORY_ID}>
-          <View />
-        </InputAccessoryView>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  mainContainer: {
     flex: 1,
   },
-  topHeader: {
-    paddingHorizontal: 20,
-    paddingBottom: 14,
+  safeArea: {
+    flex: 1,
   },
-  headerNavRow: {
+  header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
   },
   headerIconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(113, 63, 18, 0.08)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerScreenTitle: {
+  cancelButton: {
+    paddingVertical: 8,
+    paddingRight: 16,
+  },
+  saveButton: {
+    paddingVertical: 8,
+    paddingLeft: 16,
+  },
+  headerButtonText: {
     fontSize: 17,
-    fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: -0.3,
   },
-  segmentedProgressBar: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 8,
-  },
-  progressSegment: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-  },
-  scrollArea: {
-    flex: 1,
+  saveButtonText: {
+    fontWeight: '600',
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 16,
+    paddingBottom: 48,
   },
-  stepTitleContainer: {
-    marginBottom: 20,
-  },
-  stepHeadline: {
-    fontSize: 24,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: -0.5,
-    marginBottom: 6,
-  },
-  stepExplainer: {
-    fontSize: 13.5,
-    fontFamily: 'Outfit_400Regular',
-    lineHeight: 20,
-  },
-  stepCard: {
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  iconChooserRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconPreviewButton: {
-    width: 60,
-    height: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inputLabel: {
-    fontSize: 10,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: 0.8,
-    marginBottom: 6,
-  },
-  largeTextInput: {
-    fontSize: 18,
-    fontFamily: 'Outfit_600SemiBold',
-    paddingVertical: 4,
-  },
-  standardTextInput: {
-    fontSize: 15,
+  groupLabel: {
+    fontSize: 12,
+    marginLeft: 16,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     fontFamily: 'Outfit_500Medium',
-    paddingVertical: 6,
   },
-  fieldDivider: {
-    height: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-    marginVertical: 18,
+  formGroup: {
+    borderRadius: 14,
+    marginHorizontal: 16,
+    marginBottom: 20,
+    overflow: 'hidden',
   },
-  amountInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  currencyPrefix: {
-    fontSize: 32,
-    fontFamily: 'Outfit_700Bold',
-  },
-  currencyPrefixSmall: {
-    fontSize: 20,
-    fontFamily: 'Outfit_600SemiBold',
-  },
-  heroAmountInput: {
-    fontSize: 32,
-    fontFamily: 'Outfit_700Bold',
-    flex: 1,
-    paddingVertical: 2,
-  },
-  percentInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  rowBetween: {
+  formRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0.5,
+    minHeight: 52,
   },
-  subActionLink: {
-    fontSize: 11,
-    fontFamily: 'Outfit_600SemiBold',
-    textDecorationLine: 'underline',
+  formRowFirst: {},
+  formRowLast: {
+    borderBottomWidth: 0,
   },
-  fieldHint: {
-    fontSize: 11,
+  label: {
+    fontSize: 15,
+    fontFamily: 'Outfit_500Medium',
+  },
+  subLabel: {
+    fontSize: 12,
+    marginTop: 2,
     fontFamily: 'Outfit_400Regular',
-    marginTop: 4,
   },
-  presetScroll: {
-    marginTop: 10,
+  valueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  valueText: {
+    fontSize: 15,
+    fontFamily: 'Outfit_500Medium',
+  },
+  placeholderText: {
+    color: '#8E8E93',
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    padding: 0,
+    fontFamily: 'Outfit_400Regular',
+  },
+  amountInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  amountInput: {
+    fontSize: 18,
+    fontFamily: 'Outfit_600SemiBold',
+    padding: 0,
+    minWidth: 80,
+  },
+  currencyPrefix: {
+    fontSize: 16,
+    marginRight: 4,
+    fontFamily: 'Outfit_500Medium',
+  },
+  logoTriggerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  presetsRow: {
+    paddingTop: 10,
+    paddingBottom: 4,
+    gap: 8,
   },
   presetPill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0, 0, 0, 0.06)',
-    marginRight: 8,
-  },
-  presetPillActive: {
-    backgroundColor: '#1C1917',
+    borderRadius: 10,
   },
   presetPillText: {
     fontSize: 12,
-    fontFamily: 'Outfit_500Medium',
   },
-  presetPillTextActive: {
-    color: '#FFFFFF',
-    fontFamily: 'Outfit_600SemiBold',
+  summaryCard: {
+    margin: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
   },
-  amortizationBox: {
-    marginTop: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-    borderRadius: 16,
-    padding: 16,
-  },
-  amortLabel: {
-    fontSize: 12.5,
-    fontFamily: 'Outfit_400Regular',
-  },
-  amortValue: {
+  summaryHeaderTitle: {
     fontSize: 13,
     fontFamily: 'Outfit_600SemiBold',
   },
-  amortValueBold: {
-    fontSize: 15,
-    fontFamily: 'Outfit_700Bold',
-  },
-  customEmiToggleRow: {
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
-    alignItems: 'center',
-  },
-  customEmiToggleText: {
-    fontSize: 11.5,
-    fontFamily: 'Outfit_600SemiBold',
-  },
-  selectorTriggerRow: {
+  summaryStatsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 8,
   },
-  selectorTriggerValue: {
-    fontSize: 15,
-    fontFamily: 'Outfit_600SemiBold',
-  },
-  reviewSummaryBox: {
-    marginTop: 18,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  reviewTitle: {
-    fontSize: 15,
-    fontFamily: 'Outfit_700Bold',
-  },
-  reviewSub: {
-    fontSize: 12,
-    fontFamily: 'Outfit_400Regular',
-    marginTop: 1,
-  },
-  readyBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  readyBadgeText: {
-    fontSize: 10,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: 0.5,
-  },
-  bottomActionBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-  },
-  backActionButton: {
-    height: 50,
-    paddingHorizontal: 18,
-    borderRadius: 16,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    flexShrink: 0,
-  },
-  backActionText: {
-    fontSize: 15,
-    fontFamily: 'Outfit_600SemiBold',
-  },
-  primaryActionButton: {
+  summaryStatItem: {
     flex: 1,
-    height: 50,
-    borderRadius: 16,
-    borderCurve: 'continuous',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    flexShrink: 1,
   },
-  primaryActionText: {
-    fontSize: 16,
+  summaryStatLabel: {
+    fontSize: 11,
+    fontFamily: 'Outfit_400Regular',
+    marginBottom: 2,
+  },
+  summaryStatValue: {
+    fontSize: 14,
     fontFamily: 'Outfit_600SemiBold',
   },
 
-  /* Modal Styles */
+  // Modal Styles
   modalContainer: {
     flex: 1,
   },
@@ -1260,62 +1391,61 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 16,
     paddingBottom: 12,
+    borderBottomWidth: 1,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontFamily: 'Outfit_700Bold',
-  },
-  modalSubtitle: {
-    fontSize: 12.5,
-    fontFamily: 'Outfit_400Regular',
-    marginTop: 2,
-  },
-  modalCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalSearchRow: {
+  searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 20,
+    margin: 16,
     paddingHorizontal: 12,
-    height: 40,
-    borderRadius: 12,
+    height: 44,
+    borderRadius: 10,
     borderWidth: 1,
     gap: 8,
-    marginBottom: 12,
   },
-  modalSearchInput: {
+  searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Outfit_400Regular',
+    padding: 0,
   },
   iconGridContent: {
-    paddingHorizontal: 14,
-    paddingBottom: 30,
+    paddingHorizontal: 16,
+    paddingBottom: 32,
   },
-  iconGridCell: {
-    flex: 1,
-    aspectRatio: 1,
-    margin: 6,
-    borderRadius: 16,
-    borderWidth: 1,
+  iconGridWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'flex-start',
+  },
+  iconGridCard: {
+    width: '30.5%',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 6,
+    paddingVertical: 16,
+    paddingHorizontal: 6,
+    borderRadius: 12,
+    borderWidth: 1,
   },
-  iconGridCellSelected: {
+  iconGridCardSelected: {
     borderWidth: 2,
   },
-  iconCellName: {
-    fontSize: 9.5,
+  iconGridCardLabel: {
+    fontSize: 11,
+    marginTop: 6,
     fontFamily: 'Outfit_500Medium',
-    marginTop: 4,
     textAlign: 'center',
+  },
+  iconSelectedBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

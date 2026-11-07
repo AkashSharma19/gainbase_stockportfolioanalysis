@@ -9,27 +9,23 @@ import {
   Platform,
   Alert,
   Modal,
-  Keyboard,
-  InputAccessoryView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import {
   ChevronRight,
-  ArrowRight,
-  ArrowLeft,
   X,
   Check,
   Search,
   Calendar,
   Sparkles,
-  CreditCard,
-  Tag,
-  Clock,
+  TrendingUp,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 
 import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -43,20 +39,20 @@ import {
   CATEGORY_3D_ICONS_LIST,
   findBest3DIconForText,
 } from '@/constants/Category3DIcons';
-import { formatCurrencyINR, formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
-
-const EMPTY_ACCESSORY_ID = 'gainbase-empty-accessory';
+import {
+  formatCurrencyINR,
+  formatIndianAmount,
+  parseIndianAmount,
+} from '@/utils/formatters';
 
 const CYCLES: {
   cycle: Subscription['billingCycle'];
   label: string;
-  tag: string;
-  periodText: string;
 }[] = [
-  { cycle: 'monthly', label: 'Monthly', tag: 'Most popular', periodText: '/mo' },
-  { cycle: 'yearly', label: 'Yearly', tag: 'Save on annual plans', periodText: '/yr' },
-  { cycle: 'quarterly', label: 'Quarterly', tag: 'Every 3 months', periodText: '/qtr' },
-  { cycle: 'weekly', label: 'Weekly', tag: 'Every 7 days', periodText: '/wk' },
+  { cycle: 'monthly', label: 'Monthly' },
+  { cycle: 'yearly', label: 'Yearly' },
+  { cycle: 'quarterly', label: 'Quarterly' },
+  { cycle: 'weekly', label: 'Weekly' },
 ];
 
 export default function AddSubscriptionScreen() {
@@ -64,19 +60,18 @@ export default function AddSubscriptionScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const insets = useSafeAreaInsets();
 
-  const { subscriptions, accounts, addSubscription, updateSubscription } = useMoneyStore();
+  const { subscriptions, accounts, addSubscription, updateSubscription } =
+    useMoneyStore();
 
   const editingSubscription = useMemo(() => {
     return id ? subscriptions.find((s) => String(s.id) === String(id)) : null;
   }, [id, subscriptions]);
 
-  // Step State (0: Service, 1: Cost & Cycle, 2: Renewal & Account)
-  const [currentStep, setCurrentStep] = useState(0);
-
   // Form Fields
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
-  const [billingCycle, setBillingCycle] = useState<Subscription['billingCycle']>('monthly');
+  const [billingCycle, setBillingCycle] =
+    useState<Subscription['billingCycle']>('monthly');
   const [nextPaymentDate, setNextPaymentDate] = useState(new Date());
   const [linkedAccountId, setLinkedAccountId] = useState('');
   const [color, setColor] = useState('#7E22CE');
@@ -86,21 +81,6 @@ export default function AddSubscriptionScreen() {
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
   const currColors = Colors[colorScheme];
-
-  // Unified Native Theme
-  const THEME = useMemo(() => {
-    return {
-      bg: currColors.background,
-      text: currColors.text,
-      sub: currColors.textSecondary,
-      border: currColors.border,
-      cardBg: currColors.card,
-      cardBorder: currColors.border,
-      trackInactive: isDark ? '#2C2C2E' : '#E5E5EA',
-      trackActive: currColors.tintMoney,
-      accentPill: isDark ? currColors.cardSecondary : '#F2F2F7',
-    };
-  }, [currColors, isDark]);
 
   // Modals & Pickers
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -126,27 +106,12 @@ export default function AddSubscriptionScreen() {
     return CATEGORY_3D_ICONS_LIST.filter((item) => {
       const matchName = item.name.toLowerCase().includes(q);
       const matchGroup = item.group.toLowerCase().includes(q);
-      const matchKeywords = item.keywords.some((kw) => kw.toLowerCase().includes(q));
+      const matchKeywords = item.keywords.some((kw) =>
+        kw.toLowerCase().includes(q)
+      );
       return matchName || matchGroup || matchKeywords;
     });
   }, [iconSearch]);
-
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setIsKeyboardVisible(true)
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setIsKeyboardVisible(false)
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
 
   const handleHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -215,53 +180,20 @@ export default function AddSubscriptionScreen() {
     }
   }, [parsedAmountNum, billingCycle]);
 
-  // Step Validation & Navigation
-  const validateStep = (step: number): boolean => {
-    if (step === 0) {
-      if (!name.trim()) {
-        Alert.alert('Required Field', 'Please enter a subscription or service name.');
-        return false;
-      }
-      return true;
-    }
-    if (step === 1) {
-      if (parsedAmountNum <= 0) {
-        Alert.alert('Required Field', 'Please enter a valid subscription amount.');
-        return false;
-      }
-      return true;
-    }
-    return true;
-  };
-
-  const handleNext = () => {
-    handleHaptic();
-    if (!validateStep(currentStep)) return;
-    if (currentStep < 2) {
-      setCurrentStep((prev) => prev + 1);
-    } else {
-      handleFinalSave();
-    }
-  };
-
-  const handleBack = () => {
-    handleHaptic();
-    if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1);
-    } else {
-      router.back();
-    }
-  };
-
-  const handleFinalSave = () => {
+  const handleSave = () => {
     handleHaptic();
     if (parsedAmountNum <= 0 || !name.trim()) {
-      Alert.alert('Validation Error', 'Please complete all required subscription details.');
+      Alert.alert(
+        'Required Field',
+        'Please enter a service name and valid subscription amount.'
+      );
       return;
     }
 
     const subData: Subscription = {
-      id: editingSubscription ? editingSubscription.id : Math.random().toString(36).substring(2, 9),
+      id: editingSubscription
+        ? editingSubscription.id
+        : Math.random().toString(36).substring(2, 9),
       name: name.trim(),
       provider: name.trim(),
       amount: parsedAmountNum,
@@ -273,7 +205,9 @@ export default function AddSubscriptionScreen() {
       logo: icon,
       icon: icon,
       isActive: true,
-      createdAt: editingSubscription ? editingSubscription.createdAt : new Date().toISOString(),
+      createdAt: editingSubscription
+        ? editingSubscription.createdAt
+        : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
@@ -295,195 +229,256 @@ export default function AddSubscriptionScreen() {
     }
   };
 
-  // Step Meta Configuration
-  const STEP_METAS = [
-    { title: 'Name', subtitle: 'Subscription Name' },
-    { title: 'Billing', subtitle: 'Billing & Plan' },
-    { title: 'Renewal', subtitle: 'Renewal Schedule' },
-  ];
-
   return (
-    <View style={[styles.root, { backgroundColor: THEME.bg }]}>
+    <View
+      style={[
+        styles.mainContainer,
+        {
+          backgroundColor: currColors.background,
+          paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 52 : 16),
+        },
+      ]}
+    >
       <StatusBar style={isDark ? 'light' : 'dark'} />
-
-      {/* ─── Top Header & Progress Bar ─── */}
-      <View style={[styles.topHeader, { paddingTop: Math.max(insets.top, 16) + 4 }]}>
-        <View style={styles.headerNavRow}>
+      <View style={[styles.safeArea, { backgroundColor: currColors.background }]}>
+        {/* HEADER BAR (Matching Add Transaction in Investments) */}
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: currColors.background,
+              borderBottomColor: currColors.border,
+            },
+          ]}
+        >
           <TouchableOpacity
-            style={[styles.headerIconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
-            onPress={handleBack}
+            onPress={() => router.back()}
+            style={[
+              styles.headerIconButton,
+              {
+                backgroundColor: currColors.cardSecondary,
+                borderColor: currColors.border,
+              },
+            ]}
             activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <ArrowLeft size={20} color={THEME.text} />
+            <X size={18} color={currColors.text} strokeWidth={2.2} />
           </TouchableOpacity>
-
-          <ThemedText style={[styles.headerScreenTitle, { color: THEME.text }]}>
+          <ThemedText
+            type="semiBold"
+            style={[styles.headerTitle, { color: currColors.text }]}
+          >
             {editingSubscription ? 'Edit Subscription' : 'Add Subscription'}
           </ThemedText>
-
           <TouchableOpacity
-            style={[styles.headerIconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
+            onPress={handleSave}
+            style={[
+              styles.headerIconButton,
+              {
+                backgroundColor: currColors.tintMoney,
+                borderColor: currColors.tintMoney,
+              },
+            ]}
+            activeOpacity={0.8}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <X size={20} color={THEME.text} />
+            <Check
+              size={18}
+              color={isDark ? '#000000' : '#FFFFFF'}
+              strokeWidth={2.6}
+            />
           </TouchableOpacity>
         </View>
 
-        {/* 3-Segment Progress Bar */}
-        <View style={styles.segmentedProgressBar}>
-          {[0, 1, 2].map((stepIdx) => (
-            <View
-              key={stepIdx}
-              style={[
-                styles.progressSegment,
-                {
-                  backgroundColor:
-                    stepIdx <= currentStep ? THEME.trackActive : THEME.trackInactive,
-                },
-              ]}
-            />
-          ))}
-        </View>
-      </View>
-
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          style={styles.scrollArea}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: 24 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
         >
-          {/* Step Headline & Explainer */}
-          <View style={styles.stepTitleContainer}>
-            <ThemedText style={[styles.stepHeadline, { color: THEME.text }]}>
-              {STEP_METAS[currentStep].subtitle}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* 1. SERVICE DETAILS GROUP */}
+            <ThemedText
+              style={[styles.groupLabel, { color: currColors.textSecondary }]}
+            >
+              SERVICE DETAILS
             </ThemedText>
-            <ThemedText style={[styles.stepExplainer, { color: THEME.sub }]}>
-              {currentStep === 0 &&
-                'Enter the subscription name and choose an icon.'}
-              {currentStep === 1 &&
-                'Enter the amount and billing frequency.'}
-              {currentStep === 2 &&
-                'Set the next renewal date and payment account.'}
-            </ThemedText>
-          </View>
-
-          {/* ════════════ STEP 0: SUBSCRIPTION NAME & ICON ════════════ */}
-          {currentStep === 0 && (
-            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
-              {/* Visual 3D Icon Preview & Tap to Pick - Boundary free */}
-              <View style={styles.iconChooserRow}>
+            <View
+              style={[styles.formGroup, { backgroundColor: currColors.card }]}
+            >
+              {/* Service Name & Clickable 3D Icon */}
+              <View
+                style={[
+                  styles.formRow,
+                  styles.formRowFirst,
+                  { borderBottomColor: currColors.border },
+                ]}
+              >
                 <TouchableOpacity
-                  style={styles.iconPreviewButton}
-                  onPress={() => {
-                    handleHaptic();
-                    setShowIconModal(true);
-                  }}
-                  activeOpacity={0.8}
+                  style={styles.logoTriggerButton}
+                  onPress={() => setShowIconModal(true)}
+                  activeOpacity={0.7}
                 >
-                  <Category3DIcon name={icon} size={48} />
+                  <Category3DIcon name={icon} size={32} />
                 </TouchableOpacity>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      color: currColors.text,
+                      marginLeft: 12,
+                      fontSize: 16,
+                    },
+                  ]}
+                  placeholder="e.g. Netflix, Spotify, Amazon Prime"
+                  placeholderTextColor={currColors.textSecondary}
+                  value={name}
+                  onChangeText={handleNameChange}
+                  autoCorrect={false}
+                  spellCheck={false}
+                  autoFocus={!editingSubscription}
+                />
+              </View>
 
-                <View style={{ flex: 1, marginLeft: 16 }}>
-                  <TextInput
+              {/* 3D Icon Avatar Row */}
+              <TouchableOpacity
+                style={[styles.formRow, styles.formRowLast]}
+                onPress={() => setShowIconModal(true)}
+                activeOpacity={0.7}
+              >
+                <ThemedText
+                  style={[styles.label, { color: currColors.text }]}
+                >
+                  Avatar Icon
+                </ThemedText>
+                <View style={styles.valueContainer}>
+                  <Category3DIcon name={icon} size={22} />
+                  <ThemedText
                     style={[
-                      styles.largeTextInput,
-                      { color: THEME.text, borderBottomColor: THEME.cardBorder },
+                      styles.valueText,
+                      { color: currColors.text, marginLeft: 6 },
                     ]}
-                    placeholder="e.g. Netflix, Spotify, iCloud"
-                    placeholderTextColor={THEME.sub + '80'}
-                    value={name}
-                    onChangeText={handleNameChange}
-                    autoCorrect={false}
-                    spellCheck={false}
-                    autoFocus={!editingSubscription}
-                    returnKeyType="next"
+                  >
+                    {selectedIconItem?.name || icon.toUpperCase()}
+                  </ThemedText>
+                  <ChevronRight
+                    size={16}
+                    color={currColors.border}
+                    style={{ marginLeft: 6 }}
                   />
                 </View>
-              </View>
+              </TouchableOpacity>
             </View>
-          )}
 
-          {/* ════════════ STEP 1: COST & BILLING CYCLE ════════════ */}
-          {currentStep === 1 && (
-            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
-              {/* Amount Input */}
-              <View>
-                <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                  AMOUNT (₹)
-                </ThemedText>
-                <View style={styles.amountInputRow}>
-                  <ThemedText style={[styles.currencyPrefix, { color: THEME.text }]}>₹</ThemedText>
+            {/* 2. BILLING & COST GROUP */}
+            <ThemedText
+              style={[styles.groupLabel, { color: currColors.textSecondary }]}
+            >
+              BILLING & COST
+            </ThemedText>
+            <View
+              style={[styles.formGroup, { backgroundColor: currColors.card }]}
+            >
+              {/* Subscription Amount */}
+              <View
+                style={[
+                  styles.formRow,
+                  { borderBottomColor: currColors.border },
+                ]}
+              >
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <ThemedText
+                    style={[styles.label, { color: currColors.text }]}
+                  >
+                    Subscription Cost
+                  </ThemedText>
+                  <ThemedText
+                    style={[
+                      styles.subLabel,
+                      { color: currColors.textSecondary },
+                    ]}
+                  >
+                    Recurring amount billed
+                  </ThemedText>
+                </View>
+                <View style={styles.amountInputWrap}>
+                  <ThemedText
+                    style={[
+                      styles.currencyPrefix,
+                      { color: currColors.textSecondary },
+                    ]}
+                  >
+                    ₹
+                  </ThemedText>
                   <TextInput
-                    style={[styles.heroAmountInput, { color: THEME.text }]}
+                    style={[styles.amountInput, { color: currColors.text }]}
                     placeholder="0"
-                    placeholderTextColor={THEME.text + '4D'}
+                    placeholderTextColor={currColors.textSecondary}
                     keyboardType="numeric"
                     value={amount}
                     onChangeText={(val) => setAmount(formatIndianAmount(val))}
-                    autoFocus={true}
-                    inputAccessoryViewID={EMPTY_ACCESSORY_ID}
+                    textAlign="right"
                   />
                 </View>
               </View>
 
-              <View style={[styles.fieldDivider, { backgroundColor: THEME.text + '14' }]} />
-
-              {/* Billing Cycle Picker Cards */}
-              <View>
-                <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                  BILLING CYCLE
+              {/* Billing Frequency / Cycle */}
+              <View
+                style={[
+                  styles.formRow,
+                  parsedAmountNum <= 0 && styles.formRowLast,
+                  { borderBottomColor: currColors.border, flexDirection: 'column', alignItems: 'stretch' },
+                ]}
+              >
+                <ThemedText
+                  style={[styles.label, { color: currColors.text, marginBottom: 8 }]}
+                >
+                  Billing Frequency
                 </ThemedText>
-                <View style={styles.cycleGrid}>
+                <View style={styles.cyclesRow}>
                   {CYCLES.map((c) => {
                     const isSelected = billingCycle === c.cycle;
                     return (
                       <TouchableOpacity
                         key={c.cycle}
                         style={[
-                          styles.cycleCard,
+                          styles.cyclePill,
                           {
-                            borderColor: isSelected ? currColors.tintMoney : currColors.border,
                             backgroundColor: isSelected
-                              ? isDark ? 'rgba(0, 194, 150, 0.15)' : 'rgba(0, 194, 150, 0.12)'
-                              : isDark ? currColors.cardSecondary : '#F2F2F7',
+                              ? isDark
+                                ? '#2C2C2E'
+                                : '#FFFFFF'
+                              : currColors.cardSecondary,
+                            borderColor: isSelected
+                              ? currColors.tintMoney
+                              : currColors.border,
+                            borderWidth: isSelected ? 1.5 : 1,
                           },
                         ]}
                         onPress={() => {
                           handleHaptic();
                           setBillingCycle(c.cycle);
                         }}
-                        activeOpacity={0.8}
+                        activeOpacity={0.7}
                       >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <ThemedText
-                            style={[
-                              styles.cycleCardTitle,
-                              { color: isSelected ? (isDark ? '#FFFFFF' : '#003328') : currColors.text },
-                            ]}
-                          >
-                            {c.label}
-                          </ThemedText>
-                          {isSelected && (
-                            <View style={[styles.cycleCheckPill, { backgroundColor: currColors.tintMoney }]}>
-                              <Check size={12} color={isDark ? '#003328' : '#FFFFFF'} strokeWidth={3} />
-                            </View>
-                          )}
-                        </View>
                         <ThemedText
                           style={[
-                            styles.cycleCardSub,
-                            { color: isSelected ? currColors.tintMoney : currColors.textSecondary },
+                            styles.cyclePillText,
+                            {
+                              color: isSelected
+                                ? currColors.text
+                                : currColors.textSecondary,
+                              fontFamily: isSelected
+                                ? 'Outfit_600SemiBold'
+                                : 'Outfit_400Regular',
+                            },
                           ]}
                         >
-                          {c.tag}
+                          {c.label}
                         </ThemedText>
                       </TouchableOpacity>
                     );
@@ -491,27 +486,73 @@ export default function AddSubscriptionScreen() {
                 </View>
               </View>
 
-              {/* Dynamic Annualized Spend Box */}
+              {/* Annualized Cost Insights Card */}
               {parsedAmountNum > 0 && (
-                <View style={[styles.costBreakdownBox, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
-                  <View style={styles.costBreakdownHeader}>
-                    <Sparkles size={16} color={currColors.tintMoney} />
-                    <ThemedText style={[styles.costBreakdownTitle, { color: currColors.text }]}>
-                      Cash Flow Impact
+                <View
+                  style={[
+                    styles.insightsCard,
+                    {
+                      backgroundColor: isDark
+                        ? currColors.cardSecondary
+                        : '#F9FAFB',
+                      borderColor: currColors.border,
+                    },
+                  ]}
+                >
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      marginBottom: 8,
+                    }}
+                  >
+                    <TrendingUp size={15} color={currColors.tintMoney} />
+                    <ThemedText
+                      style={[
+                        styles.insightsHeaderTitle,
+                        { color: currColors.text },
+                      ]}
+                    >
+                      Cost Projections
                     </ThemedText>
                   </View>
 
-                  <View style={styles.costMetricsRow}>
-                    <View style={styles.costMetricCol}>
-                      <ThemedText style={[styles.costMetricLabel, { color: currColors.textSecondary }]}>Monthly Cost</ThemedText>
-                      <ThemedText style={[styles.costMetricValue, { color: currColors.text }]}>
+                  <View style={styles.insightsStatsRow}>
+                    <View style={styles.insightsStatItem}>
+                      <ThemedText
+                        style={[
+                          styles.insightsStatLabel,
+                          { color: currColors.textSecondary },
+                        ]}
+                      >
+                        Monthly Run-Rate
+                      </ThemedText>
+                      <ThemedText
+                        style={[
+                          styles.insightsStatValue,
+                          { color: currColors.tintMoney },
+                        ]}
+                      >
                         ₹{monthlyEquivalent.toLocaleString('en-IN')}/mo
                       </ThemedText>
                     </View>
-                    <View style={[styles.costMetricDivider, { backgroundColor: currColors.border }]} />
-                    <View style={styles.costMetricCol}>
-                      <ThemedText style={[styles.costMetricLabel, { color: currColors.textSecondary }]}>Yearly Cost</ThemedText>
-                      <ThemedText style={[styles.costMetricValue, { color: currColors.text }]}>
+
+                    <View style={styles.insightsStatItem}>
+                      <ThemedText
+                        style={[
+                          styles.insightsStatLabel,
+                          { color: currColors.textSecondary },
+                        ]}
+                      >
+                        Annualized Spend
+                      </ThemedText>
+                      <ThemedText
+                        style={[
+                          styles.insightsStatValue,
+                          { color: currColors.text },
+                        ]}
+                      >
                         ₹{yearlyEquivalent.toLocaleString('en-IN')}/yr
                       </ThemedText>
                     </View>
@@ -519,253 +560,239 @@ export default function AddSubscriptionScreen() {
                 </View>
               )}
             </View>
-          )}
 
-          {/* ════════════ STEP 2: RENEWAL & DEBIT ACCOUNT ════════════ */}
-          {currentStep === 2 && (
-            <View style={[styles.stepCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
+            {/* 3. RENEWAL & PAYMENT GROUP */}
+            <ThemedText
+              style={[styles.groupLabel, { color: currColors.textSecondary }]}
+            >
+              RENEWAL & PAYMENT
+            </ThemedText>
+            <View
+              style={[styles.formGroup, { backgroundColor: currColors.card }]}
+            >
               {/* Next Payment Date */}
-              <View>
-                <View style={styles.selectorTriggerRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <Calendar size={18} color={currColors.tintMoney} />
-                    <ThemedText style={[styles.selectorTriggerValue, { color: currColors.text }]}>
-                      Renewal Date
-                    </ThemedText>
-                  </View>
-                  {Platform.OS === 'ios' ? (
-                     <DateTimePicker
-                      value={nextPaymentDate}
-                      mode="date"
-                      display="default"
-                      onChange={onDateChange}
-                      themeVariant={colorScheme}
-                      accentColor={currColors.tintMoney}
-                    />
-                  ) : (
-                    <TouchableOpacity
-                      onPress={() => {
-                        handleHaptic();
-                        setShowDatePicker(true);
-                      }}
-                    >
-                      <ThemedText style={[styles.selectorTriggerValue, { color: currColors.text }]}>
-                        {nextPaymentDate.toLocaleDateString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {showDatePicker && Platform.OS !== 'ios' && (
+              <View
+                style={[
+                  styles.formRow,
+                  { borderBottomColor: currColors.border },
+                ]}
+              >
+                <ThemedText
+                  style={[styles.label, { color: currColors.text }]}
+                >
+                  Next Renewal Date
+                </ThemedText>
+                {Platform.OS === 'ios' ? (
                   <DateTimePicker
                     value={nextPaymentDate}
                     mode="date"
-                    display="default"
+                    display="compact"
                     onChange={onDateChange}
+                    themeVariant={colorScheme}
+                    accentColor={currColors.tintMoney}
                   />
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => setShowDatePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <ThemedText
+                      style={[styles.valueText, { color: currColors.text }]}
+                    >
+                      {nextPaymentDate.toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </ThemedText>
+                  </TouchableOpacity>
                 )}
               </View>
 
-              <View style={[styles.fieldDivider, { backgroundColor: THEME.text + '14' }]} />
+              {showDatePicker && Platform.OS !== 'ios' && (
+                <DateTimePicker
+                  value={nextPaymentDate}
+                  mode="date"
+                  display="default"
+                  onChange={onDateChange}
+                />
+              )}
 
-              {/* Linked Debit Account */}
-              <View>
-                <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                  PAYMENT ACCOUNT
-                </ThemedText>
-                <TouchableOpacity
-                  style={styles.selectorTriggerRow}
-                  onPress={() => {
-                    handleHaptic();
-                    setShowAccountModal(true);
-                  }}
-                  activeOpacity={0.8}
+              {/* Paid From Account */}
+              <TouchableOpacity
+                style={[styles.formRow, styles.formRowLast]}
+                onPress={() => setShowAccountModal(true)}
+                activeOpacity={0.7}
+              >
+                <ThemedText
+                  style={[styles.label, { color: currColors.text }]}
                 >
+                  Paid From Account
+                </ThemedText>
+                <View style={styles.valueContainer}>
                   {linkedAccount ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                      <AccountLogoOrIcon account={linkedAccount} size={28} />
-                      <View style={{ flex: 1 }}>
-                        <ThemedText style={[styles.selectorTriggerValue, { color: THEME.text }]} numberOfLines={1}>
-                          {linkedAccount.name}
-                        </ThemedText>
-                        <ThemedText style={{ fontSize: 12, color: THEME.sub }}>
-                          Balance: ₹{linkedAccount.balance.toLocaleString('en-IN')}
-                        </ThemedText>
-                      </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <AccountLogoOrIcon account={linkedAccount} size={20} />
+                      <ThemedText
+                        style={[styles.valueText, { color: currColors.text }]}
+                      >
+                        {linkedAccount.name}
+                      </ThemedText>
                     </View>
                   ) : (
-                    <ThemedText style={{ color: THEME.text + '80', fontSize: 15 }}>
-                      Select bank or account
+                    <ThemedText
+                      style={[styles.valueText, styles.placeholderText]}
+                    >
+                      Select Account
                     </ThemedText>
                   )}
-                  <ChevronRight size={18} color={THEME.sub} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Final Review Summary Dossier */}
-              <View style={[styles.reviewSummaryBox, { backgroundColor: currColors.cardSecondary, borderColor: currColors.border }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <Category3DIcon name={icon} size={42} />
-                  <View style={{ flex: 1 }}>
-                    <ThemedText style={[styles.reviewTitle, { color: currColors.text }]} numberOfLines={1}>
-                      {name || 'New Subscription'}
-                    </ThemedText>
-                    <ThemedText style={[styles.reviewSub, { color: currColors.textSecondary }]}>
-                      ₹{parsedAmountNum.toLocaleString('en-IN')} {CYCLES.find((c) => c.cycle === billingCycle)?.periodText} • {CYCLES.find((c) => c.cycle === billingCycle)?.label}
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.readyBadge, { backgroundColor: currColors.tintMoney }]}>
-                    <ThemedText style={[styles.readyBadgeText, { color: isDark ? '#003328' : '#FFFFFF' }]}>READY</ThemedText>
-                  </View>
+                  <ChevronRight
+                    size={16}
+                    color={currColors.border}
+                    style={{ marginLeft: 6 }}
+                  />
                 </View>
-              </View>
+              </TouchableOpacity>
             </View>
-          )}
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
 
-        {/* ─── Sticky Bottom Action Bar ─── */}
-        <View
-          style={[
-            styles.bottomActionBar,
-            {
-              backgroundColor: 'transparent',
-              borderTopWidth: 0,
-              paddingBottom: isKeyboardVisible
-                ? 24
-                : Math.max(insets.bottom, 16) + 8,
-            },
-          ]}
-        >
-          {currentStep > 0 && (
-            <TouchableOpacity
-              style={[
-                styles.backActionButton,
-                {
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)',
-                  backgroundColor: 'transparent',
-                },
-              ]}
-              onPress={handleBack}
-              activeOpacity={0.8}
-            >
-              <ArrowLeft size={18} color={currColors.text} />
-              <ThemedText style={[styles.backActionText, { color: currColors.text }]}>
-                Back
-              </ThemedText>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            style={[
-              styles.primaryActionButton,
-              {
-                backgroundColor: isDark ? '#FFFFFF' : '#1C1917',
-              },
-            ]}
-            onPress={handleNext}
-            activeOpacity={0.85}
-          >
-            <ThemedText style={[styles.primaryActionText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
-              {currentStep === 2
-                ? editingSubscription
-                  ? 'Update Subscription'
-                  : 'Save Subscription'
-                : 'Continue'}
-            </ThemedText>
-            {currentStep === 2 ? (
-              <Check size={18} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.5} />
-            ) : (
-              <ArrowRight size={18} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.5} />
-            )}
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-
-      {/* ─── Full-Page Choose 3D Icon Modal ─── */}
+      {/* ─── FULL PAGE 3D ICON PICKER MODAL ─── */}
       <Modal
         visible={showIconModal}
         animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowIconModal(false)}
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
+        onRequestClose={() => {
+          setShowIconModal(false);
+          setIconSearch('');
+        }}
       >
-        <View style={[styles.modalContainer, { backgroundColor: currColors.background }]}>
-          <View style={styles.modalHeader}>
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: currColors.background },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor: currColors.background,
+                borderBottomColor: currColors.border,
+                paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24),
+              },
+            ]}
+          >
             <TouchableOpacity
-              onPress={() => setShowIconModal(false)}
-              style={[styles.modalCloseBtn, { backgroundColor: currColors.cardSecondary }]}
+              onPress={() => {
+                setShowIconModal(false);
+                setIconSearch('');
+              }}
+              style={styles.cancelButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <X size={18} color={currColors.text} />
+              <ThemedText
+                style={[
+                  styles.headerButtonText,
+                  { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' },
+                ]}
+              >
+                Cancel
+              </ThemedText>
             </TouchableOpacity>
-            <ThemedText style={[styles.modalHeaderTitle, { color: currColors.text }]}>
-              Choose 3D Icon
+
+            <ThemedText
+              type="semiBold"
+              style={[styles.headerTitle, { color: currColors.text }]}
+            >
+              Choose 3D Avatar Icon
             </ThemedText>
-            <View style={{ width: 36 }} />
+
+            <View style={{ width: 50 }} />
           </View>
 
-          {/* Search Box */}
-          <View style={[styles.modalSearchBox, { backgroundColor: isDark ? currColors.cardSecondary : '#F2F2F7', borderColor: currColors.border }]}>
+          <View
+            style={[
+              styles.searchBarContainer,
+              {
+                backgroundColor: currColors.card,
+                borderColor: currColors.border,
+              },
+            ]}
+          >
             <Search size={18} color={currColors.textSecondary} />
             <TextInput
-              style={[styles.modalSearchInput, { color: currColors.text }]}
-              placeholder="Search icons (e.g. streaming, game, music, food)..."
-              placeholderTextColor={currColors.textSecondary + '80'}
+              style={[styles.searchInput, { color: currColors.text }]}
+              placeholder="Search 80+ 3D objects (tv, music, cloud)..."
+              placeholderTextColor={currColors.textSecondary}
               value={iconSearch}
               onChangeText={setIconSearch}
-              autoCorrect={false}
+              autoFocus
             />
+            {iconSearch.length > 0 && (
+              <TouchableOpacity onPress={() => setIconSearch('')}>
+                <X size={16} color={currColors.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* Icon Grid */}
           <ScrollView
             contentContainerStyle={styles.iconGridContent}
+            keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.iconGrid}>
+            <View style={styles.iconGridWrap}>
               {filteredIcons.map((item) => {
                 const isSelected = icon === item.id;
                 return (
                   <TouchableOpacity
                     key={item.id}
                     style={[
-                      styles.iconGridTile,
+                      styles.iconGridCard,
                       {
                         backgroundColor: currColors.card,
-                        borderColor: currColors.border,
+                        borderColor: isSelected
+                          ? currColors.tintMoney
+                          : currColors.border,
                       },
-                      isSelected && [
-                        styles.iconGridTileActive,
-                        {
-                          borderColor: currColors.tintMoney,
-                          borderWidth: 2,
-                          backgroundColor: isDark ? currColors.cardSecondary : '#E6F7F2',
-                        },
-                      ],
+                      isSelected && styles.iconGridCardSelected,
                     ]}
                     onPress={() => {
                       handleHaptic();
                       setIcon(item.id);
                       setIsIconManuallyChosen(true);
                       setShowIconModal(false);
+                      setIconSearch('');
                     }}
                     activeOpacity={0.7}
                   >
-                    <Category3DIcon name={item.id} size={42} />
+                    <Category3DIcon name={item.id} size={38} />
                     <ThemedText
                       style={[
-                        styles.iconGridLabel,
-                        { color: isSelected ? currColors.text : currColors.textSecondary },
+                        styles.iconGridCardLabel,
+                        { color: currColors.text },
                       ]}
                       numberOfLines={1}
                     >
                       {item.name}
                     </ThemedText>
                     {isSelected && (
-                      <View style={[styles.iconGridCheck, { backgroundColor: currColors.tintMoney }]}>
-                        <Check size={10} color={isDark ? '#003328' : '#FFFFFF'} strokeWidth={3} />
+                      <View
+                        style={[
+                          styles.iconSelectedBadge,
+                          { backgroundColor: currColors.tintMoney },
+                        ]}
+                      >
+                        <Check size={10} color="#FFFFFF" strokeWidth={3} />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -776,372 +803,246 @@ export default function AddSubscriptionScreen() {
         </View>
       </Modal>
 
-      {/* ─── Unified Account Picker Modal ─── */}
+      {/* ─── ACCOUNT PICKER MODAL ─── */}
       <AccountPickerModal
         visible={showAccountModal}
-        onClose={() => setShowAccountModal(false)}
-        onSelectAccount={(acc) => {
-          setLinkedAccountId(acc.id);
-        }}
         selectedAccountId={linkedAccountId}
-        title="Select Payment Method"
+        onSelectAccount={(acc: Account) => {
+          handleHaptic();
+          setLinkedAccountId(acc.id);
+          setShowAccountModal(false);
+        }}
+        onClose={() => setShowAccountModal(false)}
       />
-
-      {Platform.OS === 'ios' && (
-        <InputAccessoryView nativeID={EMPTY_ACCESSORY_ID}>
-          <View />
-        </InputAccessoryView>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  mainContainer: {
     flex: 1,
   },
-  topHeader: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+  safeArea: {
+    flex: 1,
   },
-  headerNavRow: {
+  header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
   },
   headerIconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(88, 28, 135, 0.08)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerScreenTitle: {
-    fontSize: 16,
-    fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: -0.3,
+  cancelButton: {
+    paddingVertical: 8,
+    paddingRight: 16,
   },
-  segmentedProgressBar: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 10,
+  saveButton: {
+    paddingVertical: 8,
+    paddingLeft: 16,
   },
-  progressSegment: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
+  headerButtonText: {
+    fontSize: 17,
   },
-  scrollArea: {
-    flex: 1,
+  saveButtonText: {
+    fontWeight: '600',
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 16,
+    paddingBottom: 48,
   },
-  stepTitleContainer: {
-    marginBottom: 20,
-  },
-  stepHeadline: {
-    fontSize: 26,
-    fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: -0.8,
-    lineHeight: 32,
-    marginBottom: 6,
-  },
-  stepExplainer: {
-    fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
-    lineHeight: 20,
-  },
-  stepCard: {
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  fieldDivider: {
-    height: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-    marginVertical: 18,
-  },
-  inputLabel: {
-    fontSize: 11,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: 1,
+  groupLabel: {
+    fontSize: 12,
+    marginLeft: 16,
     marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontFamily: 'Outfit_500Medium',
   },
-  iconChooserRow: {
+  formGroup: {
+    borderRadius: 14,
+    marginHorizontal: 16,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  formRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0.5,
+    minHeight: 52,
+  },
+  formRowFirst: {},
+  formRowLast: {
+    borderBottomWidth: 0,
+  },
+  label: {
+    fontSize: 15,
+    fontFamily: 'Outfit_500Medium',
+  },
+  subLabel: {
+    fontSize: 12,
+    marginTop: 2,
+    fontFamily: 'Outfit_400Regular',
+  },
+  valueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  iconPreviewButton: {
-    width: 60,
-    height: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
+  valueText: {
+    fontSize: 15,
+    fontFamily: 'Outfit_500Medium',
   },
-  largeTextInput: {
+  placeholderText: {
+    color: '#8E8E93',
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    padding: 0,
+    fontFamily: 'Outfit_400Regular',
+  },
+  amountInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  amountInput: {
     fontSize: 18,
     fontFamily: 'Outfit_600SemiBold',
-    borderBottomWidth: 1.5,
-    paddingVertical: 6,
-  },
-  standardTextInput: {
-    fontSize: 15,
-    fontFamily: 'Outfit_500Medium',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.15)',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.02)',
-  },
-
-  amountInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    padding: 0,
+    minWidth: 80,
   },
   currencyPrefix: {
-    fontSize: 32,
-    fontFamily: 'Outfit_600SemiBold',
-    marginRight: 6,
-  },
-  heroAmountInput: {
-    flex: 1,
-    fontSize: 36,
-    fontFamily: 'Outfit_600SemiBold',
-    padding: 0,
-    letterSpacing: -1,
-  },
-  cycleGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  cycleCard: {
-    width: '48%',
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  cycleCardActive: {},
-  cycleCardTitle: {
-    fontSize: 15,
-    fontFamily: 'Outfit_600SemiBold',
-  },
-  cycleCardTitleActive: {},
-  cycleCardSub: {
-    fontSize: 11,
-    fontFamily: 'Outfit_400Regular',
-    marginTop: 4,
-  },
-  cycleCardSubActive: {
+    fontSize: 16,
+    marginRight: 4,
     fontFamily: 'Outfit_500Medium',
   },
-  cycleCheckPill: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+  logoTriggerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cyclesRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  cyclePill: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  costBreakdownBox: {
-    marginTop: 18,
+  cyclePillText: {
+    fontSize: 13,
+  },
+  insightsCard: {
+    margin: 12,
     padding: 14,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
   },
-  costBreakdownHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 10,
-  },
-  costBreakdownTitle: {
-    fontSize: 12,
+  insightsHeaderTitle: {
+    fontSize: 13,
     fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: 0.5,
   },
-  costMetricsRow: {
+  insightsStatsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  costMetricCol: {
+  insightsStatItem: {
     flex: 1,
   },
-  costMetricLabel: {
+  insightsStatLabel: {
     fontSize: 11,
     fontFamily: 'Outfit_400Regular',
     marginBottom: 2,
   },
-  costMetricValue: {
-    fontSize: 16,
-    fontFamily: 'Outfit_600SemiBold',
-  },
-  costMetricDivider: {
-    width: 1,
-    height: 28,
-    marginHorizontal: 12,
-  },
-  selectorTriggerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
-  selectorTriggerValue: {
-    fontSize: 15,
-    fontFamily: 'Outfit_500Medium',
-  },
-  datePickerDoneButton: {
-    alignSelf: 'flex-end',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  datePickerDoneText: {
-    fontFamily: 'Outfit_600SemiBold',
+  insightsStatValue: {
     fontSize: 14,
-  },
-  reviewSummaryBox: {
-    marginTop: 20,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  reviewTitle: {
-    fontSize: 15,
     fontFamily: 'Outfit_600SemiBold',
   },
-  reviewSub: {
-    fontSize: 12,
-    fontFamily: 'Outfit_400Regular',
-    marginTop: 2,
-  },
-  readyBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  readyBadgeText: {
-    fontSize: 9,
-    fontFamily: 'Outfit_700Bold',
-    letterSpacing: 0.8,
-  },
-  bottomActionBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-  },
-  backActionButton: {
-    height: 50,
-    paddingHorizontal: 18,
-    borderRadius: 16,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    flexShrink: 0,
-  },
-  backActionText: {
-    fontSize: 15,
-    fontFamily: 'Outfit_600SemiBold',
-  },
-  primaryActionButton: {
-    flex: 1,
-    height: 50,
-    borderRadius: 16,
-    borderCurve: 'continuous',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    flexShrink: 1,
-  },
-  primaryActionText: {
-    fontSize: 16,
-    fontFamily: 'Outfit_600SemiBold',
-  },
+
+  // Modal Styles
   modalContainer: {
     flex: 1,
-    paddingTop: 16,
   },
   modalHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-  },
-  modalCloseBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
   },
-  modalHeaderTitle: {
-    fontSize: 17,
-    fontFamily: 'Outfit_600SemiBold',
-  },
-  modalSearchBox: {
+  searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
+    margin: 16,
     paddingHorizontal: 12,
-    height: 42,
-    borderRadius: 12,
+    height: 44,
+    borderRadius: 10,
     borderWidth: 1,
     gap: 8,
-    marginBottom: 12,
   },
-  modalSearchInput: {
+  searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Outfit_400Regular',
+    padding: 0,
   },
   iconGridContent: {
     paddingHorizontal: 16,
-    paddingBottom: 40,
+    paddingBottom: 32,
   },
-  iconGrid: {
+  iconGridWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
+    justifyContent: 'flex-start',
   },
-  iconGridTile: {
-    width: '22.5%',
-    aspectRatio: 1,
-    borderRadius: 14,
-    borderWidth: 1,
+  iconGridCard: {
+    width: '30.5%',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 6,
-    position: 'relative',
+    paddingVertical: 16,
+    paddingHorizontal: 6,
+    borderRadius: 12,
+    borderWidth: 1,
   },
-  iconGridTileActive: {},
-  iconGridLabel: {
-    fontSize: 10,
+  iconGridCardSelected: {
+    borderWidth: 2,
+  },
+  iconGridCardLabel: {
+    fontSize: 11,
+    marginTop: 6,
     fontFamily: 'Outfit_500Medium',
-    marginTop: 4,
     textAlign: 'center',
   },
-  iconGridCheck: {
+  iconSelectedBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    top: 6,
+    right: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

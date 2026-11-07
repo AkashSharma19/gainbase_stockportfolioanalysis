@@ -10,15 +10,13 @@ import {
   Alert,
   Modal,
   Switch,
-  Keyboard,
-  InputAccessoryView,
+  Pressable,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import {
-  ArrowRight,
-  ArrowLeft,
+  ChevronRight,
   X,
   Check,
   Search,
@@ -41,7 +39,7 @@ import { useMoneyStore } from '@/store/useMoneyStore';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { formatIndianAmount, parseIndianAmount } from '@/utils/formatters';
 import { Account, AccountType } from '@/types/money';
-import { BANK_BRANDS, BankLogo } from '@/components/BankLogo';
+import { BANK_BRANDS, BankLogo, resolveBrokerBrandLogo } from '@/components/BankLogo';
 import { Category3DIcon } from '@/components/Category3DIcon';
 import { CATEGORY_3D_ICONS_LIST } from '@/constants/Category3DIcons';
 
@@ -123,11 +121,9 @@ const POPULAR_BROKERS = [
   'ICICI Direct',
 ];
 
-const EMPTY_ACCESSORY_ID = 'gainbase-empty-accessory';
-
 export default function AddAccountScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, type: initialType } = useLocalSearchParams<{ id?: string; type?: AccountType }>();
   const insets = useSafeAreaInsets();
 
   const { accounts, addAccount, updateAccount } = useMoneyStore();
@@ -137,11 +133,10 @@ export default function AddAccountScreen() {
     return id ? accounts.find((acc) => String(acc.id) === String(id)) : null;
   }, [id, accounts]);
 
-  // Step state: 0: Type, 1: Details & Branding, 2: Balances & Settings
-  const [currentStep, setCurrentStep] = useState(0);
-
   // Form State
-  const [type, setType] = useState<AccountType>('savings');
+  const [type, setType] = useState<AccountType>(
+    editingAccount?.type || (initialType as AccountType) || 'savings'
+  );
   const [name, setName] = useState('');
   const [balance, setBalance] = useState('');
   const [creditLimit, setCreditLimit] = useState('');
@@ -162,35 +157,24 @@ export default function AddAccountScreen() {
   const [iconSearchQuery, setIconSearchQuery] = useState('');
   const [brokerSearchQuery, setBrokerSearchQuery] = useState('');
 
-  // Keyboard listener for bottom padding
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setIsKeyboardVisible(true)
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setIsKeyboardVisible(false)
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
   // Pre-populate when editing
   useEffect(() => {
     if (editingAccount) {
       setName(editingAccount.name);
       setType(editingAccount.type);
       setBalance(formatIndianAmount(Math.abs(editingAccount.balance).toString()));
-      setCreditLimit(editingAccount.creditLimit ? formatIndianAmount(editingAccount.creditLimit.toString()) : '');
+      setCreditLimit(
+        editingAccount.creditLimit
+          ? formatIndianAmount(editingAccount.creditLimit.toString())
+          : ''
+      );
       setInstitution(editingAccount.institution || '');
       setLogo(editingAccount.logo || '');
       setAccountNumber(editingAccount.accountNumber || '');
       setColor(editingAccount.color);
-      setIconId(editingAccount.icon || (editingAccount.type === 'wallet' ? 'wallet' : ''));
+      setIconId(
+        editingAccount.icon || (editingAccount.type === 'wallet' ? 'wallet' : '')
+      );
       setIncludeInAssets(editingAccount.includeInAssets !== false);
       setLinkedBroker(editingAccount.linkedBroker || '');
       setIsLogoManuallySelected(Boolean(editingAccount.logo));
@@ -204,20 +188,6 @@ export default function AddAccountScreen() {
   const activeTypeConfig = useMemo(() => {
     return ACCOUNT_TYPES.find((t) => t.type === type) || ACCOUNT_TYPES[0];
   }, [type]);
-
-  // Unified Native Theme
-  const THEME = useMemo(() => {
-    return {
-      bg: currColors.background,
-      cardBg: currColors.card,
-      cardBorder: currColors.border,
-      text: currColors.text,
-      sub: currColors.textSecondary,
-      accentPill: currColors.cardSecondary,
-      trackActive: currColors.tintMoney,
-      trackInactive: isDark ? '#2C2C2E' : '#E5E5EA',
-    };
-  }, [currColors, isDark]);
 
   const handleHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -277,56 +247,18 @@ export default function AddAccountScreen() {
     handleHaptic();
     if (type === 'investment') {
       setShowBrokerModal(true);
-    } else if (type === 'savings' || type === 'credit_card' || type === 'emergency_fund') {
+    } else if (
+      type === 'savings' ||
+      type === 'credit_card' ||
+      type === 'emergency_fund'
+    ) {
       setShowLogoModal(true);
     } else {
       setShowIconModal(true);
     }
   };
 
-  // Step Validation & Navigation
-  const validateStep = (step: number): boolean => {
-    if (step === 0) {
-      return true;
-    }
-    if (step === 1) {
-      if (!name.trim()) {
-        Alert.alert('Required Field', 'Please provide a name for this account.');
-        return false;
-      }
-      return true;
-    }
-    if (step === 2) {
-      const parsedBalance = parseIndianAmount(balance);
-      if (isNaN(parsedBalance) && !editingAccount && type !== 'credit_card') {
-        Alert.alert('Invalid Balance', 'Please enter a valid numeric starting balance.');
-        return false;
-      }
-      return true;
-    }
-    return true;
-  };
-
-  const handleNext = () => {
-    handleHaptic();
-    if (!validateStep(currentStep)) return;
-    if (currentStep < 2) {
-      setCurrentStep((prev) => prev + 1);
-    } else {
-      handleFinalSave();
-    }
-  };
-
-  const handleBack = () => {
-    handleHaptic();
-    if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1);
-    } else {
-      router.back();
-    }
-  };
-
-  const handleFinalSave = () => {
+  const handleSave = () => {
     handleHaptic();
     if (!name.trim()) {
       Alert.alert('Required Field', 'Please enter an account name.');
@@ -341,31 +273,48 @@ export default function AddAccountScreen() {
       finalBalance = Math.abs(finalBalance);
     }
 
-    const parsedLimit = creditLimit ? Math.round((parseIndianAmount(creditLimit) || 0) * 100) / 100 : undefined;
+    const parsedLimit = creditLimit
+      ? Math.round((parseIndianAmount(creditLimit) || 0) * 100) / 100
+      : undefined;
 
     if (editingAccount) {
       updateAccount(editingAccount.id, {
         name: name.trim(),
         type,
         balance: finalBalance,
-        creditLimit: type === 'credit_card' ? (parsedLimit || 0) : undefined,
+        creditLimit: type === 'credit_card' ? parsedLimit || 0 : undefined,
         institution: institution.trim() || undefined,
         logo: logo || undefined,
         accountNumber: accountNumber.trim() || undefined,
         color,
-        icon: (type === 'receivable' || type === 'payable' || type === 'wallet')
-          ? (iconId || (type === 'wallet' ? 'wallet' : (type === 'receivable' ? 'receivable' : 'payable')))
-          : undefined,
+        icon:
+          type === 'receivable' || type === 'payable' || type === 'wallet'
+            ? iconId ||
+              (type === 'wallet'
+                ? 'wallet'
+                : type === 'receivable'
+                ? 'receivable'
+                : 'payable')
+            : undefined,
         includeInAssets,
-        linkedBroker: type === 'investment' ? (linkedBroker || undefined) : undefined,
+        linkedBroker:
+          type === 'investment' ? linkedBroker || undefined : undefined,
       });
     } else {
       const resolvedIcon =
-        (type === 'receivable' || type === 'payable' || type === 'wallet')
-          ? (iconId || (type === 'wallet' ? 'wallet' : (type === 'receivable' ? 'receivable' : 'payable')))
-          : type === 'savings' ? 'Landmark'
-          : type === 'investment' ? 'Activity'
-          : type === 'emergency_fund' ? 'PiggyBank'
+        type === 'receivable' || type === 'payable' || type === 'wallet'
+          ? iconId ||
+            (type === 'wallet'
+              ? 'wallet'
+              : type === 'receivable'
+              ? 'receivable'
+              : 'payable')
+          : type === 'savings'
+          ? 'Landmark'
+          : type === 'investment'
+          ? 'Activity'
+          : type === 'emergency_fund'
+          ? 'PiggyBank'
           : 'CreditCard';
 
       const newAccount: Account = {
@@ -374,13 +323,14 @@ export default function AddAccountScreen() {
         type,
         icon: resolvedIcon,
         balance: finalBalance,
-        creditLimit: type === 'credit_card' ? (parsedLimit || 0) : undefined,
+        creditLimit: type === 'credit_card' ? parsedLimit || 0 : undefined,
         institution: institution.trim() || undefined,
         logo: logo || undefined,
         accountNumber: accountNumber.trim() || undefined,
         color,
         includeInAssets,
-        linkedBroker: type === 'investment' ? (linkedBroker || undefined) : undefined,
+        linkedBroker:
+          type === 'investment' ? linkedBroker || undefined : undefined,
         isArchived: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -393,7 +343,9 @@ export default function AddAccountScreen() {
 
   // Broker list with deduplication
   const availableBrokers = useMemo(() => {
-    const portfolioBrokers = portfolioTransactions.map((t) => t.broker).filter(Boolean) as string[];
+    const portfolioBrokers = portfolioTransactions
+      .map((t) => t.broker)
+      .filter(Boolean) as string[];
     const merged = new Set([...portfolioBrokers, ...POPULAR_BROKERS]);
     return Array.from(merged);
   }, [portfolioTransactions]);
@@ -428,7 +380,7 @@ export default function AddAccountScreen() {
     );
   }, [iconSearchQuery]);
 
-  // Calculations for Step 2
+  // Credit card utilization calculations
   const parsedOutstandingNum = useMemo(() => {
     return parseIndianAmount(balance) || 0;
   }, [balance]);
@@ -443,305 +395,509 @@ export default function AddAccountScreen() {
   }, [type, parsedOutstandingNum, parsedLimitNum]);
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.root, { backgroundColor: THEME.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={0}
+    <View
+      style={[
+        styles.mainContainer,
+        {
+          backgroundColor: currColors.background,
+          paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 52 : 16),
+        },
+      ]}
     >
       <StatusBar style={isDark ? 'light' : 'dark'} />
-
-      {/* ─── Top Header & Progress Bar ─── */}
-      <View style={[styles.topHeader, { paddingTop: Math.max(insets.top, 16) + 4 }]}>
-        <View style={styles.headerNavRow}>
+      <View style={[styles.safeArea, { backgroundColor: currColors.background }]}>
+        {/* HEADER BAR (Matching Add Transaction in Investments) */}
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: currColors.background,
+              borderBottomColor: currColors.border,
+            },
+          ]}
+        >
           <TouchableOpacity
-            style={[styles.headerIconButton, { backgroundColor: THEME.text + '14' }]}
-            onPress={handleBack}
+            onPress={() => router.back()}
+            style={[
+              styles.headerIconButton,
+              {
+                backgroundColor: currColors.cardSecondary,
+                borderColor: currColors.border,
+              },
+            ]}
             activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <ArrowLeft size={20} color={THEME.text} />
+            <X size={18} color={currColors.text} strokeWidth={2.2} />
           </TouchableOpacity>
-
-          <ThemedText style={[styles.headerScreenTitle, { color: THEME.text }]}>
+          <ThemedText
+            type="semiBold"
+            style={[styles.headerTitle, { color: currColors.text }]}
+          >
             {editingAccount ? 'Edit Account' : 'Add Account'}
           </ThemedText>
-
           <TouchableOpacity
-            style={[styles.headerIconButton, { backgroundColor: THEME.text + '14' }]}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
+            onPress={handleSave}
+            style={[
+              styles.headerIconButton,
+              {
+                backgroundColor: currColors.tintMoney,
+                borderColor: currColors.tintMoney,
+              },
+            ]}
+            activeOpacity={0.8}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <X size={20} color={THEME.text} />
+            <Check
+              size={18}
+              color={isDark ? '#000000' : '#FFFFFF'}
+              strokeWidth={2.6}
+            />
           </TouchableOpacity>
         </View>
 
-        {/* 3-Segment Progress Bar */}
-        <View style={styles.segmentedProgressBar}>
-          {[0, 1, 2].map((stepIdx) => (
-            <View
-              key={stepIdx}
-              style={[
-                styles.progressSegment,
-                {
-                  backgroundColor:
-                    stepIdx <= currentStep ? THEME.trackActive : THEME.trackInactive,
-                },
-              ]}
-            />
-          ))}
-        </View>
-      </View>
-
-      <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: isKeyboardVisible ? 24 : 120 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-          {/* ════════════ STEP 0: ACCOUNT TYPE ════════════ */}
-          {currentStep === 0 && (
-            <View style={styles.stepContainer}>
-              <View style={[styles.typeGrid, { marginTop: 6 }]}>
-                {ACCOUNT_TYPES.map((item) => {
-                  const isSelected = type === item.type;
-                  return (
-                    <TouchableOpacity
-                      key={item.type}
-                      style={[
-                        styles.typeBox,
-                        {
-                          borderColor: isSelected ? currColors.tintMoney : currColors.border,
-                          backgroundColor: isSelected
-                            ? (isDark ? '#2C2C2E' : '#FFFFFF')
-                            : (isDark ? currColors.card : '#FFFFFF'),
-                        },
-                      ]}
-                      onPress={() => {
-                        handleHaptic();
-                        setType(item.type);
-                        if (item.type === 'wallet' && !iconId) {
-                          setIconId('wallet');
-                        }
-                      }}
-                      activeOpacity={0.8}
-                    >
-                      <View style={styles.typeBoxTopRow}>
-                        <View style={styles.typeBoxIconWrap}>
-                          <Category3DIcon name={item.category3d} size={38} />
-                        </View>
-
-                        {isSelected ? (
-                          <View style={[styles.typeBoxCheck, { backgroundColor: currColors.tintMoney }]}>
-                            <Check size={11} color={isDark ? '#003328' : '#FFFFFF'} strokeWidth={3} />
-                          </View>
-                        ) : (
-                          <View style={[styles.typeBoxInactiveDot, { borderColor: currColors.border }]} />
-                        )}
-                      </View>
-
-                      <View>
-                        <ThemedText
-                          style={[
-                            styles.typeBoxTitle,
-                            { color: currColors.text },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {item.title}
-                        </ThemedText>
-                        <ThemedText
-                          style={[
-                            styles.typeBoxDescription,
-                            { color: currColors.textSecondary },
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {item.shortDescription}
-                        </ThemedText>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-
-          {/* ════════════ STEP 1: DETAILS & BRANDING ════════════ */}
-          {currentStep === 1 && (
-            <View style={styles.stepContainer}>
-              {/* Account Name Card with clickable brand logo on left */}
-              <View style={[styles.sectionCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
-                <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                  ACCOUNT NAME
-                </ThemedText>
-                <View style={styles.nameInputRow}>
-                  {/* Clickable Logo on the left - NO BOUNDARIES */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* 1. HORIZONTAL ACCOUNT TYPE SELECTOR */}
+            <ThemedText
+              style={[styles.groupLabel, { color: currColors.textSecondary }]}
+            >
+              ACCOUNT TYPE
+            </ThemedText>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.typeSelectorScroll}
+              style={styles.typeSelectorContainer}
+            >
+              {ACCOUNT_TYPES.map((item) => {
+                const isSelected = type === item.type;
+                return (
                   <TouchableOpacity
-                    style={styles.logoTriggerButton}
-                    onPress={handleLogoClick}
-                    activeOpacity={0.7}
-                  >
-                    {logo ? (
-                      <BankLogo logo={logo} size={32} />
-                    ) : (
-                      <Category3DIcon
-                        name={iconId || activeTypeConfig.category3d}
-                        size={34}
-                      />
-                    )}
-                  </TouchableOpacity>
-
-                  {/* TextInput */}
-                  <TextInput
+                    key={item.type}
                     style={[
-                      styles.nameTextInput,
+                      styles.typePill,
                       {
-                        backgroundColor: isDark ? currColors.cardSecondary : '#F2F2F7',
-                        color: THEME.text,
-                        borderColor: THEME.cardBorder,
+                        backgroundColor: isSelected
+                          ? isDark
+                            ? '#2C2C2E'
+                            : '#FFFFFF'
+                          : currColors.card,
+                        borderColor: isSelected
+                          ? currColors.tintMoney
+                          : currColors.border,
+                        borderWidth: isSelected ? 1.5 : 1,
                       },
                     ]}
-                    placeholder={
-                      type === 'savings'
-                        ? 'e.g. HDFC Salary Account'
-                        : type === 'credit_card'
-                        ? 'e.g. ICICI Sapphiro Credit Card'
-                        : type === 'investment'
-                        ? 'e.g. Zerodha Stock Portfolio'
-                        : type === 'emergency_fund'
-                        ? 'e.g. Axis 1-Year FD'
-                        : 'e.g. Pocket Cash Wallet'
-                    }
-                    placeholderTextColor={THEME.sub + '80'}
-                    selectionColor={currColors.tintMoney}
-                    value={name}
-                    onChangeText={handleNameChange}
-                    autoCorrect={false}
-                    spellCheck={false}
-                    returnKeyType="done"
-                    autoFocus={!editingAccount}
-                  />
-                </View>
+                    onPress={() => {
+                      handleHaptic();
+                      setType(item.type);
+                      if (item.type === 'wallet' && !iconId) {
+                        setIconId('wallet');
+                      }
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Category3DIcon name={item.category3d} size={22} />
+                    <ThemedText
+                      style={[
+                        styles.typePillText,
+                        {
+                          color: isSelected
+                            ? currColors.text
+                            : currColors.textSecondary,
+                          fontFamily: isSelected
+                            ? 'Outfit_600SemiBold'
+                            : 'Outfit_400Regular',
+                        },
+                      ]}
+                    >
+                      {item.title}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* 2. ACCOUNT DETAILS GROUP */}
+            <ThemedText
+              style={[styles.groupLabel, { color: currColors.textSecondary }]}
+            >
+              ACCOUNT DETAILS
+            </ThemedText>
+            <View
+              style={[styles.formGroup, { backgroundColor: currColors.card }]}
+            >
+              {/* Account Name & Clickable Logo */}
+              <View
+                style={[
+                  styles.formRow,
+                  styles.formRowFirst,
+                  { borderBottomColor: currColors.border },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.logoTriggerButton}
+                  onPress={handleLogoClick}
+                  activeOpacity={0.7}
+                >
+                  {logo ? (
+                    <BankLogo logo={logo} size={32} />
+                  ) : (
+                    <Category3DIcon
+                      name={iconId || activeTypeConfig.category3d}
+                      size={32}
+                    />
+                  )}
+                </TouchableOpacity>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      color: currColors.text,
+                      marginLeft: 12,
+                      fontSize: 16,
+                    },
+                  ]}
+                  placeholder={
+                    type === 'savings'
+                      ? 'e.g. HDFC Salary Account'
+                      : type === 'credit_card'
+                      ? 'e.g. ICICI Sapphiro Credit Card'
+                      : type === 'investment'
+                      ? 'e.g. Zerodha Stock Portfolio'
+                      : type === 'emergency_fund'
+                      ? 'e.g. Axis 1-Year FD'
+                      : type === 'receivable'
+                      ? 'e.g. Loan to Rahul'
+                      : type === 'payable'
+                      ? 'e.g. Money Owed to Dad'
+                      : 'e.g. Pocket Cash Wallet'
+                  }
+                  placeholderTextColor={currColors.textSecondary}
+                  value={name}
+                  onChangeText={handleNameChange}
+                  autoCorrect={false}
+                  spellCheck={false}
+                  autoFocus={!editingAccount}
+                />
               </View>
 
-              {/* Account Identifier Card */}
-              <View style={[styles.sectionCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
-                <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                  LAST 4 DIGITS / ACCOUNT NUMBER (OPTIONAL)
+              {/* Institution / Linked Broker / Icon Picker Row */}
+              {type === 'investment' ? (
+                <TouchableOpacity
+                  style={[
+                    styles.formRow,
+                    { borderBottomColor: currColors.border },
+                  ]}
+                  onPress={() => setShowBrokerModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText
+                    style={[styles.label, { color: currColors.text }]}
+                  >
+                    Linked Broker
+                  </ThemedText>
+                  <View style={styles.valueContainer}>
+                    {linkedBroker ? (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <BankLogo
+                          logo={
+                            resolveBrokerBrandLogo(linkedBroker, accounts) ||
+                            linkedBroker
+                          }
+                          size={20}
+                        />
+                        <ThemedText
+                          style={[styles.valueText, { color: currColors.text }]}
+                        >
+                          {linkedBroker}
+                        </ThemedText>
+                      </View>
+                    ) : (
+                      <ThemedText
+                        style={[styles.valueText, styles.placeholderText]}
+                      >
+                        Select Broker
+                      </ThemedText>
+                    )}
+                    <ChevronRight
+                      size={16}
+                      color={currColors.border}
+                      style={{ marginLeft: 6 }}
+                    />
+                  </View>
+                </TouchableOpacity>
+              ) : type === 'savings' ||
+                type === 'credit_card' ||
+                type === 'emergency_fund' ? (
+                <TouchableOpacity
+                  style={[
+                    styles.formRow,
+                    { borderBottomColor: currColors.border },
+                  ]}
+                  onPress={() => setShowLogoModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText
+                    style={[styles.label, { color: currColors.text }]}
+                  >
+                    Bank / Institution
+                  </ThemedText>
+                  <View style={styles.valueContainer}>
+                    {logo ? (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <BankLogo logo={logo} size={20} />
+                        <ThemedText
+                          style={[styles.valueText, { color: currColors.text }]}
+                        >
+                          {institution || logo}
+                        </ThemedText>
+                      </View>
+                    ) : (
+                      <ThemedText
+                        style={[styles.valueText, styles.placeholderText]}
+                      >
+                        Select Bank
+                      </ThemedText>
+                    )}
+                    <ChevronRight
+                      size={16}
+                      color={currColors.border}
+                      style={{ marginLeft: 6 }}
+                    />
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[
+                    styles.formRow,
+                    { borderBottomColor: currColors.border },
+                  ]}
+                  onPress={() => setShowIconModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText
+                    style={[styles.label, { color: currColors.text }]}
+                  >
+                    Avatar Icon
+                  </ThemedText>
+                  <View style={styles.valueContainer}>
+                    <Category3DIcon
+                      name={iconId || activeTypeConfig.category3d}
+                      size={22}
+                    />
+                    <ThemedText
+                      style={[
+                        styles.valueText,
+                        { color: currColors.text, marginLeft: 6 },
+                      ]}
+                    >
+                      {iconId ? iconId.toUpperCase() : 'Default'}
+                    </ThemedText>
+                    <ChevronRight
+                      size={16}
+                      color={currColors.border}
+                      style={{ marginLeft: 6 }}
+                    />
+                  </View>
+                </TouchableOpacity>
+              )}
+
+              {/* Account Identifier */}
+              <View style={[styles.formRow, styles.formRowLast]}>
+                <ThemedText
+                  style={[styles.label, { color: currColors.text }]}
+                >
+                  Last 4 Digits (Optional)
                 </ThemedText>
                 <TextInput
                   style={[
-                    styles.standardInput,
+                    styles.input,
                     {
-                      backgroundColor: isDark ? currColors.cardSecondary : '#F2F2F7',
-                      color: THEME.text,
-                      borderColor: THEME.cardBorder,
+                      color: currColors.text,
+                      textAlign: 'right',
                     },
                   ]}
-                  placeholder="e.g. •••• 4021"
-                  placeholderTextColor={THEME.sub + '80'}
-                  selectionColor={currColors.tintMoney}
+                  placeholder="•••• 4021"
+                  placeholderTextColor={currColors.textSecondary}
                   value={accountNumber}
                   onChangeText={setAccountNumber}
                   autoCorrect={false}
                   spellCheck={false}
                   autoCapitalize="none"
-                  inputAccessoryViewID={EMPTY_ACCESSORY_ID}
                 />
               </View>
             </View>
-          )}
 
-          {/* ════════════ STEP 2: BALANCES & LIMITS ════════════ */}
-          {currentStep === 2 && (
-            <View style={styles.stepContainer}>
-              {/* Balance & Limits Card */}
-              <View style={[styles.sectionCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
-                {type === 'credit_card' ? (
-                  <>
-                    {/* Current Outstanding */}
-                    <View>
-                      <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                        CURRENT OUTSTANDING DUE (₹)
+            {/* 3. BALANCES & LIMITS GROUP */}
+            <ThemedText
+              style={[styles.groupLabel, { color: currColors.textSecondary }]}
+            >
+              BALANCE & LIMITS
+            </ThemedText>
+            <View
+              style={[styles.formGroup, { backgroundColor: currColors.card }]}
+            >
+              {type === 'credit_card' ? (
+                <>
+                  {/* Current Outstanding Due */}
+                  <View
+                    style={[
+                      styles.formRow,
+                      { borderBottomColor: currColors.border },
+                    ]}
+                  >
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <ThemedText
+                        style={[styles.label, { color: currColors.text }]}
+                      >
+                        Current Outstanding
                       </ThemedText>
-                      <View style={styles.amountInputRow}>
-                        <ThemedText style={[styles.currencyPrefix, { color: THEME.text }]}>₹</ThemedText>
-                        <TextInput
-                          style={[styles.heroAmountInput, { color: THEME.text }]}
-                          placeholder="0"
-                          placeholderTextColor={THEME.text + '4D'}
-                          keyboardType="numeric"
-                          value={balance}
-                          onChangeText={(val) => setBalance(formatIndianAmount(val))}
-                          autoFocus={true}
-                          inputAccessoryViewID={EMPTY_ACCESSORY_ID}
-                        />
-                      </View>
-                      <ThemedText style={[styles.inputExplainer, { color: THEME.sub }]}>
-                        Amount billed or spent that you currently owe on this card.
-                      </ThemedText>
-                    </View>
-
-                    <View style={[styles.fieldDivider, { backgroundColor: THEME.text + '14' }]} />
-
-                    {/* Total Credit Limit */}
-                    <View>
-                      <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                        TOTAL CREDIT LIMIT (₹)
-                      </ThemedText>
-                      <View style={styles.amountInputRow}>
-                        <ThemedText style={[styles.currencyPrefix, { color: THEME.text }]}>₹</ThemedText>
-                        <TextInput
-                          style={[styles.heroAmountInput, { color: THEME.text, fontSize: 32 }]}
-                          placeholder="0"
-                          placeholderTextColor={THEME.text + '4D'}
-                          keyboardType="numeric"
-                          value={creditLimit}
-                          onChangeText={(val) => setCreditLimit(formatIndianAmount(val))}
-                          inputAccessoryViewID={EMPTY_ACCESSORY_ID}
-                        />
-                      </View>
-                    </View>
-
-                    {/* Real-time Utilization Indicator */}
-                    {parsedLimitNum > 0 && (
-                      <View
+                      <ThemedText
                         style={[
-                          styles.utilizationCard,
-                          {
-                            backgroundColor: isDark ? currColors.cardSecondary : '#F9FAFB',
-                            borderColor: currColors.border,
-                          },
+                          styles.subLabel,
+                          { color: currColors.textSecondary },
                         ]}
                       >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            {utilizationRate > 70 ? (
-                              <AlertCircle size={16} color="#DC2626" />
-                            ) : (
-                              <ShieldCheck size={16} color={utilizationRate > 30 ? '#D97706' : '#16A34A'} />
-                            )}
-                            <ThemedText
-                              style={[
-                                styles.utilizationLabel,
-                                {
-                                  color:
-                                    utilizationRate > 70
-                                      ? '#DC2626'
-                                      : utilizationRate > 30
-                                      ? '#B45309'
-                                      : '#15803D',
-                                },
-                              ]}
-                            >
-                              {utilizationRate}% Utilization ({utilizationRate <= 30 ? 'Healthy' : utilizationRate <= 70 ? 'Moderate' : 'High'})
-                            </ThemedText>
-                          </View>
+                        Amount currently due on card
+                      </ThemedText>
+                    </View>
+                    <View style={styles.amountInputWrap}>
+                      <ThemedText
+                        style={[
+                          styles.currencyPrefix,
+                          { color: currColors.textSecondary },
+                        ]}
+                      >
+                        ₹
+                      </ThemedText>
+                      <TextInput
+                        style={[
+                          styles.amountInput,
+                          { color: currColors.text },
+                        ]}
+                        placeholder="0"
+                        placeholderTextColor={currColors.textSecondary}
+                        keyboardType="numeric"
+                        value={balance}
+                        onChangeText={(val) =>
+                          setBalance(formatIndianAmount(val))
+                        }
+                        textAlign="right"
+                      />
+                    </View>
+                  </View>
+
+                  {/* Total Credit Limit */}
+                  <View
+                    style={[
+                      styles.formRow,
+                      parsedLimitNum <= 0 && styles.formRowLast,
+                      { borderBottomColor: currColors.border },
+                    ]}
+                  >
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <ThemedText
+                        style={[styles.label, { color: currColors.text }]}
+                      >
+                        Total Credit Limit
+                      </ThemedText>
+                      <ThemedText
+                        style={[
+                          styles.subLabel,
+                          { color: currColors.textSecondary },
+                        ]}
+                      >
+                        Maximum sanctioned limit
+                      </ThemedText>
+                    </View>
+                    <View style={styles.amountInputWrap}>
+                      <ThemedText
+                        style={[
+                          styles.currencyPrefix,
+                          { color: currColors.textSecondary },
+                        ]}
+                      >
+                        ₹
+                      </ThemedText>
+                      <TextInput
+                        style={[
+                          styles.amountInput,
+                          { color: currColors.text },
+                        ]}
+                        placeholder="0"
+                        placeholderTextColor={currColors.textSecondary}
+                        keyboardType="numeric"
+                        value={creditLimit}
+                        onChangeText={(val) =>
+                          setCreditLimit(formatIndianAmount(val))
+                        }
+                        textAlign="right"
+                      />
+                    </View>
+                  </View>
+
+                  {/* Real-time Utilization Indicator */}
+                  {parsedLimitNum > 0 && (
+                    <View
+                      style={[
+                        styles.utilizationCard,
+                        {
+                          backgroundColor: isDark
+                            ? currColors.cardSecondary
+                            : '#F9FAFB',
+                          borderColor: currColors.border,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          {utilizationRate > 70 ? (
+                            <AlertCircle size={15} color="#DC2626" />
+                          ) : (
+                            <ShieldCheck
+                              size={15}
+                              color={
+                                utilizationRate > 30 ? '#D97706' : '#16A34A'
+                              }
+                            />
+                          )}
                           <ThemedText
                             style={[
-                              styles.availableLimitText,
+                              styles.utilizationLabel,
                               {
                                 color:
                                   utilizationRate > 70
@@ -752,212 +908,254 @@ export default function AddAccountScreen() {
                               },
                             ]}
                           >
-                            ₹{Math.max(0, parsedLimitNum - parsedOutstandingNum).toLocaleString('en-IN')} Available
+                            {utilizationRate}% Utilization (
+                            {utilizationRate <= 30
+                              ? 'Healthy'
+                              : utilizationRate <= 70
+                              ? 'Moderate'
+                              : 'High'}
+                            )
                           </ThemedText>
                         </View>
-
-                        {/* Bar indicator */}
-                        <View style={styles.utilizationTrack}>
-                          <View
-                            style={[
-                              styles.utilizationFill,
-                              {
-                                width: `${Math.min(100, Math.max(0, utilizationRate))}%`,
-                                backgroundColor:
-                                  utilizationRate > 70
-                                    ? '#DC2626'
-                                    : utilizationRate > 30
-                                    ? '#F59E0B'
-                                    : '#16A34A',
-                              },
-                            ]}
-                          />
-                        </View>
+                        <ThemedText
+                          style={[
+                            styles.availableLimitText,
+                            {
+                              color:
+                                utilizationRate > 70
+                                  ? '#DC2626'
+                                  : utilizationRate > 30
+                                  ? '#B45309'
+                                  : '#15803D',
+                            },
+                          ]}
+                        >
+                          ₹
+                          {Math.max(
+                            0,
+                            parsedLimitNum - parsedOutstandingNum
+                          ).toLocaleString('en-IN')}{' '}
+                          Available
+                        </ThemedText>
                       </View>
-                    )}
-                  </>
-                ) : (
-                  /* Standard Balance Input for other account types */
-                  <View>
-                    <ThemedText style={[styles.inputLabel, { color: THEME.sub }]}>
-                      {type === 'payable' ? 'AMOUNT CURRENTLY OWED (₹)' : 'STARTING BALANCE (₹)'}
-                    </ThemedText>
-                    <View style={styles.amountInputRow}>
-                      <ThemedText style={[styles.currencyPrefix, { color: THEME.text }]}>₹</ThemedText>
+
+                      {/* Bar indicator */}
+                      <View style={styles.utilizationTrack}>
+                        <View
+                          style={[
+                            styles.utilizationFill,
+                            {
+                              width: `${Math.min(
+                                100,
+                                Math.max(0, utilizationRate)
+                              )}%`,
+                              backgroundColor:
+                                utilizationRate > 70
+                                  ? '#DC2626'
+                                  : utilizationRate > 30
+                                  ? '#F59E0B'
+                                  : '#16A34A',
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  )}
+                </>
+              ) : (
+                /* Standard Balance Input */
+                <>
+                  <View style={[styles.formRow, styles.formRowLast]}>
+                    <View style={{ flex: 1, paddingRight: 8 }}>
+                      <ThemedText
+                        style={[styles.label, { color: currColors.text }]}
+                      >
+                        {type === 'payable'
+                          ? 'Amount Currently Owed'
+                          : type === 'receivable'
+                          ? 'Amount Lent Out'
+                          : 'Starting Balance'}
+                      </ThemedText>
+                      <ThemedText
+                        style={[
+                          styles.subLabel,
+                          { color: currColors.textSecondary },
+                        ]}
+                      >
+                        {type === 'payable'
+                          ? 'Debt balance you owe'
+                          : type === 'receivable'
+                          ? 'Asset balance due to you'
+                          : 'Opening ledger balance'}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.amountInputWrap}>
+                      <ThemedText
+                        style={[
+                          styles.currencyPrefix,
+                          { color: currColors.textSecondary },
+                        ]}
+                      >
+                        ₹
+                      </ThemedText>
                       <TextInput
-                        style={[styles.heroAmountInput, { color: THEME.text }]}
+                        style={[
+                          styles.amountInput,
+                          { color: currColors.text },
+                        ]}
                         placeholder="0"
-                        placeholderTextColor={THEME.text + '4D'}
+                        placeholderTextColor={currColors.textSecondary}
                         keyboardType="numeric"
                         value={balance}
-                        onChangeText={(val) => setBalance(formatIndianAmount(val))}
-                        autoFocus={true}
-                        inputAccessoryViewID={EMPTY_ACCESSORY_ID}
+                        onChangeText={(val) =>
+                          setBalance(formatIndianAmount(val))
+                        }
+                        textAlign="right"
                       />
                     </View>
-
-                    {/* Quick Amount Preset Chips */}
-                    <View style={styles.presetsWrap}>
-                      {['0', '5000', '25000', '100000', '500000'].map((amt) => (
-                        <TouchableOpacity
-                          key={amt}
-                          style={[
-                            styles.presetChip,
-                            { backgroundColor: THEME.accentPill, borderColor: THEME.text + '20' },
-                          ]}
-                          onPress={() => {
-                            handleHaptic();
-                            setBalance(formatIndianAmount(amt));
-                          }}
-                          activeOpacity={0.7}
-                        >
-                          <ThemedText style={[styles.presetChipText, { color: THEME.text }]}>
-                            ₹{Number(amt).toLocaleString('en-IN')}
-                          </ThemedText>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
                   </View>
-                )}
-              </View>
+                </>
+              )}
+            </View>
 
-              {/* Include in Total Net Worth Toggle Card */}
-              <View style={[styles.sectionCard, { backgroundColor: THEME.cardBg, borderColor: THEME.cardBorder }]}>
-                <View style={styles.toggleRow}>
-                  <View style={{ flex: 1, paddingRight: 16 }}>
-                    <ThemedText style={[styles.toggleTitle, { color: THEME.text }]}>
-                      Include in Total Net Worth
-                    </ThemedText>
-                    <ThemedText style={[styles.toggleSubtitle, { color: THEME.sub }]}>
-                      When active, this balance will contribute to your aggregated assets & liabilities.
-                    </ThemedText>
-                  </View>
-                  <Switch
-                    value={includeInAssets}
-                    onValueChange={(val) => {
-                      handleHaptic();
-                      setIncludeInAssets(val);
-                    }}
-                    trackColor={{ false: THEME.trackInactive, true: THEME.text }}
-                    thumbColor="#FFFFFF"
-                  />
+            {/* 4. PREFERENCES GROUP */}
+            <ThemedText
+              style={[styles.groupLabel, { color: currColors.textSecondary }]}
+            >
+              PREFERENCES
+            </ThemedText>
+            <View
+              style={[styles.formGroup, { backgroundColor: currColors.card }]}
+            >
+              <View style={[styles.formRow, styles.formRowLast]}>
+                <View style={{ flex: 1, paddingRight: 16 }}>
+                  <ThemedText
+                    style={[styles.label, { color: currColors.text }]}
+                  >
+                    Include in Net Worth
+                  </ThemedText>
+                  <ThemedText
+                    style={[
+                      styles.subLabel,
+                      { color: currColors.textSecondary },
+                    ]}
+                  >
+                    Aggregates balance into total assets & liabilities
+                  </ThemedText>
                 </View>
+                <Switch
+                  value={includeInAssets}
+                  onValueChange={(val) => {
+                    handleHaptic();
+                    setIncludeInAssets(val);
+                  }}
+                  trackColor={{
+                    false: isDark ? '#2C2C2E' : '#E5E5EA',
+                    true: currColors.tintMoney,
+                  }}
+                  thumbColor="#FFFFFF"
+                />
               </View>
             </View>
-          )}
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
 
-        {/* ─── Sticky Bottom Action Bar ─── */}
-        <View
-          style={[
-            styles.bottomActionBar,
-            {
-              backgroundColor: 'transparent',
-              borderTopWidth: 0,
-              paddingBottom: isKeyboardVisible
-                ? 24
-                : Math.max(insets.bottom, 16) + 8,
-            },
-          ]}
-        >
-          {currentStep > 0 && (
-            <TouchableOpacity
-              style={[
-                styles.backActionButton,
-                {
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)',
-                  backgroundColor: 'transparent',
-                },
-              ]}
-              onPress={handleBack}
-              activeOpacity={0.8}
-            >
-              <ArrowLeft size={18} color={currColors.text} />
-              <ThemedText style={[styles.backActionText, { color: currColors.text }]}>
-                Back
-              </ThemedText>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            style={[
-              styles.primaryActionButton,
-              {
-                backgroundColor: isDark ? '#FFFFFF' : '#1C1917',
-              },
-            ]}
-            onPress={handleNext}
-            activeOpacity={0.85}
-          >
-            <ThemedText style={[styles.primaryActionText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
-              {currentStep === 2
-                ? editingAccount
-                  ? 'Update Account'
-                  : 'Save Account'
-                : 'Continue'}
-            </ThemedText>
-            {currentStep === 2 ? (
-              <Check size={18} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.5} />
-            ) : (
-              <ArrowRight size={18} color={isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.5} />
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Empty InputAccessoryView to suppress the default iOS Done button toolbar */}
-        {Platform.OS === 'ios' && (
-          <InputAccessoryView nativeID={EMPTY_ACCESSORY_ID}>
-            <View />
-          </InputAccessoryView>
-        )}
-
-        {/* ─── Full-Page Bank Logo Modal ─── */}
+      {/* ─── FULL PAGE BANK LOGO SELECTION MODAL ─── */}
       <Modal
         visible={showLogoModal}
         animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowLogoModal(false)}
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
+        onRequestClose={() => {
+          setShowLogoModal(false);
+          setBrandSearchQuery('');
+        }}
       >
-        <View style={[styles.modalRoot, { backgroundColor: '#F8FAFC' }]}>
-          <View style={styles.modalHeaderRow}>
-            <ThemedText style={styles.modalHeaderTitle}>Select Bank / Institution</ThemedText>
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: currColors.background },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor: currColors.background,
+                borderBottomColor: currColors.border,
+                paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24),
+              },
+            ]}
+          >
             <TouchableOpacity
               onPress={() => {
                 setShowLogoModal(false);
                 setBrandSearchQuery('');
               }}
-              style={styles.modalCloseButton}
+              style={styles.cancelButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <X size={20} color="#1F2937" />
+              <ThemedText
+                style={[
+                  styles.headerButtonText,
+                  { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' },
+                ]}
+              >
+                Cancel
+              </ThemedText>
             </TouchableOpacity>
+
+            <ThemedText
+              type="semiBold"
+              style={[styles.headerTitle, { color: currColors.text }]}
+            >
+              Select Bank
+            </ThemedText>
+
+            <View style={{ width: 50 }} />
           </View>
 
-          <View style={styles.modalSearchContainer}>
-            <View style={styles.modalSearchBox}>
-              <Search size={18} color="#9CA3AF" />
-              <TextInput
-                style={styles.modalSearchInput}
-                placeholder="Search bank name (e.g. HDFC, SBI, Axis)..."
-                placeholderTextColor="#9CA3AF"
-                value={brandSearchQuery}
-                onChangeText={setBrandSearchQuery}
-                autoCorrect={false}
-              />
-              {brandSearchQuery ? (
-                <TouchableOpacity onPress={() => setBrandSearchQuery('')}>
-                  <X size={16} color="#9CA3AF" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
+          <View
+            style={[
+              styles.searchBarContainer,
+              {
+                backgroundColor: currColors.card,
+                borderColor: currColors.border,
+              },
+            ]}
+          >
+            <Search size={18} color={currColors.textSecondary} />
+            <TextInput
+              style={[styles.searchInput, { color: currColors.text }]}
+              placeholder="Search bank name (e.g. HDFC, SBI, Axis)..."
+              placeholderTextColor={currColors.textSecondary}
+              value={brandSearchQuery}
+              onChangeText={setBrandSearchQuery}
+              autoFocus
+            />
+            {brandSearchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setBrandSearchQuery('')}>
+                <X size={16} color={currColors.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
 
-          <ScrollView contentContainerStyle={styles.modalListContent}>
+          <ScrollView
+            contentContainerStyle={styles.modalListContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             {filteredBrands.map((b) => {
               const isSelected = logo.toLowerCase() === b.id.toLowerCase();
               return (
                 <TouchableOpacity
                   key={b.id}
-                  style={[styles.bankModalItem, isSelected && styles.bankModalItemSelected]}
+                  style={[
+                    styles.modalListItem,
+                    { borderBottomColor: currColors.border },
+                  ]}
                   onPress={() => {
                     handleHaptic();
                     setLogo(b.id);
@@ -968,12 +1166,41 @@ export default function AddAccountScreen() {
                   }}
                   activeOpacity={0.7}
                 >
-                  <BankLogo logo={b.id} size={36} />
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <ThemedText style={styles.bankModalItemTitle}>{b.name}</ThemedText>
-                    <ThemedText style={styles.bankModalItemCategory}>{b.category?.toUpperCase() || 'BANK'}</ThemedText>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      flex: 1,
+                    }}
+                  >
+                    <BankLogo logo={b.id} size={32} />
+                    <View style={{ flex: 1 }}>
+                      <ThemedText
+                        style={[
+                          styles.modalItemTitle,
+                          { color: currColors.text },
+                        ]}
+                      >
+                        {b.name}
+                      </ThemedText>
+                      <ThemedText
+                        style={[
+                          styles.modalItemCategory,
+                          { color: currColors.textSecondary },
+                        ]}
+                      >
+                        {b.category?.toUpperCase() || 'BANK'}
+                      </ThemedText>
+                    </View>
                   </View>
-                  {isSelected && <Check size={18} color="#00C9A7" strokeWidth={2.5} />}
+                  {isSelected && (
+                    <Check
+                      size={18}
+                      color={currColors.tintMoney}
+                      strokeWidth={2.5}
+                    />
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -981,68 +1208,181 @@ export default function AddAccountScreen() {
         </View>
       </Modal>
 
-      {/* ─── Full-Page Broker Modal ─── */}
+      {/* ─── FULL PAGE BROKER SELECTION MODAL ─── */}
       <Modal
         visible={showBrokerModal}
         animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowBrokerModal(false)}
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
+        onRequestClose={() => {
+          setShowBrokerModal(false);
+          setBrokerSearchQuery('');
+        }}
       >
-        <View style={[styles.modalRoot, { backgroundColor: '#F8FAFC' }]}>
-          <View style={styles.modalHeaderRow}>
-            <ThemedText style={styles.modalHeaderTitle}>Select Broker / Platform</ThemedText>
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: currColors.background },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor: currColors.background,
+                borderBottomColor: currColors.border,
+                paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24),
+              },
+            ]}
+          >
             <TouchableOpacity
               onPress={() => {
                 setShowBrokerModal(false);
                 setBrokerSearchQuery('');
               }}
-              style={styles.modalCloseButton}
+              style={styles.cancelButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <X size={20} color="#1F2937" />
+              <ThemedText
+                style={[
+                  styles.headerButtonText,
+                  { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' },
+                ]}
+              >
+                Cancel
+              </ThemedText>
             </TouchableOpacity>
+
+            <ThemedText
+              type="semiBold"
+              style={[styles.headerTitle, { color: currColors.text }]}
+            >
+              Select Broker
+            </ThemedText>
+
+            <View style={{ width: 50 }} />
           </View>
 
-          <View style={styles.modalSearchContainer}>
-            <View style={styles.modalSearchBox}>
-              <Search size={18} color="#9CA3AF" />
-              <TextInput
-                style={styles.modalSearchInput}
-                placeholder="Search broker (e.g. Zerodha, Groww)..."
-                placeholderTextColor="#9CA3AF"
-                value={brokerSearchQuery}
-                onChangeText={setBrokerSearchQuery}
-                autoCorrect={false}
-              />
-              {brokerSearchQuery ? (
-                <TouchableOpacity onPress={() => setBrokerSearchQuery('')}>
-                  <X size={16} color="#9CA3AF" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
+          <View
+            style={[
+              styles.searchBarContainer,
+              {
+                backgroundColor: currColors.card,
+                borderColor: currColors.border,
+              },
+            ]}
+          >
+            <Search size={18} color={currColors.textSecondary} />
+            <TextInput
+              style={[styles.searchInput, { color: currColors.text }]}
+              placeholder="Search or add new broker (Zerodha, Groww)..."
+              placeholderTextColor={currColors.textSecondary}
+              value={brokerSearchQuery}
+              onChangeText={setBrokerSearchQuery}
+              autoFocus
+            />
+            {brokerSearchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setBrokerSearchQuery('')}>
+                <X size={16} color={currColors.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
 
-          <ScrollView contentContainerStyle={styles.modalListContent}>
+          <ScrollView
+            contentContainerStyle={styles.modalListContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {brokerSearchQuery.length > 0 && (
+              <TouchableOpacity
+                style={[
+                  styles.modalListItem,
+                  { borderBottomColor: currColors.border },
+                ]}
+                onPress={() => {
+                  handleHaptic();
+                  setLinkedBroker(brokerSearchQuery);
+                  if (!name) setName(brokerSearchQuery);
+                  setShowBrokerModal(false);
+                  setBrokerSearchQuery('');
+                }}
+              >
+                <ThemedText
+                  style={[
+                    styles.modalItemTitle,
+                    { color: currColors.tintMoney },
+                  ]}
+                >
+                  Use "{brokerSearchQuery}"
+                </ThemedText>
+              </TouchableOpacity>
+            )}
+
             {filteredBrokers.map((broker) => {
               const isSelected = linkedBroker === broker;
               return (
                 <TouchableOpacity
                   key={broker}
-                  style={[styles.bankModalItem, isSelected && styles.bankModalItemSelected]}
+                  style={[
+                    styles.modalListItem,
+                    { borderBottomColor: currColors.border },
+                  ]}
                   onPress={() => {
                     handleHaptic();
                     setLinkedBroker(broker);
                     if (!name) setName(broker);
+                    const brokerBrand = BANK_BRANDS.find(
+                      (b) =>
+                        b.name.toLowerCase().includes(broker.toLowerCase()) ||
+                        b.id.toLowerCase().includes(broker.toLowerCase())
+                    );
+                    if (brokerBrand) {
+                      setLogo(brokerBrand.id);
+                    }
                     setShowBrokerModal(false);
                     setBrokerSearchQuery('');
                   }}
                   activeOpacity={0.7}
                 >
-                  <Activity size={24} color={currColors.tintMoney} />
-                  <View style={{ flex: 1, marginLeft: 14 }}>
-                    <ThemedText style={styles.bankModalItemTitle}>{broker}</ThemedText>
-                    <ThemedText style={styles.bankModalItemCategory}>INVESTMENT BROKER</ThemedText>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      flex: 1,
+                    }}
+                  >
+                    <BankLogo
+                      logo={resolveBrokerBrandLogo(broker, accounts) || broker}
+                      size={30}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <ThemedText
+                        style={[
+                          styles.modalItemTitle,
+                          { color: currColors.text },
+                        ]}
+                      >
+                        {broker}
+                      </ThemedText>
+                      <ThemedText
+                        style={[
+                          styles.modalItemCategory,
+                          { color: currColors.textSecondary },
+                        ]}
+                      >
+                        INVESTMENT BROKER
+                      </ThemedText>
+                    </View>
                   </View>
-                  {isSelected && <Check size={18} color={currColors.tintMoney} strokeWidth={2.5} />}
+                  {isSelected && (
+                    <Check
+                      size={18}
+                      color={currColors.tintMoney}
+                      strokeWidth={2.5}
+                    />
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -1050,54 +1390,108 @@ export default function AddAccountScreen() {
         </View>
       </Modal>
 
-      {/* ─── Full-Page 3D Icon Picker Modal ─── */}
+      {/* ─── FULL PAGE 3D ICON PICKER MODAL ─── */}
       <Modal
         visible={showIconModal}
         animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowIconModal(false)}
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
+        onRequestClose={() => {
+          setShowIconModal(false);
+          setIconSearchQuery('');
+        }}
       >
-        <View style={[styles.modalRoot, { backgroundColor: '#F8FAFC' }]}>
-          <View style={styles.modalHeaderRow}>
-            <ThemedText style={styles.modalHeaderTitle}>Choose 3D Avatar Icon</ThemedText>
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: currColors.background },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor: currColors.background,
+                borderBottomColor: currColors.border,
+                paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 56 : 24),
+              },
+            ]}
+          >
             <TouchableOpacity
               onPress={() => {
                 setShowIconModal(false);
                 setIconSearchQuery('');
               }}
-              style={styles.modalCloseButton}
+              style={styles.cancelButton}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <X size={20} color="#1F2937" />
+              <ThemedText
+                style={[
+                  styles.headerButtonText,
+                  { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' },
+                ]}
+              >
+                Cancel
+              </ThemedText>
             </TouchableOpacity>
+
+            <ThemedText
+              type="semiBold"
+              style={[styles.headerTitle, { color: currColors.text }]}
+            >
+              Choose 3D Avatar Icon
+            </ThemedText>
+
+            <View style={{ width: 50 }} />
           </View>
 
-          <View style={styles.modalSearchContainer}>
-            <View style={styles.modalSearchBox}>
-              <Search size={18} color="#9CA3AF" />
-              <TextInput
-                style={styles.modalSearchInput}
-                placeholder="Search 80+ 3D objects (cash, safe, wallet)..."
-                placeholderTextColor="#9CA3AF"
-                value={iconSearchQuery}
-                onChangeText={setIconSearchQuery}
-                autoCorrect={false}
-              />
-              {iconSearchQuery ? (
-                <TouchableOpacity onPress={() => setIconSearchQuery('')}>
-                  <X size={16} color="#9CA3AF" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
+          <View
+            style={[
+              styles.searchBarContainer,
+              {
+                backgroundColor: currColors.card,
+                borderColor: currColors.border,
+              },
+            ]}
+          >
+            <Search size={18} color={currColors.textSecondary} />
+            <TextInput
+              style={[styles.searchInput, { color: currColors.text }]}
+              placeholder="Search 80+ 3D objects (cash, wallet, safe)..."
+              placeholderTextColor={currColors.textSecondary}
+              value={iconSearchQuery}
+              onChangeText={setIconSearchQuery}
+              autoFocus
+            />
+            {iconSearchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setIconSearchQuery('')}>
+                <X size={16} color={currColors.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
 
-          <ScrollView contentContainerStyle={styles.iconGridContent}>
+          <ScrollView
+            contentContainerStyle={styles.iconGridContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.iconGridWrap}>
               {filteredIcons.map((item) => {
                 const isSelected = iconId === item.id;
                 return (
                   <TouchableOpacity
                     key={item.id}
-                    style={[styles.iconGridCard, isSelected && styles.iconGridCardSelected]}
+                    style={[
+                      styles.iconGridCard,
+                      {
+                        backgroundColor: currColors.card,
+                        borderColor: isSelected
+                          ? currColors.tintMoney
+                          : currColors.border,
+                      },
+                      isSelected && styles.iconGridCardSelected,
+                    ]}
                     onPress={() => {
                       handleHaptic();
                       setIconId(item.id);
@@ -1107,11 +1501,22 @@ export default function AddAccountScreen() {
                     activeOpacity={0.7}
                   >
                     <Category3DIcon name={item.id} size={38} />
-                    <ThemedText style={styles.iconGridCardLabel} numberOfLines={1}>
+                    <ThemedText
+                      style={[
+                        styles.iconGridCardLabel,
+                        { color: currColors.text },
+                      ]}
+                      numberOfLines={1}
+                    >
                       {item.name}
                     </ThemedText>
                     {isSelected && (
-                      <View style={styles.iconSelectedBadge}>
+                      <View
+                        style={[
+                          styles.iconSelectedBadge,
+                          { backgroundColor: currColors.tintMoney },
+                        ]}
+                      >
                         <Check size={10} color="#FFFFFF" strokeWidth={3} />
                       </View>
                     )}
@@ -1122,220 +1527,167 @@ export default function AddAccountScreen() {
           </ScrollView>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  mainContainer: {
     flex: 1,
   },
-  topHeader: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
+  safeArea: {
+    flex: 1,
   },
-  headerNavRow: {
+  header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
   },
   headerIconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
   },
-  headerScreenTitle: {
+  cancelButton: {
+    paddingVertical: 8,
+    paddingRight: 16,
+  },
+  saveButton: {
+    paddingVertical: 8,
+    paddingLeft: 16,
+  },
+  headerButtonText: {
     fontSize: 17,
-    fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: -0.2,
   },
-  segmentedProgressBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  progressSegment: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-  },
-  scrollArea: {
-    flex: 1,
+  saveButtonText: {
+    fontWeight: '600',
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 16,
+    paddingBottom: 48,
   },
-  stepContainer: {
-    width: '100%',
+  typeSelectorContainer: {
+    marginBottom: 20,
   },
-  sectionCard: {
-    borderRadius: 20,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  typeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'space-between',
-  },
-  typeBox: {
-    width: '48.2%',
-    borderRadius: 18,
-    borderCurve: 'continuous',
-    borderWidth: 1.5,
-    padding: 14,
-    justifyContent: 'space-between',
-    minHeight: 126,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  typeBoxTopRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  typeBoxIconWrap: {
-    width: 42,
-    height: 42,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  typeBoxCheck: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  typeBoxInactiveDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1.5,
-  },
-  typeBoxTitle: {
-    fontSize: 15,
-    fontFamily: 'Outfit_600SemiBold',
-    marginBottom: 2,
-    letterSpacing: -0.2,
-  },
-  typeBoxDescription: {
-    fontSize: 11,
-    fontFamily: 'Outfit_400Regular',
-    lineHeight: 15,
-  },
-  inputLabel: {
-    fontSize: 11,
-    fontFamily: 'Outfit_600SemiBold',
-    letterSpacing: 0.8,
-    marginBottom: 8,
-  },
-  nameInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  logoTriggerButton: {
-    width: 42,
-    height: 42,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  nameTextInput: {
-    flex: 1,
-    height: 48,
-    fontSize: 16,
-    fontFamily: 'Outfit_500Medium',
-    borderWidth: 1,
-    borderRadius: 14,
-    borderCurve: 'continuous',
-    paddingHorizontal: 14,
-  },
-  standardInput: {
-    fontSize: 16,
-    fontFamily: 'Outfit_500Medium',
-    borderWidth: 1,
-    borderRadius: 14,
-    borderCurve: 'continuous',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  presetsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  typeSelectorScroll: {
+    paddingHorizontal: 16,
     gap: 8,
-    marginTop: 10,
   },
-  presetChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  presetChipText: {
-    fontSize: 12,
-    fontFamily: 'Outfit_500Medium',
-  },
-  fieldDivider: {
-    height: 1,
-    marginVertical: 18,
-  },
-  amountInputRow: {
+  typePill: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+  },
+  typePillText: {
+    fontSize: 14,
+  },
+  groupLabel: {
+    fontSize: 12,
+    marginLeft: 16,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontFamily: 'Outfit_500Medium',
+  },
+  formGroup: {
+    borderRadius: 14,
+    marginHorizontal: 16,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  formRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0.5,
+    minHeight: 52,
+  },
+  formRowFirst: {},
+  formRowLast: {
+    borderBottomWidth: 0,
+  },
+  label: {
+    fontSize: 15,
+    fontFamily: 'Outfit_500Medium',
+  },
+  subLabel: {
+    fontSize: 12,
+    marginTop: 2,
+    fontFamily: 'Outfit_400Regular',
+  },
+  valueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  valueText: {
+    fontSize: 15,
+    fontFamily: 'Outfit_500Medium',
+  },
+  placeholderText: {
+    color: '#8E8E93',
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    padding: 0,
+    fontFamily: 'Outfit_400Regular',
+  },
+  amountInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  amountInput: {
+    fontSize: 18,
+    fontFamily: 'Outfit_600SemiBold',
+    padding: 0,
+    minWidth: 80,
   },
   currencyPrefix: {
-    fontSize: 34,
-    fontFamily: 'Outfit_600SemiBold',
-    marginRight: 6,
+    fontSize: 16,
+    marginRight: 4,
+    fontFamily: 'Outfit_500Medium',
   },
-  heroAmountInput: {
-    flex: 1,
-    fontSize: 40,
-    fontFamily: 'Outfit_700Bold',
-    padding: 0,
-  },
-  inputExplainer: {
-    fontSize: 12,
-    fontFamily: 'Outfit_400Regular',
-    marginTop: 6,
+  logoTriggerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   utilizationCard: {
-    marginTop: 14,
+    margin: 12,
     padding: 12,
-    borderRadius: 14,
-    borderCurve: 'continuous',
+    borderRadius: 12,
     borderWidth: 1,
   },
   utilizationLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: 'Outfit_600SemiBold',
   },
   availableLimitText: {
     fontSize: 12,
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: 'Outfit_600SemiBold',
   },
   utilizationTrack: {
     height: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
     borderRadius: 3,
+    backgroundColor: 'rgba(150, 150, 150, 0.2)',
     marginTop: 8,
     overflow: 'hidden',
   },
@@ -1343,182 +1695,90 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 3,
   },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  toggleTitle: {
-    fontSize: 15,
-    fontFamily: 'Outfit_600SemiBold',
-    marginBottom: 2,
-  },
-  toggleSubtitle: {
-    fontSize: 12,
-    fontFamily: 'Outfit_400Regular',
-    lineHeight: 16,
-  },
-  bottomActionBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-  },
-  backActionButton: {
-    height: 50,
-    paddingHorizontal: 18,
-    borderRadius: 16,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    flexShrink: 0,
-  },
-  backActionText: {
-    fontSize: 15,
-    fontFamily: 'Outfit_600SemiBold',
-  },
-  primaryActionButton: {
-    flex: 1,
-    height: 50,
-    borderRadius: 16,
-    borderCurve: 'continuous',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    flexShrink: 1,
-  },
-  primaryActionText: {
-    fontSize: 16,
-    fontFamily: 'Outfit_600SemiBold',
-  },
-  // Modal styling
-  modalRoot: {
+
+  // Modal Styles (matching Add Transaction in Investments)
+  modalContainer: {
     flex: 1,
   },
-  modalHeaderRow: {
+  modalHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 14,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
-  modalHeaderTitle: {
-    fontSize: 17,
-    fontFamily: 'Outfit_600SemiBold',
-    color: '#111827',
-  },
-  modalCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalSearchContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  modalSearchBox: {
+  searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    margin: 16,
     paddingHorizontal: 12,
     height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
     gap: 8,
   },
-  modalSearchInput: {
+  searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Outfit_400Regular',
-    color: '#111827',
+    padding: 0,
   },
   modalListContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 16,
+    paddingBottom: 32,
   },
-  bankModalItem: {
+  modalListItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-    borderRadius: 14,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    borderBottomWidth: 0.5,
   },
-  bankModalItemSelected: {
-    borderColor: '#00C9A7',
-    backgroundColor: '#F0FDF4',
-  },
-  bankModalItemTitle: {
-    fontSize: 15,
-    fontFamily: 'Outfit_600SemiBold',
-    color: '#111827',
-  },
-  bankModalItemCategory: {
-    fontSize: 11,
+  modalItemTitle: {
+    fontSize: 16,
     fontFamily: 'Outfit_500Medium',
-    color: '#6B7280',
-    marginTop: 1,
+  },
+  modalItemCategory: {
+    fontSize: 12,
+    marginTop: 2,
+    fontFamily: 'Outfit_400Regular',
   },
   iconGridContent: {
     paddingHorizontal: 16,
-    paddingBottom: 40,
+    paddingBottom: 32,
   },
   iconGridWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
     justifyContent: 'flex-start',
   },
   iconGridCard: {
-    width: '22.5%',
-    aspectRatio: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    width: '30.5%',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 6,
-    position: 'relative',
+    paddingVertical: 16,
+    paddingHorizontal: 6,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   iconGridCardSelected: {
-    borderColor: '#00C9A7',
-    backgroundColor: '#F0FDF4',
     borderWidth: 2,
   },
   iconGridCardLabel: {
-    fontSize: 10,
+    fontSize: 11,
+    marginTop: 6,
     fontFamily: 'Outfit_500Medium',
-    color: '#4B5563',
-    marginTop: 4,
     textAlign: 'center',
   },
   iconSelectedBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: 6,
+    right: 6,
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#00C9A7',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -360,26 +360,34 @@ export default function AddTransactionScreen() {
         >
           <TouchableOpacity
             onPress={() => router.back()}
-            style={styles.cancelButton}
+            style={[
+              styles.headerIconButton,
+              {
+                backgroundColor: currColors.cardSecondary,
+                borderColor: currColors.border,
+              },
+            ]}
             activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <ThemedText style={[styles.headerButtonText, { color: currColors.textSecondary, fontFamily: 'Outfit_500Medium' }]}>
-              Cancel
-            </ThemedText>
+            <X size={18} color={currColors.text} strokeWidth={2.2} />
           </TouchableOpacity>
           <ThemedText type="semiBold" style={[styles.headerTitle, { color: currColors.text }]}>
             {editingTransaction ? 'Edit Transaction' : 'Add Transaction'}
           </ThemedText>
-          <TouchableOpacity onPress={handleSave} style={styles.saveButton} activeOpacity={0.7}>
-            <ThemedText
-              style={[
-                styles.headerButtonText,
-                styles.saveButtonText,
-                { color: '#0A84FF', fontFamily: 'Outfit_600SemiBold' },
-              ]}
-            >
-              Save
-            </ThemedText>
+          <TouchableOpacity
+            onPress={handleSave}
+            style={[
+              styles.headerIconButton,
+              {
+                backgroundColor: '#0A84FF',
+                borderColor: '#0A84FF',
+              },
+            ]}
+            activeOpacity={0.8}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Check size={18} color="#FFFFFF" strokeWidth={2.6} />
           </TouchableOpacity>
         </View>
 
@@ -1287,6 +1295,14 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: '600',
+  },
+  headerIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cancelButton: {
     paddingVertical: 8,
