@@ -38,8 +38,23 @@ function CustomFloatingTabBar({ state, descriptors, navigation }: any) {
   const colorScheme = useColorScheme() ?? 'dark';
   const isDark = colorScheme === 'dark';
   const currColors = Colors[colorScheme];
-  const { activeMode } = useAppModeStore();
+  const { activeMode, setActiveMode, setIsTransitioning } = useAppModeStore();
   const isInvestMode = activeMode === 'investments';
+
+  const handleToggleMode = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setIsTransitioning(true);
+    const nextMode = activeMode === 'investments' ? 'money' : 'investments';
+    setActiveMode(nextMode);
+    try {
+      router.replace('/(tabs)');
+    } catch {
+      // ignore
+    }
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 320);
+  };
 
   const currentRoute = state.routes[state.index];
   const descriptor = descriptors ? descriptors[currentRoute.key] : null;
@@ -186,12 +201,22 @@ function CustomFloatingTabBar({ state, descriptors, navigation }: any) {
               key={tab.name}
               activeOpacity={0.7}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                if (!isFocused) {
+                if (tab.name === 'index' && isFocused) {
+                  // Tapping active Tab 1 toggles between Investments and Money Manager
+                  handleToggleMode();
+                } else if (!isFocused) {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   const targetPath = tab.name === 'index' ? '/(tabs)' : `/(tabs)/${tab.name}`;
                   router.navigate(targetPath as any);
                 }
               }}
+              onLongPress={() => {
+                if (tab.name === 'index') {
+                  // Long pressing Tab 1 from any screen toggles mode immediately
+                  handleToggleMode();
+                }
+              }}
+              delayLongPress={350}
               style={[
                 styles.tabButton,
                 isFocused && {
@@ -246,7 +271,7 @@ export default function TabLayout() {
         <Tabs.Screen name="explore" />
         <Tabs.Screen name="money-loans" />
         <Tabs.Screen name="profile" />
-        <Tabs.Screen name="two" />
+        <Tabs.Screen name="two" options={{ tabBarStyle: { display: 'none' } }} />
       </Tabs>
     </View>
   );
