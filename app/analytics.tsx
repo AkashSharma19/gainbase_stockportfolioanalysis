@@ -37,7 +37,6 @@ import {
 
 import { ThemedText } from '@/components/ThemedText';
 import { Category3DIcon } from '@/components/Category3DIcon';
-import { PieChart } from 'react-native-gifted-charts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -68,18 +67,12 @@ export default function AnalyticsScreen() {
     'Current' | 'Returns' | 'Contribution' | 'XIRR'
   >('Current');
   const [sortDirection, setSortDirection] = useState<'ASC' | 'DESC'>('DESC');
-  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
 
   const scrollRef = useRef<any>(null);
-  const itemPositions = useRef<Map<number, number>>(new Map());
 
   useEffect(() => {
     fetchTickers();
   }, []);
-
-  useEffect(() => {
-    setFocusedIndex(null);
-  }, [selectedDimension, sortDirection, holdingsViewMode]);
 
   const onRefresh = React.useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -127,38 +120,6 @@ export default function AnalyticsScreen() {
 
     return data;
   }, [allocation, sortDirection, holdingsViewMode]);
-
-  const handlePiePress = (item: any, index: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (focusedIndex === index) {
-      setFocusedIndex(null);
-    } else {
-      setFocusedIndex(index);
-      const position = itemPositions.current.get(index);
-      if (position !== undefined && scrollRef.current) {
-        scrollRef.current.scrollTo({
-          y: position + 300, // Offset for the chart header
-          animated: true,
-        });
-      }
-    }
-  };
-
-  const chartData = useMemo(() => {
-    return filteredAllocation.map((item, index) => {
-      const color = CHART_COLORS[index % CHART_COLORS.length];
-      return {
-        value: item.percentage,
-        color: color,
-        text: isPrivacyMode ? '••••••' : `${item.percentage.toFixed(2)}%`,
-        label: item.name,
-        onPress: () => handlePiePress(item, index),
-        focused: focusedIndex === index,
-        shiftOutX: focusedIndex === index ? 6 : 0,
-        shiftOutY: focusedIndex === index ? 6 : 0,
-      };
-    });
-  }, [filteredAllocation, isPrivacyMode, selectedDimension, focusedIndex]);
 
   if (transactions.length === 0) {
     return (
@@ -280,61 +241,7 @@ export default function AnalyticsScreen() {
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
         >
-          <View style={styles.pieWrapper}>
-            {allocation.length > 0 ? (
-              <PieChart
-                data={chartData}
-                donut
-                sectionAutoFocus
-                onPress={(item: any, index: number) =>
-                  handlePiePress(item, index)
-                }
-                radius={SCREEN_WIDTH * 0.24}
-                innerRadius={SCREEN_WIDTH * 0.16}
-                innerCircleColor={currColors.background}
-                centerLabelComponent={() => (
-                  <View
-                    style={{
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <ThemedText
-                      style={{
-                        fontSize: 22,
-                        color: currColors.text,
-                        fontFamily: 'Outfit_600SemiBold',
-                      }}
-                    >
-                      {allocation.length}
-                    </ThemedText>
-                    <ThemedText
-                      style={{
-                        fontSize: 9,
-                        color: currColors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: 1,
-                        fontFamily: 'Outfit_500Medium',
-                      }}
-                    >
-                      {selectedDimension.split(' ')[0]}s
-                    </ThemedText>
-                  </View>
-                )}
-              />
-            ) : (
-              <ThemedText
-                style={[
-                  styles.noDataText,
-                  { color: currColors.textSecondary },
-                ]}
-              >
-                Data unavailable
-              </ThemedText>
-            )}
-          </View>
-
-          {filteredAllocation.length > 0 && (
+          {filteredAllocation.length > 0 ? (
             <>
               <View style={styles.holdingsHeader}>
             <TouchableOpacity
@@ -400,7 +307,6 @@ export default function AnalyticsScreen() {
           >
             {filteredAllocation.map((item, index) => {
               const isLast = index === filteredAllocation.length - 1;
-              const isFocused = index === focusedIndex;
               const isCompanyLink = selectedDimension === 'Company Name';
               const isCategoryLink = [
                 'Sector',
@@ -412,13 +318,8 @@ export default function AnalyticsScreen() {
               return (
                 <TouchableOpacity
                   key={item.name}
-                  onLayout={(event) => {
-                    const layout = event.nativeEvent.layout;
-                    itemPositions.current.set(index, layout.y);
-                  }}
                   style={[
                     styles.holdingItem,
-                    isFocused && { backgroundColor: currColors.cardSecondary },
                     !isLast && [
                       styles.holdingItemBorder,
                       { borderBottomColor: currColors.border },
@@ -666,6 +567,15 @@ export default function AnalyticsScreen() {
             })}
               </View>
             </>
+          ) : (
+            <View style={styles.emptyState}>
+              <ThemedText style={[styles.emptyText, { color: currColors.text }]}>
+                No allocation data
+              </ThemedText>
+              <ThemedText style={styles.emptySubtext}>
+                No investments found for this dimension.
+              </ThemedText>
+            </View>
           )}
         </ScrollView>
       </View>
@@ -730,15 +640,6 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
     gap: 16,
-  },
-  pieWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-  },
-  noDataText: {
-    color: '#8E8E93',
-    fontSize: 11,
   },
   emptyState: {
     flex: 1,
