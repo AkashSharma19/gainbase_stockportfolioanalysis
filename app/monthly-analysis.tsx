@@ -2,7 +2,6 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BackButton } from '@/components/BackButton';
 import { ChevronDown, TrendingDown, TrendingUp } from 'lucide-react-native';
@@ -57,13 +56,6 @@ export default function MonthlyAnalysisScreen() {
     });
   };
 
-  const gradientColors: readonly [string, string] =
-    colorScheme === 'dark' ? ['#1C1C1E', '#0D0E12'] : ['#FFFFFF', '#F2F2F7'];
-
-  const gradients = {
-    card: gradientColors,
-  };
-
   const CHART_COLORS = [
     '#007AFF',
     '#5856D6',
@@ -82,41 +74,69 @@ export default function MonthlyAnalysisScreen() {
     const limited = sorted.slice(-6); // Only show last 6 months
     return limited.map((item, index) => {
       const prevItem = index > 0 ? limited[index - 1] : null;
-      const hasIncreased = !prevItem || item.investment >= prevItem.investment;
-      const pointColor = hasIncreased ? '#34C759' : '#FF3B30';
+      let pointColor = currColors.textSecondary;
+      if (!prevItem) {
+        pointColor = item.investment > 0 ? '#34C759' : currColors.textSecondary;
+      } else if (item.investment > prevItem.investment && item.investment > 0) {
+        pointColor = '#34C759';
+      } else if (item.investment < prevItem.investment) {
+        pointColor = '#FF3B30';
+      } else {
+        pointColor = currColors.textSecondary;
+      }
+
       return {
         value: item.investment,
         label: item.month.slice(0, 3).toUpperCase(),
-        dataPointText: isPrivacyMode ? '••' : `${(item.investment / 1000).toFixed(0)}k`,
+        dataPointText: isPrivacyMode
+          ? '••'
+          : item.investment === 0
+            ? '0'
+            : `${(item.investment / 1000).toFixed(0)}k`,
         textColor: pointColor,
         dataPointColor: pointColor,
         textFontSize: 9,
       };
     });
-  }, [monthlyAnalysis, isPrivacyMode]);
+  }, [monthlyAnalysis, isPrivacyMode, currColors.textSecondary]);
 
   const lineSegments = useMemo(() => {
     const segments = [];
     for (let i = 1; i < lineData.length; i++) {
-      const hasIncreased = lineData[i].value >= lineData[i - 1].value;
+      const current = lineData[i].value;
+      const prev = lineData[i - 1].value;
+      let segmentColor: string;
+      if (current > prev && current > 0) {
+        segmentColor = '#34C759';
+      } else if (current < prev) {
+        segmentColor = '#FF3B30';
+      } else {
+        segmentColor = colorScheme === 'dark' ? '#3A3A3C' : '#D1D1D6';
+      }
+
       segments.push({
         startIndex: i - 1,
         endIndex: i,
-        color: hasIncreased ? '#34C759' : '#FF3B30',
+        color: segmentColor,
       });
     }
     return segments;
+  }, [lineData, colorScheme]);
+
+  const trendDirection = useMemo(() => {
+    if (lineData.length < 2) return 'up';
+    const current = lineData[lineData.length - 1].value;
+    const prev = lineData[lineData.length - 2].value;
+    if (current > prev && current > 0) return 'up';
+    if (current < prev) return 'down';
+    return 'neutral';
   }, [lineData]);
 
-  const isTrendingUp = useMemo(() => {
-    if (lineData.length < 2) return true;
-    return (
-      lineData[lineData.length - 1].value >=
-      lineData[lineData.length - 2].value
-    );
-  }, [lineData]);
-
-  const trendColor = isTrendingUp ? '#34C759' : '#FF3B30';
+  const trendColor = useMemo(() => {
+    if (trendDirection === 'up') return '#34C759';
+    if (trendDirection === 'down') return '#FF3B30';
+    return colorScheme === 'dark' ? '#8E8E93' : '#636366';
+  }, [trendDirection, colorScheme]);
 
   const maximumValue = useMemo(() => {
     if (monthlyAnalysis.length === 0) return 0;
@@ -166,74 +186,70 @@ export default function MonthlyAnalysisScreen() {
           bounces={false}
         >
           <View style={styles.chartSection}>
-            <LinearGradient
-              colors={gradients.card}
-              style={[
-                styles.chartContainer,
-                { borderColor: currColors.border },
-              ]}
-            >
-              <View style={styles.chartTitleRow}>
+            <View style={styles.chartTitleRow}>
+              <ThemedText
+                style={[
+                  styles.chartTitle,
+                  { color: currColors.textSecondary },
+                ]}
+              >
+                MO. INVESTMENT TREND
+              </ThemedText>
+              {trendDirection === 'up' ? (
+                <TrendingUp size={14} color="#34C759" />
+              ) : trendDirection === 'down' ? (
+                <TrendingDown size={14} color="#FF3B30" />
+              ) : (
                 <ThemedText
-                  style={[
-                    styles.chartTitle,
-                    { color: currColors.textSecondary },
-                  ]}
+                  style={{
+                    fontSize: 12,
+                    color: currColors.textSecondary,
+                    fontFamily: 'Outfit_600SemiBold',
+                  }}
                 >
-                  MO. INVESTMENT TREND
+                  —
                 </ThemedText>
-                {isTrendingUp ? (
-                  <TrendingUp size={14} color="#34C759" />
-                ) : (
-                  <TrendingDown size={14} color="#FF3B30" />
-                )}
-              </View>
-              <View style={styles.chartWrapper}>
-                {lineData.length > 0 ? (
-                  <LineChart
-                    data={lineData}
-                    lineSegments={lineSegments}
-                    height={160}
-                    width={SCREEN_WIDTH - 72}
-                    spacing={Math.max(36, (SCREEN_WIDTH - 104) / Math.max(1, lineData.length - 1))}
-                    initialSpacing={16}
-                    endSpacing={16}
-                    color={trendColor}
-                    thickness={3}
-                    curved
-                    areaChart
-                    startFillColor={trendColor}
-                    endFillColor="transparent"
-                    startOpacity={0.22}
-                    endOpacity={0.02}
-                    noOfSections={3}
-                    hideRules
-                    hideYAxisText
-                    xAxisThickness={0}
-                    yAxisThickness={0}
-                    yAxisLabelWidth={0}
-                    maxValue={maximumValue}
-                    isAnimated
-                    animationDuration={600}
-                    dataPointsColor={trendColor}
-                    dataPointsRadius={4}
-                    textColor={currColors.textSecondary}
-                    textFontSize={9}
-                    textShiftY={-10}
-                    textShiftX={-8}
-                    xAxisLabelTextStyle={{
-                      color: currColors.textSecondary,
-                      fontSize: 9,
-                      fontFamily: 'Outfit_500Medium',
-                    }}
-                  />
-                ) : (
-                  <ThemedText style={{ color: currColors.textSecondary }}>
-                    No data available
-                  </ThemedText>
-                )}
-              </View>
-            </LinearGradient>
+              )}
+            </View>
+            <View style={styles.chartWrapper}>
+              {lineData.length > 0 ? (
+                <LineChart
+                  data={lineData}
+                  lineSegments={lineSegments}
+                  height={160}
+                  width={SCREEN_WIDTH - 32}
+                  spacing={Math.max(40, (SCREEN_WIDTH - 64) / Math.max(1, lineData.length - 1))}
+                  initialSpacing={16}
+                  endSpacing={16}
+                  color={trendColor}
+                  thickness={3}
+                  noOfSections={3}
+                  hideRules
+                  hideYAxisText
+                  xAxisThickness={0}
+                  yAxisThickness={0}
+                  yAxisLabelWidth={0}
+                  maxValue={maximumValue}
+                  isAnimated
+                  animationDuration={600}
+                  dataPointsColor={trendColor}
+                  dataPointsRadius={4}
+                  textColor={currColors.textSecondary}
+                  textFontSize={9}
+                  textShiftY={-12}
+                  textShiftX={-4}
+                  xAxisLabelTextStyle={{
+                    color: currColors.textSecondary,
+                    fontSize: 9,
+                    fontFamily: 'Outfit_500Medium',
+                  }}
+                />
+              ) : (
+                <ThemedText style={{ color: currColors.textSecondary }}>
+                  No data available
+                </ThemedText>
+              )}
+            </View>
           </View>
 
           <View
@@ -449,18 +465,14 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   chartSection: {
-    marginBottom: 16,
-  },
-  chartContainer: {
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
+    marginBottom: 20,
   },
   chartTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+    paddingHorizontal: 4,
   },
   chartTitle: {
     fontSize: 10,
@@ -469,7 +481,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   chartWrapper: {
-    minHeight: 200,
+    minHeight: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   horizontalChartScroll: {
     flexGrow: 0,

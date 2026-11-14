@@ -4,7 +4,6 @@ import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { useMoneyStore } from '@/store/useMoneyStore';
 import { BankLogo, resolveBrokerBrandLogo } from '@/components/BankLogo';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BackButton } from '@/components/BackButton';
 import {
@@ -43,11 +42,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-const GRADIENTS = {
-  card: ['#1C1C1E', '#000000'] as const,
-  active: ['#007AFF', '#004080'] as const,
-};
-
 type Dimension = 'Sector' | 'Company Name' | 'Asset Type' | 'Broker';
 
 export default function AnalyticsScreen() {
@@ -67,15 +61,6 @@ export default function AnalyticsScreen() {
   const colorScheme = useColorScheme() ?? 'dark';
   const currColors = Colors[colorScheme];
 
-  const gradients = {
-    card:
-      colorScheme === 'dark'
-        ? (['#1C1C1E', '#000000'] as const)
-        : (['#FFFFFF', '#F2F2F7'] as const),
-    active: ['#007AFF', '#004080'] as const,
-  };
-
-  const [chartViewMode, setChartViewMode] = useState<'Pie' | 'Heatmap'>('Pie');
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDimension, setSelectedDimension] =
     useState<Dimension>('Sector');
@@ -87,79 +72,6 @@ export default function AnalyticsScreen() {
 
   const scrollRef = useRef<any>(null);
   const itemPositions = useRef<Map<number, number>>(new Map());
-
-  const getHeatmapColor = (pnlPercentage: number) => {
-    if (pnlPercentage > 0) {
-      // Scale from neutral to deep green
-      const opacity = Math.min(pnlPercentage / 10, 1);
-      return `rgba(48, 209, 88, ${0.1 + opacity * 0.9})`; // #30D158
-    } else if (pnlPercentage < 0) {
-      // Scale from neutral to deep red
-      const opacity = Math.min(Math.abs(pnlPercentage) / 10, 1);
-      return `rgba(255, 69, 58, ${0.1 + opacity * 0.9})`; // #FF453A
-    }
-    return currColors.card;
-  };
-
-  interface TreemapItem {
-    name: string;
-    value: number; // For area
-    pnl: number; // For color
-    index: number; // To sync with list
-  }
-
-  interface TreemapRect {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    data: TreemapItem;
-  }
-
-  const computeTreemap = (
-    data: TreemapItem[],
-    width: number,
-    height: number,
-  ): TreemapRect[] => {
-    if (data.length === 0) return [];
-
-    const totalValue = data.reduce((sum, item) => sum + item.value, 0);
-    const rects: TreemapRect[] = [];
-
-    // recursive division for reliability in React render
-    const divide = (
-      items: TreemapItem[],
-      x: number,
-      y: number,
-      w: number,
-      h: number,
-    ) => {
-      if (items.length === 0) return;
-      if (items.length === 1) {
-        rects.push({ x, y, width: w, height: h, data: items[0] });
-        return;
-      }
-
-      const half = Math.ceil(items.length / 2);
-      const firstHalf = items.slice(0, half);
-      const secondHalf = items.slice(half);
-
-      const firstSum = firstHalf.reduce((s, i) => s + i.value, 0);
-      const totalSum = items.reduce((s, i) => s + i.value, 0);
-      const ratio = firstSum / totalSum;
-
-      if (w > h) {
-        divide(firstHalf, x, y, w * ratio, h);
-        divide(secondHalf, x + w * ratio, y, w * (1 - ratio), h);
-      } else {
-        divide(firstHalf, x, y, w, h * ratio);
-        divide(secondHalf, x, y + h * ratio, w, h * (1 - ratio));
-      }
-    };
-
-    divide(data, 0, 0, width, height);
-    return rects;
-  };
 
   useEffect(() => {
     fetchTickers();
@@ -248,21 +160,6 @@ export default function AnalyticsScreen() {
     });
   }, [filteredAllocation, isPrivacyMode, selectedDimension, focusedIndex]);
 
-  const heatmapData = useMemo(() => {
-    return filteredAllocation.map((item, index) => ({
-      name: item.name,
-      value: Math.max(item.percentage, 0.1), // Ensure visible box
-      pnl: item.pnlPercentage || 0,
-      index: index,
-    }));
-  }, [filteredAllocation]);
-
-  const heatmapRects = useMemo(() => {
-    const containerWidth = SCREEN_WIDTH - 64; // Padding
-    const containerHeight = SCREEN_WIDTH * 0.55;
-    return computeTreemap(heatmapData, containerWidth, containerHeight);
-  }, [heatmapData]);
-
   if (transactions.length === 0) {
     return (
       <SafeAreaView
@@ -301,48 +198,6 @@ export default function AnalyticsScreen() {
     { id: 'Asset Type', label: 'Asset Type', icon: Layers },
     { id: 'Broker', label: 'Broker', icon: Briefcase },
   ];
-
-  const HeatmapView = () => (
-    <View style={styles.heatmapContainer}>
-      {heatmapRects.map((rect, i) => {
-        const isFocused = rect.data.index === focusedIndex;
-        return (
-          <TouchableOpacity
-            key={i}
-            style={[
-              styles.heatmapBox,
-              {
-                left: rect.x,
-                top: rect.y,
-                width: rect.width - 2,
-                height: rect.height - 2,
-                backgroundColor: getHeatmapColor(rect.data.pnl),
-                borderColor: isFocused ? '#FFF' : 'transparent',
-                borderWidth: isFocused ? 2 : 0,
-              },
-            ]}
-            onPress={() => handlePiePress(null, rect.data.index)}
-          >
-            {rect.width > 40 && rect.height > 20 && (
-              <View style={styles.heatmapContent}>
-                <ThemedText
-                  style={styles.heatmapSymbol}
-                  numberOfLines={1}
-                >
-                  {rect.data.name}
-                </ThemedText>
-                {rect.height > 40 && (
-                  <ThemedText style={styles.heatmapPercentage}>
-                    {rect.data.value.toFixed(1)}%
-                  </ThemedText>
-                )}
-              </View>
-            )}
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
 
   return (
     <SafeAreaView
@@ -425,85 +280,59 @@ export default function AnalyticsScreen() {
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
         >
-          <LinearGradient
-            colors={gradients.card}
-            style={[styles.chartContainer, { borderColor: currColors.border }]}
-          >
-            <View style={styles.chartHeader}>
-              <View style={styles.viewSwitcher}>
-                <TouchableOpacity
-                  style={[
-                    styles.switchButton,
-                    chartViewMode === 'Pie' && styles.switchButtonActive,
-                  ]}
-                  onPress={() => setChartViewMode('Pie')}
-                >
-                  <ThemedText style={[
-                      styles.switchText,
-                      chartViewMode === 'Pie' ? { color: '#FFF' } : { color: currColors.textSecondary }
-                  ]}>Pie</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.switchButton,
-                    chartViewMode === 'Heatmap' && styles.switchButtonActive,
-                  ]}
-                  onPress={() => setChartViewMode('Heatmap')}
-                >
-                  <ThemedText style={[
-                      styles.switchText,
-                      chartViewMode === 'Heatmap' ? { color: '#FFF' } : { color: currColors.textSecondary }
-                  ]}>Heatmap</ThemedText>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.pieWrapper}>
-              {allocation.length > 0 ? (
-                chartViewMode === 'Pie' ? (
-                  <PieChart
-                    data={chartData}
-                    donut
-                    sectionAutoFocus
-                    onPress={(item: any, index: number) => handlePiePress(item, index)}
-                    radius={SCREEN_WIDTH * 0.22}
-                    innerRadius={SCREEN_WIDTH * 0.15}
-                    innerCircleColor={currColors.card}
-                    centerLabelComponent={() => (
-                      <View
-                        style={{ justifyContent: 'center', alignItems: 'center' }}
-                      >
-                        <ThemedText style={{ fontSize: 20, color: currColors.text }}>
-                          {allocation.length}
-                        </ThemedText>
-                        <ThemedText
-                          style={{
-                            fontSize: 8,
-                            color: currColors.textSecondary,
-                            textTransform: 'uppercase',
-                            letterSpacing: 1,
-                          }}
-                        >
-                          {selectedDimension.split(' ')[0]}s
-                        </ThemedText>
-                      </View>
-                    )}
-                  />
-                ) : (
-                  <HeatmapView />
-                )
-              ) : (
-                <ThemedText
-                  style={[
-                    styles.noDataText,
-                    { color: currColors.textSecondary },
-                  ]}
-                >
-                  Data unavailable
-                </ThemedText>
-              )}
-            </View>
-          </LinearGradient>
+          <View style={styles.pieWrapper}>
+            {allocation.length > 0 ? (
+              <PieChart
+                data={chartData}
+                donut
+                sectionAutoFocus
+                onPress={(item: any, index: number) =>
+                  handlePiePress(item, index)
+                }
+                radius={SCREEN_WIDTH * 0.24}
+                innerRadius={SCREEN_WIDTH * 0.16}
+                innerCircleColor={currColors.background}
+                centerLabelComponent={() => (
+                  <View
+                    style={{
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <ThemedText
+                      style={{
+                        fontSize: 22,
+                        color: currColors.text,
+                        fontFamily: 'Outfit_600SemiBold',
+                      }}
+                    >
+                      {allocation.length}
+                    </ThemedText>
+                    <ThemedText
+                      style={{
+                        fontSize: 9,
+                        color: currColors.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: 1,
+                        fontFamily: 'Outfit_500Medium',
+                      }}
+                    >
+                      {selectedDimension.split(' ')[0]}s
+                    </ThemedText>
+                  </View>
+                )}
+              />
+            ) : (
+              <ThemedText
+                style={[
+                  styles.noDataText,
+                  { color: currColors.textSecondary },
+                ]}
+              >
+                Data unavailable
+              </ThemedText>
+            )}
+          </View>
 
           {filteredAllocation.length > 0 && (
             <>
@@ -902,16 +731,10 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     gap: 16,
   },
-  chartContainer: {
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-  },
   pieWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: SCREEN_WIDTH * 0.45,
+    paddingVertical: 12,
   },
   noDataText: {
     color: '#8E8E93',
@@ -1035,65 +858,5 @@ const styles = StyleSheet.create({
   contributionProgressBarFill: {
     height: '100%',
     borderRadius: 2.5,
-  },
-  heatmapContainer: {
-    width: SCREEN_WIDTH - 64,
-    height: SCREEN_WIDTH * 0.55,
-    borderRadius: 8,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  heatmapBox: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 4,
-    padding: 4,
-  },
-  heatmapContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heatmapSymbol: {
-    color: '#FFF',
-    fontSize: 10,
-    fontFamily: 'Outfit_700Bold',
-    textAlign: 'center',
-  },
-  heatmapPercentage: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 8,
-    marginTop: 2,
-  },
-  chartHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 20,
-  },
-  chartTitle: {
-    fontSize: 14,
-    fontFamily: 'Outfit_600SemiBold',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  viewSwitcher: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 8,
-    padding: 2,
-  },
-  switchButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  switchButtonActive: {
-    backgroundColor: '#3A3A3C',
-  },
-  switchText: {
-    fontSize: 12,
-    fontFamily: 'Outfit_500Medium',
   },
 });
