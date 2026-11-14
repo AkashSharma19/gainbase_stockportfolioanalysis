@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BackButton } from '@/components/BackButton';
-import { ChevronDown, TrendingUp } from 'lucide-react-native';
+import { ChevronDown, TrendingDown, TrendingUp } from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
-import { BarChart } from 'react-native-gifted-charts';
+import { LineChart } from 'react-native-gifted-charts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -64,7 +64,7 @@ export default function YearlyAnalysisScreen() {
   const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
   const chartScrollRef = useRef<any>(null);
 
-  const barData = useMemo(() => {
+  const lineData = useMemo(() => {
     const sorted = [...yearlyAnalysis].reverse(); // Chronological order
     const limited = sorted.slice(-6); // Only show last 6 years
     return limited.map((item: any, index: number) => {
@@ -72,42 +72,43 @@ export default function YearlyAnalysisScreen() {
       const hasIncreased =
         !prevItem ||
         item.averageMonthlyInvestment >= prevItem.averageMonthlyInvestment;
-      const barColor = hasIncreased ? '#34C759' : '#FF3B30';
+      const pointColor = hasIncreased ? '#34C759' : '#FF3B30';
 
       return {
         value: item.averageMonthlyInvestment,
         label: item.year.toString().slice(-2),
-        frontColor: barColor,
-        gradientColor: barColor,
-        topLabelComponent: () => (
-          <ThemedText
-            style={{
-              color: currColors.textSecondary,
-              fontSize: 9,
-              fontFamily: 'Outfit_500Medium',
-              marginBottom: 4,
-              textAlign: 'center',
-              width: 32,
-              marginLeft: -3,
-            }}
-          >
-            {isPrivacyMode
-              ? '••••••'
-              : (item.averageMonthlyInvestment / 1000).toFixed(0) + 'k'}
-          </ThemedText>
-        ),
+        dataPointText: isPrivacyMode
+          ? '••'
+          : `${(item.averageMonthlyInvestment / 1000).toFixed(0)}k`,
+        textColor: pointColor,
+        dataPointColor: pointColor,
+        textFontSize: 9,
       };
     });
-  }, [yearlyAnalysis, isPrivacyMode, currColors.textSecondary]);
+  }, [yearlyAnalysis, isPrivacyMode]);
 
-  useEffect(() => {
-    // Auto-scroll only if we have more than 6 years (though currently limited to 6)
-    if (barData.length > 6) {
-      setTimeout(() => {
-        chartScrollRef.current?.scrollToEnd({ animated: true });
-      }, 500);
+  const lineSegments = useMemo(() => {
+    const segments = [];
+    for (let i = 1; i < lineData.length; i++) {
+      const hasIncreased = lineData[i].value >= lineData[i - 1].value;
+      segments.push({
+        startIndex: i - 1,
+        endIndex: i,
+        color: hasIncreased ? '#34C759' : '#FF3B30',
+      });
     }
-  }, [barData]);
+    return segments;
+  }, [lineData]);
+
+  const isTrendingUp = useMemo(() => {
+    if (lineData.length < 2) return true;
+    return (
+      lineData[lineData.length - 1].value >=
+      lineData[lineData.length - 2].value
+    );
+  }, [lineData]);
+
+  const trendColor = isTrendingUp ? '#34C759' : '#FF3B30';
 
   const toggleYear = (year: number) => {
     Haptics.selectionAsync();
@@ -188,62 +189,50 @@ export default function YearlyAnalysisScreen() {
                 >
                   AVG. MONTHLY TREND
                 </ThemedText>
-                <TrendingUp size={14} color={currColors.tint} />
+                {isTrendingUp ? (
+                  <TrendingUp size={14} color="#34C759" />
+                ) : (
+                  <TrendingDown size={14} color="#FF3B30" />
+                )}
               </View>
               <View style={styles.chartWrapper}>
-                {barData.length > 0 ? (
-                  <BarChart
-                    data={barData}
-                    scrollRef={chartScrollRef}
-                    barWidth={26}
-                    noOfSections={3}
-                    barBorderRadius={6}
-                    spacing={16}
-                    initialSpacing={12}
+                {lineData.length > 0 ? (
+                  <LineChart
+                    data={lineData}
+                    lineSegments={lineSegments}
+                    height={160}
+                    width={SCREEN_WIDTH - 72}
+                    spacing={Math.max(36, (SCREEN_WIDTH - 104) / Math.max(1, lineData.length - 1))}
+                    initialSpacing={16}
                     endSpacing={16}
-                    yAxisLabelWidth={32}
-                    disableScroll
+                    color={trendColor}
+                    thickness={3}
+                    curved
+                    areaChart
+                    startFillColor={trendColor}
+                    endFillColor="transparent"
+                    startOpacity={0.22}
+                    endOpacity={0.02}
+                    noOfSections={3}
                     hideRules
+                    hideYAxisText
                     xAxisThickness={0}
                     yAxisThickness={0}
-                    yAxisTextStyle={{
-                      color: currColors.textSecondary,
-                      fontSize: 9,
-                      fontFamily: 'Outfit_400Regular',
-                    }}
+                    yAxisLabelWidth={0}
+                    maxValue={maximumValue}
+                    isAnimated
+                    animationDuration={600}
+                    dataPointsColor={trendColor}
+                    dataPointsRadius={4}
+                    textColor={currColors.textSecondary}
+                    textFontSize={9}
+                    textShiftY={-10}
+                    textShiftX={-8}
                     xAxisLabelTextStyle={{
                       color: currColors.textSecondary,
                       fontSize: 9,
                       fontFamily: 'Outfit_500Medium',
                     }}
-                    formatYLabel={formatYAxisLabel}
-                    maxValue={maximumValue}
-                    isAnimated
-                    animationDuration={500}
-                    width={SCREEN_WIDTH - 80}
-                    renderTooltip={(item: any) => (
-                      <View
-                        style={[
-                          styles.tooltip,
-                          {
-                            backgroundColor: currColors.card,
-                            borderColor: currColors.border,
-                            marginBottom: -10,
-                          },
-                        ]}
-                      >
-                        <ThemedText
-                          style={{
-                            color: currColors.text,
-                            fontSize: 12,
-                            fontWeight: '600',
-                          }}
-                        >
-                          {showCurrencySymbol ? '₹' : ''}
-                          {formatCurrency(item.value)}
-                        </ThemedText>
-                      </View>
-                    )}
                   />
                 ) : (
                   <ThemedText style={{ color: currColors.textSecondary }}>

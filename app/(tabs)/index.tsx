@@ -87,6 +87,7 @@ export function PortfolioScreen() {
 
   const theme = useColorScheme() ?? 'dark';
   const currColors = Colors[theme];
+  const isDark = theme === 'dark';
 
   // Tracks the formatted "X min ago" string, refreshed every minute
   const [syncLabel, setSyncLabel] = useState<string | null>(null);
@@ -168,6 +169,7 @@ export function PortfolioScreen() {
 
   const [refreshing, setRefreshing] = React.useState(false);
   const [expandedYear, setExpandedYear] = React.useState<number | null>(null);
+  const [trendTab, setTrendTab] = useState<'monthly' | 'yearly'>('monthly');
   const forecastYears = usePortfolioStore((state) => state.forecastYears);
 
   const toggleYear = (year: number) => {
@@ -836,370 +838,405 @@ export function PortfolioScreen() {
           {/* ─── Activity Calendar ─── */}
           <ActivityCalendar transactions={transactions} />
 
+          {/* ─── Merged Trend Analysis Section (Monthly / Yearly Switcher) ─── */}
           <View style={[styles.section, { marginBottom: 16 }]}>
-            {yearlyAnalysis.length > 0 ? (
-              <View
-                style={[
-                  styles.accordionContainer,
-                  {
-                    backgroundColor: currColors.card,
-                    borderColor: currColors.border,
-                  },
-                ]}
-              >
-                <View style={[styles.headerWithAction]}>
-                  <ThemedText
-                    style={[
-                      styles.innerSectionTitle,
-                      { color: currColors.textSecondary },
-                    ]}
-                  >
-                    YEARLY TREND
-                  </ThemedText>
-                  {yearlyAnalysis.length > 3 && (
-                    <TouchableOpacity
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        router.push('/yearly-analysis');
-                      }}
-                      style={styles.viewMoreButton}
-                    >
-                      <View
-                        style={[
-                          styles.iconCircle,
-                          { backgroundColor: currColors.cardSecondary },
-                        ]}
-                      >
-                        <ArrowRight size={14} color={currColors.tint} />
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                {previewYearlyAnalysis.map((item, index) => {
-                  const isExpanded = expandedYear === item.year;
-                  return (
-                    <View
-                      key={item.year}
-                      style={[
-                        styles.accordionItem,
-                        { borderBottomColor: currColors.border },
-                      ]}
-                    >
-                      <TouchableOpacity
-                        style={[
-                          styles.accordionHeader,
-                          { backgroundColor: currColors.card },
-                          isExpanded && {
-                            backgroundColor: currColors.cardSecondary,
-                          },
-                        ]}
-                        onPress={() => toggleYear(item.year)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.headerLeft}>
-                          <ThemedText
-                            style={[
-                              styles.yearText,
-                              { color: currColors.text },
-                            ]}
-                          >
-                            {item.year}
-                          </ThemedText>
-                          <ThemedText
-                            style={[
-                              styles.subText,
-                              { color: currColors.textSecondary },
-                            ]}
-                          >
-                            Avg. Inv:{' '}
-                            {isPrivacyMode
-                              ? '••••••'
-                              : `${showCurrencySymbol ? '₹' : ''}${item.averageMonthlyInvestment.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
-                          </ThemedText>
-                        </View>
-
-                        <View style={styles.headerRight}>
-                          {item.percentageIncrease !== 0 && (
-                            <View
-                              style={[
-                                styles.growthBadge,
-                                {
-                                  backgroundColor:
-                                    item.percentageIncrease >= 0
-                                      ? 'rgba(76, 175, 80, 0.1)'
-                                      : 'rgba(244, 67, 54, 0.1)',
-                                },
-                              ]}
-                            >
-                              <TrendingUp
-                                size={12}
-                                color={
-                                  item.percentageIncrease >= 0
-                                    ? '#34C759'
-                                    : '#FF3B30'
-                                }
-                                style={{
-                                  transform: [
-                                    {
-                                      rotate:
-                                        item.percentageIncrease >= 0
-                                          ? '0deg'
-                                          : '180deg',
-                                    },
-                                  ],
-                                }}
-                              />
-                              <ThemedText
-                                style={[
-                                  styles.growthText,
-                                  {
-                                    color:
-                                      item.percentageIncrease >= 0
-                                        ? '#34C759'
-                                        : '#FF3B30',
-                                  },
-                                ]}
-                              >
-                                {Math.abs(item.percentageIncrease).toFixed(2)}%
-                              </ThemedText>
-                            </View>
-                          )}
-                          <View
-                            style={{
-                              transform: [
-                                { rotate: isExpanded ? '180deg' : '0deg' },
-                              ],
-                              marginLeft: 8,
-                            }}
-                          >
-                            <ChevronDown
-                              size={20}
-                              color={currColors.textSecondary}
-                            />
-                          </View>
-                        </View>
-                      </TouchableOpacity>
-
-                      {isExpanded && (
-                        <View
-                          style={[
-                            styles.accordionBody,
-                            { backgroundColor: currColors.card },
-                          ]}
-                        >
-                          <View
-                            style={[
-                              styles.separator,
-                              { backgroundColor: currColors.border },
-                            ]}
-                          />
-                          <View style={styles.assetsGrid}>
-                            {item.assetDistribution.map((asset, i) => (
-                              <View key={i} style={styles.assetItem}>
-                                <View
-                                  style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                  }}
-                                >
-                                  <View
-                                    style={[
-                                      styles.dot,
-                                      {
-                                        backgroundColor:
-                                          CHART_COLORS[i % CHART_COLORS.length],
-                                      },
-                                    ]}
-                                  />
-                                  <ThemedText
-                                    style={[
-                                      styles.assetName,
-                                      { color: currColors.textSecondary },
-                                    ]}
-                                    numberOfLines={1}
-                                  >
-                                    {asset.name}
-                                  </ThemedText>
-                                </View>
-                                <ThemedText
-                                  style={[
-                                    styles.assetValue,
-                                    { color: currColors.text },
-                                  ]}
-                                >
-                                  {isPrivacyMode
-                                    ? '••••••'
-                                    : `${showCurrencySymbol ? '₹' : ''}${asset.value.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
-                                </ThemedText>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
-              </View>
-            ) : (
-              <View
-                style={[
-                  styles.emptyCard,
-                  {
-                    backgroundColor: currColors.card,
-                    borderColor: currColors.border,
-                  },
-                ]}
-              >
-                <ThemedText
+            <View
+              style={[
+                styles.accordionContainer,
+                {
+                  backgroundColor: currColors.card,
+                  borderColor: currColors.border,
+                },
+              ]}
+            >
+              {/* Header with Switcher & View-More Action */}
+              <View style={styles.trendHeaderWithAction}>
+                <View
                   style={[
-                    styles.placeholderText,
-                    { color: currColors.textSecondary },
+                    styles.trendSwitcherContainer,
+                    {
+                      backgroundColor: currColors.cardSecondary,
+                      borderColor: currColors.border,
+                      borderWidth: StyleSheet.hairlineWidth,
+                    },
                   ]}
                 >
-                  Not enough data for yearly trend
-                </ThemedText>
-              </View>
-            )}
-          </View>
-
-          {/* Monthly Analysis Section */}
-          <View style={[styles.section, { marginBottom: 16 }]}>
-            {monthlyAnalysis.length > 0 ? (
-              <View
-                style={[
-                  styles.accordionContainer,
-                  {
-                    backgroundColor: currColors.card,
-                    borderColor: currColors.border,
-                  },
-                ]}
-              >
-                <View style={[styles.headerWithAction]}>
-                  <ThemedText
-                    style={[
-                      styles.innerSectionTitle,
-                      { color: currColors.textSecondary },
-                    ]}
-                  >
-                    MONTHLY TREND
-                  </ThemedText>
-                  {monthlyAnalysis.length > 3 && (
-                    <TouchableOpacity
-                      onPress={() => {
+                  <TouchableOpacity
+                    activeOpacity={0.75}
+                    onPress={() => {
+                      if (trendTab !== 'monthly') {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        router.push('/monthly-analysis');
-                      }}
-                      style={styles.viewMoreButton}
-                    >
-                      <View
-                        style={[
-                          styles.iconCircle,
-                          { backgroundColor: currColors.cardSecondary },
-                        ]}
-                      >
-                        <ArrowRight size={14} color={currColors.tint} />
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                {previewMonthlyAnalysis.map((item, index) => (
-                  <View
-                    key={item.monthKey}
+                        setTrendTab('monthly');
+                      }
+                    }}
                     style={[
-                      styles.monthlyItem,
-                      {
-                        backgroundColor: currColors.card,
-                        borderBottomColor: currColors.border,
-                      },
-                      index === previewMonthlyAnalysis.length - 1 && {
-                        borderBottomWidth: 0,
-                      },
+                      styles.trendSwitcherTab,
+                      trendTab === 'monthly' && [
+                        styles.trendSwitcherTabActive,
+                        {
+                          backgroundColor: isDark ? currColors.card : '#FFFFFF',
+                          borderColor: currColors.border,
+                          borderWidth: StyleSheet.hairlineWidth,
+                          shadowColor: '#000000',
+                          shadowOpacity: isDark ? 0.35 : 0.08,
+                          shadowRadius: 3,
+                          shadowOffset: { width: 0, height: 1.5 },
+                          elevation: 2,
+                        },
+                      ],
                     ]}
                   >
-                    <View style={styles.headerLeft}>
-                      <ThemedText
-                        style={[styles.monthText, { color: currColors.text }]}
-                      >
-                        {item.month}
-                      </ThemedText>
-                      <ThemedText
-                        style={[
-                          styles.subText,
-                          { color: currColors.textSecondary },
-                        ]}
-                      >
-                        Invested:{' '}
-                        {isPrivacyMode
-                          ? '••••••'
-                          : `${showCurrencySymbol ? '₹' : ''}${item.investment.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
-                      </ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.trendSwitcherText,
+                        {
+                          color: trendTab === 'monthly' ? currColors.text : currColors.textSecondary,
+                          fontFamily: trendTab === 'monthly' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                        },
+                      ]}
+                    >
+                      Monthly Trend
+                    </ThemedText>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.75}
+                    onPress={() => {
+                      if (trendTab !== 'yearly') {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setTrendTab('yearly');
+                      }
+                    }}
+                    style={[
+                      styles.trendSwitcherTab,
+                      trendTab === 'yearly' && [
+                        styles.trendSwitcherTabActive,
+                        {
+                          backgroundColor: isDark ? currColors.card : '#FFFFFF',
+                          borderColor: currColors.border,
+                          borderWidth: StyleSheet.hairlineWidth,
+                          shadowColor: '#000000',
+                          shadowOpacity: isDark ? 0.35 : 0.08,
+                          shadowRadius: 3,
+                          shadowOffset: { width: 0, height: 1.5 },
+                          elevation: 2,
+                        },
+                      ],
+                    ]}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.trendSwitcherText,
+                        {
+                          color: trendTab === 'yearly' ? currColors.text : currColors.textSecondary,
+                          fontFamily: trendTab === 'yearly' ? 'Outfit_600SemiBold' : 'Outfit_500Medium',
+                        },
+                      ]}
+                    >
+                      Yearly Trend
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+
+                {((trendTab === 'monthly' && monthlyAnalysis.length > 3) ||
+                  (trendTab === 'yearly' && yearlyAnalysis.length > 3)) && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push(trendTab === 'monthly' ? '/monthly-analysis' : '/yearly-analysis');
+                    }}
+                    style={styles.viewMoreButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <View
+                      style={[
+                        styles.iconCircle,
+                        { backgroundColor: currColors.cardSecondary },
+                      ]}
+                    >
+                      <ArrowRight size={14} color={currColors.tint} />
                     </View>
-                    {item.percentageIncrease !== 0 && (
-                      <View
-                        style={[
-                          styles.growthBadge,
-                          {
-                            backgroundColor:
-                              item.percentageIncrease >= 0
-                                ? 'rgba(52, 199, 89, 0.12)'
-                                : 'rgba(255, 59, 48, 0.12)',
-                          },
-                        ]}
-                      >
-                        <TrendingUp
-                          size={12}
-                          color={
-                            item.percentageIncrease >= 0 ? '#34C759' : '#FF3B30'
-                          }
-                          style={{
-                            transform: [
-                              {
-                                rotate:
-                                  item.percentageIncrease >= 0
-                                    ? '0deg'
-                                    : '180deg',
-                              },
-                            ],
-                          }}
-                        />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Tab Content: Monthly */}
+              {trendTab === 'monthly' && (
+                monthlyAnalysis.length > 0 ? (
+                  previewMonthlyAnalysis.map((item, index) => (
+                    <View
+                      key={item.monthKey}
+                      style={[
+                        styles.monthlyItem,
+                        {
+                          backgroundColor: currColors.card,
+                          borderBottomColor: currColors.border,
+                        },
+                        index === previewMonthlyAnalysis.length - 1 && {
+                          borderBottomWidth: 0,
+                        },
+                      ]}
+                    >
+                      <View style={styles.headerLeft}>
+                        <ThemedText
+                          style={[styles.monthText, { color: currColors.text }]}
+                        >
+                          {item.month}
+                        </ThemedText>
                         <ThemedText
                           style={[
-                            styles.growthText,
+                            styles.subText,
+                            { color: currColors.textSecondary },
+                          ]}
+                        >
+                          Invested:{' '}
+                          {isPrivacyMode
+                            ? '••••••'
+                            : `${showCurrencySymbol ? '₹' : ''}${item.investment.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
+                        </ThemedText>
+                      </View>
+                      {item.percentageIncrease !== 0 && (
+                        <View
+                          style={[
+                            styles.growthBadge,
                             {
-                              color:
+                              backgroundColor:
                                 item.percentageIncrease >= 0
-                                  ? '#34C759'
-                                  : '#FF3B30',
+                                  ? 'rgba(52, 199, 89, 0.12)'
+                                  : 'rgba(255, 59, 48, 0.12)',
                             },
                           ]}
                         >
-                          {Math.abs(item.percentageIncrease).toFixed(2)}%
-                        </ThemedText>
-                      </View>
-                    )}
+                          <TrendingUp
+                            size={12}
+                            color={
+                              item.percentageIncrease >= 0 ? '#34C759' : '#FF3B30'
+                            }
+                            style={{
+                              transform: [
+                                {
+                                  rotate:
+                                    item.percentageIncrease >= 0
+                                      ? '0deg'
+                                      : '180deg',
+                                },
+                              ],
+                            }}
+                          />
+                          <ThemedText
+                            style={[
+                              styles.growthText,
+                              {
+                                color:
+                                  item.percentageIncrease >= 0
+                                    ? '#34C759'
+                                    : '#FF3B30',
+                              },
+                            ]}
+                          >
+                            {Math.abs(item.percentageIncrease).toFixed(2)}%
+                          </ThemedText>
+                        </View>
+                      )}
+                    </View>
+                  ))
+                ) : (
+                  <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                    <ThemedText
+                      style={[
+                        styles.placeholderText,
+                        { color: currColors.textSecondary },
+                      ]}
+                    >
+                      Not enough data for monthly trend
+                    </ThemedText>
                   </View>
-                ))}
-              </View>
-            ) : (
-              <View
-                style={[
-                  styles.emptyCard,
-                  {
-                    backgroundColor: currColors.card,
-                    borderColor: currColors.border,
-                  },
-                ]}
-              >
-                <ThemedText
-                  style={[
-                    styles.placeholderText,
-                    { color: currColors.textSecondary },
-                  ]}
-                >
-                  Not enough data for monthly trend
-                </ThemedText>
-              </View>
-            )}
+                )
+              )}
+
+              {/* Tab Content: Yearly */}
+              {trendTab === 'yearly' && (
+                yearlyAnalysis.length > 0 ? (
+                  previewYearlyAnalysis.map((item, index) => {
+                    const isExpanded = expandedYear === item.year;
+                    const isLast = index === previewYearlyAnalysis.length - 1 && !isExpanded;
+                    return (
+                      <View
+                        key={item.year}
+                        style={[
+                          styles.accordionItem,
+                          { borderBottomColor: currColors.border },
+                          isLast && { borderBottomWidth: 0 },
+                        ]}
+                      >
+                        <TouchableOpacity
+                          style={[
+                            styles.accordionHeader,
+                            { backgroundColor: currColors.card },
+                            isExpanded && {
+                              backgroundColor: currColors.cardSecondary,
+                            },
+                          ]}
+                          onPress={() => toggleYear(item.year)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.headerLeft}>
+                            <ThemedText
+                              style={[
+                                styles.yearText,
+                                { color: currColors.text },
+                              ]}
+                            >
+                              {item.year}
+                            </ThemedText>
+                            <ThemedText
+                              style={[
+                                styles.subText,
+                                { color: currColors.textSecondary },
+                              ]}
+                            >
+                              Avg. Inv:{' '}
+                              {isPrivacyMode
+                                ? '••••••'
+                                : `${showCurrencySymbol ? '₹' : ''}${item.averageMonthlyInvestment.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
+                            </ThemedText>
+                          </View>
+
+                          <View style={styles.headerRight}>
+                            {item.percentageIncrease !== 0 && (
+                              <View
+                                style={[
+                                  styles.growthBadge,
+                                  {
+                                    backgroundColor:
+                                      item.percentageIncrease >= 0
+                                        ? 'rgba(76, 175, 80, 0.1)'
+                                        : 'rgba(244, 67, 54, 0.1)',
+                                  },
+                                ]}
+                              >
+                                <TrendingUp
+                                  size={12}
+                                  color={
+                                    item.percentageIncrease >= 0
+                                      ? '#34C759'
+                                      : '#FF3B30'
+                                  }
+                                  style={{
+                                    transform: [
+                                      {
+                                        rotate:
+                                          item.percentageIncrease >= 0
+                                            ? '0deg'
+                                            : '180deg',
+                                      },
+                                    ],
+                                  }}
+                                />
+                                <ThemedText
+                                  style={[
+                                    styles.growthText,
+                                    {
+                                      color:
+                                        item.percentageIncrease >= 0
+                                          ? '#34C759'
+                                          : '#FF3B30',
+                                    },
+                                  ]}
+                                >
+                                  {Math.abs(item.percentageIncrease).toFixed(2)}%
+                                </ThemedText>
+                              </View>
+                            )}
+                            <View
+                              style={{
+                                transform: [
+                                  { rotate: isExpanded ? '180deg' : '0deg' },
+                                ],
+                                marginLeft: 8,
+                              }}
+                            >
+                              <ChevronDown
+                                size={20}
+                                color={currColors.textSecondary}
+                              />
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+
+                        {isExpanded && (
+                          <View
+                            style={[
+                              styles.accordionBody,
+                              { backgroundColor: currColors.card },
+                            ]}
+                          >
+                            <View
+                              style={[
+                                styles.separator,
+                                { backgroundColor: currColors.border },
+                              ]}
+                            />
+                            <View style={styles.assetsGrid}>
+                              {item.assetDistribution.map((asset, i) => (
+                                <View key={i} style={styles.assetItem}>
+                                  <View
+                                    style={{
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                    }}
+                                  >
+                                    <View
+                                      style={[
+                                        styles.dot,
+                                        {
+                                          backgroundColor:
+                                            CHART_COLORS[i % CHART_COLORS.length],
+                                        },
+                                      ]}
+                                    />
+                                    <ThemedText
+                                      style={[
+                                        styles.assetName,
+                                        { color: currColors.textSecondary },
+                                      ]}
+                                      numberOfLines={1}
+                                    >
+                                      {asset.name}
+                                    </ThemedText>
+                                  </View>
+                                  <ThemedText
+                                    style={[
+                                      styles.assetValue,
+                                      { color: currColors.text },
+                                    ]}
+                                  >
+                                    {isPrivacyMode
+                                      ? '••••••'
+                                      : `${showCurrencySymbol ? '₹' : ''}${asset.value.toLocaleString(undefined, { maximumFractionDigits: 0, notation: 'compact', compactDisplay: 'short' })}`}
+                                  </ThemedText>
+                                </View>
+                              ))}
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })
+                ) : (
+                  <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                    <ThemedText
+                      style={[
+                        styles.placeholderText,
+                        { color: currColors.textSecondary },
+                      ]}
+                    >
+                      Not enough data for yearly trend
+                    </ThemedText>
+                  </View>
+                )
+              )}
+            </View>
           </View>
         </ScrollView>
 
@@ -1356,6 +1393,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 10,
+  },
+  trendHeaderWithAction: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
+  trendSwitcherContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 3,
+    borderRadius: 20,
+    gap: 3,
+  },
+  trendSwitcherTab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  trendSwitcherTabActive: {},
+  trendSwitcherText: {
+    fontSize: 12,
+    letterSpacing: 0.2,
   },
   viewMoreButton: {
     flexDirection: 'row',
@@ -1642,6 +1706,7 @@ export default function AppHomeScreen() {
   const { activeMode } = useAppModeStore();
   const theme = useColorScheme() ?? 'dark';
   const currColors = Colors[theme];
+  const isDark = theme === 'dark';
 
   const translateX = useSharedValue(activeMode === 'money' ? -SCREEN_WIDTH : 0);
 
