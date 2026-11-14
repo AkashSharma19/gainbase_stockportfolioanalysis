@@ -23,7 +23,18 @@ export function createTickerResolver(tickers: Ticker[]): (symbol: string) => Tic
   tickers.forEach((t) => {
     const sym = (t.Tickers || '').trim().toUpperCase();
     if (!sym) return;
-    exactMap.set(sym, t);
+
+    const existingExact = exactMap.get(sym);
+    if (!existingExact) {
+      exactMap.set(sym, t);
+    } else {
+      const existingVal = existingExact['Current Value'] || 0;
+      const currentVal = t['Current Value'] || 0;
+      // Prefer ticker with valid positive current value
+      if (existingVal <= 0 && currentVal > 0) {
+        exactMap.set(sym, t);
+      }
+    }
 
     const base = normalizeTickerKey(sym);
     if (!base) return;
@@ -36,6 +47,8 @@ export function createTickerResolver(tickers: Ticker[]): (symbol: string) => Tic
       // Prefer ticker with valid positive current value
       if (existingVal <= 0 && currentVal > 0) {
         baseMap.set(base, t);
+      } else if (existingVal > 0 && currentVal <= 0) {
+        // Retain existing positive price, never overwrite with zero
       } else if (sym.includes(':') && !existing.Tickers.includes(':')) {
         // Exchange-prefixed record from primary sync takes precedence over un-prefixed orphan
         baseMap.set(base, t);
@@ -185,37 +198,117 @@ export const usePortfolioStore = create<PortfolioState>()(
             link = linkConfig?.value?.url || null;
           }
 
-          let mappedTickers: Ticker[] = get().tickers || [];
+          // Build index of currently cached local tickers to prevent overwriting valid live prices with 0 or null
+          const currentTickers = get().tickers || [];
+          const currentTickerMap = new Map<string, Ticker>();
+          currentTickers.forEach((t) => {
+            const sym = (t.Tickers || '').trim().toUpperCase();
+            if (sym) currentTickerMap.set(sym, t);
+            const base = normalizeTickerKey(sym);
+            if (base && !currentTickerMap.has(base)) currentTickerMap.set(base, t);
+          });
+
+          const mergedMap = new Map<string, Ticker>();
 
           if (tickersData && tickersData.length > 0) {
-            mappedTickers = tickersData.map((t: any) => {
+            tickersData.forEach((t: any) => {
+              const sym = (t.ticker || '').trim().toUpperCase();
+              if (!sym) return;
               const historicalData = t.historical_data || {};
-              return {
-                Tickers: t.ticker,
-                'Current Value': Number(t.current_value) || 0,
-                'Company Name': t.company_name || t.ticker,
-                'Asset Type': t.asset_type || 'Equity',
-                Sector: t.sector || 'General',
-                'Yesterday Close': t.yesterday_close !== null ? Number(t.yesterday_close) : undefined,
-                High52: t.high_52 !== null ? Number(t.high_52) : undefined,
-                Low52: t.low_52 !== null ? Number(t.low_52) : undefined,
-                Logo: (t.logo && !t.logo.includes('icon.horse')) ? t.logo : getCompanyLogoUrl(t.ticker, t.company_name),
-                'Market Cap': t.market_cap,
-                PE: t.pe !== null ? Number(t.pe) : null,
-                DividendYield: t.dividend_yield !== null ? Number(t.dividend_yield) : null,
-                DebtToEquity: t.debt_to_equity !== null ? Number(t.debt_to_equity) : null,
-                updated_at: t.updated_at,
+              const existing = currentTickerMap.get(sym) || currentTickerMap.get(normalizeTickerKey(sym));
+
+              const incomingVal = Number(t.current_value);
+              const hasValidIncomingVal = !isNaN(incomingVal) && incomingVal > 0;
+
+              // CRITICAL: If incoming price from Supabase/Google Sheet is 0/null/invalid, but local store already has a valid positive price, PRESERVE IT!
+              const finalPrice = hasValidIncomingVal
+                ? incomingVal
+                : (existing && existing['Current Value'] && existing['Current Value'] > 0 ? existing['Current Value'] : 0);
+
+              const incomingClose = t.yesterday_close !== null ? Number(t.yesterday_close) : undefined;
+              const finalYesterdayClose = (incomingClose && incomingClose > 0)
+                ? incomingClose
+                : (existing?.['Yesterday Close'] ?? (finalPrice > 0 ? finalPrice : undefined));
+
+              const isEtf =
+                t.asset_type === 'ETF' ||
+                sym.endsWith('BEES') ||
+                sym.startsWith('SETF') ||
+                (existing?.['Asset Type'] === 'ETF');
+
+              const mergedTicker: Ticker = {
+                Tickers: sym,
+                'Current Value': finalPrice,
+                'Company Name': t.company_name || existing?.['Company Name'] || sym,
+                'Asset Type': isEtf ? 'ETF' : (t.asset_type || existing?.['Asset Type'] || 'Equity'),
+                Sector: isEtf ? 'ETF' : (t.sector || existing?.Sector || 'General'),
+                'Yesterday Close': finalYesterdayClose,
+                High52: t.high_52 !== null ? Number(t.high_52) : existing?.High52,
+                Low52: t.low_52 !== null ? Number(t.low_52) : existing?.Low52,
+                Logo: (t.logo && !t.logo.includes('icon.horse')) ? t.logo : (existing?.Logo || getCompanyLogoUrl(sym, t.company_name)),
+                'Market Cap': t.market_cap || existing?.['Market Cap'],
+                PE: t.pe !== null ? Number(t.pe) : existing?.PE ?? null,
+                DividendYield: t.dividend_yield !== null ? Number(t.dividend_yield) : existing?.DividendYield ?? null,
+                DebtToEquity: t.debt_to_equity !== null ? Number(t.debt_to_equity) : existing?.DebtToEquity ?? null,
+                Currency: existing?.Currency || 'INR',
+                OriginalCurrency: existing?.OriginalCurrency,
+                OriginalPrice: existing?.OriginalPrice,
+                updated_at: t.updated_at || existing?.updated_at,
                 ...historicalData,
               };
+
+              mergedMap.set(sym, mergedTicker);
             });
           }
 
+          // Preserve any locally cached tickers (e.g. newly searched, live-fetched ETFs) that were NOT in Supabase!
+          currentTickers.forEach((localTicker) => {
+            const sym = (localTicker.Tickers || '').trim().toUpperCase();
+            if (sym && !mergedMap.has(sym)) {
+              mergedMap.set(sym, localTicker);
+            }
+          });
+
+          const finalTickersList = Array.from(mergedMap.values());
+
           set({
-            tickers: mappedTickers,
+            tickers: finalTickersList,
             headerLogo: logo,
             headerLink: link,
             lastSyncedAt: Date.now(),
           });
+
+          // AUTOMATIC LIVE HYDRATION:
+          // Check if any held asset has price <= 0 or missing, and automatically fetch live quote!
+          const { transactions } = get();
+          if (transactions && transactions.length > 0) {
+            const resolver = createTickerResolver(finalTickersList);
+            const activeHeldSymbols = new Set<string>();
+
+            // Calculate active holdings
+            const qtyMap = new Map<string, number>();
+            transactions.forEach((tx) => {
+              const s = tx.symbol.trim().toUpperCase();
+              const q = tx.quantity || 0;
+              qtyMap.set(s, (qtyMap.get(s) || 0) + (tx.type === 'BUY' ? q : -q));
+            });
+
+            qtyMap.forEach((qty, sym) => {
+              if (qty > 0) {
+                const resolved = resolver(sym);
+                const price = resolved?.['Current Value'];
+                if (!price || price <= 0 || isNaN(price)) {
+                  activeHeldSymbols.add(sym);
+                }
+              }
+            });
+
+            if (activeHeldSymbols.size > 0) {
+              activeHeldSymbols.forEach((sym) => {
+                get().fetchSingleTicker(sym, true).catch(() => {});
+              });
+            }
+          }
         } catch (error) {
           console.error('Failed to fetch tickers:', error);
         }
@@ -316,6 +409,12 @@ export const usePortfolioStore = create<PortfolioState>()(
               symbolsToUpdate.add(`NASDAQ:${cleanSym}`);
               symbolsToUpdate.add(`NYSE:${cleanSym}`);
             }
+            if (!cleanSym.includes(':')) {
+              symbolsToUpdate.add(`NSE:${cleanSym}`);
+              symbolsToUpdate.add(`BSE:${cleanSym}`);
+              symbolsToUpdate.add(`NSE:${baseSym}`);
+              symbolsToUpdate.add(`BSE:${baseSym}`);
+            }
 
             set((state) => {
               const remaining = state.tickers.filter(
@@ -324,6 +423,9 @@ export const usePortfolioStore = create<PortfolioState>()(
               const updated = [...remaining, liveTicker];
               if (baseSym !== cleanSym && baseSym.length > 0) {
                 updated.push({ ...liveTicker, Tickers: baseSym });
+              }
+              if (!cleanSym.includes(':')) {
+                updated.push({ ...liveTicker, Tickers: `NSE:${baseSym || cleanSym}` });
               }
               return { tickers: updated };
             });
@@ -347,6 +449,12 @@ export const usePortfolioStore = create<PortfolioState>()(
               upsertRows.push({
                 ...upsertRows[0],
                 ticker: baseSym,
+              });
+            }
+            if (!cleanSym.includes(':')) {
+              upsertRows.push({
+                ...upsertRows[0],
+                ticker: `NSE:${baseSym || cleanSym}`,
               });
             }
 
@@ -374,35 +482,38 @@ export const usePortfolioStore = create<PortfolioState>()(
 
           if (data && data.length > 0) {
             const row = data[0];
-            const historicalData = row.historical_data || {};
-            const tickerObj: Ticker = {
-              Tickers: row.ticker,
-              'Current Value': Number(row.current_value) || 0,
-              'Company Name': row.company_name || row.ticker,
-              'Asset Type': row.asset_type || 'Equity',
-              Sector: row.sector || 'General',
-              'Yesterday Close': row.yesterday_close !== null ? Number(row.yesterday_close) : undefined,
-              High52: row.high_52 !== null ? Number(row.high_52) : undefined,
-              Low52: row.low_52 !== null ? Number(row.low_52) : undefined,
-              Logo: (row.logo && !row.logo.includes('icon.horse')) ? row.logo : getCompanyLogoUrl(row.ticker, row.company_name),
-              'Market Cap': row.market_cap,
-              PE: row.pe !== null ? Number(row.pe) : null,
-              DividendYield: row.dividend_yield !== null ? Number(row.dividend_yield) : null,
-              DebtToEquity: row.debt_to_equity !== null ? Number(row.debt_to_equity) : null,
-              updated_at: row.updated_at,
-              ...historicalData,
-            };
+            const hasValidPrice = Number(row.current_value) > 0;
+            if (hasValidPrice) {
+              const historicalData = row.historical_data || {};
+              const tickerObj: Ticker = {
+                Tickers: row.ticker,
+                'Current Value': Number(row.current_value) || 0,
+                'Company Name': row.company_name || row.ticker,
+                'Asset Type': row.asset_type || 'Equity',
+                Sector: row.sector || 'General',
+                'Yesterday Close': row.yesterday_close !== null ? Number(row.yesterday_close) : undefined,
+                High52: row.high_52 !== null ? Number(row.high_52) : undefined,
+                Low52: row.low_52 !== null ? Number(row.low_52) : undefined,
+                Logo: (row.logo && !row.logo.includes('icon.horse')) ? row.logo : getCompanyLogoUrl(row.ticker, row.company_name),
+                'Market Cap': row.market_cap,
+                PE: row.pe !== null ? Number(row.pe) : null,
+                DividendYield: row.dividend_yield !== null ? Number(row.dividend_yield) : null,
+                DebtToEquity: row.debt_to_equity !== null ? Number(row.debt_to_equity) : null,
+                updated_at: row.updated_at,
+                ...historicalData,
+              };
 
-            set((state) => ({
-              tickers: [
-                ...state.tickers.filter(
-                  (t) => !candidateSymbols.includes(t.Tickers.trim().toUpperCase())
-                ),
-                tickerObj,
-                ...(row.ticker !== cleanSym ? [{ ...tickerObj, Tickers: cleanSym }] : []),
-              ],
-            }));
-            return tickerObj;
+              set((state) => ({
+                tickers: [
+                  ...state.tickers.filter(
+                    (t) => !candidateSymbols.includes(t.Tickers.trim().toUpperCase())
+                  ),
+                  tickerObj,
+                  ...(row.ticker !== cleanSym ? [{ ...tickerObj, Tickers: cleanSym }] : []),
+                ],
+              }));
+              return tickerObj;
+            }
           }
         } catch (e) {
           console.warn(`[fetchSingleTicker] Fallback error for ${cleanSym}:`, e);
@@ -411,6 +522,7 @@ export const usePortfolioStore = create<PortfolioState>()(
         // 4. In-memory store fallback
         const resolver = createTickerResolver(get().tickers);
         const inMemory = resolver(cleanSym);
+        if (inMemory && (inMemory['Current Value'] || 0) > 0) return inMemory;
         if (inMemory) return inMemory;
 
         return null;
@@ -482,8 +594,14 @@ export const usePortfolioStore = create<PortfolioState>()(
             const ticker = resolveTicker(sym);
             const currentPrice = ticker?.['Current Value'];
             const avgPrice = avgBuyPriceMap.get(sym) || 0;
-            const effectivePrice = currentPrice ?? avgPrice;
-            const closePrice = ticker?.['Yesterday Close'] ?? effectivePrice;
+            const effectivePrice = (currentPrice && currentPrice > 0)
+              ? currentPrice
+              : ((ticker?.['Yesterday Close'] && ticker['Yesterday Close'] > 0)
+                  ? ticker['Yesterday Close']
+                  : avgPrice);
+            const closePrice = (ticker?.['Yesterday Close'] && ticker['Yesterday Close'] > 0)
+              ? ticker['Yesterday Close']
+              : effectivePrice;
 
             currentMarketValue += qty * effectivePrice;
             currentCostBasis += qty * avgPrice;
@@ -607,7 +725,11 @@ export const usePortfolioStore = create<PortfolioState>()(
           if (data.quantity <= 0) return;
           const ticker = resolveTicker(symbol);
           const avgPrice = data.totalCost / data.quantity;
-          const currentPrice = ticker?.['Current Value'] ?? avgPrice;
+          const currentPrice = (ticker?.['Current Value'] && ticker['Current Value'] > 0)
+            ? ticker['Current Value']
+            : ((ticker?.['Yesterday Close'] && ticker['Yesterday Close'] > 0)
+                ? ticker['Yesterday Close']
+                : avgPrice);
           globalPortfolioValue += data.quantity * currentPrice;
         });
 
@@ -669,7 +791,11 @@ export const usePortfolioStore = create<PortfolioState>()(
             const symUpper = data.symbol.trim().toUpperCase();
             const ticker = resolveTicker(symUpper);
             const avgPrice = data.totalCost / data.quantity;
-            const currentPrice = ticker?.['Current Value'] ?? avgPrice;
+            const currentPrice = (ticker?.['Current Value'] && ticker['Current Value'] > 0)
+              ? ticker['Current Value']
+              : ((ticker?.['Yesterday Close'] && ticker['Yesterday Close'] > 0)
+                  ? ticker['Yesterday Close']
+                  : avgPrice);
             const currentValue = data.quantity * currentPrice;
             const brokerName = data.broker;
 
@@ -747,7 +873,11 @@ export const usePortfolioStore = create<PortfolioState>()(
           const symUpper = symbol.trim().toUpperCase();
           const ticker = resolveTicker(symUpper);
           const avgPrice = data.totalCost / data.quantity;
-          const currentPrice = ticker?.['Current Value'] ?? avgPrice;
+          const currentPrice = (ticker?.['Current Value'] && ticker['Current Value'] > 0)
+            ? ticker['Current Value']
+            : ((ticker?.['Yesterday Close'] && ticker['Yesterday Close'] > 0)
+                ? ticker['Yesterday Close']
+                : avgPrice);
 
           let dimensionValue = 'Unknown';
           if (ticker && ticker[dimension]) {
@@ -847,8 +977,14 @@ export const usePortfolioStore = create<PortfolioState>()(
           if (data.quantity <= 0) return;
           const ticker = resolveTicker(symbol);
           const avgPrice = data.totalCost / data.quantity;
-          const currentPrice = ticker?.['Current Value'] ?? avgPrice;
-          const yesterdayClose = ticker?.['Yesterday Close'] ?? currentPrice;
+          const currentPrice = (ticker?.['Current Value'] && ticker['Current Value'] > 0)
+            ? ticker['Current Value']
+            : ((ticker?.['Yesterday Close'] && ticker['Yesterday Close'] > 0)
+                ? ticker['Yesterday Close']
+                : avgPrice);
+          const yesterdayClose = (ticker?.['Yesterday Close'] && ticker['Yesterday Close'] > 0)
+            ? ticker['Yesterday Close']
+            : currentPrice;
           const currentValue = data.quantity * currentPrice;
           const investedValue = data.totalCost;
           if (currentValue <= 0 && investedValue <= 0) return;

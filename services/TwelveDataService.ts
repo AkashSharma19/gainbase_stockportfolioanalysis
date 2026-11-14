@@ -19,6 +19,7 @@ interface TwelveDataQuoteResponse {
   code?: number;
   message?: string;
   status?: string;
+  instrument_type?: string;
 }
 
 interface TwelveDataLogoResponse {
@@ -64,6 +65,21 @@ export function formatTwelveDataSymbol(symbol: string): string {
   }
   if (clean.endsWith('.BO')) {
     return `${clean.replace('.BO', '')}:BSE`;
+  }
+  // Indian ETFs and specific symbols default to NSE exchange on Twelve Data
+  if (
+    clean.endsWith('BEES') ||
+    clean.startsWith('SETF') ||
+    clean === 'GOLDBEES' ||
+    clean === 'NIFTYBEES' ||
+    clean === 'SILVERBEES' ||
+    clean === 'JUNIORBEES' ||
+    clean === 'BANKBEES' ||
+    clean === 'ITBEES' ||
+    clean === 'AUTOBEES' ||
+    clean === 'CPSEETF'
+  ) {
+    return `${clean}:NSE`;
   }
   return clean;
 }
@@ -127,49 +143,58 @@ export async function fetchYahooFinanceQuote(symbol: string): Promise<Partial<Ti
     }
     candidates.push(clean);
 
+    const endpoints = [
+      'https://query1.finance.yahoo.com/v8/finance/chart/',
+      'https://query2.finance.yahoo.com/v8/finance/chart/',
+    ];
+
     for (const sym of candidates) {
-      try {
-        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1d`;
-        const res = await fetch(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
-          },
-        });
-        if (!res.ok) continue;
+      for (const endpoint of endpoints) {
+        try {
+          const url = `${endpoint}${encodeURIComponent(sym)}?interval=1d&range=1d`;
+          const res = await fetch(url, {
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+              Accept: 'application/json',
+            },
+          });
+          if (!res.ok) continue;
 
-        const data = await res.json();
-        const meta = data.chart?.result?.[0]?.meta;
-        if (meta && typeof meta.regularMarketPrice === 'number' && meta.regularMarketPrice > 0) {
-          const rawCurrency = (meta.currency || 'INR').toUpperCase();
-          const rateToINR = await getRateToINR(rawCurrency);
+          const data = await res.json();
+          const meta = data.chart?.result?.[0]?.meta;
+          if (meta && typeof meta.regularMarketPrice === 'number' && meta.regularMarketPrice > 0) {
+            const rawCurrency = (meta.currency || 'INR').toUpperCase();
+            const rateToINR = await getRateToINR(rawCurrency);
 
-          const rawClose = meta.regularMarketPrice;
-          const rawPrev = meta.chartPreviousClose || rawClose;
-          const high52 = meta.fiftyTwoWeekHigh ? meta.fiftyTwoWeekHigh * rateToINR : undefined;
-          const low52 = meta.fiftyTwoWeekLow ? meta.fiftyTwoWeekLow * rateToINR : undefined;
+            const rawClose = meta.regularMarketPrice;
+            const rawPrev = meta.chartPreviousClose || rawClose;
+            const high52 = meta.fiftyTwoWeekHigh ? meta.fiftyTwoWeekHigh * rateToINR : undefined;
+            const low52 = meta.fiftyTwoWeekLow ? meta.fiftyTwoWeekLow * rateToINR : undefined;
 
-          const isEtf =
-            meta.instrumentType === 'ETF' ||
-            (meta.shortName && meta.shortName.toUpperCase().includes('ETF')) ||
-            clean.endsWith('BEES') ||
-            clean.startsWith('SETF');
+            const isEtf =
+              meta.instrumentType === 'ETF' ||
+              (meta.shortName && meta.shortName.toUpperCase().includes('ETF')) ||
+              clean.endsWith('BEES') ||
+              clean.startsWith('SETF');
 
-          return {
-            Tickers: symbol.trim().toUpperCase(),
-            'Company Name': meta.shortName || meta.longName || symbol,
-            'Current Value': rawClose * rateToINR,
-            'Yesterday Close': rawPrev * rateToINR,
-            High52: high52,
-            Low52: low52,
-            Currency: 'INR',
-            'Asset Type': isEtf ? 'ETF' : 'Equity',
-            Sector: isEtf ? 'ETF' : 'General',
-            OriginalCurrency: rawCurrency !== 'INR' ? rawCurrency : undefined,
-            OriginalPrice: rawCurrency !== 'INR' ? rawClose : undefined,
-          };
+            return {
+              Tickers: symbol.trim().toUpperCase(),
+              'Company Name': meta.shortName || meta.longName || symbol,
+              'Current Value': rawClose * rateToINR,
+              'Yesterday Close': rawPrev * rateToINR,
+              High52: high52,
+              Low52: low52,
+              Currency: 'INR',
+              'Asset Type': isEtf ? 'ETF' : 'Equity',
+              Sector: isEtf ? 'ETF' : 'General',
+              OriginalCurrency: rawCurrency !== 'INR' ? rawCurrency : undefined,
+              OriginalPrice: rawCurrency !== 'INR' ? rawClose : undefined,
+            };
+          }
+        } catch {
+          // Try next endpoint or candidate
         }
-      } catch {
-        // Try next candidate
       }
     }
     return null;
@@ -208,6 +233,12 @@ export async function fetchTwelveDataQuote(
         const high52 = rawHigh52 !== undefined && !isNaN(rawHigh52) ? rawHigh52 * rateToINR : undefined;
         const low52 = rawLow52 !== undefined && !isNaN(rawLow52) ? rawLow52 * rateToINR : undefined;
 
+        const isEtf =
+          data.instrument_type === 'ETF' ||
+          formattedSym.includes('BEES') ||
+          formattedSym.startsWith('SETF') ||
+          (data.name && data.name.toUpperCase().includes('ETF'));
+
         return {
           Tickers: symbol.trim().toUpperCase(),
           'Company Name': data.name || symbol,
@@ -216,6 +247,8 @@ export async function fetchTwelveDataQuote(
           High52: high52,
           Low52: low52,
           Currency: 'INR',
+          'Asset Type': isEtf ? 'ETF' : 'Equity',
+          Sector: isEtf ? 'ETF' : undefined,
           OriginalCurrency: rawCurrency !== 'INR' ? rawCurrency : undefined,
           OriginalPrice: rawCurrency !== 'INR' && !isNaN(rawClose) ? rawClose : undefined,
         };
@@ -224,7 +257,7 @@ export async function fetchTwelveDataQuote(
 
     // Fallback: If Twelve Data restricted this symbol (e.g. Indian ETFs on free plan) or rate-limited:
     const yahooQuote = await fetchYahooFinanceQuote(symbol);
-    if (yahooQuote && yahooQuote['Current Value'] !== undefined) {
+    if (yahooQuote && typeof yahooQuote['Current Value'] === 'number' && yahooQuote['Current Value'] > 0) {
       return yahooQuote;
     }
 
