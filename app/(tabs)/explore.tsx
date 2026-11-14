@@ -1,7 +1,6 @@
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 
-import { Category3DIcon } from '@/components/Category3DIcon';
 import { MASTER_STOCKS_LIST } from '@/constants/NSE_COMPANIES';
 import { usePortfolioStore } from '@/store/usePortfolioStore';
 import { Ticker } from '@/types';
@@ -12,7 +11,7 @@ import {
 } from '@/services/TwelveDataService';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { TrendingUp, Globe, Star, SlidersHorizontal, Search, XCircle, Clock, LayoutGrid } from 'lucide-react-native';
+import { TrendingUp, Globe, Star, SlidersHorizontal, Search, XCircle, Clock } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -198,13 +197,6 @@ export default function ExploreScreen() {
     return Array.from(assetTypes).sort();
   }, [tickers]);
 
-  const uniqueSectors = useMemo(() => {
-    const sectors = new Set<string>(
-      tickers.map((t) => t['Sector']).filter((t): t is string => !!t),
-    );
-    return Array.from(sectors).sort();
-  }, [tickers]);
-
   const renderItem = ({ item, index }: { item: Ticker; index: number }) => {
     const currentValue = item['Current Value'] || 0;
     const yesterdayClose = item['Yesterday Close'] || currentValue;
@@ -381,205 +373,6 @@ export default function ExploreScreen() {
           </View>
         </View>
       </TouchableOpacity>
-    );
-  };
-
-  const topMovers = useMemo(() => {
-    const sorted = [...tickers]
-      .filter(
-        (t) =>
-          t && t.Tickers && t['Company Name'] && t['Asset Type'] !== 'Index',
-      )
-      .map((t) => {
-        const current = t['Current Value'] || 0;
-        const yesterday = t['Yesterday Close'] || current;
-        const change =
-          yesterday !== 0 ? ((current - yesterday) / yesterday) * 100 : 0;
-        return { ...t, changePercentage: change };
-      })
-      .sort(
-        (a, b) => Math.abs(b.changePercentage) - Math.abs(a.changePercentage),
-      );
-
-    return sorted.slice(0, 10);
-  }, [tickers]);
-
-  const renderTopMovers = () => {
-    if (searchQuery || filterAssetType) return null;
-
-    return (
-      <View style={styles.topMoversContainer}>
-        <View
-          style={[
-            styles.sectionHeader,
-            { marginTop: 8, paddingHorizontal: 16 },
-          ]}
-        >
-          <ThemedText
-            style={[styles.sectionTitle, { color: currColors.textSecondary }]}
-          >
-            TOP MOVERS
-          </ThemedText>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.topMoversScroll}
-        >
-          {topMovers.map((item, index) => {
-            const isPositive = item.changePercentage >= 0;
-            return (
-              <TouchableOpacity
-                key={item.Tickers}
-                style={[
-                  styles.moverCard,
-                  {
-                    backgroundColor: currColors.card,
-                    borderColor: currColors.border,
-                  },
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push(`/stock-details/${item.Tickers}`);
-                }}
-              >
-                <View style={styles.moverHeader}>
-                  <View
-                    style={[
-                      styles.moverIcon,
-                      { backgroundColor: currColors.cardSecondary },
-                    ]}
-                  >
-                    {item.Logo ? (
-                      <View
-                        style={{
-                          backgroundColor: '#FFFFFF',
-                          borderRadius: 10,
-                          padding: 3,
-                        }}
-                      >
-                        <Image
-                          source={{ uri: item.Logo }}
-                          style={{ width: 32, height: 32, borderRadius: 8 }}
-                          resizeMode="contain"
-                        />
-                      </View>
-                    ) : (
-                      <ThemedText
-                        style={[
-                          styles.moverIconText,
-                          { color: currColors.text },
-                        ]}
-                      >
-                        {item['Company Name']?.[0] || '?'}
-                      </ThemedText>
-                    )}
-                  </View>
-                  <View
-                    style={[
-                      styles.miniBadge,
-                      {
-                        backgroundColor: isPositive
-                          ? 'rgba(52, 199, 89, 0.12)'
-                          : 'rgba(255, 59, 48, 0.12)',
-                      },
-                    ]}
-                  >
-                    <ThemedText
-                      style={[
-                        styles.miniBadgeText,
-                        { color: isPositive ? '#34C759' : '#FF3B30' },
-                      ]}
-                    >
-                      {isPositive ? '+' : ''}
-                      {item.changePercentage.toFixed(2)}%
-                    </ThemedText>
-                  </View>
-                </View>
-                <ThemedText
-                  style={[styles.moverSymbol, { color: currColors.text }]}
-                  numberOfLines={1}
-                >
-                  {item['Company Name']}
-                </ThemedText>
-                <ThemedText
-                  style={[
-                    styles.moverPrice,
-                    { color: currColors.textSecondary },
-                  ]}
-                >
-                  {showCurrencySymbol ? '₹' : ''}
-                  {item['Current Value']?.toLocaleString('en-IN')}
-                </ThemedText>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-    );
-  };
-
-  // Removed local getSectorIcon
-
-  const renderSectorGrid = () => {
-    if (searchQuery || filterAssetType) return null;
-
-    const displaySectors = uniqueSectors.slice(0, 3);
-    if (displaySectors.length === 0) return null;
-
-    return (
-      <View style={styles.sectorGridContainer}>
-        <View style={styles.sectionHeader}>
-          <ThemedText
-            style={[styles.sectionTitle, { color: currColors.textSecondary }]}
-          >
-            BROWSE SECTORS
-          </ThemedText>
-        </View>
-        <View style={styles.sectorGrid}>
-          {displaySectors.map((sName) => {
-            return (
-              <TouchableOpacity
-                key={sName}
-                style={styles.sectorCard}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push(`/sector-details/${encodeURIComponent(sName)}`);
-                }}
-              >
-                <View style={styles.iconContainer}>
-                  <Category3DIcon name={sName} size={36} />
-                </View>
-                <ThemedText
-                  style={[styles.sectorName, { color: currColors.text }]}
-                  numberOfLines={1}
-                >
-                  {sName}
-                </ThemedText>
-              </TouchableOpacity>
-            );
-          })}
-          <TouchableOpacity
-            style={styles.sectorCard}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push('/sectors');
-            }}
-          >
-            <View
-              style={[
-                styles.iconContainer,
-                { backgroundColor: currColors.tint + '15' },
-              ]}
-            >
-              <LayoutGrid size={22} color={currColors.tint} />
-            </View>
-            <ThemedText style={[styles.sectorName, { color: currColors.tint }]}>
-              More
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
-      </View>
     );
   };
 
@@ -810,8 +603,6 @@ export default function ExploreScreen() {
                   currColors={currColors}
                 />
                 {renderSearchFocusView()}
-                {!isSearchFocused && renderTopMovers()}
-                {!isSearchFocused && renderSectorGrid()}
                 {searchQuery || filterAssetType ? (
                   <View style={[styles.sectionHeader, { marginTop: 10 }]}>
                     <ThemedText
@@ -824,7 +615,7 @@ export default function ExploreScreen() {
                     </ThemedText>
                   </View>
                 ) : !isSearchFocused ? (
-                  <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+                  <View style={[styles.sectionHeader, { marginTop: 4 }]}>
                     <ThemedText
                       style={[
                         styles.sectionTitle,
@@ -894,7 +685,6 @@ export default function ExploreScreen() {
                           {
                             color: currColors.textSecondary,
                             textAlign: 'center',
-                            marginBottom: 16,
                           },
                         ]}
                       >
@@ -902,28 +692,6 @@ export default function ExploreScreen() {
                           ? `No stocks found for "${searchQuery}"`
                           : 'Your watchlist is empty.\nSearch for companies to add them.'}
                       </ThemedText>
-                      {!searchQuery && (
-                        <TouchableOpacity
-                          activeOpacity={0.8}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            router.push('/sectors');
-                          }}
-                          style={{
-                            paddingHorizontal: 18,
-                            paddingVertical: 10,
-                            borderRadius: 20,
-                            backgroundColor: currColors.cardSecondary,
-                            borderWidth: 1,
-                            borderColor: currColors.border,
-                            marginTop: 4,
-                          }}
-                        >
-                          <ThemedText type="semiBold" style={{ color: currColors.tint, fontSize: 13 }}>
-                            Explore All Sectors
-                          </ThemedText>
-                        </TouchableOpacity>
-                      )}
                     </>
                   )}
                 </View>
@@ -1389,82 +1157,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
-  },
-  topMoversContainer: {
-    marginBottom: 24,
-    marginHorizontal: -16,
-  },
-  topMoversScroll: {
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  moverCard: {
-    width: 140,
-    padding: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  moverHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  moverIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  moverIconText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  miniBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  miniBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  moverSymbol: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  moverPrice: {
-    fontSize: 12,
-    fontWeight: '400',
-  },
-  sectorGridContainer: {
-    marginBottom: 24,
-  },
-  sectorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  sectorCard: {
-    width: (SCREEN_WIDTH - 32 - 24) / 4, // 4 columns
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  sectorName: {
-    fontSize: 11,
-    fontWeight: '500',
-    textAlign: 'center',
-    letterSpacing: -0.2,
   },
   ribbonContainer: {
     height: 50,
